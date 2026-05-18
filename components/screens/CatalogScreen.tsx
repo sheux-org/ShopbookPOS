@@ -38,7 +38,7 @@ const CATEGORIES: CategoryItem[] = [
   { id: "grocery", label: "Grocery", icon: "cart-outline", count: 84 },
   { id: "dairy", label: "Dairy", icon: "water-outline", count: 22 },
   { id: "drinks", label: "Drinks", icon: "wine-outline", count: 31 },
-  { id: "snacks", label: "Snacks", icon: "cookie-outline", count: 47 },
+  { id: "snacks", label: "Snacks", icon: "fast-food-outline", count: 47 },
   { id: "household", label: "Household", icon: "home-outline", count: 38 },
 ];
 
