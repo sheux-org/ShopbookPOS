@@ -107,7 +107,13 @@ export default function BusinessDetailsRoute() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollWrapper} 
+        contentContainerStyle={[
+          styles.scrollContent,
+          isEditing && { paddingBottom: 100 }
+        ]}
+      >
         {/* Business Main Card */}
         <View style={styles.detailCard}>
           <View style={styles.storeIconBox}>
@@ -189,21 +195,23 @@ export default function BusinessDetailsRoute() {
           {/* Static details showing admin privileges */}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Admin Privilege Status</Text>
-            <Text style={[styles.infoVal, { color: TOKENS.success }]}>FULL READ-WRITE SQL PRIVILEGES</Text>
+            <Text style={[styles.infoVal, { color: TOKENS.success }]}>FULL READ-WRITE PRIVILEGES</Text>
           </View>
         </View>
+      </ScrollView>
 
-        {isEditing && (
+      {isEditing && (
+        <View style={[styles.fixedBottomContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
           <TouchableOpacity
             style={styles.saveButton}
             activeOpacity={0.8}
             onPress={handleSaveChanges}
           >
-            <Feather name="save" size={16} color={TOKENS.card} />
-            <Text style={styles.saveButtonText}>Save Details to SQLite</Text>
+            <Feather name="check" size={16} color={TOKENS.card} />
+            <Text style={styles.saveButtonText}>Update Details</Text>
           </TouchableOpacity>
-        )}
-      </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
@@ -367,5 +375,16 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
     fontSize: 14,
     fontWeight: "bold",
+  },
+  fixedBottomContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: TOKENS.background,
+    borderTopWidth: 1,
+    borderTopColor: TOKENS.border,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
 });
