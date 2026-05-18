@@ -20,6 +20,7 @@ export const ProfileScreen: React.FC = () => {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
+  const [selectedPlan, setSelectedPlan] = useState<"1_month" | "3_month" | "1_year">("3_month");
 
   useEffect(() => {
     const updateCount = () => {
@@ -137,6 +138,102 @@ export const ProfileScreen: React.FC = () => {
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
+
+          {/* Option: Payments Setup */}
+          <TouchableOpacity
+            style={styles.optionRow}
+            activeOpacity={0.7}
+            onPress={() => triggerToast("Pricing subscription setup initialized")}
+          >
+            <View style={[styles.optionIconBox, { backgroundColor: "#FCE8E6" }]}>
+              <Feather name="credit-card" size={18} color={TOKENS.error} />
+            </View>
+            <View style={styles.optionTextWrapper}>
+              <Text style={styles.optionTitle}>Payments</Text>
+              <Text style={styles.optionSubtitle}>Subscription plans, invoice billing, and receipts history</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Payments & Subscriptions visual carousel plans */}
+        <View style={styles.optionsGroup}>
+          <Text style={styles.groupHeader}>Premium Plans</Text>
+          
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.plansScrollContent}
+          >
+            {/* 1 Month Plan Card */}
+            <TouchableOpacity
+              style={[styles.planCard, selectedPlan === "1_month" && styles.planCardActive]}
+              activeOpacity={0.9}
+              onPress={() => {
+                setSelectedPlan("1_month");
+                triggerToast("1-Month Pro Plan selected! 💳");
+              }}
+            >
+              <View style={styles.planHeader}>
+                <Text style={styles.planTitle}>Starter</Text>
+                <Text style={styles.planDuration}>1 Month Access</Text>
+              </View>
+              <Text style={styles.planPrice}>Rs. 2,500</Text>
+              <Text style={styles.planPriceSub}>billed monthly</Text>
+              <View style={[styles.planStatusBadge, selectedPlan === "1_month" && styles.planStatusBadgeActive]}>
+                <Text style={[styles.planStatusText, selectedPlan === "1_month" && { color: "#fff" }]}>
+                  {selectedPlan === "1_month" ? "Active Plan" : "Choose Plan"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* 3 Months Plan Card (Popular) */}
+            <TouchableOpacity
+              style={[styles.planCard, styles.planCardPopular, selectedPlan === "3_month" && styles.planCardActive]}
+              activeOpacity={0.9}
+              onPress={() => {
+                setSelectedPlan("3_month");
+                triggerToast("3-Month Pro Plan selected! 🌟");
+              }}
+            >
+              <View style={styles.popularRibbon}>
+                <Text style={styles.popularRibbonText}>MOST POPULAR</Text>
+              </View>
+              <View style={styles.planHeader}>
+                <Text style={[styles.planTitle, { color: TOKENS.primary, marginTop: 12 }]}>Retail Pro</Text>
+                <Text style={styles.planDuration}>3 Months Access</Text>
+              </View>
+              <Text style={styles.planPrice}>Rs. 6,800</Text>
+              <Text style={styles.planPriceSub}>Save 10% · billed quarterly</Text>
+              <View style={[styles.planStatusBadge, selectedPlan === "3_month" ? styles.planStatusBadgeActive : { backgroundColor: TOKENS.primary }]}>
+                <Text style={[styles.planStatusText, { color: '#fff' }]}>
+                  {selectedPlan === "3_month" ? "Active Plan" : "Choose Plan"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* 1 Year Plan Card */}
+            <TouchableOpacity
+              style={[styles.planCard, selectedPlan === "1_year" && styles.planCardActive]}
+              activeOpacity={0.9}
+              onPress={() => {
+                setSelectedPlan("1_year");
+                triggerToast("1-Year Pro Plan selected! 🚀");
+              }}
+            >
+              <View style={styles.planHeader}>
+                <Text style={styles.planTitle}>Enterprise</Text>
+                <Text style={styles.planDuration}>12 Months Access</Text>
+              </View>
+              <Text style={styles.planPrice}>Rs. 15,000</Text>
+              <Text style={styles.planPriceSub}>Save 50% · billed annually</Text>
+              <View style={[styles.planStatusBadge, selectedPlan === "1_year" && styles.planStatusBadgeActive]}>
+                <Text style={[styles.planStatusText, selectedPlan === "1_year" && { color: "#fff" }]}>
+                  {selectedPlan === "1_year" ? "Active Plan" : "Choose Plan"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         <View style={styles.optionsGroup}>
@@ -423,5 +520,95 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
     fontSize: 9,
     fontWeight: "bold",
+  },
+  plansScrollContent: {
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    gap: 12,
+  },
+  planCard: {
+    width: 170,
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 16,
+    position: "relative",
+    overflow: "hidden",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 3,
+    elevation: 0.5,
+  },
+  planCardActive: {
+    borderColor: TOKENS.primary,
+    borderWidth: 2,
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  planCardPopular: {
+    borderColor: "#FCD34D",
+    borderWidth: 1.5,
+  },
+  popularRibbon: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#F59E0B",
+    paddingVertical: 3,
+    alignItems: "center",
+  },
+  popularRibbonText: {
+    color: "#fff",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  planHeader: {
+    alignItems: "center",
+    marginTop: 8,
+    gap: 2,
+  },
+  planTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  planDuration: {
+    fontSize: 10,
+    color: TOKENS.muted,
+  },
+  planPrice: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    marginTop: 12,
+  },
+  planPriceSub: {
+    fontSize: 8,
+    color: TOKENS.muted,
+    marginTop: 2,
+  },
+  planStatusBadge: {
+    marginTop: 14,
+    paddingVertical: 6,
+    width: "100%",
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+  },
+  planStatusBadgeActive: {
+    backgroundColor: TOKENS.primary,
+  },
+  planStatusText: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: TOKENS.dark,
   },
 });
