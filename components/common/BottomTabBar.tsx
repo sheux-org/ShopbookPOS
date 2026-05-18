@@ -1,0 +1,89 @@
+import React from "react";
+import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TOKENS } from "../../constants/tokens";
+
+interface BottomTabBarProps {
+  activeTab?: "home" | "pos" | "stocks" | "profile";
+  onTabPress?: (tab: string) => void;
+}
+
+export const BottomTabBar: React.FC<BottomTabBarProps> = ({
+  activeTab = "home",
+  onTabPress,
+}) => {
+  const insets = useSafeAreaInsets();
+
+  const tabs = [
+    { id: "home", label: "Home", icon: "home" },
+    { id: "pos", label: "POS", icon: "shopping-cart" },
+    { id: "stocks", label: "Stocks", icon: "package" },
+    { id: "profile", label: "Profile", icon: "user" },
+  ];
+
+  return (
+    <View
+      style={[
+        styles.container,
+        { paddingBottom: Math.max(insets.bottom, 10) },
+      ]}
+    >
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.id;
+        return (
+          <TouchableOpacity
+            key={tab.id}
+            style={styles.tab}
+            activeOpacity={0.7}
+            onPress={() => onTabPress?.(tab.id)}
+          >
+            <Feather
+              // @ts-ignore dynamic mapping is safe here for known feather icons
+              name={tab.icon}
+              size={22}
+              color={isActive ? TOKENS.primary : TOKENS.muted}
+            />
+            <Text
+              style={[
+                styles.label,
+                isActive ? styles.labelActive : styles.labelInactive,
+              ]}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    backgroundColor: TOKENS.card,
+    borderTopWidth: 1,
+    borderTopColor: TOKENS.border,
+    paddingTop: 10,
+  },
+  tab: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+  label: {
+    fontSize: 11,
+    marginTop: 4,
+  },
+  labelActive: {
+    color: TOKENS.primary,
+    fontWeight: "bold",
+  },
+  labelInactive: {
+    color: TOKENS.muted,
+    fontWeight: "500",
+  },
+});

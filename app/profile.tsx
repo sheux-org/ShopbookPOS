@@ -1,12 +1,12 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { HomeScreen } from "../components/screens/HomeScreen";
+import { ProfileScreen } from "../components/screens/ProfileScreen";
 
-export default function IndexRoute() {
+export default function ProfileRoute() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <HomeScreen />
+      <ProfileScreen />
     </>
   );
 }
