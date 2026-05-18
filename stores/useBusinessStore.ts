@@ -19,7 +19,7 @@ interface BusinessState {
   updateActiveBusinessDetails: (details: { name: string; category: string; address: string; phone: string }) => Promise<void>;
 }
 
-// Clean onboarding state when no business is registered yet
+// Clean onboarding placeholder when no business is registered yet
 const PLACEHOLDER_BUSINESS: Business = {
   id: "0",
   name: "Register Your Shop",
@@ -46,10 +46,15 @@ export const useBusinessStore = create<BusinessState>()(
           const db = require('../components/data/db').default;
           const dbBizs = await db.get('businesses').query().fetch();
           
-          // Only show businesses that belong to our owner phone number: 0717133074
+          // Get the currently logged-in user's phone number
+          const { useAuthStore } = require('./useAuthStore');
+          const loggedInPhone = useAuthStore.getState().userPhone || "0717133074";
+          const cleanLoggedInPhone = loggedInPhone.replace(/\s+/g, "");
+          
+          // Filter to only include businesses with our owner phone number
           const filteredDbBizs = dbBizs.filter((b: any) => {
             const cleanPhone = b.phoneNumber ? b.phoneNumber.replace(/\s+/g, "") : "";
-            return cleanPhone.includes("717133074") || cleanPhone.includes("0717133074");
+            return cleanPhone.includes(cleanLoggedInPhone) || cleanLoggedInPhone.includes(cleanPhone);
           });
           
           const list: Business[] = filteredDbBizs.map((b: any) => ({
@@ -57,7 +62,7 @@ export const useBusinessStore = create<BusinessState>()(
             name: b.name,
             category: b.businessType,
             address: b.address || "No Address Provided",
-            phone: b.phoneNumber || "0717133074",
+            phone: b.phoneNumber || "+94 ** *** ****",
           }));
           
           if (list.length > 0) {

@@ -119,6 +119,37 @@ export const cartState = {
 // Automatically load all store profiles from local SQLite database into memory
 setTimeout(async () => {
   try {
+    const db = require('./db').default;
+    
+    // 🧼 Clean-slate reset: Wipes all existing tables for a pristine first-use onboarding test!
+    await db.write(async () => {
+      const allProducts = await db.get('products').query().fetch();
+      for (const p of allProducts) {
+        await p.destroyPermanently();
+      }
+      
+      const allBusinesses = await db.get('businesses').query().fetch();
+      for (const b of allBusinesses) {
+        await b.destroyPermanently();
+      }
+      
+      const allEmployees = await db.get('employees').query().fetch();
+      for (const e of allEmployees) {
+        await e.destroyPermanently();
+      }
+      
+      const allOrders = await db.get('orders').query().fetch();
+      for (const o of allOrders) {
+        await o.destroyPermanently();
+      }
+      
+      const allOrderItems = await db.get('order_items').query().fetch();
+      for (const oi of allOrderItems) {
+        await oi.destroyPermanently();
+      }
+    });
+    console.log('🧼 SQLite Database completely wiped for a pristine onboarding test!');
+
     const { useBusinessStore } = require('../../stores/useBusinessStore');
     await useBusinessStore.getState().loadBusinessesFromDb();
   } catch (err) {

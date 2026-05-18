@@ -75,16 +75,38 @@ export default function NumberInputRoute() {
 
       if (codeToVerify === "1111") {
         setOtpError(false);
-        if (cleanPhone === "0717133074" || cleanPhone === "717133074") {
-          // Existing account
-          cartState.login(phone, "1111");
-          triggerToast("Welcome back to Shopbook!");
-          router.replace("/(tabs)");
-        } else {
-          // New account: Needs registration
-          triggerToast("Number not registered. Let's create your shop profile!");
+        
+        // Execute dynamic SQLite lookup to see if a business is registered under this phone number!
+        const db = require('../../../components/data/db').default;
+        const { Q } = require('@nozbe/watermelondb');
+        
+        db.get('businesses').query(
+          Q.or(
+            Q.where('phone_number', cleanPhone),
+            Q.where('phone_number', phone)
+          )
+        ).fetch().then(async (businesses: any[]) => {
+          if (businesses.length > 0) {
+            // Existing account! Perform login and load that business instantly!
+            cartState.login(phone, "1111");
+            const activeStore = businesses[0];
+            const { useBusinessStore } = require('../../../stores/useBusinessStore');
+            useBusinessStore.getState().setActiveBusiness(activeStore.id);
+            
+            // Re-sync local listings for this phone number
+            await useBusinessStore.getState().loadBusinessesFromDb();
+            
+            triggerToast("Welcome back to Shopbook!");
+            router.replace("/(tabs)");
+          } else {
+            // New account: Needs registration!
+            triggerToast("Number not registered. Let's create your shop profile!");
+            setStep("register");
+          }
+        }).catch((err: any) => {
+          console.error('Failed to lookup business in SQLite:', err);
           setStep("register");
-        }
+        });
       } else {
         setOtpError(true);
         triggerToast("Invalid OTP. Hint: Use 1111");
@@ -148,32 +170,27 @@ export default function NumberInputRoute() {
 
         {/* Dynamic Step Panels */}
         {step === "phone" && (
-          <View style={[styles.card, styles.cardFixed]}>
-            <View>
-              <Text style={styles.cardTitle}>Device Authorization</Text>
-              <Text style={styles.cardSubtitle}>
-                Please enter your mobile number to securely sign in or register your active store terminal.
-              </Text>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Device Authorization</Text>
+            <Text style={styles.cardSubtitle}>
+              Please enter your mobile number to securely sign in to your store.
+            </Text>
 
-              <View style={styles.inputLabelRow}>
-                <Text style={styles.inputLabel}>Mobile Number</Text>
-                <Text style={styles.hintMarker}>Hint: 071 713 3074</Text>
-              </View>
+            <Text style={styles.inputLabel}>Mobile Number</Text>
 
-              <View style={styles.phoneInputRow}>
-                <View style={styles.countryCodeBox}>
-                  <Text style={styles.countryCodeText}>🇱🇰 +94</Text>
-                </View>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="71 713 3074"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="phone-pad"
-                  value={phone}
-                  onChangeText={setPhone}
-                  maxLength={12}
-                />
+            <View style={styles.phoneInputRow}>
+              <View style={styles.countryCodeBox}>
+                <Text style={styles.countryCodeText}>🇱🇰 +94</Text>
               </View>
+              <TextInput
+                style={styles.textInput}
+                placeholder="71 713 3074"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+                maxLength={12}
+              />
             </View>
 
             <TouchableOpacity
@@ -195,66 +212,61 @@ export default function NumberInputRoute() {
         )}
 
         {step === "otp" && (
-          <View style={[styles.card, styles.cardFixed]}>
-            <View>
-              <TouchableOpacity
-                style={styles.backBtn}
-                onPress={() => setStep("phone")}
-                activeOpacity={0.7}
-              >
-                <Feather name="arrow-left" size={16} color={TOKENS.primary} />
-                <Text style={styles.backBtnText}>Change number</Text>
-              </TouchableOpacity>
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => setStep("phone")}
+              activeOpacity={0.7}
+            >
+              <Feather name="arrow-left" size={16} color={TOKENS.primary} />
+              <Text style={styles.backBtnText}>Change number</Text>
+            </TouchableOpacity>
 
-              <Text style={styles.cardTitle}>Enter Verification Code</Text>
-              <Text style={styles.cardSubtitle}>
-                We sent a 4-digit terminal authorization code to +94 {phone}. Enter it below to unlock.
-              </Text>
+            <Text style={styles.cardTitle}>Enter Verification Code</Text>
+            <Text style={styles.cardSubtitle}>
+              We sent a 4-digit verification code to +94 {phone}. Enter it below to unlock.
+            </Text>
 
-              <View style={styles.inputLabelRow}>
-                <Text style={styles.inputLabel}>4-Digit OTP Code</Text>
-                <Text style={styles.hintMarker}>Hint: 1111</Text>
-              </View>
+            <Text style={styles.inputLabel}>4-Digit OTP Code</Text>
 
-              <View style={styles.otpContainer}>
-                {/* Hidden absolute invisible TextInput for native keyboard */}
-                <TextInput
-                  style={styles.hiddenOtpInput}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  value={otp}
-                  onChangeText={(val) => {
-                    setOtp(val);
-                    if (otpError) setOtpError(false);
-                    if (val.length === 4) {
-                      handleVerifyOtp(val);
-                    }
-                  }}
-                  autoFocus={true}
-                />
+            <View style={styles.otpContainer}>
+              {/* Hidden absolute invisible TextInput for native keyboard */}
+              <TextInput
+                style={styles.hiddenOtpInput}
+                keyboardType="number-pad"
+                maxLength={4}
+                value={otp}
+                onChangeText={(val) => {
+                  setOtp(val);
+                  if (otpError) setOtpError(false);
+                  if (val.length === 4) {
+                    handleVerifyOtp(val);
+                  }
+                }}
+                autoFocus={true}
+              />
 
-                {/* 4 Premium individual digit slot boxes */}
-                <View style={styles.otpSlotsRow}>
-                  {[0, 1, 2, 3].map((idx) => {
-                    const char = otp[idx] || "";
-                    const isFocused = otp.length === idx;
-                    return (
-                      <View
-                        key={idx}
-                        style={[
-                          styles.otpSlotBox,
-                          char !== "" && styles.otpSlotBoxFilled,
-                          isFocused && styles.otpSlotBoxFocused,
-                          otpError && styles.otpSlotBoxError,
-                        ]}
-                      >
-                        <Text style={[styles.otpSlotText, otpError && styles.otpSlotTextError]}>
-                          {char}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
+              {/* 4 Premium individual digit slot boxes */}
+              <View style={styles.otpSlotsRow}>
+                {[0, 1, 2, 3].map((idx) => {
+                  const char = otp[idx] || "";
+                  const isFocused = otp.length === idx;
+                  return (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.otpSlotBox,
+                        char !== "" && styles.otpSlotBoxFilled,
+                        isFocused && styles.otpSlotBoxFocused,
+                        otpError && styles.otpSlotBoxError,
+                      ]}
+                    >
+                      <Text style={[styles.otpSlotText, otpError && styles.otpSlotTextError]}>
+                        {char}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
 
@@ -422,10 +434,6 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
   },
-  cardFixed: {
-    height: 310,
-    justifyContent: "space-between",
-  },
   cardTitle: {
     fontSize: 18,
     fontWeight: "bold",
@@ -450,6 +458,7 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    marginBottom: 8,
   },
   hintMarker: {
     fontSize: 11,

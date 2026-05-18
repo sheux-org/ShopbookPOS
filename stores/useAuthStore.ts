@@ -8,6 +8,7 @@ interface AuthState {
   session: Session | null;
   user: User | null;
   isLoggedIn: boolean;
+  userPhone: string | null;
   activeBusinessId: string | null;
   activeEmployeeId: string | null;
   setSession: (session: Session | null) => void;
@@ -25,6 +26,7 @@ export const useAuthStore = create<AuthState>()(
       session: null,
       user: null,
       isLoggedIn: false,
+      userPhone: null,
       activeBusinessId: null,
       activeEmployeeId: null,
       setSession: (session) => set({ session }),
@@ -33,18 +35,18 @@ export const useAuthStore = create<AuthState>()(
       setActiveEmployeeId: (activeEmployeeId) => set({ activeEmployeeId }),
       login: (phone, otp) => {
         const cleanPhone = phone.replace(/\s+/g, "");
-        if ((cleanPhone === "0717133074" || cleanPhone === "717133074") && otp === "1111") {
-          set({ isLoggedIn: true });
+        if (otp === "1111") {
+          set({ isLoggedIn: true, userPhone: cleanPhone });
           return true;
         }
         return false;
       },
       logout: () => {
-        set({ isLoggedIn: false, session: null, user: null });
+        set({ isLoggedIn: false, session: null, user: null, userPhone: null });
         useCart.getState().clearCart();
       },
       signOut: () => {
-        set({ session: null, user: null, activeBusinessId: null, activeEmployeeId: null, isLoggedIn: false });
+        set({ session: null, user: null, activeBusinessId: null, activeEmployeeId: null, isLoggedIn: false, userPhone: null });
         useCart.getState().clearCart();
       },
     }),
