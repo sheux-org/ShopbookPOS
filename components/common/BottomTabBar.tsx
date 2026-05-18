@@ -38,11 +38,15 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
             activeOpacity={0.7}
             onPress={() => onTabPress?.(tab.id)}
           >
+            {/* Sleek active indicator bar */}
+            <View style={[styles.indicator, isActive && styles.indicatorActive]} />
+
             <Feather
               // @ts-ignore dynamic mapping is safe here for known feather icons
               name={tab.icon}
               size={22}
               color={isActive ? TOKENS.primary : TOKENS.muted}
+              style={{ marginTop: 8 }}
             />
             <Text
               style={[
@@ -67,12 +71,25 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
     borderTopWidth: 1,
     borderTopColor: TOKENS.border,
-    paddingTop: 10,
+    paddingTop: 6,
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
+    position: "relative",
+  },
+  indicator: {
+    position: "absolute",
+    top: -6,
+    width: 58,
+    height: 3,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    backgroundColor: "transparent",
+  },
+  indicatorActive: {
+    backgroundColor: TOKENS.primary,
   },
   label: {
     fontSize: 11,
