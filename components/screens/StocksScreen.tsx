@@ -165,7 +165,7 @@ export const StocksScreen: React.FC = () => {
         <Text style={styles.headerTitle}>Stocks Manager</Text>
 
         <View style={styles.headerRightActions}>
-          {cartCount > 0 && (
+          {cartCount > 0 ? (
             <TouchableOpacity
               style={styles.headerCartBtn}
               activeOpacity={0.8}
@@ -176,15 +176,9 @@ export const StocksScreen: React.FC = () => {
                 <Text style={styles.headerCartBadgeText}>{cartCount}</Text>
               </View>
             </TouchableOpacity>
+          ) : (
+            <View style={styles.placeholderWidth} />
           )}
-
-          <TouchableOpacity
-            style={styles.scanIconBtn}
-            activeOpacity={0.85}
-            onPress={() => router.push("/scan")}
-          >
-            <Ionicons name="barcode-outline" size={20} color={TOKENS.dark} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -728,12 +722,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "bold",
   },
-  scanIconBtn: {
+  placeholderWidth: {
     width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });

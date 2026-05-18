@@ -40,11 +40,35 @@ let catalogProducts: CatalogProduct[] = [
   { id: "10", name: "Bread Loaf", price: 110, category: "grocery", icon: "🍞", stockText: "12 in stock", stockType: "normal", stockCount: 12, unitType: "Pieces", costPrice: 85 },
 ];
 
+export interface Business {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+}
+
+const BUSINESSES: Business[] = [
+  { id: "1", name: "Shopbook Colombo Store", address: "142 Galle Road, Colombo 03", phone: "+94 11 234 5678" },
+  { id: "2", name: "Shopbook Kandy Outlet", address: "88 Peradeniya Road, Kandy", phone: "+94 81 234 5678" },
+  { id: "3", name: "Shopbook Galle Branch", address: "55 Main Street, Galle Fort", phone: "+94 91 234 5678" },
+];
+
+let activeBusiness: Business = BUSINESSES[0];
+
 const listeners = new Set<() => void>();
 
 export const cartState = {
   getCart: () => cartItems,
   getCatalogProducts: () => catalogProducts,
+  getBusinesses: () => BUSINESSES,
+  getActiveBusiness: () => activeBusiness,
+  setActiveBusiness: (id: string) => {
+    const found = BUSINESSES.find((b) => b.id === id);
+    if (found) {
+      activeBusiness = found;
+      listeners.forEach((l) => l());
+    }
+  },
   
   addCartItem: (name: string, price: number, icon?: string, sku?: string, stock?: number) => {
     const existing = cartItems.find((item) => item.name === name);

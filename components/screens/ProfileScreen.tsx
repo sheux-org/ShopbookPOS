@@ -71,20 +71,7 @@ export const ProfileScreen: React.FC = () => {
         <Text style={styles.headerTitle}>Profile Settings</Text>
 
         <View style={styles.headerRightActions}>
-          {cartCount > 0 ? (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/cart")}
-            >
-              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{cartCount}</Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.placeholderWidth} />
-          )}
+          <View style={styles.placeholderWidth} />
         </View>
       </View>
 
@@ -109,28 +96,6 @@ export const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCol}>
-            <Text style={styles.statVal}>28</Text>
-            <Text style={styles.statLabel}>Sales Today</Text>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          <View style={styles.statCol}>
-            <Text style={styles.statVal}>Rs. 14.5k</Text>
-            <Text style={styles.statLabel}>Daily Volume</Text>
-          </View>
-
-          <View style={styles.statDivider} />
-
-          <View style={styles.statCol}>
-            <Text style={styles.statVal}>Active</Text>
-            <Text style={styles.statLabel}>Terminal</Text>
-          </View>
-        </View>
-
         {/* Setting options list group */}
         <View style={styles.optionsGroup}>
           <Text style={styles.groupHeader}>Business Settings</Text>
@@ -139,7 +104,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => Alert.alert("Store Details", "Shopbook retail POS terminal #2041 active in Colombo main branch.")}
+            onPress={() => router.push("/business-details")}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#E8F0FE" }]}>
               <Feather name="home" size={18} color={TOKENS.primary} />
@@ -147,38 +112,6 @@ export const ProfileScreen: React.FC = () => {
             <View style={styles.optionTextWrapper}>
               <Text style={styles.optionTitle}>Store Details</Text>
               <Text style={styles.optionSubtitle}>Configure business logo, receipt details & addresses</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
-          </TouchableOpacity>
-
-          {/* Option: Printers */}
-          <TouchableOpacity
-            style={styles.optionRow}
-            activeOpacity={0.7}
-            onPress={() => Alert.alert("Thermal Printers", "Standard 58mm Thermal Printer is connected via Bluetooth.")}
-          >
-            <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
-              <Feather name="printer" size={18} color="#137333" />
-            </View>
-            <View style={styles.optionTextWrapper}>
-              <Text style={styles.optionTitle}>Bluetooth Printers</Text>
-              <Text style={styles.optionSubtitle}>thermal printers and cash drawers settings</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
-          </TouchableOpacity>
-
-          {/* Option: Terminals */}
-          <TouchableOpacity
-            style={styles.optionRow}
-            activeOpacity={0.7}
-            onPress={() => Alert.alert("Card Terminals", "Sunmi card reader scanner linked successfully.")}
-          >
-            <View style={[styles.optionIconBox, { backgroundColor: "#FEF7E0" }]}>
-              <Feather name="credit-card" size={18} color="#B06000" />
-            </View>
-            <View style={styles.optionTextWrapper}>
-              <Text style={styles.optionTitle}>Payment Terminals</Text>
-              <Text style={styles.optionSubtitle}>Status of card reader connected terminals</Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>

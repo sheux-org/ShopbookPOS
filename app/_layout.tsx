@@ -13,6 +13,7 @@ export default function RootLayout() {
         <Stack.Screen name="(pos)/search" />
         <Stack.Screen name="(stocks)/add-item" />
         <Stack.Screen name="(stocks)/scan" />
+        <Stack.Screen name="business-details" />
       </Stack>
     </SafeAreaProvider>
   );

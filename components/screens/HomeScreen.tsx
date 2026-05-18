@@ -8,13 +8,15 @@ import {
   FlatList,
   Platform,
   TextInput,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { BottomTabBar } from "../common/BottomTabBar";
-import { cartState } from "../data/cartState";
+import { cartState, Business } from "../data/cartState";
 
 interface HomeProduct {
   id: string;
@@ -48,11 +50,16 @@ export const HomeScreen: React.FC = () => {
   const [productsList, setProductsList] = useState<HomeProduct[]>([]);
   const [cartItemsCount, setCartItemsCount] = useState(0);
 
+  // Active Business dropdown states
+  const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
+  const [isBusinessSheetOpen, setIsBusinessSheetOpen] = useState(false);
+
   useEffect(() => {
     const syncState = () => {
       const cart = cartState.getCart();
       setCartItemsCount(cart.reduce((sum, item) => sum + item.quantity, 0));
       setProductsList(cartState.getCatalogProducts());
+      setActiveBusiness(cartState.getActiveBusiness());
     };
 
     syncState();
@@ -108,7 +115,16 @@ export const HomeScreen: React.FC = () => {
       <View style={styles.header}>
         <View style={styles.headerTextWrapper}>
           <Text style={styles.headerTitle}>Mini POS</Text>
-          <Text style={styles.headerSubtitle}>Product Grid View</Text>
+          <TouchableOpacity
+            style={styles.businessSwitcherBtn}
+            activeOpacity={0.7}
+            onPress={() => setIsBusinessSheetOpen(true)}
+          >
+            <Text style={styles.headerSubtitle} numberOfLines={1}>
+              🏢 {activeBusiness.name}
+            </Text>
+            <Feather name="chevron-down" size={13} color={TOKENS.muted} style={{ marginLeft: 3 }} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.headerActions}>
@@ -265,6 +281,67 @@ export const HomeScreen: React.FC = () => {
       >
         <Ionicons name="barcode-outline" size={24} color={TOKENS.card} />
       </TouchableOpacity>
+
+      {/* Premium Business Swapping Bottom Sheet */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isBusinessSheetOpen}
+        onRequestClose={() => setIsBusinessSheetOpen(false)}
+      >
+        <View style={styles.sheetOverlay}>
+          <Pressable style={styles.sheetDismissArea} onPress={() => setIsBusinessSheetOpen(false)} />
+          <View style={styles.sheetContent}>
+            {/* Sheet Handle */}
+            <View style={styles.sheetHandle} />
+
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Select Active Business</Text>
+              <TouchableOpacity
+                onPress={() => setIsBusinessSheetOpen(false)}
+                style={styles.sheetCloseBtn}
+              >
+                <Feather name="x" size={20} color={TOKENS.dark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.sheetScrollContent}>
+              {cartState.getBusinesses().map((biz) => {
+                const isSelected = activeBusiness.id === biz.id;
+                return (
+                  <TouchableOpacity
+                    key={biz.id}
+                    style={[
+                      styles.bizCard,
+                      isSelected && styles.bizCardSelected
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      cartState.setActiveBusiness(biz.id);
+                      setIsBusinessSheetOpen(false);
+                      triggerToast(`Switched to ${biz.name}`);
+                    }}
+                  >
+                    <View style={styles.bizCardLeft}>
+                      <View style={[styles.bizIconBox, isSelected && styles.bizIconBoxActive]}>
+                        <Feather name="home" size={18} color={isSelected ? TOKENS.card : TOKENS.primary} />
+                      </View>
+                      <View style={styles.bizDetails}>
+                        <Text style={styles.bizName}>{biz.name}</Text>
+                        <Text style={styles.bizAddress}>{biz.address}</Text>
+                        <Text style={styles.bizPhone}>{biz.phone}</Text>
+                      </View>
+                    </View>
+                    {isSelected && (
+                      <Feather name="check-circle" size={20} color={TOKENS.success} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -550,5 +627,105 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
     fontSize: 9,
     fontWeight: "bold",
+  },
+  businessSwitcherBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+    alignSelf: "flex-start",
+  },
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-end",
+  },
+  sheetDismissArea: {
+    flex: 1,
+  },
+  sheetContent: {
+    backgroundColor: TOKENS.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "80%",
+    paddingBottom: 24,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: TOKENS.border,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 10,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+  },
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  sheetCloseBtn: {
+    padding: 4,
+  },
+  sheetScrollContent: {
+    padding: 20,
+    gap: 12,
+  },
+  bizCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: TOKENS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 14,
+  },
+  bizCardSelected: {
+    borderColor: TOKENS.primary,
+    backgroundColor: "#F4F7FF",
+  },
+  bizCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+  bizIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: TOKENS.background,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  bizIconBoxActive: {
+    backgroundColor: TOKENS.primary,
+  },
+  bizDetails: {
+    flex: 1,
+    gap: 2,
+  },
+  bizName: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  bizAddress: {
+    fontSize: 11,
+    color: TOKENS.muted,
+  },
+  bizPhone: {
+    fontSize: 11,
+    color: TOKENS.muted,
   },
 });
