@@ -43,14 +43,15 @@ let catalogProducts: CatalogProduct[] = [
 export interface Business {
   id: string;
   name: string;
+  category: string;
   address: string;
   phone: string;
 }
 
 const BUSINESSES: Business[] = [
-  { id: "1", name: "Shopbook Colombo Store", address: "142 Galle Road, Colombo 03", phone: "+94 11 234 5678" },
-  { id: "2", name: "Shopbook Kandy Outlet", address: "88 Peradeniya Road, Kandy", phone: "+94 81 234 5678" },
-  { id: "3", name: "Shopbook Galle Branch", address: "55 Main Street, Galle Fort", phone: "+94 91 234 5678" },
+  { id: "1", name: "Shopbook Electronics", category: "Electronics & Gadgets", address: "142 Galle Road, Colombo 03", phone: "+94 11 234 5678" },
+  { id: "2", name: "Shopbook Apparel", category: "Clothing & Fashion", address: "88 Peradeniya Road, Kandy", phone: "+94 81 234 5678" },
+  { id: "3", name: "Shopbook Groceries", category: "Supermarket & Groceries", address: "55 Main Street, Galle Fort", phone: "+94 91 234 5678" },
 ];
 
 let activeBusiness: Business = BUSINESSES[0];
@@ -80,10 +81,10 @@ export const cartState = {
     }
     return false;
   },
-  register: (name: string, address: string, phone: string) => {
+  register: (name: string, address: string, phone: string, category: string = "General Retail") => {
     // Dynamically create and register a new store/business
     const newId = String(BUSINESSES.length + 1);
-    const newBiz: Business = { id: newId, name, address, phone };
+    const newBiz: Business = { id: newId, name, category, address, phone };
     BUSINESSES.push(newBiz);
     activeBusiness = newBiz;
     loggedIn = true;

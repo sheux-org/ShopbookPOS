@@ -36,18 +36,6 @@ export const ProfileScreen: React.FC = () => {
     setTimeout(() => setToastMessage(null), 1500);
   };
 
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "home") {
-      router.push("/");
-    } else if (tabId === "pos") {
-      router.push("/pos");
-    } else if (tabId === "stocks") {
-      router.push("/stocks");
-    } else if (tabId !== "profile") {
-      triggerToast(`${tabId.toUpperCase()} view tab selected`);
-    }
-  };
-
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
       {/* Toast Notification */}
@@ -112,6 +100,38 @@ export const ProfileScreen: React.FC = () => {
             <View style={styles.optionTextWrapper}>
               <Text style={styles.optionTitle}>Store Details</Text>
               <Text style={styles.optionSubtitle}>Configure business logo, receipt details & addresses</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+          </TouchableOpacity>
+
+          {/* Option: Business Management */}
+          <TouchableOpacity
+            style={styles.optionRow}
+            activeOpacity={0.7}
+            onPress={() => router.push("/manage-businesses")}
+          >
+            <View style={[styles.optionIconBox, { backgroundColor: "#FEF7E0" }]}>
+              <Feather name="briefcase" size={18} color="#B06000" />
+            </View>
+            <View style={styles.optionTextWrapper}>
+              <Text style={styles.optionTitle}>Business Management</Text>
+              <Text style={styles.optionSubtitle}>Create and manage multiple businesses or branches</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+          </TouchableOpacity>
+
+          {/* Option: Staff Management */}
+          <TouchableOpacity
+            style={styles.optionRow}
+            activeOpacity={0.7}
+            onPress={() => router.push("/manage-staff")}
+          >
+            <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
+              <Feather name="users" size={18} color="#137333" />
+            </View>
+            <View style={styles.optionTextWrapper}>
+              <Text style={styles.optionTitle}>Staff Management</Text>
+              <Text style={styles.optionSubtitle}>Add and configure Admins, Managers & Cashiers</Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>

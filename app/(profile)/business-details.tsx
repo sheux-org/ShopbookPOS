@@ -10,8 +10,8 @@ import {
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TOKENS } from "../constants/tokens";
-import { cartState, Business } from "../components/data/cartState";
+import { TOKENS } from "../../constants/tokens";
+import { cartState, Business } from "../../components/data/cartState";
 
 export default function BusinessDetailsRoute() {
   const insets = useSafeAreaInsets();
@@ -49,7 +49,7 @@ export default function BusinessDetailsRoute() {
             <Feather name="home" size={28} color={TOKENS.primary} />
           </View>
           <Text style={styles.storeName}>{activeBusiness.name}</Text>
-          <Text style={styles.storeStatus}>Active Shopbook POS Terminal</Text>
+          <Text style={styles.storeStatus}>{activeBusiness.category} POS Terminal</Text>
         </View>
 
         {/* Info Group */}
@@ -62,8 +62,8 @@ export default function BusinessDetailsRoute() {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Terminal ID</Text>
-            <Text style={styles.infoVal}>#2041 Colombo Branch</Text>
+            <Text style={styles.infoLabel}>Business Type</Text>
+            <Text style={styles.infoVal}>{activeBusiness.category}</Text>
           </View>
 
           <View style={styles.infoRow}>
