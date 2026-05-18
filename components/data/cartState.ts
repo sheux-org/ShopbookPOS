@@ -19,6 +19,8 @@ export interface CatalogProduct {
   stockCount: number;
   unitType?: string;
   costPrice?: number;
+  quickCode?: string;
+  barcode?: string;
 }
 
 let cartItems: CartItem[] = [

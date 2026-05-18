@@ -8,6 +8,7 @@ import {
   TextInput,
   Platform,
   Alert,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -73,6 +74,10 @@ export const StocksScreen: React.FC = () => {
   const [formSalesPrice, setFormSalesPrice] = useState("");
   const [formStockIn, setFormStockIn] = useState("");
   const [formLowStock, setFormLowStock] = useState("");
+  const [formQuickCode, setFormQuickCode] = useState("");
+  const [formBarcode, setFormBarcode] = useState("");
+  const [formImage, setFormImage] = useState("🍎");
+  const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
     const updateCount = () => {
@@ -93,9 +98,18 @@ export const StocksScreen: React.FC = () => {
     triggerToast(`Added ${name} to checkout invoice`);
   };
 
+  const triggerBarcodeScanner = () => {
+    setIsScanning(true);
+  };
+
   const handleSaveProduct = () => {
     if (!formName || !formSalesPrice || !formStockIn) {
       Alert.alert("Required Fields Missing", "Please enter product name, selling price, and initial stock quantity.");
+      return;
+    }
+
+    if (!formQuickCode && !formBarcode) {
+      Alert.alert("Identification Required", "Please enter at least either a Quick Code or a Barcode to identify this product.");
       return;
     }
 
@@ -114,10 +128,12 @@ export const StocksScreen: React.FC = () => {
       name: formName,
       price: priceNum,
       category: formCategory,
-      icon: CATEGORY_ICONS[formCategory] || "📦",
+      icon: formImage || CATEGORY_ICONS[formCategory] || "📦",
       stockCount: stockCount,
       unitType: formUnitType,
       costPrice: costNum,
+      quickCode: formQuickCode || undefined,
+      barcode: formBarcode || undefined,
     });
 
     triggerToast(`Product "${formName}" saved to catalog!`);
@@ -128,6 +144,9 @@ export const StocksScreen: React.FC = () => {
     setFormSalesPrice("");
     setFormStockIn("");
     setFormLowStock("");
+    setFormQuickCode("");
+    setFormBarcode("");
+    setFormImage("🍎");
   };
 
   const handleTabPress = (tabId: string) => {
@@ -218,6 +237,41 @@ export const StocksScreen: React.FC = () => {
                 value={formName}
                 onChangeText={setFormName}
               />
+            </View>
+
+            {/* Field: Quick Code & Barcode Row */}
+            <View style={styles.fieldColumnsRow}>
+              <View style={styles.flexField}>
+                <Text style={styles.fieldLabel}>Quick Code</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. QC-302"
+                  placeholderTextColor="#9CA3AF"
+                  value={formQuickCode}
+                  onChangeText={setFormQuickCode}
+                />
+              </View>
+
+              <View style={styles.flexField}>
+                <Text style={styles.fieldLabel}>Barcode</Text>
+                <View style={styles.barcodeInputContainer}>
+                  <TextInput
+                    style={styles.barcodeInput}
+                    placeholder="Type or Scan 890..."
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    value={formBarcode}
+                    onChangeText={setFormBarcode}
+                  />
+                  <TouchableOpacity
+                    style={styles.barcodeScanBtn}
+                    activeOpacity={0.8}
+                    onPress={triggerBarcodeScanner}
+                  >
+                    <Ionicons name="scan-outline" size={15} color={TOKENS.primary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
 
             {/* Field: Category Chips selector */}
@@ -316,6 +370,57 @@ export const StocksScreen: React.FC = () => {
               </View>
             </View>
 
+            {/* Field: Product Image Picker */}
+            <View style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>Product Image / Icon *</Text>
+              <Text style={styles.fieldHelpText}>Select an image/emoji representing the product catalog icon</Text>
+              
+              <View style={styles.imagePickerContainer}>
+                {/* Current Active Preview */}
+                <View style={styles.imagePreviewBox}>
+                  <Text style={styles.imagePreviewText}>{formImage}</Text>
+                </View>
+                
+                {/* Horizontal Emojis selector list */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.imageOptionsScroll}
+                >
+                  {["🍎", "🥛", "🥤", "🍪", "🧼", "🍞", "🥚", "🌾", "🥣", "🧴", "🍫", "🥦", "🥩", "🧅", "🍌", "🥫", "🔋"].map((emoji) => {
+                    const isSelected = formImage === emoji;
+                    return (
+                      <TouchableOpacity
+                        key={emoji}
+                        style={[
+                          styles.imageOptionChip,
+                          isSelected && styles.imageOptionChipActive
+                        ]}
+                        onPress={() => setFormImage(emoji)}
+                      >
+                        <Text style={styles.imageOptionText}>{emoji}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                  
+                  {/* Simulated Gallery custom upload box */}
+                  <TouchableOpacity
+                    style={styles.imageOptionChipUpload}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      const mockCustoms = ["🍕", "🍔", "🍟", "🍩", "🍦", "🍗", "🍣", "🍇"];
+                      const picked = mockCustoms[Math.floor(Math.random() * mockCustoms.length)];
+                      setFormImage(picked);
+                      triggerToast("Simulated Photo uploaded successfully! 📸");
+                    }}
+                  >
+                    <Feather name="camera" size={14} color={TOKENS.primary} />
+                    <Text style={styles.imageUploadText}>Upload</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </View>
+
             {/* Submit Button */}
             <TouchableOpacity
               style={styles.submitBtn}
@@ -385,8 +490,64 @@ export const StocksScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-
-
+      {/* SIMULATED HIGH-FIDELITY BARCODE SCANNER OVERLAY MODAL */}
+      <Modal
+        visible={isScanning}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsScanning(false)}
+      >
+        <View style={styles.scannerBg}>
+          <View style={styles.scannerCard}>
+            <View style={styles.scannerHeaderRow}>
+              <Text style={styles.scannerTitle}>📷 Barcode Scanner Active</Text>
+              <TouchableOpacity
+                style={styles.closeScannerBtn}
+                onPress={() => setIsScanning(false)}
+              >
+                <Feather name="x" size={20} color={TOKENS.dark} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.scannerInstruction}>
+              Align the retail product barcode within the viewfinder to automatically scan and catalog
+            </Text>
+            
+            {/* Viewfinder area with blinking animation and moving laser line */}
+            <View style={styles.scannerViewfinder}>
+              {/* Four corners */}
+              <View style={[styles.viewfinderCorner, styles.cornerTL]} />
+              <View style={[styles.viewfinderCorner, styles.cornerTR]} />
+              <View style={[styles.viewfinderCorner, styles.cornerBL]} />
+              <View style={[styles.viewfinderCorner, styles.cornerBR]} />
+              
+              {/* Moving Laser line */}
+              <View style={styles.scannerLaserLine} />
+              
+              <Text style={styles.scanningText}>SCANNING...</Text>
+            </View>
+            
+            <TouchableOpacity
+              style={styles.scannerForceScanBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                const mockBarcodes = [
+                  "8901030777551",
+                  "501234567890",
+                  "4902430582766",
+                  "7622300744961",
+                ];
+                const randomBarcode = mockBarcodes[Math.floor(Math.random() * mockBarcodes.length)];
+                setFormBarcode(randomBarcode);
+                setIsScanning(false);
+                triggerToast(`Barcode Scanned: ${randomBarcode} ✅`);
+              }}
+            >
+              <Text style={styles.forceScanText}>⚡ Instant Capture</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
@@ -727,5 +888,218 @@ const styles = StyleSheet.create({
   },
   placeholderWidth: {
     width: 38,
+  },
+  barcodeInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 8,
+    height: 38,
+    paddingHorizontal: 8,
+  },
+  barcodeInput: {
+    flex: 1,
+    fontSize: 13,
+    color: TOKENS.dark,
+    padding: 0,
+  },
+  barcodeScanBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: TOKENS.lightBlue,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+  },
+  fieldHelpText: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    marginBottom: 4,
+  },
+  imagePickerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 4,
+  },
+  imagePreviewBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1.5,
+    borderColor: TOKENS.accentBlue,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  imagePreviewText: {
+    fontSize: 28,
+  },
+  imageOptionsScroll: {
+    alignItems: "center",
+    gap: 8,
+    paddingRight: 16,
+  },
+  imageOptionChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+  },
+  imageOptionChipActive: {
+    backgroundColor: TOKENS.lightBlue,
+    borderColor: TOKENS.primary,
+    borderWidth: 1.5,
+  },
+  imageOptionText: {
+    fontSize: 20,
+  },
+  imageOptionChipUpload: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+  },
+  imageUploadText: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: TOKENS.primary,
+  },
+  scannerBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  scannerCard: {
+    backgroundColor: TOKENS.card,
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    alignItems: "center",
+    gap: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  scannerHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+  },
+  scannerTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  closeScannerBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scannerInstruction: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  scannerViewfinder: {
+    width: 220,
+    height: 140,
+    borderWidth: 1,
+    borderColor: "rgba(37, 99, 235, 0.3)",
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
+  },
+  viewfinderCorner: {
+    position: "absolute",
+    width: 16,
+    height: 16,
+    borderColor: TOKENS.primary,
+  },
+  cornerTL: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+  },
+  cornerTR: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+  },
+  cornerBL: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+  },
+  cornerBR: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+  },
+  scannerLaserLine: {
+    position: "absolute",
+    width: "90%",
+    height: 2,
+    backgroundColor: "#EF4444",
+    top: "50%",
+  },
+  scanningText: {
+    position: "absolute",
+    bottom: 10,
+    fontSize: 10,
+    fontWeight: "bold",
+    color: TOKENS.primary,
+    letterSpacing: 1.5,
+  },
+  scannerForceScanBtn: {
+    backgroundColor: TOKENS.primary,
+    height: 40,
+    borderRadius: 20,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  forceScanText: {
+    color: TOKENS.card,
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });
