@@ -195,8 +195,7 @@ export const ScanScreen: React.FC = () => {
         </ScrollView>
       </View>
 
-      {/* Shared bottom multi-module navigation bar */}
-      <BottomTabBar activeTab={undefined} onTabPress={handleTabPress} />
+
     </View>
   );
 };

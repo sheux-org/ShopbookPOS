@@ -1,12 +1,12 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { ScanScreen } from "../components/screens/ScanScreen";
+import { PosScreen } from "../../components/screens/PosScreen";
 
-export default function ScanRoute() {
+export default function PosRoute() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScanScreen />
+      <PosScreen />
     </>
   );
 }

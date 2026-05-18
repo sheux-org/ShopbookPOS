@@ -265,9 +265,6 @@ export const HomeScreen: React.FC = () => {
       >
         <Ionicons name="barcode-outline" size={24} color={TOKENS.card} />
       </TouchableOpacity>
-
-      {/* Shared bottom multi-module navigation bar */}
-      <BottomTabBar activeTab="home" onTabPress={handleTabPress} />
     </View>
   );
 };

@@ -229,8 +229,7 @@ export const CatalogScreen: React.FC = () => {
 
 
 
-      {/* Reusable Persistent Bottom Nav Bar */}
-      <BottomTabBar activeTab={undefined} onTabPress={handleTabPress} />
+
     </View>
   );
 };

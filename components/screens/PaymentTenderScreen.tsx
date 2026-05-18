@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 
-type TenderMethod = "cash" | "card" | "credit";
+type TenderMethod = "cash" | "card";
 
 export const PaymentTenderScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -88,7 +88,7 @@ export const PaymentTenderScreen: React.FC = () => {
 
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitle}>
-            {activeMethod === "cash" ? "Cash" : activeMethod === "card" ? "Card Payment" : "On Credit"}
+            {activeMethod === "cash" ? "Cash" : "Card Payment"}
           </Text>
           <Text style={styles.headerSubtitle}>Total · Rs. {totalAmount.toLocaleString()}.00</Text>
         </View>
@@ -117,15 +117,7 @@ export const PaymentTenderScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.selectorTab, activeMethod === "credit" && styles.selectorTabActive]}
-          onPress={() => { setActiveMethod("credit"); setTenderedVal(""); }}
-        >
-          <Feather name="book-open" size={14} color={activeMethod === "credit" ? TOKENS.primary : TOKENS.muted} />
-          <Text style={[styles.selectorTabText, activeMethod === "credit" && styles.selectorTabTextActive]}>
-            On Credit
-          </Text>
-        </TouchableOpacity>
+
       </View>
 
       {/* Input Tender area & Change block exactly like Image 5 */}
@@ -148,18 +140,35 @@ export const PaymentTenderScreen: React.FC = () => {
         )}
 
         {activeMethod === "card" && (
-          <View style={styles.cardPaymentMethodArea}>
-            <Ionicons name="card" size={44} color={TOKENS.primary} />
-            <Text style={styles.cardAreaTitle}>Ready to swipe or insert card</Text>
-            <Text style={styles.cardAreaSubtitle}>Swipe or tap client card on connected card reader reader terminal.</Text>
-          </View>
-        )}
+          <View style={styles.cardPaymentContainer}>
+            {/* Visual Simulated Credit Card */}
+            <View style={styles.simCard}>
+              <View style={styles.simCardHeader}>
+                <Feather name="wifi" size={18} color={TOKENS.card} />
+                <Ionicons name="logo-bitcoin" size={20} color={TOKENS.card} style={{opacity: 0.8}} />
+              </View>
+              
+              <Text style={styles.simCardNumber}>••••  ••••  ••••  4021</Text>
+              
+              <View style={styles.simCardFooter}>
+                <View>
+                  <Text style={styles.simCardHolderLabel}>CARDHOLDER</Text>
+                  <Text style={styles.simCardHolderName}>Shopbook Customer</Text>
+                </View>
+                <View style={styles.simCardBrandBadge}>
+                  <View style={[styles.simCardBrandCircle, {backgroundColor: TOKENS.warning, marginRight: -8}]} />
+                  <View style={[styles.simCardBrandCircle, {backgroundColor: TOKENS.error}]} />
+                </View>
+              </View>
+            </View>
 
-        {activeMethod === "credit" && (
-          <View style={styles.creditPaymentMethodArea}>
-            <Ionicons name="people-circle" size={44} color="#B06000" />
-            <Text style={styles.cardAreaTitle}>Attach Customer Book Account</Text>
-            <Text style={styles.cardAreaSubtitle}>The total outstanding amount of Rs. {totalAmount.toLocaleString()} will be debited to active book account.</Text>
+            <View style={styles.cardStatusBox}>
+              <Feather name="loader" size={22} color={TOKENS.primary} />
+              <Text style={styles.cardAreaTitle}>Swipe, Tap, or Insert Card</Text>
+              <Text style={styles.cardAreaSubtitle}>
+                Connected POS terminal is ready for payment of Rs. {totalAmount.toLocaleString()}
+              </Text>
+            </View>
           </View>
         )}
       </View>
@@ -420,13 +429,67 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14,
   },
-  cardPaymentMethodArea: {
+  cardPaymentContainer: {
+    width: "100%",
     alignItems: "center",
-    gap: 12,
+    gap: 20,
   },
-  creditPaymentMethodArea: {
+  simCard: {
+    backgroundColor: "#0F172A",
+    width: "90%",
+    aspectRatio: 1.586,
+    borderRadius: 16,
+    padding: 20,
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  simCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 12,
+  },
+  simCardNumber: {
+    color: TOKENS.card,
+    fontSize: 20,
+    fontWeight: "600",
+    letterSpacing: 2,
+    textAlign: "center",
+    marginVertical: 14,
+  },
+  simCardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  simCardHolderLabel: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 9,
+    fontWeight: "bold",
+    letterSpacing: 1,
+  },
+  simCardHolderName: {
+    color: TOKENS.card,
+    fontSize: 13,
+    fontWeight: "bold",
+    marginTop: 2,
+  },
+  simCardBrandBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  simCardBrandCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    opacity: 0.85,
+  },
+  cardStatusBox: {
+    alignItems: "center",
+    gap: 8,
   },
   cardAreaTitle: {
     fontSize: 16,

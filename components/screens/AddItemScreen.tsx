@@ -215,8 +215,7 @@ export const AddItemScreen: React.FC = () => {
 
 
 
-      {/* Shared bottom multi-module navigation bar */}
-      <BottomTabBar activeTab="pos" onTabPress={handleTabPress} />
+
     </View>
   );
 };

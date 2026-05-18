@@ -11,7 +11,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 
-type PaymentMethodType = "cash" | "card" | "credit";
+type PaymentMethodType = "cash" | "card";
 
 export const PaymentScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -120,34 +120,7 @@ export const PaymentScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
 
-        {/* On Credit Tile */}
-        <TouchableOpacity
-          style={[
-            styles.paymentTile,
-            selectedMethod === "credit" && styles.paymentTileActive,
-          ]}
-          activeOpacity={0.8}
-          onPress={() => handleSelectMethod("credit")}
-        >
-          <View style={[styles.iconWrapper, { backgroundColor: "#FEF7E0" }]}>
-            <Feather name="book-open" size={20} color="#B06000" />
-          </View>
 
-          <View style={styles.tileTextWrapper}>
-            <Text style={styles.tileTitle}>On Credit</Text>
-            <Text style={styles.tileSubtitle}>Add to customer book</Text>
-          </View>
-
-          <View style={styles.radioWrapper}>
-            {selectedMethod === "credit" ? (
-              <View style={styles.radioOuterSelected}>
-                <View style={styles.radioInnerSelected} />
-              </View>
-            ) : (
-              <View style={styles.radioUnselected} />
-            )}
-          </View>
-        </TouchableOpacity>
       </View>
 
       {/* Summary Box exactly matching Image 4 at bottom */}

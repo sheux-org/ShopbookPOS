@@ -236,8 +236,7 @@ export const ProfileScreen: React.FC = () => {
 
 
 
-      {/* Persistent Bottom multi-module navigation bar */}
-      <BottomTabBar activeTab="profile" onTabPress={handleTabPress} />
+
     </View>
   );
 };

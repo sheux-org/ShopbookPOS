@@ -1,12 +1,12 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { HomeScreen } from "../components/screens/HomeScreen";
+import { SearchScreen } from "../../components/screens/SearchScreen";
 
-export default function IndexRoute() {
+export default function SearchRoute() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <HomeScreen />
+      <SearchScreen />
     </>
   );
 }

@@ -45,7 +45,7 @@ export const PosScreen: React.FC = () => {
   const router = useRouter();
 
   // Mode Selection: 'quick_code' | 'scan' | 'search'
-  const [activeMode, setActiveMode] = useState<"quick_code" | "scan" | "search">("quick_code");
+  const [activeMode, setActiveMode] = useState<"quick_code" | "scan" | "search">("scan");
 
   // Sync state with shared cartState store
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
@@ -286,23 +286,8 @@ export const PosScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      {/* Dynamic Summary Bar before control panel */}
-      {invoiceItems.length > 0 && (
-        <TouchableOpacity
-          style={styles.summaryBarButton}
-          activeOpacity={0.85}
-          onPress={() => router.push("/cart")}
-        >
-          <View style={styles.summaryBarLeft}>
-            <Feather name="shopping-bag" size={16} color={TOKENS.card} style={styles.bagIcon} />
-            <Text style={styles.summaryLabelActive}>Proceed to Checkout</Text>
-          </View>
-          <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()} ➡️</Text>
-        </TouchableOpacity>
-      )}
-
       {/* Bottom Panel - Segmented Control, Input Mode View, Numpad */}
-      <View style={[styles.bottomPanel, { paddingBottom: Math.max(insets.bottom, 60) }]}>
+      <View style={[styles.bottomPanel, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         {/* Three-column Mode Buttons */}
         <View style={styles.segmentedControl}>
           <TouchableOpacity
@@ -347,7 +332,7 @@ export const PosScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.segmentButton}
-            onPress={() => router.push("/add-item")}
+            onPress={() => router.push("/search")}
             activeOpacity={0.8}
           >
             <Feather
@@ -358,7 +343,7 @@ export const PosScreen: React.FC = () => {
             <Text
               style={styles.segmentText}
             >
-              Search products...
+              Search
             </Text>
           </TouchableOpacity>
         </View>
@@ -539,10 +524,24 @@ export const PosScreen: React.FC = () => {
             </View>
           )}
         </View>
+
+        {/* Proceed to Checkout button placed perfectly below inputs */}
+        {invoiceItems.length > 0 && (
+          <TouchableOpacity
+            style={[styles.summaryBarButton, { marginTop: 12, marginBottom: 8 }]}
+            activeOpacity={0.85}
+            onPress={() => router.push("/cart")}
+          >
+            <View style={styles.summaryBarLeft}>
+              <Feather name="shopping-bag" size={16} color={TOKENS.card} style={styles.bagIcon} />
+              <Text style={styles.summaryLabelActive}>Proceed to Checkout</Text>
+            </View>
+            <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()} ➡️</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Shared bottom multi-module navigation bar */}
-      <BottomTabBar activeTab="pos" onTabPress={handleTabPress} />
+
     </View>
   );
 };
@@ -709,9 +708,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: TOKENS.primary,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginHorizontal: 12,
-    marginVertical: 6,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginVertical: 3,
     borderRadius: 10,
     shadowColor: TOKENS.primary,
     shadowOffset: { width: 0, height: 2 },
@@ -788,7 +787,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   modeContentWrapper: {
-    marginTop: 12,
+    marginTop: 6,
     paddingHorizontal: 16,
   },
   quickCodeBox: {
@@ -797,8 +796,8 @@ const styles = StyleSheet.create({
     borderColor: TOKENS.primary,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    height: 68,
+    paddingVertical: 6,
+    height: 52,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -812,25 +811,25 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
   quickCodeBoxLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: TOKENS.muted,
     fontWeight: "500",
   },
   codeTextRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 2,
-    height: 28,
+    marginTop: 1,
+    height: 22,
   },
   quickCodeVal: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "bold",
     color: TOKENS.dark,
     letterSpacing: 1.5,
   },
   blueCursor: {
     width: 2,
-    height: 22,
+    height: 18,
     backgroundColor: TOKENS.primary,
     marginLeft: 4,
   },
@@ -846,39 +845,39 @@ const styles = StyleSheet.create({
     borderColor: TOKENS.accentBlue,
     paddingLeft: 10,
     paddingRight: 6,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 20,
     gap: 6,
   },
   matchedText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: TOKENS.primary,
   },
   addSmallBadge: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: TOKENS.primary,
     alignItems: "center",
     justifyContent: "center",
   },
   noMatchText: {
-    fontSize: 13,
+    fontSize: 12,
     color: TOKENS.error,
     fontWeight: "600",
   },
   numpadContainer: {
-    marginTop: 10,
-    gap: 8,
+    marginTop: 6,
+    gap: 5,
   },
   numpadRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 5,
   },
   numpadBtn: {
     flex: 1,
-    height: 48,
+    height: 38,
     backgroundColor: TOKENS.card,
     borderWidth: 1,
     borderColor: TOKENS.border,
@@ -895,7 +894,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F9FAFB",
   },
   numpadBtnText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: TOKENS.dark,
   },

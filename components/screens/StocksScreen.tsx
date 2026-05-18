@@ -390,8 +390,7 @@ export const StocksScreen: React.FC = () => {
 
 
 
-      {/* Shared bottom navigation bar */}
-      <BottomTabBar activeTab="stocks" onTabPress={handleTabPress} />
+
     </View>
   );
 };

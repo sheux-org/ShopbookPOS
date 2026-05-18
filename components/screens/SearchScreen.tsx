@@ -223,8 +223,7 @@ export const SearchScreen: React.FC = () => {
 
 
 
-      {/* Shared bottom multi-module navigation bar */}
-      <BottomTabBar activeTab={undefined} onTabPress={handleTabPress} />
+
     </View>
   );
 };
