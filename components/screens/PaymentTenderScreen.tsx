@@ -266,7 +266,8 @@ export const PaymentTenderScreen: React.FC = () => {
         activeOpacity={0.85}
         onPress={handleCompleteSale}
       >
-        <Text style={styles.completeBtnText}>Complete Sale & Print Receipt 🖨️</Text>
+        <Text style={styles.completeBtnText}>Complete Sale & Print Receipt</Text>
+        <Feather name="printer" size={18} color={TOKENS.card} />
       </TouchableOpacity>
 
       {/* GORGEOUS PAYMENT SUCCESS MODAL DIALOG */}
@@ -567,12 +568,14 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   actionCompleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: TOKENS.primary,
     marginHorizontal: 16,
     height: 48,
     borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
+    gap: 10,
     shadowColor: TOKENS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

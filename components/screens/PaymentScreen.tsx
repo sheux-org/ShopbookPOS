@@ -124,7 +124,12 @@ export const PaymentScreen: React.FC = () => {
       </View>
 
       {/* Summary Box exactly matching Image 4 at bottom */}
-      <View style={styles.bottomSection}>
+      <View
+        style={[
+          styles.bottomSection,
+          { paddingBottom: Platform.OS === "ios" ? Math.max(insets.bottom, 12) : 16 },
+        ]}
+      >
         <View style={styles.summaryCard}>
           <View style={styles.summarySubrow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
@@ -278,7 +283,8 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.primary,
   },
   bottomSection: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     gap: 12,
     borderTopWidth: 1,
     borderTopColor: TOKENS.border,
@@ -337,16 +343,16 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.primary,
     height: 48,
     borderRadius: 24,
-    gap: 8,
+    gap: 10,
     shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
   continueText: {
     color: TOKENS.card,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "bold",
   },
 });

@@ -12,45 +12,28 @@ import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { BottomTabBar } from "../common/BottomTabBar";
-import { cartState } from "../data/cartState";
-
-interface SearchProduct {
-  id: string;
-  name: string;
-  sku: string;
-  stock: number;
-  stockType: "normal" | "low" | "out";
-  price: number;
-  icon: string;
-}
-
-const SEARCH_RESULTS: SearchProduct[] = [
-  { id: "101", name: "Anchor Full Cream Milk 1L", sku: "SKU 234001", stock: 24, stockType: "normal", price: 680, icon: "🥛" },
-  { id: "102", name: "Anchor Newdale Milk 1L", sku: "SKU 234008", stock: 12, stockType: "normal", price: 720, icon: "🥛" },
-  { id: "103", name: "Anchor Milk Powder 400g", sku: "SKU 234029", stock: 8, stockType: "normal", price: 1450, icon: "🥫" },
-  { id: "104", name: "Anchor Cheese Spread", sku: "SKU 234055", stock: 4, stockType: "low", price: 980, icon: "🧀" },
-  { id: "105", name: "Anchor Butter 200g", sku: "SKU 234077", stock: 18, stockType: "normal", price: 1120, icon: "🧈" },
-];
+import { cartState, CatalogProduct } from "../data/cartState";
 
 export const SearchScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [searchQuery, setSearchQuery] = useState("Anchor");
-  const [activeChip, setActiveChip] = useState("Anchor");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeChip, setActiveChip] = useState("All");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Sync count for invoice items floating indicator
+  // Live products catalog list synced from cartState
+  const [productsList, setProductsList] = useState<CatalogProduct[]>([]);
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    const updateCount = () => {
+    const syncState = () => {
       const cart = cartState.getCart();
       setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
+      setProductsList(cartState.getCatalogProducts());
     };
-    updateCount();
-    return cartState.subscribe(updateCount);
+    syncState();
+    return cartState.subscribe(syncState);
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -58,26 +41,40 @@ export const SearchScreen: React.FC = () => {
     setTimeout(() => setToastMessage(null), 1500);
   };
 
-  const handleAddProduct = (prod: SearchProduct) => {
-    cartState.addCartItem(prod.name, prod.price, prod.icon, prod.sku, prod.stock);
+  const handleAddProduct = (prod: CatalogProduct) => {
+    const skuCode = `SKU 23400${prod.id}`;
+    cartState.addCartItem(prod.name, prod.price, prod.icon, skuCode, prod.stockCount);
     triggerToast(`Added ${prod.name} to active invoice`);
   };
 
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "home") {
-      router.push("/");
-    } else if (tabId === "pos") {
-      router.push("/pos");
-    } else if (tabId === "stocks") {
-      router.push("/stocks");
-    } else if (tabId === "profile") {
-      router.push("/profile");
-    } else {
-      triggerToast(`${tabId.toUpperCase()} view tab selected`);
-    }
-  };
+  const filterChips = ["All", "In Stock", "Under Rs. 1000", "Low Stock", "Out of Stock"];
 
-  const filterChips = ["Anchor", "Dairy", "In stock", "Under Rs. 1000"];
+  const filteredProducts = useMemo(() => {
+    let results = productsList;
+
+    // 1. Filter by Chip state
+    if (activeChip === "In Stock") {
+      results = results.filter((p) => p.stockType !== "out" && p.stockCount > 0);
+    } else if (activeChip === "Under Rs. 1000") {
+      results = results.filter((p) => p.price < 1000);
+    } else if (activeChip === "Low Stock") {
+      results = results.filter((p) => p.stockType === "low");
+    } else if (activeChip === "Out of Stock") {
+      results = results.filter((p) => p.stockType === "out");
+    }
+
+    // 2. Filter by typed search query
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase().trim();
+      results = results.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query) ||
+          p.category.toLowerCase().includes(query)
+      );
+    }
+
+    return results;
+  }, [productsList, searchQuery, activeChip]);
 
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
@@ -130,14 +127,6 @@ export const SearchScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
           )}
-
-          <TouchableOpacity
-            style={styles.scanHeaderButton}
-            activeOpacity={0.8}
-            onPress={() => router.push("/stocks/scan")}
-          >
-            <Ionicons name="barcode-outline" size={20} color={TOKENS.card} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -176,12 +165,14 @@ export const SearchScreen: React.FC = () => {
 
       {/* Title Count Subheader */}
       <View style={styles.subheader}>
-        <Text style={styles.subheaderText}>5 RESULTS</Text>
+        <Text style={styles.subheaderText}>
+          {filteredProducts.length} {filteredProducts.length === 1 ? "RESULT" : "RESULTS"}
+        </Text>
       </View>
 
       {/* Results Scrollable list */}
       <ScrollView style={styles.resultsList} showsVerticalScrollIndicator={false}>
-        {SEARCH_RESULTS.map((item) => (
+        {filteredProducts.map((item) => (
           <View key={item.id} style={styles.resultItemRow}>
             {/* Left Box Icon */}
             <View style={styles.iconBox}>
@@ -194,12 +185,14 @@ export const SearchScreen: React.FC = () => {
                 {item.name}
               </Text>
               <View style={styles.skuStockRow}>
-                <Text style={styles.skuText}>{item.sku}</Text>
+                <Text style={styles.skuText}>SKU 23400{item.id}</Text>
                 <Text style={styles.dividerDot}>·</Text>
                 {item.stockType === "low" ? (
-                  <Text style={styles.stockLowText}>Stock {item.stock} · Low</Text>
+                  <Text style={styles.stockLowText}>{item.stockText}</Text>
+                ) : item.stockType === "out" ? (
+                  <Text style={styles.stockOutText}>{item.stockText}</Text>
                 ) : (
-                  <Text style={styles.stockNormalText}>Stock {item.stock}</Text>
+                  <Text style={styles.stockNormalText}>{item.stockText}</Text>
                 )}
               </View>
             </View>
@@ -209,21 +202,40 @@ export const SearchScreen: React.FC = () => {
               <Text style={styles.itemPrice}>Rs. {item.price.toLocaleString()}</Text>
               
               <TouchableOpacity
-                style={styles.addButton}
-                activeOpacity={0.8}
-                onPress={() => handleAddProduct(item)}
+                style={[
+                  styles.addButton,
+                  item.stockType === "out" && styles.addButtonDisabled
+                ]}
+                activeOpacity={item.stockType === "out" ? 1 : 0.8}
+                onPress={() => item.stockType !== "out" && handleAddProduct(item)}
               >
-                <Feather name="plus" size={12} color={TOKENS.primary} style={styles.plusIcon} />
-                <Text style={styles.addButtonText}>Add</Text>
+                <Feather
+                  name={item.stockType === "out" ? "alert-circle" : "plus"}
+                  size={12}
+                  color={item.stockType === "out" ? TOKENS.muted : TOKENS.primary}
+                  style={styles.plusIcon}
+                />
+                <Text
+                  style={[
+                    styles.addButtonText,
+                    item.stockType === "out" && styles.addButtonTextDisabled
+                  ]}
+                >
+                  {item.stockType === "out" ? "Out" : "Add"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         ))}
+
+        {filteredProducts.length === 0 && (
+          <View style={styles.emptySearchState}>
+            <Feather name="search" size={40} color={TOKENS.muted} />
+            <Text style={styles.emptySearchTitle}>No items match your filters</Text>
+            <Text style={styles.emptySearchSub}>Try searching for a different name or changing filter tabs.</Text>
+          </View>
+        )}
       </ScrollView>
-
-
-
-
     </View>
   );
 };
@@ -409,6 +421,11 @@ const styles = StyleSheet.create({
     color: TOKENS.warning,
     fontWeight: "bold",
   },
+  stockOutText: {
+    fontSize: 12,
+    color: TOKENS.error,
+    fontWeight: "bold",
+  },
   rightActionsCol: {
     alignItems: "flex-end",
     gap: 6,
@@ -430,6 +447,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 4,
   },
+  addButtonDisabled: {
+    backgroundColor: "#F3F4F6",
+    borderColor: TOKENS.border,
+  },
   plusIcon: {
     marginTop: 0.5,
   },
@@ -437,6 +458,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: TOKENS.primary,
     fontWeight: "bold",
+  },
+  addButtonTextDisabled: {
+    color: TOKENS.muted,
   },
   headerRightActions: {
     flexDirection: "row",
@@ -469,5 +493,23 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
     fontSize: 9,
     fontWeight: "bold",
+  },
+  emptySearchState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    gap: 8,
+  },
+  emptySearchTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    marginTop: 8,
+  },
+  emptySearchSub: {
+    fontSize: 13,
+    color: TOKENS.muted,
+    textAlign: "center",
+    paddingHorizontal: 32,
   },
 });
