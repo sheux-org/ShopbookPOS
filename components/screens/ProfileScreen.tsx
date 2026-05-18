@@ -91,11 +91,11 @@ export const ProfileScreen: React.FC = () => {
           </View>
 
           <Text style={styles.partnerName}>{activeBusiness?.name || "Shopbook Partner Store"}</Text>
-          <Text style={styles.partnerPlan}>{activeBusiness?.category ? `${activeBusiness.category} Plan` : "Pro Retailer Plan"}</Text>
+          <Text style={styles.partnerPlan}>🛡️ Administrator / Store Owner</Text>
 
           <View style={styles.activeBadge}>
             <View style={styles.activeDot} />
-            <Text style={styles.activeText}>Connected Partner</Text>
+            <Text style={styles.activeText}>System Admin Active</Text>
           </View>
         </View>
 

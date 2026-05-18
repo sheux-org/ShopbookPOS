@@ -55,6 +55,44 @@ export const cartState = {
       listeners.forEach((l) => l());
     }
   },
+  updateActiveBusinessDetails: async (details: { name: string; category: string; address: string; phone: string }) => {
+    activeBusiness = {
+      ...activeBusiness,
+      ...details,
+    };
+    
+    try {
+      const db = require('./db').default;
+      const { Q } = require('@nozbe/watermelondb');
+      
+      const businesses = await db.get('businesses').query(Q.where('phone_number', activeBusiness.phone)).fetch();
+      if (businesses.length > 0) {
+        const targetBiz = businesses[0];
+        await db.write(async () => {
+          await targetBiz.update((b: any) => {
+            b.name = details.name;
+            b.businessType = details.category;
+            b.address = details.address;
+            b.phoneNumber = details.phone;
+          });
+        });
+        console.log('Successfully updated business details in local WatermelonDB database');
+      } else {
+        await db.write(async () => {
+          await db.get('businesses').create((b: any) => {
+            b.name = details.name;
+            b.businessType = details.category;
+            b.address = details.address;
+            b.phoneNumber = details.phone;
+          });
+        });
+        console.log('Successfully created business details in local WatermelonDB database');
+      }
+      listeners.forEach((l) => l());
+    } catch (err) {
+      console.error('Failed to update business details in WatermelonDB:', err);
+    }
+  },
   getIsLoggedIn: () => loggedIn,
   login: (phone: string, otp: string): boolean => {
     const cleanPhone = phone.replace(/\s+/g, "");

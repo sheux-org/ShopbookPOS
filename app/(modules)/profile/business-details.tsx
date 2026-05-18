@@ -6,8 +6,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Business, cartState } from "../../../components/data/cartState";
@@ -18,16 +20,63 @@ export default function BusinessDetailsRoute() {
   const router = useRouter();
 
   const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
+  
+  // Edit form states
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(activeBusiness.name);
+  const [category, setCategory] = useState(activeBusiness.category);
+  const [address, setAddress] = useState(activeBusiness.address);
+  const [phone, setPhone] = useState(activeBusiness.phone);
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const syncState = () => {
-      setActiveBusiness(cartState.getActiveBusiness());
+      const biz = cartState.getActiveBusiness();
+      setActiveBusiness(biz);
+      setName(biz.name);
+      setCategory(biz.category);
+      setAddress(biz.address);
+      setPhone(biz.phone);
     };
     return cartState.subscribe(syncState);
   }, []);
 
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2000);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!name.trim() || !category.trim() || !address.trim() || !phone.trim()) {
+      Alert.alert("Required Fields", "All business profile fields must be filled out.");
+      return;
+    }
+
+    try {
+      await cartState.updateActiveBusinessDetails({
+        name: name.trim(),
+        category: category.trim(),
+        address: address.trim(),
+        phone: phone.trim(),
+      });
+      setIsEditing(false);
+      triggerToast("Store Profile updated successfully! 🚀");
+    } catch (error) {
+      Alert.alert("Update Error", "Failed to persist business profile changes.");
+    }
+  };
+
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <View style={styles.toastContainer}>
+          <Feather name="check-circle" size={16} color={TOKENS.card} />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -39,7 +88,23 @@ export default function BusinessDetailsRoute() {
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Store Details</Text>
-        <View style={styles.placeholderWidth} />
+        
+        <TouchableOpacity
+          style={styles.editToggleBtn}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (isEditing) {
+              // Cancel edit
+              setName(activeBusiness.name);
+              setCategory(activeBusiness.category);
+              setAddress(activeBusiness.address);
+              setPhone(activeBusiness.phone);
+            }
+            setIsEditing(!isEditing);
+          }}
+        >
+          <Text style={styles.editToggleText}>{isEditing ? "Cancel" : "Edit"}</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent}>
@@ -49,43 +114,95 @@ export default function BusinessDetailsRoute() {
             <Feather name="home" size={28} color={TOKENS.primary} />
           </View>
           <Text style={styles.storeName}>{activeBusiness.name}</Text>
-          <Text style={styles.storeStatus}>{activeBusiness.category} POS Terminal</Text>
+          <Text style={styles.storeStatus}>🛡️ Admin Control Terminal</Text>
         </View>
 
         {/* Info Group */}
         <View style={styles.infoGroup}>
-          <Text style={styles.groupLabel}>Store Information</Text>
+          <Text style={styles.groupLabel}>Administrative Profile</Text>
 
+          {/* Business Name Field */}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Business Name</Text>
-            <Text style={styles.infoVal}>{activeBusiness.name}</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.inputField}
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter Business Name"
+                placeholderTextColor={TOKENS.muted}
+              />
+            ) : (
+              <Text style={styles.infoVal}>{activeBusiness.name}</Text>
+            )}
           </View>
 
+          {/* Business Type Field */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Business Type</Text>
-            <Text style={styles.infoVal}>{activeBusiness.category}</Text>
+            <Text style={styles.infoLabel}>Business Type / Category</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.inputField}
+                value={category}
+                onChangeText={setCategory}
+                placeholder="Enter Category (e.g. Supermarket & Groceries)"
+                placeholderTextColor={TOKENS.muted}
+              />
+            ) : (
+              <Text style={styles.infoVal}>{activeBusiness.category}</Text>
+            )}
           </View>
 
+          {/* Address Field */}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Address</Text>
-            <Text style={styles.infoVal}>{activeBusiness.address}</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.inputField}
+                value={address}
+                onChangeText={setAddress}
+                placeholder="Enter Address"
+                placeholderTextColor={TOKENS.muted}
+              />
+            ) : (
+              <Text style={styles.infoVal}>{activeBusiness.address}</Text>
+            )}
           </View>
 
+          {/* Phone Field */}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Phone Number</Text>
-            <Text style={styles.infoVal}>{activeBusiness.phone}</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.inputField}
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                placeholder="Enter Phone Number"
+                placeholderTextColor={TOKENS.muted}
+              />
+            ) : (
+              <Text style={styles.infoVal}>{activeBusiness.phone}</Text>
+            )}
           </View>
 
+          {/* Static details showing admin privileges */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Tax ID (TIN)</Text>
-            <Text style={styles.infoVal}>TIN-9948839912</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Operating Hours</Text>
-            <Text style={styles.infoVal}>08:00 AM - 10:00 PM</Text>
+            <Text style={styles.infoLabel}>Admin Privilege Status</Text>
+            <Text style={[styles.infoVal, { color: TOKENS.success }]}>FULL READ-WRITE SQL PRIVILEGES</Text>
           </View>
         </View>
+
+        {isEditing && (
+          <TouchableOpacity
+            style={styles.saveButton}
+            activeOpacity={0.8}
+            onPress={handleSaveChanges}
+          >
+            <Feather name="save" size={16} color={TOKENS.card} />
+            <Text style={styles.saveButtonText}>Save Details to SQLite</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );
@@ -95,6 +212,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: TOKENS.background,
+  },
+  toastContainer: {
+    position: "absolute",
+    top: 90,
+    alignSelf: "center",
+    backgroundColor: TOKENS.success,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+    zIndex: 999,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  toastText: {
+    color: TOKENS.card,
+    fontSize: 13,
+    fontWeight: "600",
   },
   header: {
     flexDirection: "row",
@@ -114,13 +254,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  editToggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: TOKENS.lightBlue,
+  },
+  editToggleText: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: TOKENS.primary,
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: TOKENS.dark,
-  },
-  placeholderWidth: {
-    width: 36,
   },
   scrollWrapper: {
     flex: 1,
@@ -153,7 +301,7 @@ const styles = StyleSheet.create({
   },
   storeStatus: {
     fontSize: 12,
-    color: TOKENS.success,
+    color: TOKENS.primary,
     fontWeight: "600",
     marginTop: 4,
   },
@@ -188,5 +336,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: TOKENS.dark,
     fontWeight: "600",
+  },
+  inputField: {
+    fontSize: 14,
+    color: TOKENS.dark,
+    fontWeight: "600",
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  saveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: TOKENS.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  saveButtonText: {
+    color: TOKENS.card,
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });
