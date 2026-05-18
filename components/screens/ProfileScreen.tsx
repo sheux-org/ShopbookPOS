@@ -147,7 +147,7 @@ export const ProfileScreen: React.FC = () => {
                   text: "Sign Out",
                   style: "destructive",
                   onPress: () => {
-                    cartState.clearCart();
+                    cartState.logout();
                     triggerToast("Profile logged out");
                     router.push("/");
                   },

@@ -408,19 +408,17 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: TOKENS.card,
+    backgroundColor: "#F3F4F6",
     borderRadius: 10,
     paddingHorizontal: 12,
-    height: 40,
+    height: 44,
     gap: 8,
     marginHorizontal: 16,
     marginTop: 12,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: TOKENS.dark,
   },
   catalogBanner: {

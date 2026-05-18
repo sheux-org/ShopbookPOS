@@ -54,6 +54,7 @@ const BUSINESSES: Business[] = [
 ];
 
 let activeBusiness: Business = BUSINESSES[0];
+let loggedIn: boolean = false;
 
 const listeners = new Set<() => void>();
 
@@ -68,6 +69,30 @@ export const cartState = {
       activeBusiness = found;
       listeners.forEach((l) => l());
     }
+  },
+  getIsLoggedIn: () => loggedIn,
+  login: (phone: string, otp: string): boolean => {
+    const cleanPhone = phone.replace(/\s+/g, "");
+    if (cleanPhone === "0717133074" && otp === "1111") {
+      loggedIn = true;
+      listeners.forEach((l) => l());
+      return true;
+    }
+    return false;
+  },
+  register: (name: string, address: string, phone: string) => {
+    // Dynamically create and register a new store/business
+    const newId = String(BUSINESSES.length + 1);
+    const newBiz: Business = { id: newId, name, address, phone };
+    BUSINESSES.push(newBiz);
+    activeBusiness = newBiz;
+    loggedIn = true;
+    listeners.forEach((l) => l());
+  },
+  logout: () => {
+    loggedIn = false;
+    cartItems = [];
+    listeners.forEach((l) => l());
   },
   
   addCartItem: (name: string, price: number, icon?: string, sku?: string, stock?: number) => {
