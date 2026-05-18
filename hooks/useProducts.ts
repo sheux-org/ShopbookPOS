@@ -17,13 +17,17 @@ export interface DBProduct {
 }
 
 export function useProducts(category?: string, search?: string, activeChip?: string) {
+  const activeBiz = cartState.getActiveBusiness();
   return useQuery<DBProduct[]>({
-    queryKey: ["products", category, search, activeChip],
+    queryKey: ["products", activeBiz.id, category, search, activeChip],
     queryFn: async () => {
       const db = require("../components/data/db").default;
       const { Q } = require("@nozbe/watermelondb");
       
       let query = db.get("products").query();
+
+      // Isolate products strictly by active business ID
+      query = query.extend(Q.where("business_id", activeBiz.id));
 
       if (category && category !== "all" && category !== "All") {
         query = query.extend(Q.where("category", category.toLowerCase()));

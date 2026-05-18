@@ -132,35 +132,33 @@ const SEEDING_PRODUCTS = [
 
 setTimeout(async () => {
   try {
+    // Automatically load all store profiles from local SQLite database into memory
+    await useBusinessStore.getState().loadBusinessesFromDb();
+
     const db = require('./db').default;
     const existing = await db.get('products').query().fetch();
     if (existing.length === 0) {
       console.log('WatermelonDB products table is empty. Seeding initial catalog...');
-      const activeBiz = useBusinessStore.getState().activeBusiness;
-      
-      await db.write(async () => {
-        const dbBiz = await db.get('businesses').create((b: any) => {
-          b.name = activeBiz.name;
-          b.businessType = activeBiz.category;
-          b.address = activeBiz.address;
-          b.phoneNumber = activeBiz.phone;
+      const dbBizs = await db.get('businesses').query().fetch();
+      if (dbBizs.length > 0) {
+        const firstBiz = dbBizs[0];
+        await db.write(async () => {
+          for (const item of SEEDING_PRODUCTS) {
+            await db.get('products').create((p: any) => {
+              p.business.set(firstBiz);
+              p.name = item.name;
+              p.price = item.price;
+              p.category = item.category;
+              p.icon = item.icon;
+              p.stockCount = item.stockCount;
+              p.unitType = item.unitType;
+              p.costPrice = item.costPrice;
+              p.quickCode = item.quickCode;
+            });
+          }
         });
-
-        for (const item of SEEDING_PRODUCTS) {
-          await db.get('products').create((p: any) => {
-            p.business.set(dbBiz);
-            p.name = item.name;
-            p.price = item.price;
-            p.category = item.category;
-            p.icon = item.icon;
-            p.stockCount = item.stockCount;
-            p.unitType = item.unitType;
-            p.costPrice = item.costPrice;
-            p.quickCode = item.quickCode;
-          });
-        }
-      });
-      console.log('Successfully seeded WatermelonDB with initial mock products');
+        console.log('Successfully seeded WatermelonDB products for the first business');
+      }
     }
   } catch (err) {
     console.error('Failed to seed WatermelonDB initial products:', err);
