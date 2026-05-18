@@ -16,6 +16,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CatalogProduct } from "../data/cartState";
+import { useProducts } from "../../hooks/useProducts";
 
 export const SearchScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -27,18 +28,17 @@ export const SearchScreen: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
 
-  // Live products catalog list synced from cartState
-  const [productsList, setProductsList] = useState<CatalogProduct[]>([]);
+  // Live products catalog list synced via React Query hook
+  const { data: productsList = [] } = useProducts(undefined, searchQuery, activeChip);
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    const syncState = () => {
+    const syncCart = () => {
       const cart = cartState.getCart();
       setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-      setProductsList(cartState.getCatalogProducts());
     };
-    syncState();
-    return cartState.subscribe(syncState);
+    syncCart();
+    return cartState.subscribe(syncCart);
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -65,34 +65,8 @@ export const SearchScreen: React.FC = () => {
 
   const filterChips = ["All", "In Stock", "Under Rs. 1000", "Low Stock", "Out of Stock"];
 
-  const filteredProducts = useMemo(() => {
-    let results = productsList;
-
-    // 1. Filter by Chip state
-    if (activeChip === "In Stock") {
-      results = results.filter((p) => p.stockType !== "out" && p.stockCount > 0);
-    } else if (activeChip === "Under Rs. 1000") {
-      results = results.filter((p) => p.price < 1000);
-    } else if (activeChip === "Low Stock") {
-      results = results.filter((p) => p.stockType === "low");
-    } else if (activeChip === "Out of Stock") {
-      results = results.filter((p) => p.stockType === "out");
-    }
-
-    // 2. Filter by typed search query
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase().trim();
-      results = results.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.category.toLowerCase().includes(query) ||
-          (p.barcode && p.barcode.toLowerCase().includes(query)) ||
-          (p.quickCode && p.quickCode.toLowerCase().includes(query))
-      );
-    }
-
-    return results;
-  }, [productsList, searchQuery, activeChip]);
+  // Direct queries are executed inside WatermelonDB
+  const filteredProducts = productsList;
 
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>

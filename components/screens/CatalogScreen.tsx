@@ -12,8 +12,8 @@ import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { BottomTabBar } from "../common/BottomTabBar";
 import { cartState } from "../data/cartState";
+import { useProducts } from "../../hooks/useProducts";
 
 interface CatalogProduct {
   id: string;
@@ -49,19 +49,18 @@ export const CatalogScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
-  // Dynamic catalog products synced with cartState
-  const [productsList, setProductsList] = useState<CatalogProduct[]>([]);
+  // Dynamic catalog products synced via React Query hook
+  const { data: productsList = [] } = useProducts(selectedCategory);
   const [cartItemsCount, setCartItemsCount] = useState(0);
 
   useEffect(() => {
-    const syncState = () => {
+    const syncCart = () => {
       const cart = cartState.getCart();
       setCartItemsCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-      setProductsList(cartState.getCatalogProducts());
     };
 
-    syncState();
-    return cartState.subscribe(syncState);
+    syncCart();
+    return cartState.subscribe(syncCart);
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -69,24 +68,7 @@ export const CatalogScreen: React.FC = () => {
     setTimeout(() => setToastMessage(null), 1500);
   };
 
-  const filteredProducts = useMemo(() => {
-    if (selectedCategory === "all") return productsList;
-    return productsList.filter((prod) => prod.category === selectedCategory);
-  }, [productsList, selectedCategory]);
-
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "home") {
-      router.push("/");
-    } else if (tabId === "pos") {
-      router.push("/pos");
-    } else if (tabId === "stocks") {
-      router.push("/stocks");
-    } else if (tabId === "profile") {
-      router.push("/profile");
-    } else {
-      triggerToast(`${tabId.toUpperCase()} view tab selected`);
-    }
-  };
+  const filteredProducts = productsList;
 
   const handleAddProduct = (prod: CatalogProduct) => {
     if (prod.stockType === "out") {

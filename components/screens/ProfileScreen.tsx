@@ -13,10 +13,14 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { syncDatabase } from "../../services/sync";
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const isBackupEnabled = useSettingsStore((s) => s.isBackupEnabled);
+  const toggleBackup = useSettingsStore((s) => s.toggleBackup);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
@@ -154,6 +158,68 @@ export const ProfileScreen: React.FC = () => {
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
+        </View>
+
+        {/* Option Group: Sync & Backup */}
+        <View style={styles.optionsGroup}>
+          <Text style={styles.groupHeader}>Data Sync & Backup</Text>
+
+          {/* Option: Cloud Backup Toggle */}
+          <View style={styles.optionRow}>
+            <View style={[styles.optionIconBox, { backgroundColor: "#E8F0FE" }]}>
+              <Feather name="cloud-lightning" size={18} color={TOKENS.primary} />
+            </View>
+            <View style={styles.optionTextWrapper}>
+              <Text style={styles.optionTitle}>Auto Backup to Cloud</Text>
+              <Text style={styles.optionSubtitle}>
+                {isBackupEnabled 
+                  ? "Real-time sync to Supabase is active" 
+                  : "Enable real-time cloud backup to Supabase"}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => {
+                toggleBackup();
+                triggerToast(isBackupEnabled ? "Cloud backup disabled" : "Cloud backup enabled! ☁️");
+              }}
+              style={[
+                styles.switchButton, 
+                isBackupEnabled ? styles.switchButtonActive : styles.switchButtonInactive
+              ]}
+              activeOpacity={0.8}
+            >
+              <View style={[
+                styles.switchThumb, 
+                isBackupEnabled ? styles.switchThumbActive : styles.switchThumbInactive
+              ]} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Option: Manual Sync */}
+          {isBackupEnabled && (
+            <TouchableOpacity
+              style={styles.optionRow}
+              activeOpacity={0.7}
+              onPress={async () => {
+                triggerToast("Syncing database... 🔄");
+                const success = await syncDatabase();
+                if (success) {
+                  triggerToast("Database synced successfully! ✅");
+                } else {
+                  Alert.alert("Sync Failed", "Check your internet connection and Supabase environment configuration.");
+                }
+              }}
+            >
+              <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
+                <Feather name="refresh-cw" size={18} color="#137333" />
+              </View>
+              <View style={styles.optionTextWrapper}>
+                <Text style={styles.optionTitle}>Sync Database Now</Text>
+                <Text style={styles.optionSubtitle}>Trigger manual synchronization of offline data</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Payments & Subscriptions visual carousel plans */}
@@ -610,5 +676,35 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "bold",
     color: TOKENS.dark,
+  },
+  switchButton: {
+    width: 46,
+    height: 24,
+    borderRadius: 12,
+    padding: 2,
+    justifyContent: "center",
+  },
+  switchButtonActive: {
+    backgroundColor: TOKENS.primary,
+  },
+  switchButtonInactive: {
+    backgroundColor: "#D1D5DB",
+  },
+  switchThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  switchThumbActive: {
+    alignSelf: "flex-end",
+  },
+  switchThumbInactive: {
+    alignSelf: "flex-start",
   },
 });

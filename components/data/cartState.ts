@@ -1,3 +1,5 @@
+import { useCart } from '../../stores/useCart';
+
 export interface CartItem {
   id: string;
   name: string;
@@ -22,12 +24,6 @@ export interface CatalogProduct {
   quickCode?: string;
   barcode?: string;
 }
-
-let cartItems: CartItem[] = [
-  { id: "1", name: "Anchor Milk 1L", quantity: 2, price: 680, icon: "🥛", sku: "SKU 234001", stock: 24 },
-  { id: "2", name: "Marie Biscuits", quantity: 3, price: 180, icon: "🍪", sku: "SKU 234002", stock: 4 },
-  { id: "3", name: "Cream Soda 1.5L", quantity: 2, price: 320, icon: "🥤", sku: "SKU 234003", stock: 22 },
-];
 
 let catalogProducts: CatalogProduct[] = [
   { id: "1", name: "Anchor Milk 1L", price: 680, category: "dairy", icon: "🥛", stockText: "24 in stock", stockType: "normal", stockCount: 24, unitType: "Liters", costPrice: 580 },
@@ -62,7 +58,7 @@ let loggedIn: boolean = false;
 const listeners = new Set<() => void>();
 
 export const cartState = {
-  getCart: () => cartItems,
+  getCart: () => useCart.getState().cart,
   getCatalogProducts: () => catalogProducts,
   getBusinesses: () => BUSINESSES,
   getActiveBusiness: () => activeBusiness,
@@ -83,53 +79,55 @@ export const cartState = {
     }
     return false;
   },
-  register: (name: string, address: string, phone: string, category: string = "General Retail") => {
-    // Dynamically create and register a new store/business
+  register: async (name: string, address: string, phone: string, category: string = "General Retail") => {
     const newId = String(BUSINESSES.length + 1);
     const newBiz: Business = { id: newId, name, category, address, phone };
     BUSINESSES.push(newBiz);
     activeBusiness = newBiz;
     loggedIn = true;
     listeners.forEach((l) => l());
+
+    // Save business & admin employee to local database
+    try {
+      const db = require('./db').default;
+      await db.write(async () => {
+        const newBusiness = await db.get('businesses').create((biz: any) => {
+          biz.name = name;
+          biz.businessType = category;
+          biz.address = address;
+          biz.phoneNumber = phone;
+        });
+
+        await db.get('employees').create((emp: any) => {
+          emp.business.set(newBusiness);
+          emp.name = "Owner / Admin";
+          emp.role = "admin";
+          emp.phone = phone;
+        });
+      });
+      console.log('Successfully saved business and admin employee to local database');
+    } catch (err) {
+      console.error('Failed to write business/employee to local database:', err);
+    }
   },
   logout: () => {
     loggedIn = false;
-    cartItems = [];
+    useCart.getState().clearCart();
     listeners.forEach((l) => l());
   },
   
   addCartItem: (name: string, price: number, icon?: string, sku?: string, stock?: number) => {
-    const existing = cartItems.find((item) => item.name === name);
-    if (existing) {
-      cartItems = cartItems.map((item) =>
-        item.name === name ? { ...item, quantity: item.quantity + 1 } : item
-      );
-    } else {
-      cartItems = [
-        ...cartItems,
-        {
-          id: Date.now().toString(),
-          name,
-          price,
-          quantity: 1,
-          icon: icon || "📦",
-          sku: sku || `SKU ${Math.floor(100000 + Math.random() * 900000)}`,
-          stock: stock !== undefined ? stock : 15,
-        },
-      ];
-    }
+    useCart.getState().addCartItem(name, price, icon, sku, stock);
     listeners.forEach((l) => l());
   },
   
   updateQuantity: (id: string, delta: number) => {
-    cartItems = cartItems
-      .map((item) => (item.id === id ? { ...item, quantity: item.quantity + delta } : item))
-      .filter((item) => item.quantity > 0);
+    useCart.getState().updateQuantity(id, delta);
     listeners.forEach((l) => l());
   },
   
   clearCart: () => {
-    cartItems = [];
+    useCart.getState().clearCart();
     listeners.forEach((l) => l());
   },
 
@@ -148,12 +146,92 @@ export const cartState = {
       } as CatalogProduct,
     ];
     listeners.forEach((l) => l());
+
+    // Save product to WatermelonDB database
+    try {
+      const db = require('./db').default;
+      const { Q } = require('@nozbe/watermelondb');
+      db.write(async () => {
+        const activeBiz = cartState.getActiveBusiness();
+        let dbBiz;
+        const businesses = await db.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
+        if (businesses.length > 0) {
+          dbBiz = businesses[0];
+        } else {
+          dbBiz = await db.get('businesses').create((b: any) => {
+            b.name = activeBiz.name;
+            b.businessType = activeBiz.category;
+            b.address = activeBiz.address;
+            b.phoneNumber = activeBiz.phone;
+          });
+        }
+
+        await db.get('products').create((p: any) => {
+          p.business.set(dbBiz);
+          p.name = product.name;
+          p.price = product.price;
+          p.category = product.category;
+          p.icon = product.icon;
+          p.stockCount = product.stockCount;
+          p.unitType = product.unitType;
+          p.costPrice = product.costPrice;
+          p.quickCode = product.quickCode;
+          p.barcode = product.barcode;
+        });
+      });
+      console.log('Successfully saved new catalog product to WatermelonDB database');
+    } catch (err) {
+      console.error('Failed to write new catalog product to WatermelonDB:', err);
+    }
   },
   
   subscribe: (listener: () => void) => {
     listeners.add(listener);
+    const unsubCart = useCart.subscribe(() => {
+      listener();
+    });
     return () => {
       listeners.delete(listener);
+      unsubCart();
     };
   },
 };
+
+// Seeding initial catalog products into WatermelonDB if it's empty
+setTimeout(async () => {
+  try {
+    const db = require('./db').default;
+    const existing = await db.get('products').query().fetch();
+    if (existing.length === 0) {
+      console.log('WatermelonDB products table is empty. Seeding initial catalog...');
+      const activeBiz = cartState.getActiveBusiness();
+      
+      await db.write(async () => {
+        const dbBiz = await db.get('businesses').create((b: any) => {
+          b.name = activeBiz.name;
+          b.businessType = activeBiz.category;
+          b.address = activeBiz.address;
+          b.phoneNumber = activeBiz.phone;
+        });
+
+        for (const item of catalogProducts) {
+          await db.get('products').create((p: any) => {
+            p.business.set(dbBiz);
+            p.name = item.name;
+            p.price = item.price;
+            p.category = item.category;
+            p.icon = item.icon;
+            p.stockCount = item.stockCount;
+            p.unitType = item.unitType;
+            p.costPrice = item.costPrice;
+            p.quickCode = item.quickCode;
+            p.barcode = item.barcode;
+          });
+        }
+      });
+      console.log('Successfully seeded WatermelonDB with initial mock products');
+    }
+  } catch (err) {
+    console.error('Failed to seed WatermelonDB initial products:', err);
+  }
+}, 1000);

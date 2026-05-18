@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, Business } from "../data/cartState";
 import { useTabBarVisible } from "../../hooks/useTabBarVisible";
+import { useProducts } from "../../hooks/useProducts";
 
 interface HomeProduct {
   id: string;
@@ -47,8 +48,8 @@ export const HomeScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Dynamic products list from cartState
-  const [productsList, setProductsList] = useState<HomeProduct[]>([]);
+  // Dynamic products list fetched via React Query custom hook
+  const { data: productsList = [] } = useProducts(selectedCategory, searchQuery);
   const [cartItemsCount, setCartItemsCount] = useState(0);
 
   // Active Business dropdown states
@@ -115,15 +116,14 @@ export const HomeScreen: React.FC = () => {
   };
 
   useEffect(() => {
-    const syncState = () => {
+    const syncCart = () => {
       const cart = cartState.getCart();
       setCartItemsCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-      setProductsList(cartState.getCatalogProducts());
       setActiveBusiness(cartState.getActiveBusiness());
     };
 
-    syncState();
-    return cartState.subscribe(syncState);
+    syncCart();
+    return cartState.subscribe(syncCart);
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -152,14 +152,8 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  // Filter products by search and category
-  const filteredProducts = useMemo(() => {
-    return productsList.filter((prod) => {
-      const matchesCategory = selectedCategory === "all" || prod.category === selectedCategory;
-      const matchesSearch = prod.name.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [productsList, selectedCategory, searchQuery]);
+  // WatermelonDB performs search & filter queries directly
+  const filteredProducts = productsList;
 
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>

@@ -16,6 +16,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
+import { useAddProduct } from "../../hooks/useProducts";
 
 interface FavoriteProduct {
   id: string;
@@ -62,6 +63,8 @@ const CATEGORY_ICONS: Record<string, string> = {
 export const StocksScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const addProductMutation = useAddProduct();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
@@ -131,8 +134,8 @@ export const StocksScreen: React.FC = () => {
       return;
     }
 
-    // Save product dynamically
-    cartState.addNewCatalogProduct({
+    // Save product dynamically using React Query mutation hook
+    addProductMutation.mutate({
       name: formName,
       price: priceNum,
       category: formCategory,
@@ -155,18 +158,6 @@ export const StocksScreen: React.FC = () => {
     setFormQuickCode("");
     setFormBarcode("");
     setFormImage("🍎");
-  };
-
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "home") {
-      router.push("/");
-    } else if (tabId === "pos") {
-      router.push("/pos");
-    } else if (tabId === "profile") {
-      router.push("/profile");
-    } else if (tabId !== "stocks") {
-      triggerToast(`${tabId.toUpperCase()} view tab selected`);
-    }
   };
 
   return (
