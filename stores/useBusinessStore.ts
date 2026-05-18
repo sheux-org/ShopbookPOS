@@ -43,21 +43,65 @@ export const useBusinessStore = create<BusinessState>()(
       },
       loadBusinessesFromDb: async () => {
         try {
-          const db = require('../components/data/db').default;
-          const dbBizs = await db.get('businesses').query().fetch();
-          
-          // Get the currently logged-in user's phone number
           const { useAuthStore } = require('./useAuthStore');
-          const loggedInPhone = useAuthStore.getState().userPhone || "0717133074";
-          const cleanLoggedInPhone = loggedInPhone.replace(/\s+/g, "");
           
-          // Filter to only include businesses with our owner phone number
-          const filteredDbBizs = dbBizs.filter((b: any) => {
-            const cleanPhone = b.phoneNumber ? b.phoneNumber.replace(/\s+/g, "") : "";
-            return cleanPhone.includes(cleanLoggedInPhone) || cleanLoggedInPhone.includes(cleanPhone);
+          // 1. Wait for Auth hydration to finish from AsyncStorage
+          if (!useAuthStore.persist.hasHydrated()) {
+            console.log('Skipping business load: AuthStore not hydrated yet');
+            return;
+          }
+
+          const db = require('../components/data/db').default;
+          const { Q } = require('@nozbe/watermelondb');
+          
+          const loggedInPhone = useAuthStore.getState().userPhone;
+          if (!loggedInPhone) {
+            // Only reset to placeholder if the user is explicitly logged out
+            if (!useAuthStore.getState().isLoggedIn) {
+              set({
+                businesses: DEFAULT_BUSINESSES,
+                activeBusiness: DEFAULT_BUSINESSES[0]
+              });
+            }
+            return;
+          }
+          
+          const normalizePhone = (phoneStr: string): string => {
+            let cleaned = phoneStr.replace(/\D/g, "");
+            if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
+            if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+            return cleaned;
+          };
+          
+          const cleanLoggedInPhone = normalizePhone(loggedInPhone);
+          const matchedBusinessesMap = new Map<string, any>();
+          
+          // 1. Fetch businesses where the logged-in user is a registered staff member (Employee)
+          const allEmployees = await db.get('employees').query().fetch();
+          const matchedEmployees = allEmployees.filter((emp: any) => {
+            return normalizePhone(emp.phone || "") === cleanLoggedInPhone;
           });
           
-          const list: Business[] = filteredDbBizs.map((b: any) => ({
+          for (const emp of matchedEmployees) {
+            const biz = await emp.business.fetch();
+            if (biz) {
+              matchedBusinessesMap.set(biz.id, biz);
+            }
+          }
+          
+          // 2. Fetch businesses owned directly by the logged-in user phone number
+          const allBusinesses = await db.get('businesses').query().fetch();
+          const matchedOwned = allBusinesses.filter((b: any) => {
+            return normalizePhone(b.phoneNumber || "") === cleanLoggedInPhone;
+          });
+          
+          for (const biz of matchedOwned) {
+            matchedBusinessesMap.set(biz.id, biz);
+          }
+          
+          const uniqueBusinesses = Array.from(matchedBusinessesMap.values());
+          
+          const list: Business[] = uniqueBusinesses.map((b: any) => ({
             id: b.id,
             name: b.name,
             category: b.businessType,
@@ -65,10 +109,14 @@ export const useBusinessStore = create<BusinessState>()(
             phone: b.phoneNumber || "+94 ** *** ****",
           }));
           
+          // Determine target business to activate
+          const targetBizId = useAuthStore.getState().activeBusinessId || get().activeBusiness.id;
+          
           if (list.length > 0) {
+            const selectedBiz = list.find(b => b.id === targetBizId) || list[0];
             set({
               businesses: list,
-              activeBusiness: list.find(b => b.id === get().activeBusiness.id) || list[0]
+              activeBusiness: selectedBiz
             });
           } else {
             set({

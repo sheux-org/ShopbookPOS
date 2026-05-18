@@ -30,12 +30,7 @@ export default function ManageStaffRoute() {
 
   const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
 
-  // Initial pre-populated staff members list
-  const [staffList, setStaffList] = useState<StaffMember[]>([
-    { id: "1", name: "Shopbook Owner (You)", role: "Admin", email: "owner@shopbook.lk", phone: "+94 71 713 3074" },
-    { id: "2", name: "Pasan Pahasara", role: "Manager", email: "pasan@shopbook.lk", phone: "+94 77 123 4567" },
-    { id: "3", name: "Dilshan Perera", role: "Cashier", email: "dilshan@shopbook.lk", phone: "+94 72 987 6543" },
-  ]);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,6 +40,36 @@ export default function ManageStaffRoute() {
   const [newPhone, setNewPhone] = useState("");
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const loadStaffFromDb = async () => {
+    try {
+      const db = require('../../../components/data/db').default;
+      const { Q } = require('@nozbe/watermelondb');
+      
+      const activeBiz = cartState.getActiveBusiness();
+      if (!activeBiz || activeBiz.id === "0") return;
+      
+      const dbEmployees = await db.get('employees').query(
+        Q.where('business_id', activeBiz.id)
+      ).fetch();
+      
+      const list: StaffMember[] = dbEmployees.map((emp: any) => ({
+        id: emp.id,
+        name: emp.name,
+        role: emp.role === 'admin' ? 'Admin' : emp.role === 'manager' ? 'Manager' : 'Cashier',
+        email: emp.email || "no-email@shopbook.lk",
+        phone: emp.phone,
+      }));
+      
+      setStaffList(list);
+    } catch (err) {
+      console.error('Failed to load staff from database:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadStaffFromDb();
+  }, [activeBusiness]);
 
   useEffect(() => {
     const syncState = () => {
@@ -58,7 +83,7 @@ export default function ManageStaffRoute() {
     setTimeout(() => setToastMessage(null), 2000);
   };
 
-  const handleAddStaff = () => {
+  const handleAddStaff = async () => {
     if (!newName.trim()) {
       triggerToast("Please enter staff name!");
       return;
@@ -72,24 +97,55 @@ export default function ManageStaffRoute() {
       return;
     }
 
-    const newMember: StaffMember = {
-      id: String(staffList.length + 1),
-      name: newName,
-      role: newRole,
-      email: newEmail,
-      phone: newPhone,
-    };
+    try {
+      const db = require('../../../components/data/db').default;
+      const { Q } = require('@nozbe/watermelondb');
+      
+      const activeBiz = cartState.getActiveBusiness();
+      const businesses = await db.get('businesses').query(Q.where('id', activeBiz.id)).fetch();
+      const dbBiz = businesses[0];
+      
+      if (!dbBiz) {
+        triggerToast("No business registered in SQLite!");
+        return;
+      }
+      
+      const dbRole = newRole === 'Admin' ? 'admin' : newRole === 'Manager' ? 'manager' : 'cashier';
+      
+      const normalizePhone = (phoneStr: string): string => {
+        let cleaned = phoneStr.replace(/\D/g, "");
+        if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
+        if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+        return cleaned;
+      };
+      
+      const cleanPhone = normalizePhone(newPhone);
 
-    setStaffList([...staffList, newMember]);
-    setIsModalOpen(false);
-
-    // Clear inputs
-    setNewName("");
-    setNewRole("Cashier");
-    setNewEmail("");
-    setNewPhone("");
-
-    triggerToast(`${newName} added as ${newRole} successfully!`);
+      await db.write(async () => {
+        await db.get('employees').create((emp: any) => {
+          emp.business.set(dbBiz);
+          emp.name = newName;
+          emp.role = dbRole;
+          emp.phone = cleanPhone;
+          emp.email = newEmail;
+        });
+      });
+      
+      triggerToast(`${newName} added as ${newRole} successfully! 🎉`);
+      setIsModalOpen(false);
+      
+      // Clear inputs
+      setNewName("");
+      setNewRole("Cashier");
+      setNewEmail("");
+      setNewPhone("");
+      
+      // Reload list dynamically
+      await loadStaffFromDb();
+    } catch (err) {
+      console.error('Failed to save staff to WatermelonDB database:', err);
+      triggerToast("Failed to add staff member.");
+    }
   };
 
   const getRoleBadgeStyle = (role: string) => {

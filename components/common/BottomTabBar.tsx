@@ -15,12 +15,22 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
-  const tabs = [
+  const { useAuthStore } = require("../../stores/useAuthStore");
+  const userRole = useAuthStore((s: any) => s.userRole) || "admin";
+
+  const allTabs = [
     { id: "home", label: "Home", icon: "home" },
     { id: "pos", label: "POS", icon: "shopping-cart" },
     { id: "stocks", label: "Stocks", icon: "package" },
     { id: "profile", label: "Profile", icon: "user" },
   ];
+
+  const tabs = allTabs.filter((tab) => {
+    if (tab.id === "stocks" && userRole === "cashier") {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <View

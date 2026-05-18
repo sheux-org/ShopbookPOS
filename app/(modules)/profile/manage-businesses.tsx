@@ -97,13 +97,21 @@ export default function ManageBusinessesRoute() {
 
         <Text style={styles.headerTitle}>Business Management</Text>
 
-        <TouchableOpacity
-          style={styles.createHeaderBtn}
-          activeOpacity={0.8}
-          onPress={() => setIsModalOpen(true)}
-        >
-          <Feather name="plus" size={20} color={TOKENS.primary} />
-        </TouchableOpacity>
+        {(() => {
+          const { useAuthStore } = require("../../../stores/useAuthStore");
+          const role = useAuthStore.getState().userRole || "admin";
+          if (role === "cashier") return null;
+
+          return (
+            <TouchableOpacity
+              style={styles.createHeaderBtn}
+              activeOpacity={0.8}
+              onPress={() => setIsModalOpen(true)}
+            >
+              <Feather name="plus" size={20} color={TOKENS.primary} />
+            </TouchableOpacity>
+          );
+        })()}
       </View>
 
       {/* Toast Alert */}

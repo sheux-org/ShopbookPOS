@@ -77,7 +77,7 @@ export default function BusinessDetailsRoute() {
         </View>
       )}
 
-      {/* Header */}
+        {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -89,22 +89,30 @@ export default function BusinessDetailsRoute() {
 
         <Text style={styles.headerTitle}>Store Details</Text>
         
-        <TouchableOpacity
-          style={styles.editToggleBtn}
-          activeOpacity={0.7}
-          onPress={() => {
-            if (isEditing) {
-              // Cancel edit
-              setName(activeBusiness.name);
-              setCategory(activeBusiness.category);
-              setAddress(activeBusiness.address);
-              setPhone(activeBusiness.phone);
-            }
-            setIsEditing(!isEditing);
-          }}
-        >
-          <Text style={styles.editToggleText}>{isEditing ? "Cancel" : "Edit"}</Text>
-        </TouchableOpacity>
+        {(() => {
+          const { useAuthStore } = require("../../../stores/useAuthStore");
+          const role = useAuthStore.getState().userRole || "admin";
+          if (role === "cashier") return null;
+
+          return (
+            <TouchableOpacity
+              style={styles.editToggleBtn}
+              activeOpacity={0.7}
+              onPress={() => {
+                if (isEditing) {
+                  // Cancel edit
+                  setName(activeBusiness.name);
+                  setCategory(activeBusiness.category);
+                  setAddress(activeBusiness.address);
+                  setPhone(activeBusiness.phone);
+                }
+                setIsEditing(!isEditing);
+              }}
+            >
+              <Text style={styles.editToggleText}>{isEditing ? "Cancel" : "Edit"}</Text>
+            </TouchableOpacity>
+          );
+        })()}
       </View>
 
       <ScrollView 

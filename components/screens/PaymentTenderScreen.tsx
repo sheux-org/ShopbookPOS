@@ -64,7 +64,71 @@ export const PaymentTenderScreen: React.FC = () => {
       Alert.alert("Insufficient Tender", `Amount tendered must be at least Rs. ${totalAmount.toLocaleString()}`);
       return;
     }
-    setShowSuccessModal(true);
+    
+    // Save order details to local SQLite WatermelonDB database
+    try {
+      const db = require("../data/db").default;
+      const { Q } = require("@nozbe/watermelondb");
+      const { useAuthStore } = require("../../stores/useAuthStore");
+      const { useBusinessStore } = require("../../stores/useBusinessStore");
+      
+      const activeBiz = useBusinessStore.getState().activeBusiness;
+      const authStore = useAuthStore.getState();
+      const cashierName = authStore.employeeName || "Owner / Admin";
+      
+      db.write(async () => {
+        // Find database business record
+        const businesses = await db.get('businesses').query(Q.where('id', activeBiz.id)).fetch();
+        let dbBiz = businesses[0];
+        if (!dbBiz) {
+          const allBizs = await db.get('businesses').query().fetch();
+          dbBiz = allBizs[0];
+        }
+        
+        if (!dbBiz) {
+          console.error('No business record found in SQLite database!');
+          return;
+        }
+        
+        const invoiceNum = `INV-${Math.floor(100000 + Math.random() * 900000)} (Staff: ${cashierName})`;
+        
+        const newOrder = await db.get('orders').create((ord: any) => {
+          ord.business.set(dbBiz);
+          ord.invoiceNumber = invoiceNum;
+          ord.totalAmount = totalAmount;
+          ord.status = 'paid';
+        });
+        
+        // Save order items & decrement products inventory stocks
+        const cart = cartState.getCart();
+        for (const item of cart) {
+          await db.get('order_items').create((ordItem: any) => {
+            ordItem.order.set(newOrder);
+            ordItem.name = item.name;
+            ordItem.quantity = item.quantity;
+            ordItem.price = item.price;
+          });
+          
+          // Decrement SQLite stock count
+          const products = await db.get('products').query(Q.where('name', item.name)).fetch();
+          if (products.length > 0) {
+            const prod = products[0];
+            await prod.update((p: any) => {
+              p.stockCount = Math.max(0, p.stockCount - item.quantity);
+            });
+          }
+        }
+        console.log('Order and stock decrements written successfully to local SQLite for:', cashierName);
+      }).then(() => {
+        setShowSuccessModal(true);
+      }).catch((err: any) => {
+        console.error('Failed to execute SQLite order transaction:', err);
+        setShowSuccessModal(true);
+      });
+    } catch (err) {
+      console.error('Failed to load SQLite models:', err);
+      setShowSuccessModal(true);
+    }
   };
 
   const handleFinishSuccess = () => {
