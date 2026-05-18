@@ -15,9 +15,9 @@ export default function RootLayout() {
         <Stack.Screen name="(pos)/search" />
         <Stack.Screen name="(stocks)/add-item" />
         <Stack.Screen name="(stocks)/scan" />
-        <Stack.Screen name="(profile)/business-details" />
-        <Stack.Screen name="(profile)/manage-businesses" />
-        <Stack.Screen name="(profile)/manage-staff" />
+        <Stack.Screen name="profile/business-details" />
+        <Stack.Screen name="profile/manage-businesses" />
+        <Stack.Screen name="profile/manage-staff" />
       </Stack>
     </SafeAreaProvider>
   );

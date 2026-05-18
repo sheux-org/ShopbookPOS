@@ -33,7 +33,7 @@ export const PaymentScreen: React.FC = () => {
   const handleContinue = () => {
     // Navigate to tender numpad, passing payment type and total
     router.push({
-      pathname: "/payment-tender",
+      pathname: "/pos/payment-tender",
       params: {
         paymentMethod: selectedMethod,
         totalAmount: totalAmount.toString(),
@@ -48,7 +48,7 @@ export const PaymentScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/cart")}
+          onPress={() => router.push("/pos/cart")}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>

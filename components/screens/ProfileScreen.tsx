@@ -9,10 +9,9 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { BottomTabBar } from "../common/BottomTabBar";
 import { cartState } from "../data/cartState";
 
 export const ProfileScreen: React.FC = () => {
@@ -92,7 +91,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push("/business-details")}
+            onPress={() => router.push("/profile/business-details")}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#E8F0FE" }]}>
               <Feather name="home" size={18} color={TOKENS.primary} />
@@ -108,7 +107,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push("/manage-businesses")}
+            onPress={() => router.push("/profile/manage-businesses")}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#FEF7E0" }]}>
               <Feather name="briefcase" size={18} color="#B06000" />
@@ -124,7 +123,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push("/manage-staff")}
+            onPress={() => router.push("/profile/manage-staff")}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
               <Feather name="users" size={18} color="#137333" />

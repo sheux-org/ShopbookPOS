@@ -1,12 +1,12 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { ScanScreen } from "../../components/screens/ScanScreen";
+import { PaymentScreen } from "@/components/screens/PaymentScreen";
 
-export default function ScanRoute() {
+export default function PaymentRoute() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScanScreen />
+      <PaymentScreen />
     </>
   );
 }

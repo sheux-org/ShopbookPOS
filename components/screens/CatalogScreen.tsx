@@ -124,7 +124,7 @@ export const CatalogScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.headerCartBtn}
               activeOpacity={0.8}
-              onPress={() => router.push("/cart")}
+              onPress={() => router.push("/pos/cart")}
             >
               <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
               <View style={styles.headerCartBadge}>
@@ -136,7 +136,7 @@ export const CatalogScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.searchHeaderButton}
             activeOpacity={0.7}
-            onPress={() => router.push("/search")}
+            onPress={() => router.push("/pos/search")}
           >
             <Feather name="search" size={22} color={TOKENS.dark} />
           </TouchableOpacity>

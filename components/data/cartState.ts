@@ -74,7 +74,7 @@ export const cartState = {
   getIsLoggedIn: () => loggedIn,
   login: (phone: string, otp: string): boolean => {
     const cleanPhone = phone.replace(/\s+/g, "");
-    if (cleanPhone === "0717133074" && otp === "1111") {
+    if ((cleanPhone === "0717133074" || cleanPhone === "717133074") && otp === "1111") {
       loggedIn = true;
       listeners.forEach((l) => l());
       return true;

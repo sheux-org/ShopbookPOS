@@ -169,7 +169,7 @@ export const StocksScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.headerCartBtn}
               activeOpacity={0.8}
-              onPress={() => router.push("/cart")}
+              onPress={() => router.push("/pos/cart")}
             >
               <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
               <View style={styles.headerCartBadge}>
@@ -193,7 +193,7 @@ export const StocksScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.searchBarTouch}
           activeOpacity={0.9}
-          onPress={() => router.push("/search")}
+          onPress={() => router.push("/pos/search")}
         >
           <Feather name="search" size={18} color={TOKENS.muted} />
           <Text style={styles.searchPlaceholder}>Search products in stock...</Text>

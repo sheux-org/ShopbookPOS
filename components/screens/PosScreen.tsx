@@ -212,7 +212,7 @@ export const PosScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.headerCartBtn}
               activeOpacity={0.8}
-              onPress={() => router.push("/cart")}
+              onPress={() => router.push("/pos/cart")}
             >
               <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
               <View style={styles.headerCartBadge}>
@@ -332,7 +332,7 @@ export const PosScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.segmentButton}
-            onPress={() => router.push("/search")}
+            onPress={() => router.push("/pos/search")}
             activeOpacity={0.8}
           >
             <Feather
@@ -530,7 +530,7 @@ export const PosScreen: React.FC = () => {
           <TouchableOpacity
             style={[styles.summaryBarButton, { marginTop: 12, marginBottom: 8 }]}
             activeOpacity={0.85}
-            onPress={() => router.push("/cart")}
+            onPress={() => router.push("/pos/cart")}
           >
             <View style={styles.summaryBarLeft}>
               <Feather name="shopping-bag" size={16} color={TOKENS.card} style={styles.bagIcon} />

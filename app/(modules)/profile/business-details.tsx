@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from "react";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  ScrollView,
-  Platform,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TOKENS } from "../../constants/tokens";
-import { cartState, Business } from "../../components/data/cartState";
+import { Business, cartState } from "../../../components/data/cartState";
+import { TOKENS } from "../../../constants/tokens";
 
 export default function BusinessDetailsRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  
+
   const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function BusinessDetailsRoute() {
         {/* Info Group */}
         <View style={styles.infoGroup}>
           <Text style={styles.groupLabel}>Store Information</Text>
-          
+
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Business Name</Text>
             <Text style={styles.infoVal}>{activeBusiness.name}</Text>

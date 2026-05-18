@@ -132,7 +132,7 @@ export const HomeScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.headerCartBtn}
               activeOpacity={0.8}
-              onPress={() => router.push("/cart")}
+              onPress={() => router.push("/(modules)/pos/cart")}
             >
               <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
               <View style={styles.headerCartBadge}>
@@ -144,7 +144,7 @@ export const HomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.searchIconBtn}
             activeOpacity={0.7}
-            onPress={() => router.push("/search")}
+            onPress={() => router.push("/(modules)/pos/search")}
           >
             <Feather name="search" size={20} color={TOKENS.dark} />
           </TouchableOpacity>
@@ -168,7 +168,7 @@ export const HomeScreen: React.FC = () => {
       <TouchableOpacity
         style={styles.catalogBanner}
         activeOpacity={0.85}
-        onPress={() => router.push("/catalog")}
+        onPress={() => router.push("/(modules)/pos/catalog")}
       >
         <View style={styles.catalogBannerLeft}>
           <View style={styles.bannerIconWrapper}>
@@ -277,7 +277,7 @@ export const HomeScreen: React.FC = () => {
       <TouchableOpacity
         style={styles.floatingScanFab}
         activeOpacity={0.85}
-        onPress={() => router.push("/scan")}
+        onPress={() => router.push("/(modules)/stocks/scan")}
       >
         <Ionicons name="barcode-outline" size={24} color={TOKENS.card} />
       </TouchableOpacity>

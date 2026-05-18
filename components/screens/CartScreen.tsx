@@ -83,7 +83,7 @@ export const CartScreen: React.FC = () => {
     }
     // Navigate to Choose Payment Method, passing parameters
     router.push({
-      pathname: "/payment",
+      pathname: "/pos/payment",
       params: {
         totalAmount: total.toString(),
         subtotal: subtotal.toString(),

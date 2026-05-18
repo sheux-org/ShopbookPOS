@@ -122,7 +122,7 @@ export const SearchScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.headerCartBtn}
               activeOpacity={0.8}
-              onPress={() => router.push("/cart")}
+              onPress={() => router.push("/pos/cart")}
             >
               <Feather name="shopping-cart" size={16} color={TOKENS.primary} />
               <View style={styles.headerCartBadge}>
@@ -134,7 +134,7 @@ export const SearchScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.scanHeaderButton}
             activeOpacity={0.8}
-            onPress={() => router.push("/scan")}
+            onPress={() => router.push("/stocks/scan")}
           >
             <Ionicons name="barcode-outline" size={20} color={TOKENS.card} />
           </TouchableOpacity>

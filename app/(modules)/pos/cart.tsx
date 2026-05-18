@@ -1,12 +1,12 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { SearchScreen } from "../../components/screens/SearchScreen";
+import { CartScreen } from "@/components/screens/CartScreen";
 
-export default function SearchRoute() {
+export default function CartRoute() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SearchScreen />
+      <CartScreen />
     </>
   );
 }

@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from "react";
+import { Feather } from "@expo/vector-icons";
+import { Redirect, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Redirect, useRouter } from "expo-router";
-import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TOKENS } from "../../constants/tokens";
-import { cartState } from "../../components/data/cartState";
+import { cartState } from "../../../components/data/cartState";
+import { TOKENS } from "../../../constants/tokens";
 
 export default function NumberInputRoute() {
   const insets = useSafeAreaInsets();
@@ -25,7 +25,7 @@ export default function NumberInputRoute() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState(false);
-  
+
   // Registration fields
   const [businessName, setBusinessName] = useState("");
   const [newCategory, setNewCategory] = useState("");
@@ -61,8 +61,9 @@ export default function NumberInputRoute() {
     }, 800);
   };
 
-  const handleVerifyOtp = () => {
-    if (otp.length < 4) {
+  const handleVerifyOtp = (currentOtp?: string) => {
+    const codeToVerify = currentOtp || otp;
+    if (codeToVerify.length < 4) {
       triggerToast("Please enter a 4-digit code!");
       return;
     }
@@ -72,12 +73,13 @@ export default function NumberInputRoute() {
       setIsLoading(false);
       const cleanPhone = phone.replace(/\s+/g, "");
 
-      if (otp === "1111") {
+      if (codeToVerify === "1111") {
         setOtpError(false);
         if (cleanPhone === "0717133074" || cleanPhone === "717133074") {
           // Existing account
           cartState.login(phone, "1111");
           triggerToast("Welcome back to Shopbook!");
+          router.replace("/(tabs)");
         } else {
           // New account: Needs registration
           triggerToast("Number not registered. Let's create your shop profile!");
@@ -109,6 +111,7 @@ export default function NumberInputRoute() {
       setIsLoading(false);
       cartState.register(businessName, businessAddress, phone, newCategory);
       triggerToast("Account registered successfully!");
+      router.replace("/(tabs)");
     }, 800);
   };
 
@@ -145,30 +148,32 @@ export default function NumberInputRoute() {
 
         {/* Dynamic Step Panels */}
         {step === "phone" && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Device Authorization</Text>
-            <Text style={styles.cardSubtitle}>
-              Please enter your mobile number to securely sign in or register your active store terminal.
-            </Text>
+          <View style={[styles.card, styles.cardFixed]}>
+            <View>
+              <Text style={styles.cardTitle}>Device Authorization</Text>
+              <Text style={styles.cardSubtitle}>
+                Please enter your mobile number to securely sign in or register your active store terminal.
+              </Text>
 
-            <View style={styles.inputLabelRow}>
-              <Text style={styles.inputLabel}>Mobile Number</Text>
-              <Text style={styles.hintMarker}>Hint: 071 713 3074</Text>
-            </View>
-
-            <View style={styles.phoneInputRow}>
-              <View style={styles.countryCodeBox}>
-                <Text style={styles.countryCodeText}>🇱🇰 +94</Text>
+              <View style={styles.inputLabelRow}>
+                <Text style={styles.inputLabel}>Mobile Number</Text>
+                <Text style={styles.hintMarker}>Hint: 071 713 3074</Text>
               </View>
-              <TextInput
-                style={styles.textInput}
-                placeholder="71 713 3074"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-                maxLength={12}
-              />
+
+              <View style={styles.phoneInputRow}>
+                <View style={styles.countryCodeBox}>
+                  <Text style={styles.countryCodeText}>🇱🇰 +94</Text>
+                </View>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="71 713 3074"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                  maxLength={12}
+                />
+              </View>
             </View>
 
             <TouchableOpacity
@@ -190,68 +195,73 @@ export default function NumberInputRoute() {
         )}
 
         {step === "otp" && (
-          <View style={styles.card}>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => setStep("phone")}
-              activeOpacity={0.7}
-            >
-              <Feather name="arrow-left" size={16} color={TOKENS.primary} />
-              <Text style={styles.backBtnText}>Change number</Text>
-            </TouchableOpacity>
+          <View style={[styles.card, styles.cardFixed]}>
+            <View>
+              <TouchableOpacity
+                style={styles.backBtn}
+                onPress={() => setStep("phone")}
+                activeOpacity={0.7}
+              >
+                <Feather name="arrow-left" size={16} color={TOKENS.primary} />
+                <Text style={styles.backBtnText}>Change number</Text>
+              </TouchableOpacity>
 
-            <Text style={styles.cardTitle}>Enter Verification Code</Text>
-            <Text style={styles.cardSubtitle}>
-              We sent a 4-digit terminal authorization code to +94 {phone}. Enter it below to unlock.
-            </Text>
+              <Text style={styles.cardTitle}>Enter Verification Code</Text>
+              <Text style={styles.cardSubtitle}>
+                We sent a 4-digit terminal authorization code to +94 {phone}. Enter it below to unlock.
+              </Text>
 
-            <View style={styles.inputLabelRow}>
-              <Text style={styles.inputLabel}>4-Digit OTP Code</Text>
-              <Text style={styles.hintMarker}>Hint: 1111</Text>
-            </View>
+              <View style={styles.inputLabelRow}>
+                <Text style={styles.inputLabel}>4-Digit OTP Code</Text>
+                <Text style={styles.hintMarker}>Hint: 1111</Text>
+              </View>
 
-            <View style={styles.otpContainer}>
-              {/* Hidden absolute invisible TextInput for native keyboard */}
-              <TextInput
-                style={styles.hiddenOtpInput}
-                keyboardType="number-pad"
-                maxLength={4}
-                value={otp}
-                onChangeText={(val) => {
-                  setOtp(val);
-                  if (otpError) setOtpError(false);
-                }}
-                autoFocus={true}
-              />
-              
-              {/* 4 Premium individual digit slot boxes */}
-              <View style={styles.otpSlotsRow}>
-                {[0, 1, 2, 3].map((idx) => {
-                  const char = otp[idx] || "";
-                  const isFocused = otp.length === idx;
-                  return (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.otpSlotBox,
-                        char !== "" && styles.otpSlotBoxFilled,
-                        isFocused && styles.otpSlotBoxFocused,
-                        otpError && styles.otpSlotBoxError,
-                      ]}
-                    >
-                      <Text style={[styles.otpSlotText, otpError && styles.otpSlotTextError]}>
-                        {char}
-                      </Text>
-                    </View>
-                  );
-                })}
+              <View style={styles.otpContainer}>
+                {/* Hidden absolute invisible TextInput for native keyboard */}
+                <TextInput
+                  style={styles.hiddenOtpInput}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  value={otp}
+                  onChangeText={(val) => {
+                    setOtp(val);
+                    if (otpError) setOtpError(false);
+                    if (val.length === 4) {
+                      handleVerifyOtp(val);
+                    }
+                  }}
+                  autoFocus={true}
+                />
+
+                {/* 4 Premium individual digit slot boxes */}
+                <View style={styles.otpSlotsRow}>
+                  {[0, 1, 2, 3].map((idx) => {
+                    const char = otp[idx] || "";
+                    const isFocused = otp.length === idx;
+                    return (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.otpSlotBox,
+                          char !== "" && styles.otpSlotBoxFilled,
+                          isFocused && styles.otpSlotBoxFocused,
+                          otpError && styles.otpSlotBoxError,
+                        ]}
+                      >
+                        <Text style={[styles.otpSlotText, otpError && styles.otpSlotTextError]}>
+                          {char}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
             </View>
 
             <TouchableOpacity
               style={[styles.submitButton, otp.length < 4 && styles.submitButtonDisabled]}
               activeOpacity={0.8}
-              onPress={handleVerifyOtp}
+              onPress={() => handleVerifyOtp()}
               disabled={otp.length < 4 || isLoading}
             >
               {isLoading ? (
@@ -411,6 +421,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 16,
     elevation: 4,
+  },
+  cardFixed: {
+    height: 310,
+    justifyContent: "space-between",
   },
   cardTitle: {
     fontSize: 18,

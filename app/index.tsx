@@ -15,6 +15,6 @@ export default function SessionGateRoute() {
   if (isLoggedIn) {
     return <Redirect href="/(tabs)" />;
   } else {
-    return <Redirect href="/number-input" />;
+    return <Redirect href="/auth/number-input" />;
   }
 }

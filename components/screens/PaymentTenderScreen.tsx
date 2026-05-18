@@ -81,7 +81,7 @@ export const PaymentTenderScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/payment")}
+          onPress={() => router.push("/pos/payment")}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
