@@ -1,8 +1,22 @@
 import { Tabs } from "expo-router";
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import { Animated } from "react-native";
 import { BottomTabBar } from "../../components/common/BottomTabBar";
+import { useTabBarVisible } from "../../hooks/useTabBarVisible";
 
 export default function TabLayout() {
+  const { tabBarVisible } = useTabBarVisible();
+  const translateYAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(translateYAnim, {
+      toValue: tabBarVisible ? 0 : 130, // Animates completely off-screen (accounting for safe area padding)
+      useNativeDriver: true,
+      friction: 8,
+      tension: 50,
+    }).start();
+  }, [tabBarVisible]);
+
   const mapRouteToTab = (routeName: string): "home" | "pos" | "stocks" | "profile" => {
     if (routeName === "index") return "home";
     return routeName as any;
@@ -14,13 +28,24 @@ export default function TabLayout() {
         const routeName = props.state.routeNames[props.state.index];
         const activeTab = mapRouteToTab(routeName);
         return (
-          <BottomTabBar
-            activeTab={activeTab}
-            onTabPress={(tabId) => {
-              const routeName = tabId === "home" ? "index" : tabId;
-              props.navigation.navigate(routeName);
+          <Animated.View
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              transform: [{ translateY: translateYAnim }],
+              zIndex: 100,
             }}
-          />
+          >
+            <BottomTabBar
+              activeTab={activeTab}
+              onTabPress={(tabId) => {
+                const routeName = tabId === "home" ? "index" : tabId;
+                props.navigation.navigate(routeName);
+              }}
+            />
+          </Animated.View>
         );
       }}
       screenOptions={{
@@ -54,3 +79,4 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,13 +10,14 @@ import {
   TextInput,
   Modal,
   Pressable,
+  Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { BottomTabBar } from "../common/BottomTabBar";
 import { cartState, Business } from "../data/cartState";
+import { useTabBarVisible } from "../../hooks/useTabBarVisible";
 
 interface HomeProduct {
   id: string;
@@ -53,6 +54,65 @@ export const HomeScreen: React.FC = () => {
   // Active Business dropdown states
   const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
   const [isBusinessSheetOpen, setIsBusinessSheetOpen] = useState(false);
+
+  const { tabBarVisible, setTabBarVisible } = useTabBarVisible();
+  const lastScrollY = useRef(0);
+
+  // Reset tab bar visibility to true on mount/unmount to avoid lingering hidden state
+  useEffect(() => {
+    setTabBarVisible(true);
+    return () => {
+      setTabBarVisible(true);
+    };
+  }, []);
+
+  // Synchronized FAB animation values
+  const fabWidthAnim = useRef(new Animated.Value(115)).current;
+  const fabTextOpacityAnim = useRef(new Animated.Value(1)).current;
+  const fabTextScaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(fabWidthAnim, {
+        toValue: tabBarVisible ? 115 : 48,
+        useNativeDriver: false,
+        friction: 8,
+        tension: 50,
+      }),
+      Animated.spring(fabTextOpacityAnim, {
+        toValue: tabBarVisible ? 1 : 0,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 50,
+      }),
+      Animated.spring(fabTextScaleAnim, {
+        toValue: tabBarVisible ? 1 : 0.5,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 50,
+      }),
+    ]).start();
+  }, [tabBarVisible]);
+
+  // Scroll handler for hiding/showing tab bar dynamically
+  const handleScroll = (event: any) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    
+    // Scrolling down (with threshold)
+    if (currentY > 50 && currentY > lastScrollY.current) {
+      if (tabBarVisible) {
+        setTabBarVisible(false);
+      }
+    } 
+    // Scrolling up or at the absolute top
+    else if (currentY < lastScrollY.current || currentY <= 10) {
+      if (!tabBarVisible) {
+        setTabBarVisible(true);
+      }
+    }
+    
+    lastScrollY.current = currentY;
+  };
 
   useEffect(() => {
     const syncState = () => {
@@ -221,8 +281,13 @@ export const HomeScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         numColumns={2}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.gridContainer}
+        contentContainerStyle={[
+          styles.gridContainer,
+          { paddingBottom: insets.bottom + 100 }
+        ]}
         columnWrapperStyle={styles.gridColumns}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         renderItem={({ item }) => (
           <View style={styles.productCard}>
             {/* Top row */}
@@ -273,14 +338,38 @@ export const HomeScreen: React.FC = () => {
         }
       />
 
-      {/* Restored Floating Scan FAB in the bottom right! */}
-      <TouchableOpacity
-        style={styles.floatingScanFab}
-        activeOpacity={0.85}
-        onPress={() => router.push("/(modules)/stocks/scan")}
+      {/* Synchronized Animated FAB */}
+      <Animated.View
+        style={[
+          styles.animatedFabContainer,
+          {
+            bottom: insets.bottom + 75,
+            width: fabWidthAnim,
+          }
+        ]}
       >
-        <Ionicons name="barcode-outline" size={24} color={TOKENS.card} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.fabTouchable}
+          activeOpacity={0.8}
+          onPress={() => router.push("/(modules)/stocks/scan")}
+        >
+          <View style={styles.fabIconWrapper}>
+            <Ionicons name="qr-code-outline" size={18} color="#FFFFFF" />
+          </View>
+          <Animated.Text
+            numberOfLines={1}
+            style={[
+              styles.fabText,
+              {
+                opacity: fabTextOpacityAnim,
+                transform: [{ scale: fabTextScaleAnim }],
+              }
+            ]}
+          >
+            Scan
+          </Animated.Text>
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* Premium Business Swapping Bottom Sheet */}
       <Modal
@@ -577,22 +666,44 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
     fontWeight: "500",
   },
-  floatingScanFab: {
+  animatedFabContainer: {
     position: "absolute",
-    bottom: 80,
     right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: TOKENS.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: TOKENS.primary,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#2563EB", // Vibrant POS Blue (matches UI brand perfectly)
+    borderWidth: 1,
+    borderColor: "#3B82F6", // Electric Blue Border
+    shadowColor: "#2563EB", // Glowing Blue Shadow
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 6,
-    zIndex: 90,
+    zIndex: 100,
+    overflow: "hidden",
+  },
+  fabTouchable: {
+    width: "100%",
+    height: "100%",
+    position: "relative",
+  },
+  fabIconWrapper: {
+    position: "absolute",
+    left: 13.5,
+    top: 13.5,
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fabText: {
+    position: "absolute",
+    left: 42,
+    top: 13,
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   headerActions: {
     flexDirection: "row",
