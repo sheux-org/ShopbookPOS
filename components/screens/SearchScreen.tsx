@@ -10,7 +10,8 @@ import {
   Modal,
   Alert,
 } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView } from "expo-camera";
+import { usePermission } from "../../hooks/usePermissionHandler";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,12 +22,12 @@ import { useProducts } from "../../hooks/useProducts";
 export const SearchScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { requestCameraAccess } = usePermission();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeChip, setActiveChip] = useState("All");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [permission, requestPermission] = useCameraPermissions();
 
   // Live products catalog list synced via React Query hook
   const { data: productsList = [] } = useProducts(undefined, searchQuery, activeChip);
@@ -46,15 +47,10 @@ export const SearchScreen: React.FC = () => {
     setTimeout(() => setToastMessage(null), 1500);
   };
 
-  const triggerBarcodeScanner = async () => {
-    if (!permission || !permission.granted) {
-      const status = await requestPermission();
-      if (!status.granted) {
-        Alert.alert("Camera Permission Required", "Please allow camera access to scan barcodes.");
-        return;
-      }
-    }
-    setIsScanning(true);
+  const triggerBarcodeScanner = () => {
+    requestCameraAccess(() => {
+      setIsScanning(true);
+    });
   };
 
   const handleAddProduct = (prod: CatalogProduct) => {
@@ -260,7 +256,7 @@ export const SearchScreen: React.FC = () => {
             
             {/* Viewfinder area containing live CameraView */}
             <View style={styles.scannerViewfinder}>
-              {isScanning && permission?.granted ? (
+              {isScanning ? (
                 <CameraView
                   style={StyleSheet.absoluteFillObject}
                   barcodeScannerSettings={{
