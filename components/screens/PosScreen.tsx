@@ -287,7 +287,7 @@ export const PosScreen: React.FC = () => {
       </ScrollView>
 
       {/* Bottom Panel - Segmented Control, Input Mode View, Numpad */}
-      <View style={[styles.bottomPanel, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      <View style={[styles.bottomPanel, { paddingBottom: insets.bottom + 90 }]}>
         {/* Three-column Mode Buttons */}
         <View style={styles.segmentedControl}>
           <TouchableOpacity

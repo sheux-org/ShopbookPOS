@@ -185,7 +185,10 @@ export const StocksScreen: React.FC = () => {
       {/* Scrollable Area */}
       <ScrollView
         style={styles.scrollWrapper}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 100 }
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

@@ -65,7 +65,10 @@ export const ProfileScreen: React.FC = () => {
       {/* Scrollable Settings Panel */}
       <ScrollView
         style={styles.scrollWrapper}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 100 }
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Avatar Card Glassmorphic Premium */}
