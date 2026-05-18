@@ -5,8 +5,6 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  FlatList,
-  Dimensions,
   Platform,
   Alert,
   Animated,
@@ -14,24 +12,11 @@ import {
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
-import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { BottomTabBar } from "../common/BottomTabBar";
-import { INITIAL_PRODUCTS, Product } from "../data/products";
 import { cartState } from "../data/cartState";
-
-// Specific Quick Codes list matching the UI & products
-const QUICK_CODES: Record<string, { name: string; price: number; icon: string }> = {
-  "1024": { name: "Munchee Puff", price: 180, icon: "🍪" },
-  "1001": { name: "Anchor Milk 1L", price: 680, icon: "🥛" },
-  "1002": { name: "Marie Biscuits", price: 180, icon: "🍪" },
-  "1003": { name: "Cream Soda 1.5L", price: 320, icon: "🥤" },
-  "1004": { name: "Lemon Puff", price: 250, icon: "🥮" },
-  "1005": { name: "Sunlight Soap", price: 130, icon: "🧼" },
-  "1006": { name: "Red Rice 1kg", price: 280, icon: "🌾" },
-  "1007": { name: "Ceylon Tea", price: 450, icon: "☕" },
-};
+import { useProducts } from "../../hooks/useProducts";
 
 interface InvoiceItem {
   id: string;
@@ -80,6 +65,9 @@ export const PosScreen: React.FC = () => {
 
   // Search query for search mode
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Real search products fetched dynamically from WatermelonDB via React Query
+  const { data: searchProducts = [] } = useProducts(undefined, searchQuery || undefined);
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -140,9 +128,8 @@ export const PosScreen: React.FC = () => {
 
   const matchedProduct = useMemo(() => {
     if (!quickCode) return null;
-    const catalog = cartState.getCatalogProducts();
-    return catalog.find((p) => p.quickCode === quickCode || p.barcode === quickCode) || null;
-  }, [quickCode]);
+    return searchProducts.find((p) => p.quickCode === quickCode || p.barcode === quickCode) || null;
+  }, [quickCode, searchProducts]);
 
   // Handle numpad key presses
   const handleNumPress = (val: string) => {
@@ -162,8 +149,7 @@ export const PosScreen: React.FC = () => {
   // Auto-add product if fully typed valid quick code from dynamic catalog
   useEffect(() => {
     if (!quickCode) return;
-    const catalog = cartState.getCatalogProducts();
-    const prod = catalog.find((p) => p.quickCode === quickCode || p.barcode === quickCode);
+    const prod = searchProducts.find((p) => p.quickCode === quickCode || p.barcode === quickCode);
     if (prod) {
       const timer = setTimeout(() => {
         addItemToInvoice(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
@@ -171,15 +157,12 @@ export const PosScreen: React.FC = () => {
       }, 700);
       return () => clearTimeout(timer);
     }
-  }, [quickCode]);
+  }, [quickCode, searchProducts]);
 
   // Search filtered products
   const filteredSearchProducts = useMemo(() => {
-    if (!searchQuery) return INITIAL_PRODUCTS.slice(0, 4);
-    return INITIAL_PRODUCTS.filter((prod) =>
-      prod.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery]);
+    return searchQuery ? searchProducts : searchProducts.slice(0, 4);
+  }, [searchQuery, searchProducts]);
 
   const handleTabPress = (tabId: string) => {
     if (tabId === "home") {
@@ -199,8 +182,7 @@ export const PosScreen: React.FC = () => {
     if (lastScanTime.current && Date.now() - lastScanTime.current < 2000) return;
     lastScanTime.current = Date.now();
 
-    const catalog = cartState.getCatalogProducts();
-    const prod = catalog.find((p) => p.barcode === data || p.quickCode === data);
+    const prod = searchProducts.find((p) => p.barcode === data || p.quickCode === data);
     if (prod) {
       addItemToInvoice(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
     } else {
@@ -561,8 +543,6 @@ export const PosScreen: React.FC = () => {
           </TouchableOpacity>
         )}
       </View>
-
-
     </View>
   );
 };

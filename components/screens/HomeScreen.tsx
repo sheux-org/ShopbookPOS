@@ -53,6 +53,7 @@ export const HomeScreen: React.FC = () => {
   const toggleFavoriteMutation = useToggleFavoriteProduct();
   const [cartItemsCount, setCartItemsCount] = useState(0);
 
+  console.log("productsList", productsList);
   // Active Business dropdown states
   const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
   const [isBusinessSheetOpen, setIsBusinessSheetOpen] = useState(false);

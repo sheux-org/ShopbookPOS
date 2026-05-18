@@ -16,17 +16,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { Header } from "../common/Header";
 import { BottomTabBar } from "../common/BottomTabBar";
-import { RECENT_ITEMS, RecentItem } from "../data/products";
+import { cartState } from "../data/cartState";
+import { useProducts } from "../../hooks/useProducts";
 
 export const ScanScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [addedItemsCount, setAddedItemsCount] = useState(8);
+  const [addedItemsCount, setAddedItemsCount] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const scanAnim = useRef(new Animated.Value(0)).current;
+
+  // Real scan products fetched dynamically from WatermelonDB via React Query
+  const { data: recentProducts = [] } = useProducts(undefined, searchQuery || undefined, "Recents");
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -62,7 +66,8 @@ export const ScanScreen: React.FC = () => {
     }, 1500);
   };
 
-  const handlePlusAction = (item: RecentItem) => {
+  const handlePlusAction = (item: any) => {
+    cartState.addCartItem(item.name, item.price, item.icon);
     setAddedItemsCount((prev) => prev + 1);
     triggerToast(`Scanned & added ${item.name}`);
   };
@@ -77,14 +82,7 @@ export const ScanScreen: React.FC = () => {
     }
   };
 
-  const filteredRecents = useMemo(() => {
-    if (!searchQuery) return RECENT_ITEMS;
-    return RECENT_ITEMS.filter(
-      (item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery]);
+  const filteredRecents = recentProducts;
 
   return (
     <View style={styles.container}>
@@ -173,12 +171,12 @@ export const ScanScreen: React.FC = () => {
           {filteredRecents.map((item) => (
             <View key={item.id} style={styles.recentItemRow}>
               <View style={styles.itemIconBox}>
-                <Ionicons name="barcode-outline" size={20} color={TOKENS.primary} />
+                <Text style={{ fontSize: 18 }}>{item.icon}</Text>
               </View>
 
               <View style={styles.itemDetails}>
                 <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemSku}>{item.sku}</Text>
+                <Text style={styles.itemSku}>{item.barcode || item.quickCode || "No Code"}</Text>
               </View>
 
               <Text style={styles.itemPrice}>Rs. {item.price}</Text>

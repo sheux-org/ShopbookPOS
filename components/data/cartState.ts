@@ -25,19 +25,6 @@ export interface CatalogProduct {
   barcode?: string;
 }
 
-let catalogProducts: CatalogProduct[] = [
-  { id: "1", name: "Anchor Milk 1L", price: 680, category: "dairy", icon: "🥛", stockText: "24 in stock", stockType: "normal", stockCount: 24, unitType: "Liters", costPrice: 580 },
-  { id: "2", name: "Highland Yogurt", price: 95, category: "dairy", icon: "🥣", stockText: "38 in stock", stockType: "normal", stockCount: 38, unitType: "Pieces", costPrice: 75 },
-  { id: "3", name: "Marie Biscuits", price: 180, category: "snacks", icon: "🍪", stockText: "Low · 4 remaining", stockType: "low", stockCount: 4, unitType: "Packets", costPrice: 140 },
-  { id: "4", name: "Lemon Puff 200g", price: 250, category: "snacks", icon: "🥮", stockText: "16 in stock", stockType: "normal", stockCount: 16, unitType: "Packets", costPrice: 200 },
-  { id: "5", name: "Cream Soda 1.5L", price: 320, category: "drinks", icon: "🥤", stockText: "22 in stock", stockType: "normal", stockCount: 22, unitType: "Liters", costPrice: 260 },
-  { id: "6", name: "Pepsi 1L", price: 280, category: "drinks", icon: "🥤", stockText: "Out of Stock", stockType: "out", stockCount: 0, unitType: "Liters", costPrice: 220 },
-  { id: "7", name: "Sunlight Soap", price: 130, category: "grocery", icon: "🧼", stockText: "15 in stock", stockType: "normal", stockCount: 15, unitType: "Pieces", costPrice: 100 },
-  { id: "8", name: "Red Rice 1kg", price: 280, category: "grocery", icon: "🌾", stockText: "18 in stock", stockType: "normal", stockCount: 18, unitType: "kg", costPrice: 230 },
-  { id: "9", name: "Ceylon Tea", price: 450, category: "drinks", icon: "☕", stockText: "Low · 2 remaining", stockType: "low", stockCount: 2, unitType: "Packets", costPrice: 380 },
-  { id: "10", name: "Bread Loaf", price: 110, category: "grocery", icon: "🍞", stockText: "12 in stock", stockType: "normal", stockCount: 12, unitType: "Pieces", costPrice: 85 },
-];
-
 export interface Business {
   id: string;
   name: string;
@@ -59,7 +46,6 @@ const listeners = new Set<() => void>();
 
 export const cartState = {
   getCart: () => useCart.getState().cart,
-  getCatalogProducts: () => catalogProducts,
   getBusinesses: () => BUSINESSES,
   getActiveBusiness: () => activeBusiness,
   setActiveBusiness: (id: string) => {
@@ -131,27 +117,12 @@ export const cartState = {
     listeners.forEach((l) => l());
   },
 
-  addNewCatalogProduct: (product: Omit<CatalogProduct, "id" | "stockText" | "stockType">) => {
-    const id = (catalogProducts.length + 1).toString();
-    const stockType = product.stockCount === 0 ? "out" : product.stockCount <= 5 ? "low" : "normal";
-    const stockText = stockType === "out" ? "Out of Stock" : stockType === "low" ? `Low · ${product.stockCount} remaining` : `${product.stockCount} in stock`;
-    
-    catalogProducts = [
-      ...catalogProducts,
-      {
-        ...product,
-        id,
-        stockType,
-        stockText,
-      } as CatalogProduct,
-    ];
-    listeners.forEach((l) => l());
-
-    // Save product to WatermelonDB database
+  addNewCatalogProduct: async (product: Omit<CatalogProduct, "id" | "stockText" | "stockType">) => {
+    // Save product directly to local SQLite database (WatermelonDB)
     try {
       const db = require('./db').default;
       const { Q } = require('@nozbe/watermelondb');
-      db.write(async () => {
+      await db.write(async () => {
         const activeBiz = cartState.getActiveBusiness();
         let dbBiz;
         const businesses = await db.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
@@ -180,6 +151,7 @@ export const cartState = {
         });
       });
       console.log('Successfully saved new catalog product to WatermelonDB database');
+      listeners.forEach((l) => l());
     } catch (err) {
       console.error('Failed to write new catalog product to WatermelonDB:', err);
     }
@@ -196,6 +168,20 @@ export const cartState = {
     };
   },
 };
+
+// Private initial dataset ONLY for seeding the database when empty
+const SEEDING_PRODUCTS = [
+  { name: "Anchor Milk 1L", price: 680, category: "dairy", icon: "🥛", stockCount: 24, unitType: "Liters", costPrice: 580, quickCode: "1001" },
+  { name: "Highland Yogurt", price: 95, category: "dairy", icon: "🥣", stockCount: 38, unitType: "Pieces", costPrice: 75, quickCode: "1008" },
+  { name: "Marie Biscuits", price: 180, category: "snacks", icon: "🍪", stockCount: 4, unitType: "Packets", costPrice: 140, quickCode: "1002" },
+  { name: "Lemon Puff 200g", price: 250, category: "snacks", icon: "🥮", stockCount: 16, unitType: "Packets", costPrice: 200, quickCode: "1004" },
+  { name: "Cream Soda 1.5L", price: 320, category: "drinks", icon: "🥤", stockCount: 22, unitType: "Liters", costPrice: 260, quickCode: "1003" },
+  { name: "Pepsi 1L", price: 280, category: "drinks", icon: "🥤", stockCount: 0, unitType: "Liters", costPrice: 220, quickCode: "1009" },
+  { name: "Sunlight Soap", price: 130, category: "grocery", icon: "🧼", stockCount: 15, unitType: "Pieces", costPrice: 100, quickCode: "1005" },
+  { name: "Red Rice 1kg", price: 280, category: "grocery", icon: "🌾", stockCount: 18, unitType: "kg", costPrice: 230, quickCode: "1006" },
+  { name: "Ceylon Tea", price: 450, category: "drinks", icon: "☕", stockCount: 2, unitType: "Packets", costPrice: 380, quickCode: "1007" },
+  { name: "Bread Loaf", price: 110, category: "grocery", icon: "🍞", stockCount: 12, unitType: "Pieces", costPrice: 85, quickCode: "1010" },
+];
 
 // Seeding initial catalog products into WatermelonDB if it's empty
 setTimeout(async () => {
@@ -214,7 +200,7 @@ setTimeout(async () => {
           b.phoneNumber = activeBiz.phone;
         });
 
-        for (const item of catalogProducts) {
+        for (const item of SEEDING_PRODUCTS) {
           await db.get('products').create((p: any) => {
             p.business.set(dbBiz);
             p.name = item.name;
@@ -225,7 +211,6 @@ setTimeout(async () => {
             p.unitType = item.unitType;
             p.costPrice = item.costPrice;
             p.quickCode = item.quickCode;
-            p.barcode = item.barcode;
           });
         }
       });
