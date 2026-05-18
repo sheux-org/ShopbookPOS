@@ -67,6 +67,7 @@ export class Product extends Model {
   @field('stock_count') stockCount!: number;
   @field('low_stock_alert') lowStockAlert?: number;
   @text('icon') icon?: string;
+  @field('is_favorite') isFavorite!: boolean;
 
   @relation('businesses', 'business_id') business!: Relation<any>;
   @children('order_items') orderItems!: any;

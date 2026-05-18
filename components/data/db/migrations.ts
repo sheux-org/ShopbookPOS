@@ -1,5 +1,17 @@
-import { schemaMigrations } from '@nozbe/watermelondb/Schema/migrations';
+import { schemaMigrations, addColumns } from '@nozbe/watermelondb/Schema/migrations';
 
 export default schemaMigrations({
-  migrations: [],
+  migrations: [
+    {
+      toVersion: 2,
+      steps: [
+        addColumns({
+          table: 'products',
+          columns: [
+            { name: 'is_favorite', type: 'boolean', isOptional: true },
+          ],
+        }),
+      ],
+    },
+  ],
 });

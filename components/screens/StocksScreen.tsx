@@ -16,7 +16,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
-import { useAddProduct } from "../../hooks/useProducts";
+import { useAddProduct, useProducts } from "../../hooks/useProducts";
 
 interface FavoriteProduct {
   id: string;
@@ -33,22 +33,20 @@ interface RecentAdd {
   icon: string;
 }
 
-const FAVORITES: FavoriteProduct[] = [
-  { id: "fav1", name: "Marie Biscuits", price: 180, icon: "🍪" },
-  { id: "fav2", name: "Anchor Milk 1L", price: 680, icon: "🥛" },
-  { id: "fav3", name: "Cream Soda", price: 320, icon: "🥤" },
-  { id: "fav4", name: "Sunlight Soap", price: 130, icon: "🧼" },
-  { id: "fav5", name: "Red Rice 1kg", price: 280, icon: "🌾" },
-  { id: "fav6", name: "Bread Loaf", price: 110, icon: "🍞" },
-  { id: "fav7", name: "Eggs (10)", price: 380, icon: "🥚" },
-  { id: "fav8", name: "Ceylon Tea", price: 450, icon: "🍵" },
-];
+function getRelativeTimeAgo(timestamp?: number): string {
+  if (!timestamp) return "Just now";
+  const now = Date.now();
+  const diffMs = now - timestamp;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHr / 24);
 
-const RECENTS: RecentAdd[] = [
-  { id: "rec1", name: "Munchee Lemon Puff", timeAgo: "2 min ago", price: 200, icon: "🍪" },
-  { id: "rec2", name: "Elephant Cream Soda 1.5L", timeAgo: "5 min ago", price: 320, icon: "🥤" },
-  { id: "rec3", name: "Highland Yogurt", timeAgo: "8 min ago", price: 95, icon: "🥣" },
-];
+  if (diffSec < 60) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return `${diffDays}d ago`;
+}
 
 const CATEGORIES_LIST = ["grocery", "dairy", "drinks", "snacks", "household"];
 const UNIT_TYPES = ["Pieces", "kg", "Liters", "Packets"];
@@ -65,6 +63,8 @@ export const StocksScreen: React.FC = () => {
   const router = useRouter();
 
   const addProductMutation = useAddProduct();
+  const { data: favoriteProducts = [] } = useProducts(undefined, undefined, "Favorites");
+  const { data: recentProducts = [] } = useProducts(undefined, undefined, "Recents");
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
@@ -444,20 +444,24 @@ export const StocksScreen: React.FC = () => {
           </View>
 
           <View style={styles.favGrid}>
-            {FAVORITES.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.favCard}
-                activeOpacity={0.75}
-                onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
-              >
-                <Text style={styles.favIcon}>{item.icon}</Text>
-                <Text style={styles.favName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={styles.favPrice}>Rs. {item.price}</Text>
-              </TouchableOpacity>
-            ))}
+            {favoriteProducts.length === 0 ? (
+              <Text style={{ color: TOKENS.muted, fontSize: 13, fontStyle: "italic", padding: 10 }}>No favorites added yet. Tap the heart on products in home catalog!</Text>
+            ) : (
+              favoriteProducts.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.favCard}
+                  activeOpacity={0.75}
+                  onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
+                >
+                  <Text style={styles.favIcon}>{item.icon}</Text>
+                  <Text style={styles.favName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.favPrice}>Rs. {item.price}</Text>
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </View>
 
@@ -469,22 +473,26 @@ export const StocksScreen: React.FC = () => {
           </View>
 
           <View style={styles.recentsList}>
-            {RECENTS.map((item) => (
-              <View key={item.id} style={styles.recentRow}>
-                <View style={styles.recentInfoWrapper}>
-                  <Text style={styles.recentItemName}>{item.name}</Text>
-                  <Text style={styles.recentTimeAgo}>{item.timeAgo}</Text>
-                </View>
+            {recentProducts.length === 0 ? (
+              <Text style={{ color: TOKENS.muted, fontSize: 13, fontStyle: "italic", padding: 10 }}>No recently added items. Save a product to populate list!</Text>
+            ) : (
+              recentProducts.map((item) => (
+                <View key={item.id} style={styles.recentRow}>
+                  <View style={styles.recentInfoWrapper}>
+                    <Text style={styles.recentItemName}>{item.name}</Text>
+                    <Text style={styles.recentTimeAgo}>{getRelativeTimeAgo(item.createdAt)}</Text>
+                  </View>
 
-                <TouchableOpacity
-                  style={styles.addButton}
-                  activeOpacity={0.8}
-                  onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
-                >
-                  <Text style={styles.addButtonText}>+ Add</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    activeOpacity={0.8}
+                    onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
+                  >
+                    <Text style={styles.addButtonText}>+ Add</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
           </View>
         </View>
       </ScrollView>

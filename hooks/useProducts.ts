@@ -12,6 +12,8 @@ export interface DBProduct {
   stockText: string;
   barcode?: string;
   quickCode?: string;
+  isFavorite?: boolean;
+  createdAt?: number;
 }
 
 export function useProducts(category?: string, search?: string, activeChip?: string) {
@@ -37,6 +39,10 @@ export function useProducts(category?: string, search?: string, activeChip?: str
           query = query.extend(Q.where("stock_count", Q.between(1, 5)));
         } else if (activeChip === "Out of Stock") {
           query = query.extend(Q.where("stock_count", 0));
+        } else if (activeChip === "Favorites" || activeChip === "favorites") {
+          query = query.extend(Q.where("is_favorite", true));
+        } else if (activeChip === "Recents" || activeChip === "recents") {
+          query = query.extend(Q.sortBy("created_at", Q.desc), Q.take(4));
         }
       }
 
@@ -70,6 +76,8 @@ export function useProducts(category?: string, search?: string, activeChip?: str
           stockText,
           barcode: p.barcode,
           quickCode: p.quickCode,
+          isFavorite: p.isFavorite ?? false,
+          createdAt: p.createdAt ? new Date(p.createdAt).getTime() : Date.now(),
         };
       });
     },
@@ -95,6 +103,26 @@ export function useAddProduct() {
     },
     onSuccess: () => {
       // Invalidate the query key so all screens automatically refetch from WatermelonDB!
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useToggleFavoriteProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const db = require("../components/data/db").default;
+      const product = await db.get("products").find(id);
+      await db.write(async () => {
+        await product.update((p: any) => {
+          p.isFavorite = !p.isFavorite;
+        });
+      });
+    },
+    onSuccess: () => {
+      // Invalidate products query cache so all components refetch instantly!
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
   });

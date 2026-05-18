@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, Business } from "../data/cartState";
 import { useTabBarVisible } from "../../hooks/useTabBarVisible";
-import { useProducts } from "../../hooks/useProducts";
+import { useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
 
 interface HomeProduct {
   id: string;
@@ -50,6 +50,7 @@ export const HomeScreen: React.FC = () => {
 
   // Dynamic products list fetched via React Query custom hook
   const { data: productsList = [] } = useProducts(selectedCategory, searchQuery);
+  const toggleFavoriteMutation = useToggleFavoriteProduct();
   const [cartItemsCount, setCartItemsCount] = useState(0);
 
   // Active Business dropdown states
@@ -286,7 +287,21 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.productCard}>
             {/* Top row */}
             <View style={styles.cardHeader}>
-              <Text style={styles.productIcon}>{item.icon}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={styles.productIcon}>{item.icon}</Text>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => toggleFavoriteMutation.mutate(item.id)}
+                  style={{ padding: 4 }}
+                >
+                  <Ionicons
+                    name={item.isFavorite ? "heart" : "heart-outline"}
+                    size={16}
+                    color={item.isFavorite ? TOKENS.error : TOKENS.muted}
+                  />
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity
                 style={[
                   styles.plusBtn,

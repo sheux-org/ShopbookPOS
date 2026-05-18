@@ -25,11 +25,15 @@ export const ProfileScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<"1_month" | "3_month" | "1_year">("3_month");
+  
+  // Real business details from local SQLite database
+  const [activeBusiness, setActiveBusiness] = useState(cartState.getActiveBusiness());
 
   useEffect(() => {
     const updateCount = () => {
       const cart = cartState.getCart();
       setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
+      setActiveBusiness(cartState.getActiveBusiness());
     };
     updateCount();
     return cartState.subscribe(updateCount);
@@ -39,6 +43,10 @@ export const ProfileScreen: React.FC = () => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 1500);
   };
+
+  const initials = activeBusiness?.name
+    ? activeBusiness.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "SP";
 
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
@@ -79,11 +87,11 @@ export const ProfileScreen: React.FC = () => {
         {/* Avatar Card Glassmorphic Premium */}
         <View style={styles.avatarCard}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitials}>SP</Text>
+            <Text style={styles.avatarInitials}>{initials}</Text>
           </View>
 
-          <Text style={styles.partnerName}>Shopbook Partner Store</Text>
-          <Text style={styles.partnerPlan}>Pro Retailer Plan</Text>
+          <Text style={styles.partnerName}>{activeBusiness?.name || "Shopbook Partner Store"}</Text>
+          <Text style={styles.partnerPlan}>{activeBusiness?.category ? `${activeBusiness.category} Plan` : "Pro Retailer Plan"}</Text>
 
           <View style={styles.activeBadge}>
             <View style={styles.activeDot} />
