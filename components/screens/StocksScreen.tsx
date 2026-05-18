@@ -10,7 +10,8 @@ import {
   Alert,
   Modal,
 } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView } from "expo-camera";
+import { usePermission } from "../../hooks/usePermissionHandler";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -77,11 +78,12 @@ export const StocksScreen: React.FC = () => {
   const [formSalesPrice, setFormSalesPrice] = useState("");
   const [formStockIn, setFormStockIn] = useState("");
   const [formLowStock, setFormLowStock] = useState("");
+  const { requestCameraAccess } = usePermission();
+
   const [formQuickCode, setFormQuickCode] = useState("");
   const [formBarcode, setFormBarcode] = useState("");
   const [formImage, setFormImage] = useState("🍎");
   const [isScanning, setIsScanning] = useState(false);
-  const [permission, requestPermission] = useCameraPermissions();
 
   useEffect(() => {
     const updateCount = () => {
@@ -102,15 +104,10 @@ export const StocksScreen: React.FC = () => {
     triggerToast(`Added ${name} to checkout invoice`);
   };
 
-  const triggerBarcodeScanner = async () => {
-    if (!permission || !permission.granted) {
-      const status = await requestPermission();
-      if (!status.granted) {
-        Alert.alert("Camera Permission Required", "Please allow camera access to scan barcodes.");
-        return;
-      }
-    }
-    setIsScanning(true);
+  const triggerBarcodeScanner = () => {
+    requestCameraAccess(() => {
+      setIsScanning(true);
+    });
   };
 
   const handleSaveProduct = () => {
@@ -522,7 +519,7 @@ export const StocksScreen: React.FC = () => {
             
              {/* Viewfinder area with blinking animation and moving laser line */}
             <View style={styles.scannerViewfinder}>
-              {isScanning && permission?.granted ? (
+              {isScanning ? (
                 <CameraView
                   style={StyleSheet.absoluteFillObject}
                   barcodeScannerSettings={{

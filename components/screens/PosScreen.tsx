@@ -10,7 +10,8 @@ import {
   Animated,
   TextInput,
 } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView } from "expo-camera";
+import { usePermission } from "../../hooks/usePermissionHandler";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,19 +25,20 @@ interface InvoiceItem {
   quantity: number;
   price: number;
   icon?: string;
+  stockCount?: number;
+  sku?: string;
 }
 
 export const PosScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { requestCameraAccess, hasCameraAccess } = usePermission();
 
-  // Mode Selection: 'quick_code' | 'scan' | 'search'
-  const [activeMode, setActiveMode] = useState<"quick_code" | "scan" | "search">("scan");
-
+  const [activeMode, setActiveMode] = useState<"search" | "scan" | "quick_code">("search");
+  
   // Sync state with shared cartState store
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [permission, requestPermission] = useCameraPermissions();
   const lastScanTime = useRef<number>(0);
 
   useEffect(() => {
@@ -53,11 +55,11 @@ export const PosScreen: React.FC = () => {
   // Request permissions automatically when switching to scan tab
   useEffect(() => {
     if (activeMode === "scan") {
-      if (!permission || !permission.granted) {
-        requestPermission();
+      if (!hasCameraAccess) {
+        requestCameraAccess();
       }
     }
-  }, [activeMode, permission]);
+  }, [activeMode, hasCameraAccess]);
 
   // Quick code state
   const [quickCode, setQuickCode] = useState("");
@@ -446,7 +448,7 @@ export const PosScreen: React.FC = () => {
 
               {/* Viewfinder box containing live CameraView */}
               <View style={styles.mockViewfinder}>
-                {permission?.granted ? (
+                {hasCameraAccess ? (
                   <CameraView
                     style={StyleSheet.absoluteFillObject}
                     barcodeScannerSettings={{
@@ -460,7 +462,7 @@ export const PosScreen: React.FC = () => {
                       Camera Access Required
                     </Text>
                     <TouchableOpacity
-                      onPress={requestPermission}
+                      onPress={() => requestCameraAccess()}
                       style={{ backgroundColor: TOKENS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
                     >
                       <Text style={{ color: "#fff", fontSize: 11, fontWeight: "bold" }}>Grant Permission</Text>
