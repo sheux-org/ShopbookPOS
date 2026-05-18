@@ -342,8 +342,11 @@ export const HomeScreen: React.FC = () => {
         )}
         ListEmptyComponent={
           <View style={styles.emptyGridState}>
-            <Feather name="alert-circle" size={40} color={TOKENS.muted} />
-            <Text style={styles.emptyGridText}>No products found matching criteria</Text>
+            <Feather name="search" size={48} color="#D1D5DB" />
+            <Text style={styles.emptyGridTitle}>No items found</Text>
+            <Text style={styles.emptyGridSub}>
+              Try searching for another product or add a new one to catalog.
+            </Text>
           </View>
         }
       />
@@ -668,13 +671,23 @@ const styles = StyleSheet.create({
   emptyGridState: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
-    gap: 8,
+    paddingVertical: 64,
+    paddingHorizontal: 24,
+    marginTop: 32,
+    marginHorizontal: 16,
   },
-  emptyGridText: {
-    fontSize: 14,
+  emptyGridTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptyGridSub: {
+    fontSize: 12,
     color: TOKENS.muted,
-    fontWeight: "500",
+    textAlign: "center",
+    lineHeight: 18,
   },
   animatedFabContainer: {
     position: "absolute",

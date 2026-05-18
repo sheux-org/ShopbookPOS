@@ -205,6 +205,15 @@ export const CatalogScreen: React.FC = () => {
                 </View>
               </View>
             )}
+            ListEmptyComponent={
+              <View style={styles.emptyGridState}>
+                <Feather name="search" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyGridTitle}>No items found</Text>
+                <Text style={styles.emptyGridSub}>
+                  Try searching for another product or add a new one to catalog.
+                </Text>
+              </View>
+            }
           />
         </View>
       </View>
@@ -432,5 +441,26 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
     fontSize: 9,
     fontWeight: "bold",
+  },
+  emptyGridState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 64,
+    paddingHorizontal: 16,
+    marginTop: 32,
+    marginHorizontal: 8,
+  },
+  emptyGridTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptyGridSub: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    textAlign: "center",
+    lineHeight: 16,
   },
 });

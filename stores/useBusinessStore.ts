@@ -19,10 +19,16 @@ interface BusinessState {
   updateActiveBusinessDetails: (details: { name: string; category: string; address: string; phone: string }) => Promise<void>;
 }
 
-// Only one default business for 0717133074 initially
-const DEFAULT_BUSINESSES: Business[] = [
-  { id: "1", name: "Shopbook Retailer", category: "Supermarket & Groceries", address: "142 Galle Road, Colombo 03", phone: "0717133074" },
-];
+// Clean onboarding state when no business is registered yet
+const PLACEHOLDER_BUSINESS: Business = {
+  id: "0",
+  name: "Register Your Shop",
+  category: "General Retail",
+  address: "Complete onboarding setup",
+  phone: "",
+};
+
+const DEFAULT_BUSINESSES: Business[] = [PLACEHOLDER_BUSINESS];
 
 export const useBusinessStore = create<BusinessState>()(
   persist(
@@ -38,23 +44,7 @@ export const useBusinessStore = create<BusinessState>()(
       loadBusinessesFromDb: async () => {
         try {
           const db = require('../components/data/db').default;
-          let dbBizs = await db.get('businesses').query().fetch();
-          
-          if (dbBizs.length === 0) {
-            console.log('SQLite businesses table is empty. Seeding initial brand business...');
-            await db.write(async () => {
-              for (const biz of DEFAULT_BUSINESSES) {
-                await db.get('businesses').create((b: any) => {
-                  b.name = biz.name;
-                  b.businessType = biz.category;
-                  b.address = biz.address;
-                  b.phoneNumber = biz.phone;
-                });
-              }
-            });
-            // Re-fetch
-            dbBizs = await db.get('businesses').query().fetch();
-          }
+          const dbBizs = await db.get('businesses').query().fetch();
           
           // Only show businesses that belong to our owner phone number: 0717133074
           const filteredDbBizs = dbBizs.filter((b: any) => {
@@ -75,9 +65,14 @@ export const useBusinessStore = create<BusinessState>()(
               businesses: list,
               activeBusiness: list.find(b => b.id === get().activeBusiness.id) || list[0]
             });
+          } else {
+            set({
+              businesses: [PLACEHOLDER_BUSINESS],
+              activeBusiness: PLACEHOLDER_BUSINESS,
+            });
           }
         } catch (err) {
-          console.error('Failed to load/seed businesses from SQLite:', err);
+          console.error('Failed to load businesses from SQLite:', err);
         }
       },
       registerBusiness: async (name, address, phone, category = "General Retail") => {
@@ -100,6 +95,44 @@ export const useBusinessStore = create<BusinessState>()(
             });
           });
           console.log('Successfully saved business and admin employee to local database');
+          
+          // Seed products ONLY for the very first registered store in SQLite!
+          const dbBizs = await db.get('businesses').query().fetch();
+          if (dbBizs.length === 1) {
+            console.log('First brand business registered. Seeding dynamic inventory catalog in SQLite...');
+            const existingProducts = await db.get('products').query().fetch();
+            if (existingProducts.length === 0) {
+              const SEEDING_PRODUCTS = [
+                { name: "Anchor Milk 1L", price: 680, category: "dairy", icon: "🥛", stockCount: 24, unitType: "Liters", costPrice: 580, quickCode: "1001" },
+                { name: "Highland Yogurt", price: 95, category: "dairy", icon: "🥣", stockCount: 38, unitType: "Pieces", costPrice: 75, quickCode: "1008" },
+                { name: "Marie Biscuits", price: 180, category: "snacks", icon: "🍪", stockCount: 4, unitType: "Packets", costPrice: 140, quickCode: "1002" },
+                { name: "Lemon Puff 200g", price: 250, category: "snacks", icon: "🥮", stockCount: 16, unitType: "Packets", costPrice: 200, quickCode: "1004" },
+                { name: "Cream Soda 1.5L", price: 320, category: "drinks", icon: "🥤", stockCount: 22, unitType: "Liters", costPrice: 260, quickCode: "1003" },
+                { name: "Pepsi 1L", price: 280, category: "drinks", icon: "🥤", stockCount: 0, unitType: "Liters", costPrice: 220, quickCode: "1009" },
+                { name: "Sunlight Soap", price: 130, category: "grocery", icon: "🧼", stockCount: 15, unitType: "Pieces", costPrice: 100, quickCode: "1005" },
+                { name: "Red Rice 1kg", price: 280, category: "grocery", icon: "🌾", stockCount: 18, unitType: "kg", costPrice: 230, quickCode: "1006" },
+                { name: "Ceylon Tea", price: 450, category: "drinks", icon: "☕", stockCount: 2, unitType: "Packets", costPrice: 380, quickCode: "1007" },
+                { name: "Bread Loaf", price: 110, category: "grocery", icon: "🍞", stockCount: 12, unitType: "Pieces", costPrice: 85, quickCode: "1010" },
+              ];
+              
+              await db.write(async () => {
+                for (const item of SEEDING_PRODUCTS) {
+                  await db.get('products').create((p: any) => {
+                    p.business.set(newBusinessRecord);
+                    p.name = item.name;
+                    p.price = item.price;
+                    p.category = item.category;
+                    p.icon = item.icon;
+                    p.stockCount = item.stockCount;
+                    p.unitType = item.unitType;
+                    p.costPrice = item.costPrice;
+                    p.quickCode = item.quickCode;
+                  });
+                }
+              });
+              console.log('Successfully seeded catalog products for the first registered business!');
+            }
+          }
           
           await get().loadBusinessesFromDb();
           

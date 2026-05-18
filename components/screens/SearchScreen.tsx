@@ -226,9 +226,11 @@ export const SearchScreen: React.FC = () => {
 
         {filteredProducts.length === 0 && (
           <View style={styles.emptySearchState}>
-            <Feather name="search" size={40} color={TOKENS.muted} />
-            <Text style={styles.emptySearchTitle}>No items match your filters</Text>
-            <Text style={styles.emptySearchSub}>Try searching for a different name or changing filter tabs.</Text>
+            <Feather name="search" size={48} color="#D1D5DB" />
+            <Text style={styles.emptySearchTitle}>No items found</Text>
+            <Text style={styles.emptySearchSub}>
+              Try searching for another product or add a new one to catalog.
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -568,20 +570,23 @@ const styles = StyleSheet.create({
   emptySearchState: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
-    gap: 8,
+    paddingVertical: 64,
+    paddingHorizontal: 24,
+    marginTop: 32,
+    marginHorizontal: 16,
   },
   emptySearchTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "bold",
     color: TOKENS.dark,
-    marginTop: 8,
+    marginTop: 12,
+    marginBottom: 4,
   },
   emptySearchSub: {
-    fontSize: 13,
+    fontSize: 12,
     color: TOKENS.muted,
     textAlign: "center",
-    paddingHorizontal: 32,
+    lineHeight: 18,
   },
   scannerBg: {
     flex: 1,

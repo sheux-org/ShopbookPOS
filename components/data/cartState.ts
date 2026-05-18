@@ -116,51 +116,12 @@ export const cartState = {
   },
 };
 
-// Private seeding logic for populating local WatermelonDB database when empty on initial setup
-const SEEDING_PRODUCTS = [
-  { name: "Anchor Milk 1L", price: 680, category: "dairy", icon: "🥛", stockCount: 24, unitType: "Liters", costPrice: 580, quickCode: "1001" },
-  { name: "Highland Yogurt", price: 95, category: "dairy", icon: "🥣", stockCount: 38, unitType: "Pieces", costPrice: 75, quickCode: "1008" },
-  { name: "Marie Biscuits", price: 180, category: "snacks", icon: "🍪", stockCount: 4, unitType: "Packets", costPrice: 140, quickCode: "1002" },
-  { name: "Lemon Puff 200g", price: 250, category: "snacks", icon: "🥮", stockCount: 16, unitType: "Packets", costPrice: 200, quickCode: "1004" },
-  { name: "Cream Soda 1.5L", price: 320, category: "drinks", icon: "🥤", stockCount: 22, unitType: "Liters", costPrice: 260, quickCode: "1003" },
-  { name: "Pepsi 1L", price: 280, category: "drinks", icon: "🥤", stockCount: 0, unitType: "Liters", costPrice: 220, quickCode: "1009" },
-  { name: "Sunlight Soap", price: 130, category: "grocery", icon: "🧼", stockCount: 15, unitType: "Pieces", costPrice: 100, quickCode: "1005" },
-  { name: "Red Rice 1kg", price: 280, category: "grocery", icon: "🌾", stockCount: 18, unitType: "kg", costPrice: 230, quickCode: "1006" },
-  { name: "Ceylon Tea", price: 450, category: "drinks", icon: "☕", stockCount: 2, unitType: "Packets", costPrice: 380, quickCode: "1007" },
-  { name: "Bread Loaf", price: 110, category: "grocery", icon: "🍞", stockCount: 12, unitType: "Pieces", costPrice: 85, quickCode: "1010" },
-];
-
+// Automatically load all store profiles from local SQLite database into memory
 setTimeout(async () => {
   try {
-    // Automatically load all store profiles from local SQLite database into memory
+    const { useBusinessStore } = require('../../stores/useBusinessStore');
     await useBusinessStore.getState().loadBusinessesFromDb();
-
-    const db = require('./db').default;
-    const existing = await db.get('products').query().fetch();
-    if (existing.length === 0) {
-      console.log('WatermelonDB products table is empty. Seeding initial catalog...');
-      const dbBizs = await db.get('businesses').query().fetch();
-      if (dbBizs.length > 0) {
-        const firstBiz = dbBizs[0];
-        await db.write(async () => {
-          for (const item of SEEDING_PRODUCTS) {
-            await db.get('products').create((p: any) => {
-              p.business.set(firstBiz);
-              p.name = item.name;
-              p.price = item.price;
-              p.category = item.category;
-              p.icon = item.icon;
-              p.stockCount = item.stockCount;
-              p.unitType = item.unitType;
-              p.costPrice = item.costPrice;
-              p.quickCode = item.quickCode;
-            });
-          }
-        });
-        console.log('Successfully seeded WatermelonDB products for the first business');
-      }
-    }
   } catch (err) {
-    console.error('Failed to seed WatermelonDB initial products:', err);
+    console.error('Failed to load store profiles from SQLite on startup:', err);
   }
 }, 1000);
