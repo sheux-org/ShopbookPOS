@@ -10,12 +10,12 @@ import {
   Alert,
   Modal,
 } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { BottomTabBar } from "../common/BottomTabBar";
-import { cartState, CatalogProduct } from "../data/cartState";
+import { cartState } from "../data/cartState";
 
 interface FavoriteProduct {
   id: string;
@@ -78,6 +78,7 @@ export const StocksScreen: React.FC = () => {
   const [formBarcode, setFormBarcode] = useState("");
   const [formImage, setFormImage] = useState("🍎");
   const [isScanning, setIsScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
   useEffect(() => {
     const updateCount = () => {
@@ -98,7 +99,14 @@ export const StocksScreen: React.FC = () => {
     triggerToast(`Added ${name} to checkout invoice`);
   };
 
-  const triggerBarcodeScanner = () => {
+  const triggerBarcodeScanner = async () => {
+    if (!permission || !permission.granted) {
+      const status = await requestPermission();
+      if (!status.granted) {
+        Alert.alert("Camera Permission Required", "Please allow camera access to scan barcodes.");
+        return;
+      }
+    }
     setIsScanning(true);
   };
 
@@ -513,8 +521,22 @@ export const StocksScreen: React.FC = () => {
               Align the retail product barcode within the viewfinder to automatically scan and catalog
             </Text>
             
-            {/* Viewfinder area with blinking animation and moving laser line */}
+             {/* Viewfinder area with blinking animation and moving laser line */}
             <View style={styles.scannerViewfinder}>
+              {isScanning && permission?.granted ? (
+                <CameraView
+                  style={StyleSheet.absoluteFillObject}
+                  barcodeScannerSettings={{
+                    barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
+                  }}
+                  onBarcodeScanned={({ type, data }) => {
+                    setFormBarcode(data);
+                    setIsScanning(false);
+                    triggerToast(`Barcode Scanned: ${data} ✅`);
+                  }}
+                />
+              ) : null}
+
               {/* Four corners */}
               <View style={[styles.viewfinderCorner, styles.cornerTL]} />
               <View style={[styles.viewfinderCorner, styles.cornerTR]} />

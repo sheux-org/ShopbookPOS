@@ -12,6 +12,7 @@ import {
   Animated,
   TextInput,
 } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -49,17 +50,32 @@ export const PosScreen: React.FC = () => {
 
   // Sync state with shared cartState store
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [permission, requestPermission] = useCameraPermissions();
+  const lastScanTime = useRef<number>(0);
 
   useEffect(() => {
     const syncCart = () => {
       setInvoiceItems(cartState.getCart());
     };
     syncCart();
+    // Auto-generate invoice number once on mount
+    const rand = Math.floor(100000 + Math.random() * 900000);
+    setInvoiceNumber(`##${rand}`);
     return cartState.subscribe(syncCart);
   }, []);
 
+  // Request permissions automatically when switching to scan tab
+  useEffect(() => {
+    if (activeMode === "scan") {
+      if (!permission || !permission.granted) {
+        requestPermission();
+      }
+    }
+  }, [activeMode, permission]);
+
   // Quick code state
-  const [quickCode, setQuickCode] = useState("1024");
+  const [quickCode, setQuickCode] = useState("");
   const [cursorVisible, setCursorVisible] = useState(true);
 
   // Search query for search mode
@@ -112,8 +128,8 @@ export const PosScreen: React.FC = () => {
   };
 
   // Helper to add item to invoice using cartState
-  const addItemToInvoice = (name: string, price: number, icon?: string) => {
-    cartState.addCartItem(name, price, icon);
+  const addItemToInvoice = (name: string, price: number, icon?: string, sku?: string, stock?: number) => {
+    cartState.addCartItem(name, price, icon, sku, stock);
     showToast(`Added ${name} to invoice`);
   };
 
@@ -123,7 +139,9 @@ export const PosScreen: React.FC = () => {
   }, [invoiceItems]);
 
   const matchedProduct = useMemo(() => {
-    return QUICK_CODES[quickCode] || null;
+    if (!quickCode) return null;
+    const catalog = cartState.getCatalogProducts();
+    return catalog.find((p) => p.quickCode === quickCode || p.barcode === quickCode) || null;
   }, [quickCode]);
 
   // Handle numpad key presses
@@ -141,15 +159,16 @@ export const PosScreen: React.FC = () => {
     }
   };
 
-  // Auto-add product if fully typed valid quick code
+  // Auto-add product if fully typed valid quick code from dynamic catalog
   useEffect(() => {
-    if (QUICK_CODES[quickCode]) {
-      // Auto-add delay of 1s
+    if (!quickCode) return;
+    const catalog = cartState.getCatalogProducts();
+    const prod = catalog.find((p) => p.quickCode === quickCode || p.barcode === quickCode);
+    if (prod) {
       const timer = setTimeout(() => {
-        const prod = QUICK_CODES[quickCode];
-        addItemToInvoice(prod.name, prod.price, prod.icon);
+        addItemToInvoice(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
         setQuickCode(""); // Reset after adding
-      }, 1000);
+      }, 700);
       return () => clearTimeout(timer);
     }
   }, [quickCode]);
@@ -174,12 +193,23 @@ export const PosScreen: React.FC = () => {
     }
   };
 
-  // Simulate scanning a random item
-  const handleSimulatedScan = () => {
-    const productsKeys = Object.keys(QUICK_CODES);
-    const randomKey = productsKeys[Math.floor(Math.random() * productsKeys.length)];
-    const prod = QUICK_CODES[randomKey];
-    addItemToInvoice(prod.name, prod.price, prod.icon);
+  // Camera Barcode Scanning Handler
+  const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
+    // Prevent double rapid scan triggers
+    if (lastScanTime.current && Date.now() - lastScanTime.current < 2000) return;
+    lastScanTime.current = Date.now();
+
+    const catalog = cartState.getCatalogProducts();
+    const prod = catalog.find((p) => p.barcode === data || p.quickCode === data);
+    if (prod) {
+      addItemToInvoice(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
+    } else {
+      Alert.alert(
+        "Product Not Registered",
+        `Scanned code "${data}" is not registered in catalog. Please register it in Stocks Screen first.`,
+        [{ text: "Okay" }]
+      );
+    }
   };
 
   return (
@@ -204,7 +234,7 @@ export const PosScreen: React.FC = () => {
 
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitle}>Mini POS</Text>
-          <Text style={styles.headerSubtitle}>Invoice ##2041</Text>
+          <Text style={styles.headerSubtitle}>Invoice {invoiceNumber}</Text>
         </View>
 
         <View style={styles.headerRightActions}>
@@ -222,18 +252,6 @@ export const PosScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
           )}
-
-          <TouchableOpacity
-            style={styles.holdButton}
-            activeOpacity={0.8}
-            onPress={() =>
-              Alert.alert("Invoice Put On Hold", "Invoice ##2041 has been saved to hold queue.", [
-                { text: "Okay" },
-              ])
-            }
-          >
-            <Text style={styles.holdButtonText}>Hold</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -287,7 +305,7 @@ export const PosScreen: React.FC = () => {
       </ScrollView>
 
       {/* Bottom Panel - Segmented Control, Input Mode View, Numpad */}
-      <View style={[styles.bottomPanel, { paddingBottom: insets.bottom + 90 }]}>
+      <View style={[styles.bottomPanel, { paddingBottom: insets.bottom + 75 }]}>
         {/* Three-column Mode Buttons */}
         <View style={styles.segmentedControl}>
           <TouchableOpacity
@@ -442,27 +460,38 @@ export const PosScreen: React.FC = () => {
 
           {activeMode === "scan" && (
             <View style={styles.scanWrapper}>
-              <Text style={styles.scanLabel}>INTERACTIVE VIEWPORT SIMULATOR</Text>
+              <Text style={styles.scanLabel}>CAMERA VIEWFINDER ACTIVE</Text>
 
-              {/* Viewfinder Mockup */}
+              {/* Viewfinder box containing live CameraView */}
               <View style={styles.mockViewfinder}>
+                {permission?.granted ? (
+                  <CameraView
+                    style={StyleSheet.absoluteFillObject}
+                    barcodeScannerSettings={{
+                      barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
+                    }}
+                    onBarcodeScanned={handleBarcodeScanned}
+                  />
+                ) : (
+                  <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16 }}>
+                    <Text style={{ color: "#fff", fontSize: 12, textAlign: "center", marginBottom: 10 }}>
+                      Camera Access Required
+                    </Text>
+                    <TouchableOpacity
+                      onPress={requestPermission}
+                      style={{ backgroundColor: TOKENS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 11, fontWeight: "bold" }}>Grant Permission</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Viewfinder brackets overlay */}
                 <View style={styles.bracketContainer}>
                   <View style={[styles.scanCorner, styles.topLeftScan]} />
                   <View style={[styles.scanCorner, styles.topRightScan]} />
                   <View style={[styles.scanCorner, styles.bottomLeftScan]} />
                   <View style={[styles.scanCorner, styles.bottomRightScan]} />
-
-                  {/* Dummy barcode bars */}
-                  <View style={styles.dummyBarcode}>
-                    <View style={[styles.dummyBar, { width: 2 }]} />
-                    <View style={[styles.dummyBar, { width: 5 }]} />
-                    <View style={[styles.dummyBar, { width: 1 }]} />
-                    <View style={[styles.dummyBar, { width: 3 }]} />
-                    <View style={[styles.dummyBar, { width: 2 }]} />
-                    <View style={[styles.dummyBar, { width: 6 }]} />
-                    <View style={[styles.dummyBar, { width: 2 }]} />
-                    <View style={[styles.dummyBar, { width: 4 }]} />
-                  </View>
 
                   {/* Moving animated sweep laser */}
                   <Animated.View
@@ -471,15 +500,7 @@ export const PosScreen: React.FC = () => {
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={styles.scanActionBtn}
-                activeOpacity={0.8}
-                onPress={handleSimulatedScan}
-              >
-                <Ionicons name="barcode-outline" size={18} color={TOKENS.card} />
-                <Text style={styles.scanActionBtnText}>Simulate Camera Scan</Text>
-              </TouchableOpacity>
-            </View>
+             </View>
           )}
 
           {activeMode === "search" && (
@@ -707,16 +728,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: TOKENS.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    height: 48,
     marginHorizontal: 16,
     marginVertical: 3,
-    borderRadius: 10,
+    borderRadius: 24,
     shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
   summaryBarLeft: {
     flexDirection: "row",
