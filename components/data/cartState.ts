@@ -1,4 +1,6 @@
 import { useCart } from '../../stores/useCart';
+import { useBusinessStore, Business } from '../../stores/useBusinessStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 export interface CartItem {
   id: string;
@@ -25,143 +27,62 @@ export interface CatalogProduct {
   barcode?: string;
 }
 
-export interface Business {
-  id: string;
-  name: string;
-  category: string;
-  address: string;
-  phone: string;
-}
-
-const BUSINESSES: Business[] = [
-  { id: "1", name: "Shopbook Electronics", category: "Electronics & Gadgets", address: "142 Galle Road, Colombo 03", phone: "+94 11 234 5678" },
-  { id: "2", name: "Shopbook Apparel", category: "Clothing & Fashion", address: "88 Peradeniya Road, Kandy", phone: "+94 81 234 5678" },
-  { id: "3", name: "Shopbook Groceries", category: "Supermarket & Groceries", address: "55 Main Street, Galle Fort", phone: "+94 91 234 5678" },
-];
-
-let activeBusiness: Business = BUSINESSES[0];
-let loggedIn: boolean = false;
-
-const listeners = new Set<() => void>();
+export type { Business };
 
 export const cartState = {
+  // Cart Actions mapped cleanly to useCart store
   getCart: () => useCart.getState().cart,
-  getBusinesses: () => BUSINESSES,
-  getActiveBusiness: () => activeBusiness,
-  setActiveBusiness: (id: string) => {
-    const found = BUSINESSES.find((b) => b.id === id);
-    if (found) {
-      activeBusiness = found;
-      listeners.forEach((l) => l());
-    }
-  },
-  updateActiveBusinessDetails: async (details: { name: string; category: string; address: string; phone: string }) => {
-    activeBusiness = {
-      ...activeBusiness,
-      ...details,
-    };
-    
-    try {
-      const db = require('./db').default;
-      const { Q } = require('@nozbe/watermelondb');
-      
-      const businesses = await db.get('businesses').query(Q.where('phone_number', activeBusiness.phone)).fetch();
-      if (businesses.length > 0) {
-        const targetBiz = businesses[0];
-        await db.write(async () => {
-          await targetBiz.update((b: any) => {
-            b.name = details.name;
-            b.businessType = details.category;
-            b.address = details.address;
-            b.phoneNumber = details.phone;
-          });
-        });
-        console.log('Successfully updated business details in local WatermelonDB database');
-      } else {
-        await db.write(async () => {
-          await db.get('businesses').create((b: any) => {
-            b.name = details.name;
-            b.businessType = details.category;
-            b.address = details.address;
-            b.phoneNumber = details.phone;
-          });
-        });
-        console.log('Successfully created business details in local WatermelonDB database');
-      }
-      listeners.forEach((l) => l());
-    } catch (err) {
-      console.error('Failed to update business details in WatermelonDB:', err);
-    }
-  },
-  getIsLoggedIn: () => loggedIn,
-  login: (phone: string, otp: string): boolean => {
-    const cleanPhone = phone.replace(/\s+/g, "");
-    if ((cleanPhone === "0717133074" || cleanPhone === "717133074") && otp === "1111") {
-      loggedIn = true;
-      listeners.forEach((l) => l());
-      return true;
-    }
-    return false;
-  },
-  register: async (name: string, address: string, phone: string, category: string = "General Retail") => {
-    const newId = String(BUSINESSES.length + 1);
-    const newBiz: Business = { id: newId, name, category, address, phone };
-    BUSINESSES.push(newBiz);
-    activeBusiness = newBiz;
-    loggedIn = true;
-    listeners.forEach((l) => l());
-
-    // Save business & admin employee to local database
-    try {
-      const db = require('./db').default;
-      await db.write(async () => {
-        const newBusiness = await db.get('businesses').create((biz: any) => {
-          biz.name = name;
-          biz.businessType = category;
-          biz.address = address;
-          biz.phoneNumber = phone;
-        });
-
-        await db.get('employees').create((emp: any) => {
-          emp.business.set(newBusiness);
-          emp.name = "Owner / Admin";
-          emp.role = "admin";
-          emp.phone = phone;
-        });
-      });
-      console.log('Successfully saved business and admin employee to local database');
-    } catch (err) {
-      console.error('Failed to write business/employee to local database:', err);
-    }
-  },
-  logout: () => {
-    loggedIn = false;
-    useCart.getState().clearCart();
-    listeners.forEach((l) => l());
-  },
-  
   addCartItem: (name: string, price: number, icon?: string, sku?: string, stock?: number) => {
     useCart.getState().addCartItem(name, price, icon, sku, stock);
-    listeners.forEach((l) => l());
   },
-  
   updateQuantity: (id: string, delta: number) => {
     useCart.getState().updateQuantity(id, delta);
-    listeners.forEach((l) => l());
   },
-  
   clearCart: () => {
     useCart.getState().clearCart();
-    listeners.forEach((l) => l());
   },
 
+  // Business Actions mapped cleanly to useBusinessStore store
+  getBusinesses: () => useBusinessStore.getState().businesses,
+  getActiveBusiness: () => useBusinessStore.getState().activeBusiness,
+  setActiveBusiness: (id: string) => {
+    useBusinessStore.getState().setActiveBusiness(id);
+  },
+  register: async (name: string, address: string, phone: string, category: string = "General Retail") => {
+    await useBusinessStore.getState().registerBusiness(name, address, phone, category);
+  },
+  updateActiveBusinessDetails: async (details: { name: string; category: string; address: string; phone: string }) => {
+    await useBusinessStore.getState().updateActiveBusinessDetails(details);
+  },
+
+  // Auth Actions mapped cleanly to useAuthStore store
+  getIsLoggedIn: () => useAuthStore.getState().isLoggedIn,
+  login: (phone: string, otp: string): boolean => {
+    return useAuthStore.getState().login(phone, otp);
+  },
+  logout: () => {
+    useAuthStore.getState().logout();
+  },
+
+  // Backward compatibility subscription bridging
+  subscribe: (listener: () => void) => {
+    const unsubCart = useCart.subscribe(listener);
+    const unsubBusiness = useBusinessStore.subscribe(listener);
+    const unsubAuth = useAuthStore.subscribe(listener);
+    return () => {
+      unsubCart();
+      unsubBusiness();
+      unsubAuth();
+    };
+  },
+
+  // Direct catalog adding mapped dynamically to local WatermelonDB database
   addNewCatalogProduct: async (product: Omit<CatalogProduct, "id" | "stockText" | "stockType">) => {
-    // Save product directly to local SQLite database (WatermelonDB)
     try {
       const db = require('./db').default;
       const { Q } = require('@nozbe/watermelondb');
       await db.write(async () => {
-        const activeBiz = cartState.getActiveBusiness();
+        const activeBiz = useBusinessStore.getState().activeBusiness;
         let dbBiz;
         const businesses = await db.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
         if (businesses.length > 0) {
@@ -189,25 +110,13 @@ export const cartState = {
         });
       });
       console.log('Successfully saved new catalog product to WatermelonDB database');
-      listeners.forEach((l) => l());
     } catch (err) {
       console.error('Failed to write new catalog product to WatermelonDB:', err);
     }
   },
-  
-  subscribe: (listener: () => void) => {
-    listeners.add(listener);
-    const unsubCart = useCart.subscribe(() => {
-      listener();
-    });
-    return () => {
-      listeners.delete(listener);
-      unsubCart();
-    };
-  },
 };
 
-// Private initial dataset ONLY for seeding the database when empty
+// Private seeding logic for populating local WatermelonDB database when empty on initial setup
 const SEEDING_PRODUCTS = [
   { name: "Anchor Milk 1L", price: 680, category: "dairy", icon: "🥛", stockCount: 24, unitType: "Liters", costPrice: 580, quickCode: "1001" },
   { name: "Highland Yogurt", price: 95, category: "dairy", icon: "🥣", stockCount: 38, unitType: "Pieces", costPrice: 75, quickCode: "1008" },
@@ -221,14 +130,13 @@ const SEEDING_PRODUCTS = [
   { name: "Bread Loaf", price: 110, category: "grocery", icon: "🍞", stockCount: 12, unitType: "Pieces", costPrice: 85, quickCode: "1010" },
 ];
 
-// Seeding initial catalog products into WatermelonDB if it's empty
 setTimeout(async () => {
   try {
     const db = require('./db').default;
     const existing = await db.get('products').query().fetch();
     if (existing.length === 0) {
       console.log('WatermelonDB products table is empty. Seeding initial catalog...');
-      const activeBiz = cartState.getActiveBusiness();
+      const activeBiz = useBusinessStore.getState().activeBusiness;
       
       await db.write(async () => {
         const dbBiz = await db.get('businesses').create((b: any) => {
