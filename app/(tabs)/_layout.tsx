@@ -17,7 +17,7 @@ export default function TabLayout() {
     }).start();
   }, [tabBarVisible]);
 
-  const mapRouteToTab = (routeName: string): "home" | "pos" | "stocks" | "profile" => {
+  const mapRouteToTab = (routeName: string): "home" | "pos" | "stocks" | "insights" | "profile" => {
     if (routeName === "index") return "home";
     return routeName as any;
   };
@@ -68,6 +68,12 @@ export default function TabLayout() {
         name="stocks"
         options={{
           title: "Stocks",
+        }}
+      />
+      <Tabs.Screen
+        name="insights"
+        options={{
+          title: "Insights",
         }}
       />
       <Tabs.Screen

@@ -1,0 +1,1765 @@
+import React, { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+  Alert,
+  Modal,
+  ActivityIndicator,
+  Share,
+  TextInput,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TOKENS } from "../../constants/tokens";
+import { cartState } from "../data/cartState";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Q } from "@nozbe/watermelondb";
+
+interface ProductStat {
+  name: string;
+  quantity: number;
+  revenue: number;
+}
+
+export const InsightsScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const activeBusiness = cartState.getActiveBusiness();
+
+  // Period filters
+  const [period, setPeriod] = useState<"daily" | "monthly" | "yearly" | "custom">("monthly");
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+
+  // Calendar interactive range selections (May 2026 default)
+  const [selectedStartDay, setSelectedStartDay] = useState<number | null>(null);
+  const [selectedEndDay, setSelectedEndDay] = useState<number | null>(null);
+
+  // Custom resolved dates
+  const [resolvedStartDate, setResolvedStartDate] = useState<Date | null>(null);
+  const [resolvedEndDate, setResolvedEndDate] = useState<Date | null>(null);
+
+  // Simulated export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportType, setExportType] = useState<"PDF" | "CSV" | null>(null);
+  const [exportResultModal, setExportResultModal] = useState(false);
+
+  // Low stock details drawer
+  const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
+
+  // Reports Drawer states
+  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
+  const [reportsActiveTab, setReportsActiveTab] = useState<"orders" | "inventory">("orders");
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [refillValues, setRefillValues] = useState<Record<string, string>>({});
+
+  // Active business details sync
+  const [activeBiz, setActiveBiz] = useState(activeBusiness);
+
+  useEffect(() => {
+    const updateBiz = () => {
+      setActiveBiz(cartState.getActiveBusiness());
+    };
+    return cartState.subscribe(updateBiz);
+  }, []);
+
+  // Real-time WatermelonDB statistics fetch
+  const { data: stats, isLoading, refetch } = useQuery({
+    queryKey: ["insights", activeBiz.id, period, resolvedStartDate, resolvedEndDate],
+    queryFn: async () => {
+      const db = require("../data/db").default;
+
+      // 1. Fetch active business SQLite record
+      const businesses = await db.get("businesses").query(Q.where("id", activeBiz.id)).fetch();
+      const dbBiz = businesses[0] || (await db.get("businesses").query().fetch())[0];
+      if (!dbBiz) {
+        return {
+          grossRevenue: 0,
+          ordersCount: 0,
+          avgTicket: 0,
+          lowStockCount: 0,
+          lowStockItems: [],
+          bestSellers: [],
+          slowMovers: [],
+          chartData: [],
+          resolvedOrders: [],
+          productsList: [],
+        };
+      }
+
+      // 2. Fetch completed orders for active business
+      const orders = await db.get("orders").query(
+        Q.where("business_id", dbBiz.id),
+        Q.where("status", "paid")
+      ).fetch();
+
+      // 3. Filter orders in JS based on active period
+      const filteredOrders = orders.filter((order: any) => {
+        const orderDate = new Date(order.createdAt);
+        const today = new Date();
+
+        if (period === "daily") {
+          return orderDate.toDateString() === today.toDateString();
+        } else if (period === "monthly") {
+          return (
+            orderDate.getMonth() === today.getMonth() &&
+            orderDate.getFullYear() === today.getFullYear()
+          );
+        } else if (period === "yearly") {
+          return orderDate.getFullYear() === today.getFullYear();
+        } else if (period === "custom" && resolvedStartDate && resolvedEndDate) {
+          return orderDate >= resolvedStartDate && orderDate <= resolvedEndDate;
+        }
+        return true;
+      });
+
+      // 4. Fetch low stock alert products
+      const lowStockProducts = await db.get("products").query(
+        Q.where("business_id", dbBiz.id),
+        Q.where("stock_count", Q.lte(5))
+      ).fetch();
+
+      const lowStockItems = lowStockProducts.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        sku: p.sku || "N/A",
+        category: p.category || "General",
+        stockCount: p.stockCount,
+        lowStockAlert: p.lowStockAlert || 5,
+        icon: p.icon || "package",
+      }));
+
+      // 5. Gather order items details
+      let totalRevenue = 0;
+      const productSalesMap: Record<string, { quantity: number; revenue: number }> = {};
+      const itemsByOrderMap: Record<string, any[]> = {};
+
+      if (filteredOrders.length > 0) {
+        const orderIds = filteredOrders.map((o: any) => o.id);
+        const orderItems = await db.get("order_items").query(
+          Q.where("order_id", Q.oneOf(orderIds))
+        ).fetch();
+
+        for (const order of filteredOrders) {
+          totalRevenue += order.totalAmount;
+        }
+
+        for (const item of orderItems) {
+          const qty = item.quantity || 0;
+          const price = item.price || 0;
+          const cost = qty * price;
+
+          if (!productSalesMap[item.name]) {
+            productSalesMap[item.name] = { quantity: 0, revenue: 0 };
+          }
+          productSalesMap[item.name].quantity += qty;
+          productSalesMap[item.name].revenue += cost;
+
+          // Map items per order for history drawer
+          const orderId = item._raw.order_id;
+          if (!itemsByOrderMap[orderId]) {
+            itemsByOrderMap[orderId] = [];
+          }
+          itemsByOrderMap[orderId].push({
+            id: item.id,
+            name: item.name,
+            quantity: qty,
+            price: price,
+          });
+        }
+      }
+
+      // 5b. Map resolved orders for history display
+      const resolvedOrders = filteredOrders.map((order: any) => ({
+        id: order.id,
+        invoiceNumber: order.invoiceNumber,
+        totalAmount: order.totalAmount,
+        createdAt: order.createdAt,
+        items: itemsByOrderMap[order.id] || [],
+      }));
+
+      // 5c. Fetch all products of this business for refill
+      const allProducts = await db.get("products").query(
+        Q.where("business_id", dbBiz.id)
+      ).fetch();
+
+      const productsList = allProducts.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        sku: p.sku || "N/A",
+        category: p.category || "General",
+        stockCount: p.stockCount,
+        price: p.price,
+        icon: p.icon || "📦",
+      }));
+
+      // 6. Format product lists
+      const salesList: ProductStat[] = Object.keys(productSalesMap).map((name) => ({
+        name,
+        quantity: productSalesMap[name].quantity,
+        revenue: productSalesMap[name].revenue,
+      }));
+
+      const bestSellers = [...salesList].sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+      const slowMovers = [...salesList].sort((a, b) => a.quantity - b.quantity).slice(0, 5);
+
+      // Generate colorful flexible bar graph values by category/day of week
+      const daySales: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      for (const order of filteredOrders) {
+        const dStr = days[new Date(order.createdAt).getDay()];
+        if (daySales[dStr] !== undefined) {
+          daySales[dStr] += order.totalAmount;
+        }
+      }
+
+      const chartData = Object.keys(daySales).map((day) => ({
+        label: day,
+        value: daySales[day],
+      }));
+
+      return {
+        grossRevenue: totalRevenue,
+        ordersCount: filteredOrders.length,
+        avgTicket: filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0,
+        lowStockCount: lowStockProducts.length,
+        lowStockItems,
+        bestSellers,
+        slowMovers,
+        chartData,
+        resolvedOrders,
+        productsList,
+      };
+    },
+  });
+
+  // Refill Inventory Stocks Mutation
+  const refillMutation = useMutation({
+    mutationFn: async ({ productId, refillAmount }: { productId: string; refillAmount: number }) => {
+      const db = require("../data/db").default;
+      const product = await db.get("products").find(productId);
+      await db.write(async () => {
+        await product.update((p: any) => {
+          p.stockCount = (p.stockCount || 0) + refillAmount;
+        });
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insights"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      Alert.alert("Stock In success", "Product stock refilled successfully!");
+      // Reset expanded refill values
+      setRefillValues({});
+      setExpandedProductId(null);
+    },
+    onError: (err: any) => {
+      Alert.alert("Refill Failed", err.message);
+    },
+  });
+
+  // Seeder Mutation for loading dummy testing database records
+  const seederMutation = useMutation({
+    mutationFn: async () => {
+      const db = require("../data/db").default;
+      const businesses = await db.get("businesses").query(Q.where("id", activeBiz.id)).fetch();
+      const dbBiz = businesses[0] || (await db.get("businesses").query().fetch())[0];
+      if (!dbBiz) {
+        throw new Error("Add a business profile first before seeding database sales!");
+      }
+
+      const productNames = ["🥛 Fresh Milk", "🥤 Apple Juice", "🍪 Chocolate Cookies", "🛒 Premium Rice", "🏠 Detergent Soap"];
+      const prices = [320, 240, 180, 580, 420];
+
+      await db.write(async () => {
+        // Create 15 orders spread over the current month
+        for (let i = 0; i < 15; i++) {
+          const daysAgo = Math.floor(Math.random() * 20);
+          const orderDate = new Date();
+          orderDate.setDate(orderDate.getDate() - daysAgo);
+
+          const invoiceNum = `INV-${Math.floor(100000 + Math.random() * 900000)} (Demo)`;
+          const itemCount = Math.floor(Math.random() * 3) + 1;
+          let total = 0;
+
+          const newOrder = await db.get("orders").create((ord: any) => {
+            ord.business.set(dbBiz);
+            ord.invoiceNumber = invoiceNum;
+            ord.status = "paid";
+            ord.totalAmount = 0; // Temp placeholder
+            ord._raw.created_at = orderDate.getTime();
+          });
+
+          for (let j = 0; j < itemCount; j++) {
+            const pIdx = Math.floor(Math.random() * productNames.length);
+            const name = productNames[pIdx];
+            const price = prices[pIdx];
+            const qty = Math.floor(Math.random() * 4) + 1;
+            total += price * qty;
+
+            await db.get("order_items").create((item: any) => {
+              item.order.set(newOrder);
+              item.name = name;
+              item.quantity = qty;
+              item.price = price;
+              item._raw.created_at = orderDate.getTime();
+            });
+          }
+
+          // Update total sales revenue on the parent order
+          await newOrder.update((ord: any) => {
+            ord.totalAmount = total;
+          });
+        }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insights"] });
+      Alert.alert("Demo Seeding Completed", "15 mock invoices successfully generated inside SQLite! Charts and reports are now active.");
+    },
+  });
+
+  const handleExport = (type: "PDF" | "CSV") => {
+    setExportType(type);
+    setIsExporting(true);
+    setTimeout(() => {
+      setIsExporting(false);
+      setExportResultModal(true);
+    }, 2000);
+  };
+
+  const handleShare = async () => {
+    try {
+      const content =
+        exportType === "CSV"
+          ? `Shopbook POS - Tabular CSV Statement for ${activeBiz.name}\nGross Revenue: Rs. ${stats?.grossRevenue.toLocaleString()}\nTotal Orders: ${stats?.ordersCount}`
+          : `Shopbook POS - Premium PDF Invoice statement for ${activeBiz.name}\nGenerated on Sri Lanka Helplines.`;
+      await Share.share({
+        message: content,
+      });
+      setExportResultModal(false);
+    } catch (err: any) {
+      Alert.alert("Share Failed", err.message);
+    }
+  };
+
+  const handleCalendarDayPress = (day: number) => {
+    if (!selectedStartDay || (selectedStartDay && selectedEndDay)) {
+      setSelectedStartDay(day);
+      setSelectedEndDay(null);
+    } else if (day < selectedStartDay) {
+      setSelectedStartDay(day);
+    } else {
+      setSelectedEndDay(day);
+    }
+  };
+
+  const applyCalendarRange = () => {
+    if (!selectedStartDay || !selectedEndDay) {
+      Alert.alert("Range Selection Needed", "Please select both a Start Date and an End Date on the calendar grid first.");
+      return;
+    }
+    const start = new Date(2026, 4, selectedStartDay); // May index is 4
+    const end = new Date(2026, 4, selectedEndDay, 23, 59, 59);
+
+    setResolvedStartDate(start);
+    setResolvedEndDate(end);
+    setIsCustomModalOpen(false);
+    setPeriod("custom");
+  };
+
+  return (
+    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+      {/* Dashboard Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          activeOpacity={0.7}
+          onPress={() => router.push("/")}
+        >
+          <Feather name="chevron-left" size={24} color={TOKENS.dark} />
+        </TouchableOpacity>
+
+        <View style={styles.headerTitleWrapper}>
+          <Text style={styles.headerTitle}>Business Insights</Text>
+        </View>
+
+        <View style={styles.headerActionsWrapper}>
+          <TouchableOpacity
+            style={styles.headerTextBtn}
+            activeOpacity={0.7}
+            onPress={() => setIsReportsModalOpen(true)}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Feather name="bar-chart-2" size={15} color={TOKENS.primary} />
+              <Text style={[styles.headerTextBtnLabel, { color: TOKENS.primary }]}>Reports</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.headerTextBtn}
+            activeOpacity={0.7}
+            onPress={() => refetch()}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Feather name="refresh-cw" size={12} color={TOKENS.muted} />
+              <Text style={styles.headerTextBtnLabel}>Sync</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Main Insights Panel Scroll */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
+      >
+        {/* Period Selector pills */}
+        <View style={styles.periodPillsRow}>
+          <TouchableOpacity
+            style={[styles.periodPill, period === "daily" && styles.periodPillActive]}
+            onPress={() => setPeriod("daily")}
+          >
+            <Text style={[styles.periodPillText, period === "daily" && styles.periodPillTextActive]}>Today</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.periodPill, period === "monthly" && styles.periodPillActive]}
+            onPress={() => setPeriod("monthly")}
+          >
+            <Text style={[styles.periodPillText, period === "monthly" && styles.periodPillTextActive]}>Monthly</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.periodPill, period === "yearly" && styles.periodPillActive]}
+            onPress={() => setPeriod("yearly")}
+          >
+            <Text style={[styles.periodPillText, period === "yearly" && styles.periodPillTextActive]}>Yearly</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.periodPill, period === "custom" && styles.periodPillActive]}
+            onPress={() => setIsCustomModalOpen(true)}
+          >
+            <Text style={[styles.periodPillText, period === "custom" && styles.periodPillTextActive]}>Custom</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Loading Spinner */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={TOKENS.primary} />
+            <Text style={styles.loadingText}>Computing sales logs...</Text>
+          </View>
+        ) : (
+          <>
+            {/* KPI Cards Grid */}
+            <View style={styles.kpiGrid}>
+              <View style={styles.kpiCard}>
+                <View style={[styles.kpiIconCircle, { backgroundColor: "#E8FDF0" }]}>
+                  <Feather name="trending-up" size={16} color="#10B981" />
+                </View>
+                <Text style={styles.kpiLabel}>Gross Sales</Text>
+                <Text style={styles.kpiValue}>Rs. {stats?.grossRevenue.toLocaleString()}</Text>
+              </View>
+
+              <View style={styles.kpiCard}>
+                <View style={[styles.kpiIconCircle, { backgroundColor: "#EFF6FF" }]}>
+                  <Feather name="file-text" size={16} color={TOKENS.primary} />
+                </View>
+                <Text style={styles.kpiLabel}>Transactions</Text>
+                <Text style={styles.kpiValue}>{stats?.ordersCount}</Text>
+              </View>
+
+              <View style={styles.kpiCard}>
+                <View style={[styles.kpiIconCircle, { backgroundColor: "#FEF7E0" }]}>
+                  <Feather name="shopping-bag" size={16} color="#B06000" />
+                </View>
+                <Text style={styles.kpiLabel}>Avg Basket</Text>
+                <Text style={styles.kpiValue}>Rs. {Math.round(stats?.avgTicket || 0).toLocaleString()}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.kpiCard}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (stats?.lowStockCount && stats.lowStockCount > 0) {
+                    setIsLowStockModalOpen(true);
+                  } else {
+                    Alert.alert("All Stock Normal", "All product stock counts are above the alert threshold! Great job!");
+                  }
+                }}
+              >
+                <View style={[styles.kpiIconCircle, { backgroundColor: "#FCE8E6" }]}>
+                  <Feather name="alert-triangle" size={16} color={TOKENS.error} />
+                </View>
+                <Text style={styles.kpiLabel}>Low Stock Items</Text>
+                <Text style={[styles.kpiValue, stats?.lowStockCount! > 0 && { color: TOKENS.error }]}>
+                  {stats?.lowStockCount}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Simulated Live Bar Chart */}
+            <View style={styles.chartWrapper}>
+              <Text style={styles.sectionTitle}>Weekly Sales Distribution</Text>
+              <View style={styles.barGraphRow}>
+                {stats?.chartData.map((item, index) => {
+                  const maxVal = Math.max(...stats.chartData.map((c) => c.value), 1000);
+                  const pct = Math.min((item.value / maxVal) * 100, 100);
+                  return (
+                    <View key={index} style={styles.barGraphCol}>
+                      <View style={styles.barTrack}>
+                        <View style={[styles.barFill, { height: `${pct}%` }]} />
+                      </View>
+                      <Text style={styles.barLabel}>{item.label}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Seeder Button if sales count is zero */}
+            {stats?.ordersCount === 0 && (
+              <View style={styles.seederContainer}>
+                <Feather name="database" size={24} color={TOKENS.muted} />
+                <Text style={styles.seederText}>No sales invoices recorded for this active branch yet.</Text>
+                <TouchableOpacity
+                  style={styles.seederBtn}
+                  activeOpacity={0.8}
+                  onPress={() => seederMutation.mutate()}
+                >
+                  <Text style={styles.seederBtnText}>Seed 15 Demo Sales Invoices</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Best Sellers Section */}
+            {stats?.bestSellers.length! > 0 && (
+              <View style={styles.statsSection}>
+                <Text style={styles.sectionTitle}>🔥 Best Selling Products</Text>
+                <View style={styles.statsCardList}>
+                  {stats?.bestSellers.map((item, index) => (
+                    <View key={index} style={styles.statListItem}>
+                      <View style={[styles.rankCircle, index === 0 && styles.rankGold, index === 1 && styles.rankSilver, index === 2 && styles.rankBronze]}>
+                        <Text style={styles.rankText}>{index + 1}</Text>
+                      </View>
+                      <Text style={styles.statItemName}>{item.name}</Text>
+                      <Text style={styles.statItemQty}>{item.quantity} units</Text>
+                      <Text style={styles.statItemRevenue}>Rs. {item.revenue.toLocaleString()}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Slow Movers Section */}
+            {stats?.slowMovers.length! > 0 && (
+              <View style={styles.statsSection}>
+                <Text style={styles.sectionTitle}>⏳ Slow Moving Inventory</Text>
+                <View style={styles.statsCardList}>
+                  {stats?.slowMovers.map((item, index) => (
+                    <View key={index} style={styles.statListItem}>
+                      <View style={[styles.rankCircle, { backgroundColor: "#F3F4F6" }]}>
+                        <Text style={[styles.rankText, { color: TOKENS.muted }]}>{index + 1}</Text>
+                      </View>
+                      <Text style={styles.statItemName}>{item.name}</Text>
+                      <Text style={styles.statItemQty}>{item.quantity} units</Text>
+                      <Text style={styles.statItemRevenue}>Rs. {item.revenue.toLocaleString()}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Export Actions Section */}
+            {stats?.ordersCount! > 0 && (
+              <View style={styles.exportSection}>
+                <Text style={styles.sectionTitle}>📄 Export Business Reports</Text>
+                <View style={styles.exportButtonsRow}>
+                  <TouchableOpacity
+                    style={[styles.exportCardBtn, styles.exportPdfCard]}
+                    activeOpacity={0.8}
+                    onPress={() => handleExport("PDF")}
+                  >
+                    <View style={styles.exportIconBadgePdf}>
+                      <Feather name="file-text" size={18} color="#EF4444" />
+                    </View>
+                    <Text style={styles.exportPdfTextTitle}>PDF Statement</Text>
+                    <Text style={styles.exportCardSubtitle}>Formatted store summary</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.exportCardBtn, styles.exportCsvCard]}
+                    activeOpacity={0.8}
+                    onPress={() => handleExport("CSV")}
+                  >
+                    <View style={styles.exportIconBadgeCsv}>
+                      <Feather name="grid" size={18} color="#10B981" />
+                    </View>
+                    <Text style={styles.exportCsvTextTitle}>CSV Ledger</Text>
+                    <Text style={styles.exportCardSubtitle}>Spreadsheet ledger data</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+
+      {/* Date Range Calendar Grid Modal */}
+      <Modal
+        visible={isCustomModalOpen}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setIsCustomModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.datePickerContent}>
+            <Text style={styles.modalTitle}>Select Custom Range (May 2026)</Text>
+            
+            {/* Weekdays Headers */}
+            <View style={styles.weekdaysRow}>
+              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => (
+                <Text key={idx} style={styles.weekdayLabel}>{day}</Text>
+              ))}
+            </View>
+
+            {/* Days Cells Grid */}
+            <View style={styles.daysGrid}>
+              {(() => {
+                const daysInMonth = 31;
+                const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+                const startOffset = 5; // May 2026 starts on Friday
+                const calendarCells = [...Array(startOffset).fill(null), ...daysArray];
+
+                return calendarCells.map((day, idx) => {
+                  if (day === null) {
+                    return <View key={`empty-${idx}`} style={styles.emptyDayCell} />;
+                  }
+
+                  const isSelectedStart = selectedStartDay === day;
+                  const isSelectedEnd = selectedEndDay === day;
+                  const isWithinRange = !!(selectedStartDay && selectedEndDay && day > selectedStartDay && day < selectedEndDay);
+
+                  return (
+                    <TouchableOpacity
+                      key={`day-${day}`}
+                      activeOpacity={0.8}
+                      style={[
+                        styles.dayCell,
+                        isWithinRange && styles.dayCellInRange,
+                        isSelectedStart && styles.dayCellSelectedStart,
+                        isSelectedEnd && styles.dayCellSelectedEnd,
+                      ]}
+                      onPress={() => handleCalendarDayPress(day)}
+                    >
+                      <Text style={[
+                        styles.dayText,
+                        isWithinRange && styles.dayTextInRange,
+                        (isSelectedStart || isSelectedEnd) && styles.dayTextSelected,
+                      ]}>
+                        {day}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                });
+              })()}
+            </View>
+
+            {/* Selection Text Summary */}
+            <View style={styles.selectedDatesPreview}>
+              <Text style={styles.previewLabel}>Selected Period:</Text>
+              <Text style={styles.previewValue}>
+                {selectedStartDay ? `May ${selectedStartDay}, 2026` : "Start Date"}
+                {" ➔ "}
+                {selectedEndDay ? `May ${selectedEndDay}, 2026` : "End Date"}
+              </Text>
+            </View>
+
+            {/* Action buttons */}
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setIsCustomModalOpen(false)}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={applyCalendarRange}
+              >
+                <Text style={styles.confirmBtnText}>Apply Calendar Range</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Low Stock Items Details Drawer Modal */}
+      <Modal
+        visible={isLowStockModalOpen}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsLowStockModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.lowStockModalContent, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.dragHandle} />
+            <View style={styles.lowStockModalHeader}>
+              <View style={styles.lowStockModalTitleWrapper}>
+                <Feather name="alert-triangle" size={20} color={TOKENS.error} />
+                <Text style={styles.lowStockModalTitle}>Low Stock Products List</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.closeLowStockBtn}
+                onPress={() => setIsLowStockModalOpen(false)}
+              >
+                <Feather name="x" size={20} color={TOKENS.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.lowStockModalSubtitle}>
+              The following inventory items are running critically low (5 units or less):
+            </Text>
+
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              style={styles.lowStockItemsScroll}
+              contentContainerStyle={{ gap: 10, paddingVertical: 10 }}
+            >
+              {stats?.lowStockItems && stats.lowStockItems.length > 0 ? (
+                stats.lowStockItems.map((item: any) => (
+                  <View key={item.id} style={styles.lowStockItemRow}>
+                    <View style={styles.lowStockIconWrapper}>
+                      <Text style={{ fontSize: 16 }}>{item.icon || "📦"}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.lowStockItemName}>{item.name}</Text>
+                      <Text style={styles.lowStockItemSku}>SKU: {item.sku}</Text>
+                    </View>
+                    <View style={styles.lowStockCountBadge}>
+                      <Text style={styles.lowStockCountText}>{item.stockCount} left</Text>
+                      <Text style={styles.lowStockLimitText}>Alert Threshold: {item.lowStockAlert}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyLowStockState}>
+                  <Feather name="check-circle" size={32} color="#10B981" />
+                  <Text style={styles.emptyLowStockText}>All products are sufficiently stocked!</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Reports & Refills Modal Drawer */}
+      <Modal
+        visible={isReportsModalOpen}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsReportsModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.lowStockModalContent, { paddingBottom: insets.bottom + 20, height: "85%" }]}>
+            <View style={styles.dragHandle} />
+            
+            {/* Modal Header */}
+            <View style={styles.lowStockModalHeader}>
+              <View style={styles.lowStockModalTitleWrapper}>
+                <Feather name="clipboard" size={20} color={TOKENS.primary} />
+                <Text style={styles.lowStockModalTitle}>Reports & Management</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.closeLowStockBtn}
+                onPress={() => setIsReportsModalOpen(false)}
+              >
+                <Feather name="x" size={20} color={TOKENS.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Premium Subheader Tabs */}
+            <View style={styles.modalTabsRow}>
+              <TouchableOpacity
+                style={[styles.modalTab, reportsActiveTab === "orders" && styles.modalTabActive]}
+                onPress={() => setReportsActiveTab("orders")}
+              >
+                <Feather name="list" size={14} color={reportsActiveTab === "orders" ? TOKENS.primary : TOKENS.muted} />
+                <Text style={[styles.modalTabText, reportsActiveTab === "orders" && styles.modalTabTextActive]}>
+                  Order History
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalTab, reportsActiveTab === "inventory" && styles.modalTabActive]}
+                onPress={() => setReportsActiveTab("inventory")}
+              >
+                <Feather name="plus-circle" size={14} color={reportsActiveTab === "inventory" ? TOKENS.primary : TOKENS.muted} />
+                <Text style={[styles.modalTabText, reportsActiveTab === "inventory" && styles.modalTabTextActive]}>
+                  Stock-In Refills
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* TAB CONTENT: ORDER HISTORY */}
+            {reportsActiveTab === "orders" && (
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
+                {stats?.resolvedOrders && stats.resolvedOrders.length > 0 ? (
+                  stats.resolvedOrders.map((order: any) => {
+                    const isExpanded = expandedOrderId === order.id;
+                    const orderDate = new Date(order.createdAt);
+                    return (
+                      <View key={order.id} style={styles.historyOrderCard}>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          style={styles.historyCardHeader}
+                          onPress={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.historyInvoiceNum}>Invoice #{order.invoiceNumber}</Text>
+                            <Text style={styles.historyDateText}>
+                              {orderDate.toLocaleDateString()} at {orderDate.toLocaleTimeString()}
+                            </Text>
+                          </View>
+                          <View style={{ alignItems: "flex-end", gap: 4 }}>
+                            <Text style={styles.historyTotalAmount}>Rs. {order.totalAmount.toLocaleString()}</Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+                              <Text style={styles.historyItemCount}>{order.items.length} items</Text>
+                              <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+
+                        {isExpanded && (
+                          <View style={styles.historyItemsExpandedPanel}>
+                            <View style={styles.expandedDivider} />
+                            {order.items.map((item: any) => (
+                              <View key={item.id} style={styles.expandedItemRow}>
+                                <Text style={styles.expandedItemName}>{item.name}</Text>
+                                <Text style={styles.expandedItemQty}>
+                                  {item.quantity} x Rs. {item.price.toLocaleString()}
+                                </Text>
+                                <Text style={styles.expandedItemSubtotal}>
+                                  Rs. {(item.quantity * item.price).toLocaleString()}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+                ) : (
+                  <View style={styles.emptyLowStockState}>
+                    <Feather name="file-text" size={32} color={TOKENS.muted} />
+                    <Text style={styles.emptyLowStockText}>No invoices found for this active period!</Text>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+
+            {/* TAB CONTENT: STOCK-IN INVENTORY REFILL */}
+            {reportsActiveTab === "inventory" && (
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
+                <Text style={styles.refillSectionLabel}>Select a product below to refill / Stock-In units:</Text>
+                {stats?.productsList && stats.productsList.length > 0 ? (
+                  stats.productsList.map((prod: any) => {
+                    const isExpanded = expandedProductId === prod.id;
+                    const val = refillValues[prod.id] || "";
+                    return (
+                      <View key={prod.id} style={styles.historyOrderCard}>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          style={styles.historyCardHeader}
+                          onPress={() => setExpandedProductId(isExpanded ? null : prod.id)}
+                        >
+                          <View style={styles.lowStockIconWrapper}>
+                            <Text style={{ fontSize: 16 }}>{prod.icon || "📦"}</Text>
+                          </View>
+                          <View style={{ flex: 1, marginLeft: 8 }}>
+                            <Text style={styles.historyInvoiceNum}>{prod.name}</Text>
+                            <Text style={styles.historyDateText}>SKU: {prod.sku} | Price: Rs. {prod.price}</Text>
+                          </View>
+                          <View style={{ alignItems: "flex-end", gap: 4 }}>
+                            <Text style={[styles.historyTotalAmount, prod.stockCount <= 5 && { color: TOKENS.error }]}>
+                              {prod.stockCount} left
+                            </Text>
+                            <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
+                          </View>
+                        </TouchableOpacity>
+
+                        {isExpanded && (
+                          <View style={styles.historyItemsExpandedPanel}>
+                            <View style={styles.expandedDivider} />
+                            <View style={styles.refillActionForm}>
+                              <TextInput
+                                style={styles.refillInput}
+                                placeholder="Refill amount (e.g. 10)"
+                                placeholderTextColor="#9CA3AF"
+                                keyboardType="number-pad"
+                                value={val}
+                                onChangeText={(text) => setRefillValues({ ...refillValues, [prod.id]: text })}
+                              />
+                              <TouchableOpacity
+                                style={styles.refillSubmitBtn}
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                  const refillAmt = parseInt(val, 10);
+                                  if (isNaN(refillAmt) || refillAmt <= 0) {
+                                    Alert.alert("Invalid Quantity", "Please enter a valid stock refill quantity!");
+                                    return;
+                                  }
+                                  refillMutation.mutate({ productId: prod.id, refillAmount: refillAmt });
+                                }}
+                              >
+                                {refillMutation.isPending ? (
+                                  <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                  <>
+                                    <Feather name="plus" size={14} color="#fff" />
+                                    <Text style={styles.refillSubmitBtnText}>Stock-In</Text>
+                                  </>
+                                )}
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+                ) : (
+                  <View style={styles.emptyLowStockState}>
+                    <Feather name="package" size={32} color={TOKENS.muted} />
+                    <Text style={styles.emptyLowStockText}>No products found for this business!</Text>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Export Progress Modal */}
+      <Modal visible={isExporting} transparent={true} animationType="fade">
+        <View style={styles.modalOverlayCenter}>
+          <View style={styles.exportProgressCard}>
+            <ActivityIndicator size="large" color={TOKENS.primary} />
+            <Text style={styles.exportProgressText}>Structuring {exportType} statement reports...</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Export Result Success Sheet */}
+      <Modal
+        visible={exportResultModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setExportResultModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.exportResultCard, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.dragHandle} />
+            
+            <View style={styles.successIconCircle}>
+              <Feather name="check" size={28} color="#fff" />
+            </View>
+
+            <Text style={styles.successTitle}>{exportType} Export Successful!</Text>
+            <Text style={styles.successSubtitle}>
+              Your business statement files for {activeBiz.name} are structured and ready to distribute.
+            </Text>
+
+            <View style={styles.successActions}>
+              <TouchableOpacity
+                style={styles.shareReportBtn}
+                activeOpacity={0.8}
+                onPress={handleShare}
+              >
+                <Feather name="share-2" size={16} color="#fff" style={{ marginRight: 6 }} />
+                <Text style={styles.shareReportBtnText}>Share & Save Statement</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.dismissBtn}
+                onPress={() => setExportResultModal(false)}
+              >
+                <Text style={styles.dismissBtnText}>Dismiss</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: TOKENS.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+    backgroundColor: TOKENS.card,
+    gap: 12,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitleWrapper: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  headerSubtitle: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    marginTop: 2,
+  },
+  headerActionsWrapper: {
+    flexDirection: "row",
+    gap: 14,
+    alignItems: "center",
+  },
+  headerTextBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  headerTextBtnLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: TOKENS.muted,
+  },
+  scrollContent: {
+    padding: 16,
+    gap: 16,
+  },
+  periodPillsRow: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5F9", // modern light slate background
+    borderRadius: 14,
+    padding: 4,
+    gap: 2,
+  },
+  periodPill: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  periodPillActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  periodPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748B",
+  },
+  periodPillTextActive: {
+    color: TOKENS.primary,
+    fontWeight: "bold",
+  },
+  loadingContainer: {
+    paddingVertical: 80,
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    fontWeight: "600",
+  },
+  kpiGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  kpiCard: {
+    flex: 1,
+    minWidth: "45%",
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 14,
+    gap: 6,
+  },
+  kpiIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  kpiLabel: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    fontWeight: "600",
+  },
+  kpiValue: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: TOKENS.dark,
+  },
+  chartWrapper: {
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 16,
+    gap: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  barGraphRow: {
+    flexDirection: "row",
+    height: 140,
+    alignItems: "flex-end",
+    justifyContent: "space-around",
+    paddingTop: 10,
+  },
+  barGraphCol: {
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  barTrack: {
+    width: 14,
+    height: 100,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 7,
+    overflow: "hidden",
+    justifyContent: "flex-end",
+  },
+  barFill: {
+    width: "100%",
+    backgroundColor: TOKENS.primary,
+    borderRadius: 7,
+  },
+  barLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: TOKENS.muted,
+  },
+  seederContainer: {
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+  },
+  seederText: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  seederBtn: {
+    backgroundColor: TOKENS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  seederBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  statsSection: {
+    gap: 12,
+  },
+  statsCardList: {
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    paddingVertical: 6,
+  },
+  statListItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  rankCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  rankGold: { backgroundColor: "#FBBF24" },
+  rankSilver: { backgroundColor: "#9CA3AF" },
+  rankBronze: { backgroundColor: "#F59E0B" },
+  rankText: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  statItemName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: TOKENS.dark,
+  },
+  statItemQty: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    marginRight: 16,
+  },
+  statItemRevenue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: TOKENS.dark,
+  },
+  exportSection: {
+    gap: 12,
+  },
+  exportButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  exportCardBtn: {
+    flex: 1,
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 6,
+    alignItems: "flex-start",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  exportPdfCard: {
+    borderColor: "#FECDD3", // soft red
+    backgroundColor: "#FFF5F5",
+  },
+  exportCsvCard: {
+    borderColor: "#A7F3D0", // soft emerald
+    backgroundColor: "#F0FDF4",
+  },
+  exportIconBadgePdf: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#FFE4E6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  exportIconBadgeCsv: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#D1FAE5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  exportPdfTextTitle: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#991B1B",
+  },
+  exportCsvTextTitle: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#065F46",
+  },
+  exportCardSubtitle: {
+    fontSize: 10,
+    color: TOKENS.muted,
+    fontWeight: "500",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    justifyContent: "flex-end",
+  },
+  modalOverlayCenter: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  datePickerContent: {
+    backgroundColor: TOKENS.background,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    gap: 16,
+  },
+  modalTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  weekdaysRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+  },
+  weekdayLabel: {
+    width: 38,
+    textAlign: "center",
+    fontSize: 11,
+    fontWeight: "bold",
+    color: TOKENS.muted,
+  },
+  daysGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 8,
+  },
+  emptyDayCell: {
+    width: 38,
+    height: 38,
+  },
+  dayCell: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dayCellInRange: {
+    backgroundColor: "#EFF6FF",
+    borderRadius: 0,
+  },
+  dayCellSelectedStart: {
+    backgroundColor: TOKENS.primary,
+    borderRadius: 19,
+  },
+  dayCellSelectedEnd: {
+    backgroundColor: TOKENS.primary,
+    borderRadius: 19,
+  },
+  dayText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: TOKENS.dark,
+  },
+  dayTextInRange: {
+    color: TOKENS.primary,
+  },
+  dayTextSelected: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  selectedDatesPreview: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    marginTop: 6,
+  },
+  previewLabel: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: TOKENS.muted,
+  },
+  previewValue: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: TOKENS.primary,
+  },
+  lowStockModalContent: {
+    backgroundColor: TOKENS.background,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    maxHeight: "80%",
+  },
+  lowStockModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  lowStockModalTitleWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  lowStockModalTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  closeLowStockBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lowStockModalSubtitle: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  lowStockItemsScroll: {
+    flexGrow: 0,
+  },
+  lowStockItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 12,
+    gap: 12,
+  },
+  lowStockIconWrapper: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#FCE8E6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lowStockItemName: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  lowStockItemSku: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    marginTop: 1,
+  },
+  lowStockCountBadge: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  lowStockCountText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: TOKENS.error,
+  },
+  lowStockLimitText: {
+    fontSize: 9,
+    color: TOKENS.muted,
+    fontWeight: "500",
+  },
+  emptyLowStockState: {
+    paddingVertical: 40,
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyLowStockText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#10B981",
+  },
+  textInput: {
+    height: 46,
+    backgroundColor: TOKENS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    paddingHorizontal: 14,
+    fontSize: 13,
+    color: TOKENS.dark,
+  },
+  modalButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelBtnText: {
+    fontSize: 13,
+    color: TOKENS.muted,
+    fontWeight: "bold",
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: TOKENS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmBtnText: {
+    fontSize: 13,
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  exportProgressCard: {
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+  },
+  exportProgressText: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    fontWeight: "600",
+  },
+  exportResultCard: {
+    backgroundColor: TOKENS.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    alignItems: "center",
+    gap: 16,
+  },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#E5E7EB",
+    alignSelf: "center",
+    marginBottom: 8,
+  },
+  successIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  successTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  successSubtitle: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    textAlign: "center",
+    lineHeight: 16,
+    paddingHorizontal: 16,
+  },
+  successActions: {
+    width: "100%",
+    gap: 12,
+    marginTop: 10,
+  },
+  shareReportBtn: {
+    width: "100%",
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: TOKENS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shareReportBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  dismissBtn: {
+    width: "100%",
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dismissBtnText: {
+    fontSize: 13,
+    color: TOKENS.muted,
+    fontWeight: "bold",
+  },
+  modalTabsRow: {
+    flexDirection: "row",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 10,
+  },
+  modalTab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  modalTabActive: {
+    backgroundColor: TOKENS.card,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  modalTabText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: TOKENS.muted,
+  },
+  modalTabTextActive: {
+    color: TOKENS.primary,
+    fontWeight: "bold",
+  },
+  historyOrderCard: {
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  historyCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    gap: 8,
+  },
+  historyInvoiceNum: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  historyDateText: {
+    fontSize: 10,
+    color: TOKENS.muted,
+    marginTop: 2,
+  },
+  historyTotalAmount: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: TOKENS.dark,
+  },
+  historyItemCount: {
+    fontSize: 10,
+    color: TOKENS.muted,
+    fontWeight: "500",
+  },
+  historyItemsExpandedPanel: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    backgroundColor: "#FAFAFA",
+  },
+  expandedDivider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginBottom: 10,
+  },
+  expandedItemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  expandedItemName: {
+    flex: 1.5,
+    fontSize: 12,
+    fontWeight: "600",
+    color: TOKENS.dark,
+  },
+  expandedItemQty: {
+    flex: 1.2,
+    fontSize: 11,
+    color: TOKENS.muted,
+    textAlign: "right",
+    paddingRight: 10,
+  },
+  expandedItemSubtotal: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "700",
+    color: TOKENS.dark,
+    textAlign: "right",
+  },
+  refillSectionLabel: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    marginBottom: 10,
+    fontWeight: "600",
+  },
+  refillActionForm: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  refillInput: {
+    flex: 1.5,
+    height: 38,
+    backgroundColor: TOKENS.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    paddingHorizontal: 12,
+    fontSize: 12,
+    color: TOKENS.dark,
+  },
+  refillSubmitBtn: {
+    flex: 1,
+    height: 38,
+    backgroundColor: "#10B981",
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  refillSubmitBtnText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+});

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 
 interface BottomTabBarProps {
-  activeTab?: "home" | "pos" | "stocks" | "profile";
+  activeTab?: "home" | "pos" | "stocks" | "insights" | "profile";
   onTabPress?: (tab: string) => void;
 }
 
@@ -22,6 +22,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
     { id: "home", label: "Home", icon: "home" },
     { id: "pos", label: "POS", icon: "shopping-cart" },
     { id: "stocks", label: "Stocks", icon: "package" },
+    { id: "insights", label: "Insights", icon: "bar-chart-2" },
     { id: "profile", label: "Profile", icon: "user" },
   ];
 
