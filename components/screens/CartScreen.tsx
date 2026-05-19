@@ -19,6 +19,7 @@ import * as Contacts from "expo-contacts";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CartItem } from "../data/cartState";
 import { BottomSheet } from "../common/BottomSheet";
+import { ProductImage } from "../common/ProductImage";
 
 // Static mock contacts for offline fallback and simulator testing
 const MOCK_CONTACTS = [
@@ -309,9 +310,11 @@ export const CartScreen: React.FC = () => {
         {invoiceItems.map((item) => (
           <View key={item.id} style={styles.itemRow}>
             {/* Left Box Icon */}
-            <View style={styles.iconBox}>
-              <Text style={styles.iconText}>{item.icon || "🥛"}</Text>
-            </View>
+            <ProductImage
+              icon={item.icon || "🥛"}
+              size={40}
+              style={styles.iconBox}
+            />
 
             {/* Middle Details */}
             <View style={styles.itemDetails}>

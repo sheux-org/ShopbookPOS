@@ -11,6 +11,7 @@ import {
   Modal,
   Pressable,
   Animated,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -20,6 +21,7 @@ import { cartState, Business } from "../data/cartState";
 import { useTabBarVisible } from "../../hooks/useTabBarVisible";
 import { BottomSheet } from "../common/BottomSheet";
 import { useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
+import { ProductImage } from "../common/ProductImage";
 
 interface HomeProduct {
   id: string;
@@ -44,6 +46,8 @@ const CATEGORIES = [
 export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const numColumns = width > 768 ? 4 : 2;
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -274,9 +278,10 @@ export const HomeScreen: React.FC = () => {
 
       {/* Product List Grid */}
       <FlatList
+        key={numColumns}
         data={filteredProducts}
         keyExtractor={(item) => item.id}
-        numColumns={2}
+        numColumns={numColumns}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.gridContainer,
@@ -287,58 +292,72 @@ export const HomeScreen: React.FC = () => {
         scrollEventThrottle={16}
         renderItem={({ item }) => (
           <View style={styles.productCard}>
-            {/* Top row */}
-            <View style={styles.cardHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={styles.productIcon}>{item.icon}</Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => toggleFavoriteMutation.mutate(item.id)}
-                  style={{ padding: 4 }}
-                >
-                  <Ionicons
-                    name={item.isFavorite ? "heart" : "heart-outline"}
-                    size={16}
-                    color={item.isFavorite ? TOKENS.error : TOKENS.muted}
-                  />
-                </TouchableOpacity>
-              </View>
-
+            {/* Image Section */}
+            <View style={styles.imageContainer}>
               <TouchableOpacity
-                style={[
-                  styles.plusBtn,
-                  item.stockType === "out" && styles.plusBtnOut,
-                ]}
-                activeOpacity={0.8}
+                activeOpacity={0.9}
                 onPress={() => handleAddProduct(item)}
+                style={{ width: "100%", height: 110 }}
               >
-                <Feather
-                  name="plus"
-                  size={14}
-                  color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                <ProductImage
+                  icon={item.icon}
+                  category={item.category}
+                  style={{ width: "100%", height: 110, borderRadius: 0 }}
+                />
+              </TouchableOpacity>
+              
+              {/* Overlay heart button */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => toggleFavoriteMutation.mutate(item.id)}
+                style={styles.heartBtnWrapper}
+              >
+                <Ionicons
+                  name={item.isFavorite ? "heart" : "heart-outline"}
+                  size={15}
+                  color={item.isFavorite ? TOKENS.error : TOKENS.muted}
                 />
               </TouchableOpacity>
             </View>
 
-            {/* Bottom details */}
-            <View style={styles.productDetails}>
-              <Text style={styles.productName} numberOfLines={2}>
+            {/* Bottom details - touchable to add */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => handleAddProduct(item)}
+              style={styles.productDetails}
+            >
+              <Text style={styles.productName} numberOfLines={1}>
                 {item.name}
               </Text>
               
               <View style={styles.priceStockRow}>
                 <Text style={styles.productPrice}>Rs. {item.price}</Text>
-                <Text
-                  style={[
-                    styles.stockText,
-                    item.stockType === "low" && styles.stockTextLow,
-                    item.stockType === "out" && styles.stockTextOut,
-                  ]}
-                >
-                  {item.stockText}
-                </Text>
+                <View style={styles.stockPlusRow}>
+                  <Text
+                    style={[
+                      styles.stockText,
+                      item.stockType === "low" && styles.stockTextLow,
+                      item.stockType === "out" && styles.stockTextOut,
+                    ]}
+                  >
+                    {item.stockText}
+                  </Text>
+                  
+                  <View
+                    style={[
+                      styles.plusIconBadge,
+                      item.stockType === "out" && styles.plusIconBadgeOut,
+                    ]}
+                  >
+                    <Feather
+                      name="plus"
+                      size={15}
+                      color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                    />
+                  </View>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
         )}
         ListEmptyComponent={
@@ -585,46 +604,50 @@ const styles = StyleSheet.create({
   productCard: {
     flex: 1,
     backgroundColor: TOKENS.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    padding: 12,
     justifyContent: "space-between",
-    minHeight: 120,
+    overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+  imageContainer: {
+    position: "relative",
+    width: "100%",
+    height: 110,
+    backgroundColor: "#F3F4F6",
   },
-  productIcon: {
-    fontSize: 28,
+  productCardImage: {
+    width: "100%",
+    height: 110,
   },
-  plusBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: TOKENS.primary,
+  heartBtnWrapper: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
     alignItems: "center",
     justifyContent: "center",
-  },
-  plusBtnOut: {
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1,
-    borderColor: TOKENS.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1.5,
   },
   productDetails: {
-    marginTop: 10,
+    padding: 12,
     gap: 4,
   },
   productName: {
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: "700",
     color: TOKENS.dark,
     lineHeight: 16,
   },
@@ -634,11 +657,17 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: "800",
     color: TOKENS.primary,
   },
+  stockPlusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
   stockText: {
-    fontSize: 10,
+    fontSize: 11,
     color: TOKENS.muted,
   },
   stockTextLow: {
@@ -648,6 +677,24 @@ const styles = StyleSheet.create({
   stockTextOut: {
     color: TOKENS.error,
     fontWeight: "600",
+  },
+  plusIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: TOKENS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  plusIconBadgeOut: {
+    backgroundColor: "#E5E7EB",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   emptyGridState: {
     alignItems: "center",

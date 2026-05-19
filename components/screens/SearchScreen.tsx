@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CatalogProduct } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
+import { ProductImage } from "../common/ProductImage";
 
 export const SearchScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -167,9 +168,12 @@ export const SearchScreen: React.FC = () => {
         {filteredProducts.map((item) => (
           <View key={item.id} style={styles.resultItemRow}>
             {/* Left Box Icon */}
-            <View style={styles.iconBox}>
-              <Text style={styles.iconText}>{item.icon}</Text>
-            </View>
+            <ProductImage
+              icon={item.icon}
+              category={item.category}
+              size={42}
+              style={styles.iconBox}
+            />
 
             {/* Middle Details */}
             <View style={styles.itemDetails}>
