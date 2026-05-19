@@ -1,30 +1,58 @@
-import React, { useState, useMemo } from "react";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  ListRenderItem,
+  Platform,
+  ScrollView,
+  Share,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  ScrollView,
-  Modal,
-  Share,
-  Alert,
-  ActivityIndicator,
-  Platform,
+  View,
+  useWindowDimensions,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import * as Print from "expo-print";
+import Barcode from "react-native-barcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { useGetOrders, useGetOrderItems, DBOrder } from "../../hooks/useOrders";
-import { cartState } from "../data/cartState";
+import { DBOrder, useGetOrderItems, useGetOrders } from "../../hooks/useOrders";
+import { useStaff } from "../../hooks/useStaff";
+import {
+  formatStaffDisplayLine,
+  getCashierNameFromInvoice,
+  getInvoiceBarcodeValue,
+  getInvoiceLabel,
+} from "../../utils/orderInvoice";
+import { buildThermalReceiptHtml } from "../../utils/thermalReceiptHtml";
 import { BottomSheet } from "../common/BottomSheet";
+import { cartState } from "../data/cartState";
+
+const CARD_GAP = 12;
+const INNER_TEXT_GAP = 4;
+
+const THERMAL_FONT = Platform.select({
+  ios: "Courier",
+  android: "monospace",
+  default: "monospace",
+});
+
+function OrderCardSeparator() {
+  return <View style={{ height: CARD_GAP }} />;
+}
 
 export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = false }) => {
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const router = useRouter();
 
   const activeBiz = cartState.getActiveBusiness();
   const { data: orders = [], isLoading: ordersLoading } = useGetOrders();
+  const { data: staffList = [] } = useStaff(activeBiz.id ?? "");
   const [selectedOrder, setSelectedOrder] = useState<DBOrder | null>(null);
 
   // Fetch items for the selected order
@@ -46,6 +74,75 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
     // Calculate discount implicitly: subtotal + tax - total
     return Math.max(0, subtotal + tax - selectedOrder.totalAmount);
   }, [selectedOrder, subtotal, tax]);
+
+  /** Receipt scroll area: grow with content until ~92% screen; then scrolls inside. */
+  const receiptScrollMaxHeight = useMemo(() => {
+    const maxSheet = windowHeight * 0.92;
+    const dragBlock = 19;
+    const headerBlock = 60;
+    const footerBlock = 72;
+    const sheetPadTop = 16;
+    const sheetPadBottom = Math.max(insets.bottom, 16);
+    const chrome = sheetPadTop + dragBlock + headerBlock + footerBlock + sheetPadBottom + 8;
+    return Math.max(160, maxSheet - chrome);
+  }, [windowHeight, insets.bottom]);
+
+  const receiptSheetMaxHeight = useMemo(
+    () => Math.round(windowHeight * 0.92),
+    [windowHeight]
+  );
+
+  const invoiceBarcodeValue = useMemo(() => {
+    if (!selectedOrder) return "0";
+    return getInvoiceBarcodeValue(selectedOrder.invoiceNumber, selectedOrder.id);
+  }, [selectedOrder]);
+
+  const staffLabelFromInvoice = useCallback(
+    (invoiceNumber: string) =>
+      formatStaffDisplayLine(getCashierNameFromInvoice(invoiceNumber), staffList),
+    [staffList]
+  );
+
+  const renderOrderItem: ListRenderItem<DBOrder> = useCallback(
+    ({ item: order }) => (
+      <TouchableOpacity
+        style={styles.orderCard}
+        activeOpacity={0.75}
+        onPress={() => setSelectedOrder(order)}
+      >
+        <View style={styles.orderHeader}>
+          <View style={styles.invoiceWrapper}>
+            <Text style={styles.invoiceNumber} numberOfLines={1}>
+              {getInvoiceLabel(order.invoiceNumber)}
+            </Text>
+            <Text style={styles.cashierName} numberOfLines={2}>
+              {staffLabelFromInvoice(order.invoiceNumber)}
+            </Text>
+          </View>
+
+          <View style={styles.paidBadge}>
+            <Text style={styles.paidBadgeText}>{order.status.toUpperCase()}</Text>
+          </View>
+        </View>
+
+        <View style={styles.dividerLine} />
+
+        <View style={styles.orderFooter}>
+          <Text style={styles.orderDate}>
+            {new Date(order.createdAt).toLocaleDateString()} ·{" "}
+            {new Date(order.createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+          <Text style={styles.orderTotal}>
+            Rs. {order.totalAmount.toLocaleString()}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    ),
+    [staffLabelFromInvoice]
+  );
 
   const handleShareInvoice = async () => {
     if (!selectedOrder) return;
@@ -90,12 +187,59 @@ Thank you for shopping with us!
     }
   };
 
-  const handleDownloadInvoice = () => {
+  const buildHistoryReceiptHtml = useCallback(() => {
+    if (!selectedOrder) return "";
+    const invoiceLabel = getInvoiceLabel(selectedOrder.invoiceNumber);
+    const cashierLabel = staffLabelFromInvoice(selectedOrder.invoiceNumber);
+    const items = orderItems.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      lineTotal: item.price * item.quantity,
+    }));
+    return buildThermalReceiptHtml({
+      logoUri: activeBiz.logoUri,
+      businessName: activeBiz.name,
+      category: activeBiz.category,
+      address: activeBiz.address || "Sri Lanka",
+      phone: activeBiz.phone,
+      cashierLabel,
+      invoiceLabel,
+      dateStr: new Date(selectedOrder.createdAt).toLocaleString(),
+      status: selectedOrder.status.toUpperCase(),
+      items,
+      subtotal,
+      tax,
+      discount,
+      grandTotal: selectedOrder.totalAmount,
+      barcodeLine: getInvoiceBarcodeValue(selectedOrder.invoiceNumber, selectedOrder.id),
+    });
+  }, [
+    activeBiz.address,
+    activeBiz.category,
+    activeBiz.logoUri,
+    activeBiz.name,
+    activeBiz.phone,
+    discount,
+    orderItems,
+    selectedOrder,
+    staffLabelFromInvoice,
+    subtotal,
+    tax,
+  ]);
+
+  const handlePrintReceipt = async () => {
     if (!selectedOrder) return;
-    Alert.alert(
-      "Download Successful",
-      `Invoice ${selectedOrder.invoiceNumber.split(" ")[0]} has been converted to PDF and saved to your local device Downloads folder. 📥`
-    );
+    if (itemsLoading) {
+      Alert.alert("Please wait", "Receipt lines are still loading.");
+      return;
+    }
+    try {
+      const html = buildHistoryReceiptHtml();
+      await Print.printAsync({ html });
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Print Error", "Could not complete printing.");
+    }
   };
 
   return (
@@ -135,52 +279,15 @@ Thank you for shopping with us!
           </Text>
         </View>
       ) : (
-        <ScrollView
+        <FlatList
+          data={orders}
+          keyExtractor={(item) => item.id}
+          renderItem={renderOrderItem}
           style={styles.scrollWrapper}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-        >
-          {orders.map((order) => (
-            <TouchableOpacity
-              key={order.id}
-              style={styles.orderCard}
-              activeOpacity={0.75}
-              onPress={() => setSelectedOrder(order)}
-            >
-              <View style={styles.orderHeader}>
-                <View style={styles.invoiceWrapper}>
-                  <Text style={styles.invoiceNumber} numberOfLines={1}>
-                    {order.invoiceNumber.split(" ")[0]}
-                  </Text>
-                  <Text style={styles.cashierName}>
-                    {order.invoiceNumber.includes("Staff:")
-                      ? order.invoiceNumber.split("Staff:")[1].trim().replace(")", "")
-                      : "Cashier"}
-                  </Text>
-                </View>
-
-                <View style={styles.paidBadge}>
-                  <Text style={styles.paidBadgeText}>{order.status.toUpperCase()}</Text>
-                </View>
-              </View>
-
-              <View style={styles.dividerLine} />
-
-              <View style={styles.orderFooter}>
-                <Text style={styles.orderDate}>
-                  {new Date(order.createdAt).toLocaleDateString()} ·{" "}
-                  {new Date(order.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Text>
-                <Text style={styles.orderTotal}>
-                  Rs. {order.totalAmount.toLocaleString()}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          ItemSeparatorComponent={OrderCardSeparator}
+        />
       )}
 
       {/* Invoice Detail Bottom Sheet */}
@@ -188,103 +295,129 @@ Thank you for shopping with us!
         visible={selectedOrder !== null}
         onClose={() => setSelectedOrder(null)}
         title="Receipt Invoice"
+        contentPaddingHorizontal={0}
+        contentPaddingTop={16}
+        maxHeight={receiptSheetMaxHeight}
       >
-        <View style={{ height: 500 }}>
+        <View style={styles.invoiceSheetInner}>
           {selectedOrder && (
             <ScrollView
-              style={styles.receiptScroll}
+              style={[styles.receiptScroll, { maxHeight: receiptScrollMaxHeight }]}
               contentContainerStyle={styles.receiptScrollContent}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator
+              bounces
+              nestedScrollEnabled
             >
-              {/* Receipt Card Graphic */}
-              <View style={styles.receiptCard}>
-                {/* Shop Details */}
-                <Text style={styles.receiptShopName}>{activeBiz.name}</Text>
-                <Text style={styles.receiptShopCategory}>{activeBiz.category}</Text>
-                <Text style={styles.receiptShopAddress}>
+              {/* Thermal receipt preview — matches PaymentTender / expo-print layout */}
+              <View style={styles.thermalPaper}>
+                {activeBiz.logoUri ? (
+                  activeBiz.logoUri.length <= 2 ? (
+                    <Text style={styles.thermalLogoEmoji}>{activeBiz.logoUri}</Text>
+                  ) : (
+                    <Image
+                      source={{ uri: activeBiz.logoUri }}
+                      style={styles.thermalLogoImg}
+                    />
+                  )
+                ) : (
+                  <Text style={styles.thermalMiniPos}>★ MINI POS ★</Text>
+                )}
+
+                <Text style={styles.thermalHeaderTitle}>{activeBiz.name}</Text>
+                <Text style={styles.thermalCenterMuted}>{activeBiz.category}</Text>
+                <Text style={styles.thermalCenterMuted}>
                   {activeBiz.address || "Sri Lanka"}
                 </Text>
+                {activeBiz.phone ? (
+                  <Text style={styles.thermalCenterMuted}>Tel: {activeBiz.phone}</Text>
+                ) : null}
 
-                <View style={styles.dashedDivider} />
+                <View style={styles.thermalRule} />
 
-                {/* Transaction Metadata */}
-                <View style={styles.metadataRow}>
-                  <Text style={styles.metaLabel}>Invoice</Text>
-                  <Text style={styles.metaValue}>
-                    {selectedOrder.invoiceNumber.split(" ")[0]}
+                <View style={styles.thermalRow}>
+                  <Text style={styles.thermalRowLeft}>Cashier</Text>
+                  <Text style={styles.thermalRowRight} numberOfLines={2}>
+                    {staffLabelFromInvoice(selectedOrder.invoiceNumber)}
                   </Text>
                 </View>
-                <View style={styles.metadataRow}>
-                  <Text style={styles.metaLabel}>Staff</Text>
-                  <Text style={styles.metaValue}>
-                    {selectedOrder.invoiceNumber.includes("Staff:")
-                      ? selectedOrder.invoiceNumber.split("Staff:")[1].trim().replace(")", "")
-                      : "Admin"}
+                <View style={styles.thermalRow}>
+                  <Text style={styles.thermalRowLeft}>Invoice</Text>
+                  <Text style={styles.thermalRowRight}>
+                    {getInvoiceLabel(selectedOrder.invoiceNumber)}
                   </Text>
                 </View>
-                <View style={styles.metadataRow}>
-                  <Text style={styles.metaLabel}>Date</Text>
-                  <Text style={styles.metaValue}>
+                <View style={styles.thermalRow}>
+                  <Text style={styles.thermalRowLeft}>Date</Text>
+                  <Text style={styles.thermalRowRight}>
                     {new Date(selectedOrder.createdAt).toLocaleString()}
                   </Text>
                 </View>
-                <View style={styles.metadataRow}>
-                  <Text style={styles.metaLabel}>Status</Text>
-                  <Text style={styles.metaValueActive}>
+                <View style={styles.thermalRow}>
+                  <Text style={styles.thermalRowLeft}>Status</Text>
+                  <Text style={styles.thermalRowRightBold}>
                     {selectedOrder.status.toUpperCase()}
                   </Text>
                 </View>
 
-                <View style={styles.dashedDivider} />
+                <View style={styles.thermalRule} />
 
-                {/* Items List inside Invoice */}
-                <Text style={styles.sectionTitle}>Items Details</Text>
                 {itemsLoading ? (
-                  <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 12 }} />
+                  <ActivityIndicator
+                    size="small"
+                    color={TOKENS.primary}
+                    style={{ marginVertical: 12 }}
+                  />
                 ) : (
-                  <View style={styles.itemsWrapper}>
-                    {orderItems.map((item) => (
-                      <View key={item.id} style={styles.receiptItemRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.receiptItemName}>{item.name}</Text>
-                          <Text style={styles.receiptItemQty}>
-                            {item.quantity} × Rs. {item.price.toLocaleString()}
-                          </Text>
-                        </View>
-                        <Text style={styles.receiptItemTotal}>
-                          Rs. {(item.price * item.quantity).toLocaleString()}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
+                  orderItems.map((item) => (
+                    <View key={item.id} style={styles.thermalRow}>
+                      <Text style={styles.thermalRowLeft} numberOfLines={3}>
+                        {item.quantity}x {item.name}
+                      </Text>
+                      <Text style={styles.thermalRowRight}>
+                        Rs. {(item.price * item.quantity).toFixed(2)}
+                      </Text>
+                    </View>
+                  ))
                 )}
 
-                <View style={styles.solidDivider} />
+                <View style={styles.thermalRule} />
 
-                {/* Financial calculations summary */}
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Subtotal</Text>
-                  <Text style={styles.summaryValue}>Rs. {subtotal.toLocaleString()}.00</Text>
+                <View style={styles.thermalRow}>
+                  <Text style={styles.thermalSummaryBold}>Subtotal</Text>
+                  <Text style={styles.thermalSummaryBold}>Rs. {subtotal.toFixed(2)}</Text>
                 </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Tax (8%)</Text>
-                  <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
+                <View style={styles.thermalRow}>
+                  <Text style={styles.thermalRowLeft}>Standard Tax (8%)</Text>
+                  <Text style={styles.thermalRowRight}>Rs. {tax.toFixed(2)}</Text>
                 </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabelActive}>Discount</Text>
-                  <Text style={styles.summaryDiscountValue}>- Rs. {discount.toLocaleString()}.00</Text>
-                </View>
+                {discount > 0 ? (
+                  <View style={styles.thermalRow}>
+                    <Text style={styles.thermalRowLeft}>Discount</Text>
+                    <Text style={styles.thermalRowRight}>- Rs. {discount.toFixed(2)}</Text>
+                  </View>
+                ) : null}
 
-                <View style={styles.solidDivider} />
-
-                <View style={styles.receiptTotalRow}>
-                  <Text style={styles.receiptTotalLabel}>Grand Total</Text>
-                  <Text style={styles.receiptTotalValue}>
-                    Rs. {selectedOrder.totalAmount.toLocaleString()}.00
+                <View style={[styles.thermalRow, { marginTop: 6 }]}>
+                  <Text style={styles.thermalTotalLabel}>TOTAL</Text>
+                  <Text style={styles.thermalTotalValue}>
+                    Rs. {selectedOrder.totalAmount.toFixed(2)}
                   </Text>
                 </View>
 
-                <Text style={styles.thankYouText}>Thank you for shopping with us!</Text>
+                <View style={styles.thermalRule} />
+
+                <Text style={styles.thermalFooterCenter}>Thank you for visiting!</Text>
+                <Text style={styles.thermalFooterCenter}>Powered by Shopbook Mini POS</Text>
+                <View style={styles.thermalBarcodeBox}>
+                  <Barcode
+                    value={invoiceBarcodeValue}
+                    format="CODE128"
+                    singleBarWidth={1.8}
+                    height={42}
+                    maxWidth={280}
+                  />
+                  <Text style={styles.thermalBarcodeCaption}>{invoiceBarcodeValue}</Text>
+                </View>
               </View>
             </ScrollView>
           )}
@@ -292,21 +425,22 @@ Thank you for shopping with us!
           {/* Actions Footer */}
           <View style={styles.modalActions}>
             <TouchableOpacity
-              style={styles.actionBtnShare}
+              style={styles.actionBtnOutline}
               activeOpacity={0.8}
               onPress={handleShareInvoice}
             >
-              <Feather name="share-2" size={16} color={TOKENS.card} />
-              <Text style={styles.actionBtnText}>Share Receipt</Text>
+              <Feather name="share-2" size={16} color={TOKENS.primary} />
+              <Text style={styles.actionBtnOutlineText}>Share</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.actionBtnDownload}
+              style={[styles.actionBtnShare, itemsLoading && styles.actionBtnDisabled]}
               activeOpacity={0.8}
-              onPress={handleDownloadInvoice}
+              onPress={handlePrintReceipt}
+              disabled={itemsLoading}
             >
-              <Feather name="download" size={16} color={TOKENS.primary} />
-              <Text style={styles.actionBtnDownloadText}>Download PDF</Text>
+              <Feather name="printer" size={16} color={TOKENS.card} />
+              <Text style={styles.actionBtnText}>Print receipt</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -385,25 +519,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+    flexGrow: 1,
   },
   orderCard: {
     backgroundColor: TOKENS.card,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: TOKENS.border,
     padding: 16,
-    gap: 12,
   },
   orderHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    marginBottom: 12,
   },
   invoiceWrapper: {
     flex: 1,
-    marginRight: 8,
+    marginRight: 12,
+    gap: INNER_TEXT_GAP,
+    minWidth: 0,
   },
   invoiceNumber: {
     fontSize: 15,
@@ -413,15 +551,16 @@ const styles = StyleSheet.create({
   cashierName: {
     fontSize: 12,
     color: TOKENS.muted,
-    marginTop: 2,
+    lineHeight: 16,
   },
   paidBadge: {
     backgroundColor: "#ECFDF5",
     borderWidth: 1,
     borderColor: "#A7F3D0",
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
+    flexShrink: 0,
   },
   paidBadgeText: {
     color: "#047857",
@@ -431,11 +570,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     height: 1,
     backgroundColor: TOKENS.border,
+    marginBottom: 12,
   },
   orderFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   orderDate: {
     fontSize: 12,
@@ -446,182 +586,139 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: TOKENS.primary,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: TOKENS.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: "85%",
-    paddingTop: 16,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: TOKENS.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+  invoiceSheetInner: {
+    flexDirection: "column",
   },
   receiptScroll: {
-    flex: 1,
+    flexGrow: 0,
   },
   receiptScrollContent: {
-    padding: 16,
+    paddingTop: 0,
+    paddingHorizontal: 0,
+    paddingBottom: 16,
   },
-  receiptCard: {
+  thermalPaper: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: "90%",
     backgroundColor: TOKENS.card,
-    borderRadius: 16,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
   },
-  receiptShopName: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: TOKENS.dark,
+  thermalLogoEmoji: {
+    fontSize: 36,
     textAlign: "center",
+    marginBottom: 6,
   },
-  receiptShopCategory: {
-    fontSize: 12,
-    color: TOKENS.muted,
-    textAlign: "center",
-    marginTop: 2,
+  thermalLogoImg: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignSelf: "center",
+    marginBottom: 6,
   },
-  receiptShopAddress: {
-    fontSize: 12,
-    color: TOKENS.muted,
-    textAlign: "center",
-    marginTop: 2,
-  },
-  dashedDivider: {
-    height: 1,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-    borderStyle: "dashed",
-    marginVertical: 16,
-  },
-  metadataRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 4,
-  },
-  metaLabel: {
-    fontSize: 13,
-    color: TOKENS.muted,
-  },
-  metaValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: TOKENS.dark,
-  },
-  metaValueActive: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#047857",
-  },
-  sectionTitle: {
-    fontSize: 14,
+  thermalMiniPos: {
+    fontFamily: THERMAL_FONT,
+    fontSize: 15,
     fontWeight: "bold",
-    color: TOKENS.dark,
+    textAlign: "center",
+    letterSpacing: 2,
+    color: "#000",
     marginBottom: 8,
   },
-  itemsWrapper: {
-    gap: 8,
+  thermalHeaderTitle: {
+    fontFamily: THERMAL_FONT,
+    fontSize: 17,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#000",
+    marginTop: 4,
   },
-  receiptItemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  receiptItemName: {
+  thermalCenterMuted: {
+    fontFamily: THERMAL_FONT,
     fontSize: 13,
-    fontWeight: "600",
-    color: TOKENS.dark,
-  },
-  receiptItemQty: {
-    fontSize: 11,
-    color: TOKENS.muted,
+    color: "#444",
+    textAlign: "center",
     marginTop: 2,
   },
-  receiptItemTotal: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: TOKENS.dark,
+  thermalRule: {
+    borderTopWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#000",
+    marginVertical: 10,
   },
-  solidDivider: {
-    height: 1,
-    backgroundColor: TOKENS.border,
-    marginVertical: 12,
-  },
-  summaryRow: {
+  thermalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 8,
     marginVertical: 3,
   },
-  summaryLabel: {
+  thermalRowLeft: {
+    fontFamily: THERMAL_FONT,
     fontSize: 13,
-    color: TOKENS.muted,
+    color: "#000",
+    flex: 1,
+    minWidth: 0,
   },
-  summaryLabelActive: {
+  thermalRowRight: {
+    fontFamily: THERMAL_FONT,
     fontSize: 13,
-    color: TOKENS.primary,
+    color: "#000",
     fontWeight: "600",
+    flexShrink: 0,
+    maxWidth: "52%",
+    textAlign: "right",
   },
-  summaryValue: {
+  thermalRowRightBold: {
+    fontFamily: THERMAL_FONT,
     fontSize: 13,
-    fontWeight: "600",
-    color: TOKENS.dark,
+    fontWeight: "bold",
+    color: "#047857",
+    flexShrink: 0,
+    maxWidth: "52%",
+    textAlign: "right",
   },
-  summaryDiscountValue: {
+  thermalSummaryBold: {
+    fontFamily: THERMAL_FONT,
     fontSize: 13,
-    fontWeight: "600",
-    color: TOKENS.error,
+    fontWeight: "bold",
+    color: "#000",
   },
-  receiptTotalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginVertical: 4,
+  thermalTotalLabel: {
+    fontFamily: THERMAL_FONT,
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#000",
   },
-  receiptTotalLabel: {
+  thermalTotalValue: {
+    fontFamily: THERMAL_FONT,
     fontSize: 16,
     fontWeight: "bold",
-    color: TOKENS.dark,
+    color: "#000",
   },
-  receiptTotalValue: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: TOKENS.primary,
-  },
-  thankYouText: {
+  thermalFooterCenter: {
+    fontFamily: THERMAL_FONT,
     fontSize: 13,
-    color: TOKENS.muted,
+    color: "#333",
     textAlign: "center",
-    fontStyle: "italic",
-    marginTop: 24,
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  thermalBarcodeBox: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    marginTop: 14,
+  },
+  thermalBarcodeCaption: {
+    fontFamily: THERMAL_FONT,
+    fontSize: 11,
+    color: "#555",
+    textAlign: "center",
+    marginTop: 8,
   },
   modalActions: {
     flexDirection: "row",
@@ -631,6 +728,23 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
     borderTopWidth: 1,
     borderTopColor: TOKENS.border,
+  },
+  actionBtnOutline: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    height: 48,
+    borderRadius: 24,
+    gap: 8,
+  },
+  actionBtnOutlineText: {
+    color: TOKENS.primary,
+    fontSize: 14,
+    fontWeight: "bold",
   },
   actionBtnShare: {
     flex: 1,
@@ -647,25 +761,11 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
+  actionBtnDisabled: {
+    opacity: 0.45,
+  },
   actionBtnText: {
     color: TOKENS.card,
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  actionBtnDownload: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    height: 48,
-    borderRadius: 24,
-    gap: 8,
-  },
-  actionBtnDownloadText: {
-    color: TOKENS.primary,
     fontSize: 14,
     fontWeight: "bold",
   },

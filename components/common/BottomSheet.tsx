@@ -22,6 +22,12 @@ interface BottomSheetProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  /** Inner horizontal padding for the rounded sheet (default 20). Use 0 for edge-to-edge body content. */
+  contentPaddingHorizontal?: number;
+  /** Inner top padding below the sheet top radius (default 12). */
+  contentPaddingTop?: number;
+  /** Cap total sheet height (e.g. fraction of screen). Scroll should live inside children when used. */
+  maxHeight?: number;
 }
 
 export const BottomSheet: React.FC<BottomSheetProps> = ({
@@ -29,6 +35,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   onClose,
   title,
   children,
+  contentPaddingHorizontal = 20,
+  contentPaddingTop = 12,
+  maxHeight,
 }) => {
   const insets = useSafeAreaInsets();
   const [showModal, setShowModal] = useState(visible);
@@ -124,6 +133,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               {
                 transform: [{ translateY: sheetTranslateY }],
                 paddingBottom: Math.max(insets.bottom, 16),
+                paddingHorizontal: contentPaddingHorizontal,
+                paddingTop: contentPaddingTop,
+                ...(maxHeight != null ? { maxHeight } : null),
               },
             ]}
           >
@@ -131,7 +143,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             <View style={styles.dragHandle} />
 
             {title ? (
-              <View style={styles.sheetHeader}>
+              <View
+                style={[
+                  styles.sheetHeader,
+                  contentPaddingHorizontal === 0 ? { paddingHorizontal: 16 } : null,
+                ]}
+              >
                 <Text style={styles.sheetTitle}>{title}</Text>
                 <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
                   <Feather name="x" size={20} color={TOKENS.dark} />
@@ -160,8 +177,6 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
