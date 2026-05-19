@@ -75,12 +75,11 @@ export function useBusinesses() {
       // Synchronize back to the business store list for backward compatibility
       useBusinessStore.setState({ businesses: list });
       
-      // Keep the active business in sync if it's the placeholder or not in the list anymore
+      // Keep the active business in sync with fresh database updates in real-time
       const currentActive = useBusinessStore.getState().activeBusiness;
-      const stillExists = list.find((b) => b.id === currentActive.id);
-      if (!stillExists || currentActive.id === "0") {
-        const targetBizId = useAuthStore.getState().activeBusinessId;
-        const selectedBiz = list.find((b) => b.id === targetBizId) || list[0];
+      const targetBizId = useAuthStore.getState().activeBusinessId || currentActive.id;
+      const selectedBiz = list.find((b) => b.id === targetBizId) || list.find((b) => b.id === currentActive.id) || list[0];
+      if (selectedBiz) {
         useBusinessStore.setState({ activeBusiness: selectedBiz });
       }
 
@@ -203,9 +202,21 @@ export function useUpdateActiveBusiness() {
           });
         });
       }
+      return { id: activeBiz.id, ...details };
     },
-    onSuccess: () => {
+    onSuccess: (updatedBiz) => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      
+      // Real-time active business synchronization everywhere across all components!
+      useBusinessStore.setState({
+        activeBusiness: {
+          id: updatedBiz.id,
+          name: updatedBiz.name,
+          category: updatedBiz.category,
+          address: updatedBiz.address,
+          phone: updatedBiz.phone,
+        }
+      });
     },
   });
 }
@@ -234,9 +245,24 @@ export function useUpdateBusiness() {
           });
         });
       }
+      return { id, ...details };
     },
-    onSuccess: () => {
+    onSuccess: (updatedBiz) => {
       queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      
+      // Real-time active business synchronization everywhere across all components!
+      const currentActive = useBusinessStore.getState().activeBusiness;
+      if (currentActive.id === updatedBiz.id) {
+        useBusinessStore.setState({
+          activeBusiness: {
+            id: updatedBiz.id,
+            name: updatedBiz.name,
+            category: updatedBiz.category,
+            address: updatedBiz.address,
+            phone: updatedBiz.phone,
+          }
+        });
+      }
     },
   });
 }

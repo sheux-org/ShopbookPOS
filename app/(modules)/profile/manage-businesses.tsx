@@ -152,13 +152,42 @@ export default function ManageBusinessesRoute() {
       phone: newPhone.trim(),
       category: newCategory.trim(),
     }, {
-      onSuccess: () => {
+      onSuccess: (newBiz) => {
         setIsModalOpen(false);
         setNewName("");
         setNewCategory("");
         setNewAddress("");
         setNewPhone("");
-        triggerToast("Business store created successfully!");
+        triggerToast("Business store created successfully! 🎉");
+
+        Alert.alert(
+          "Activate New Branch",
+          `Would you like to set "${newBiz.name}" as your active business branch immediately?`,
+          [
+            {
+              text: "No",
+              style: "cancel"
+            },
+            {
+              text: "Yes, Activate",
+              onPress: () => {
+                useBusinessStore.setState({
+                  activeBusiness: {
+                    id: newBiz.id,
+                    name: newBiz.name,
+                    category: newBiz.category,
+                    address: newBiz.address,
+                    phone: newBiz.phone,
+                  }
+                });
+                
+                const { useAuthStore } = require("../../../stores/useAuthStore");
+                useAuthStore.getState().setActiveBusinessId(newBiz.id);
+                triggerToast(`Switched active business to "${newBiz.name}"! 🚀`);
+              }
+            }
+          ]
+        );
       },
       onError: () => {
         triggerToast("Failed to register business.");

@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,6 +17,15 @@ import { cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
 import { useVerifyOtp, useRegisterUser } from "../../../hooks/useAuth";
 
+const CATEGORIES = [
+  { label: "Grocery", icon: "🛒" },
+  { label: "Dairy", icon: "🥛" },
+  { label: "Drinks", icon: "🥤" },
+  { label: "Snacks", icon: "🍪" },
+  { label: "Household", icon: "🏠" },
+  { label: "Other", icon: "✨" },
+];
+
 export default function NumberInputRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -27,10 +36,16 @@ export default function NumberInputRoute() {
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState(false);
 
-  // Registration fields
+  // Onboarding registration state fields
   const [businessName, setBusinessName] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [businessAddress, setBusinessAddress] = useState("");
+  const [registerStep, setRegisterStep] = useState<1 | 2 | 3>(1);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  // Focus and keyboard refs
+  const nameInputRef = useRef<TextInput>(null);
+  const addressInputRef = useRef<TextInput>(null);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -285,68 +300,153 @@ export default function NumberInputRoute() {
 
         {step === "register" && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Register Shop Details</Text>
-            <Text style={styles.cardSubtitle}>
-              No profile found for +94 {phone}. Fill in your active retail business details to initialize this terminal.
-            </Text>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Business / Brand Name</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. Shopbook Retail Store"
-                placeholderTextColor="#9CA3AF"
-                value={businessName}
-                onChangeText={setBusinessName}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Business Category / Type</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. Electronics, Clothing, Groceries"
-                placeholderTextColor="#9CA3AF"
-                value={newCategory}
-                onChangeText={setNewCategory}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Store Address</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. 142 Galle Road, Colombo 03"
-                placeholderTextColor="#9CA3AF"
-                value={businessAddress}
-                onChangeText={setBusinessAddress}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.formLabel}>Registered Phone Number</Text>
-              <TextInput
-                style={[styles.formInput, styles.formInputDisabled]}
-                value={"+94 " + phone}
-                editable={false}
-              />
-            </View>
-
+            {/* Back Button */}
             <TouchableOpacity
-              style={[styles.submitButton, (!businessName.trim() || !newCategory.trim() || !businessAddress.trim()) && styles.submitButtonDisabled]}
-              activeOpacity={0.8}
-              onPress={handleRegister}
-              disabled={!businessName.trim() || !newCategory.trim() || !businessAddress.trim() || isLoading}
+              style={styles.backBtn}
+              onPress={() => {
+                if (registerStep === 1) {
+                  setStep("otp");
+                } else {
+                  setRegisterStep((prev) => (prev - 1) as 1 | 2 | 3);
+                }
+              }}
+              activeOpacity={0.7}
             >
-              {isLoading ? (
-                <ActivityIndicator color={TOKENS.card} size="small" />
-              ) : (
-                <>
-                  <Text style={styles.submitButtonText}>Register & Log In</Text>
-                  <Feather name="check-circle" size={16} color={TOKENS.card} />
-                </>
-              )}
+              <Feather name="arrow-left" size={16} color={TOKENS.primary} />
+              <Text style={styles.backBtnText}>
+                {registerStep === 1 ? "Back to OTP" : "Previous step"}
+              </Text>
             </TouchableOpacity>
+
+            {/* Onboarding Progressive Header */}
+            <View style={styles.onboardingHeader}>
+              <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarFill, { width: `${(registerStep / 3) * 100}%` }]} />
+              </View>
+              <Text style={styles.stepIndicatorText}>{registerStep}/3</Text>
+            </View>
+
+            {/* Step 1: Business Name */}
+            {registerStep === 1 && (
+              <View>
+                <Text style={styles.onboardingTitle}>Tell us your Business Name</Text>
+                <Text style={styles.onboardingSubtitle}>This will be displayed on your invoices and profile.</Text>
+
+                <TouchableOpacity
+                  activeOpacity={1}
+                  style={[styles.premiumInputWrapper, isInputFocused && styles.premiumInputWrapperFocused]}
+                  onPress={() => nameInputRef.current?.focus()}
+                >
+                  <TextInput
+                    ref={nameInputRef}
+                    style={styles.premiumTextInput}
+                    placeholder="e.g. Green Mart"
+                    placeholderTextColor="#9CA3AF"
+                    value={businessName}
+                    onChangeText={setBusinessName}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
+                  />
+                  {businessName.trim() !== "" && (
+                    <Feather name="check" size={18} color={TOKENS.primary} style={styles.inputCheckmark} />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.premiumNextBtn, !businessName.trim() && styles.premiumNextBtnDisabled]}
+                  onPress={() => setRegisterStep(2)}
+                  disabled={!businessName.trim()}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.premiumNextBtnText}>Next</Text>
+                  <Feather name="arrow-right" size={16} color={TOKENS.card} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Step 2: Business Type Grid */}
+            {registerStep === 2 && (
+              <View>
+                <Text style={styles.onboardingTitle}>Tell us your Business Type</Text>
+                <Text style={styles.onboardingSubtitle}>Select your primary retail store sector for tailored presets.</Text>
+
+                <View style={styles.chipsContainer}>
+                  {CATEGORIES.map((item) => {
+                    const isSelected = newCategory === item.label;
+                    return (
+                      <TouchableOpacity
+                        key={item.label}
+                        style={[styles.chipBox, isSelected && styles.chipBoxSelected]}
+                        onPress={() => setNewCategory(item.label)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.chipEmoji}>{item.icon}</Text>
+                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                          {item.label}
+                        </Text>
+                        {isSelected && (
+                          <Feather name="check" size={12} color={TOKENS.primary} style={styles.chipCheck} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.premiumNextBtn, !newCategory && styles.premiumNextBtnDisabled]}
+                  onPress={() => setRegisterStep(3)}
+                  disabled={!newCategory}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.premiumNextBtnText}>Next</Text>
+                  <Feather name="arrow-right" size={16} color={TOKENS.card} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Step 3: Address & Finish */}
+            {registerStep === 3 && (
+              <View>
+                <Text style={styles.onboardingTitle}>Tell us your Store Address</Text>
+                <Text style={styles.onboardingSubtitle}>Where is your main retail store outlet located?</Text>
+
+                <TouchableOpacity
+                  activeOpacity={1}
+                  style={[styles.premiumInputWrapper, isInputFocused && styles.premiumInputWrapperFocused]}
+                  onPress={() => addressInputRef.current?.focus()}
+                >
+                  <TextInput
+                    ref={addressInputRef}
+                    style={styles.premiumTextInput}
+                    placeholder="e.g. 123 Galle Road, Colombo 03"
+                    placeholderTextColor="#9CA3AF"
+                    value={businessAddress}
+                    onChangeText={setBusinessAddress}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
+                  />
+                  {businessAddress.trim() !== "" && (
+                    <Feather name="check" size={18} color={TOKENS.primary} style={styles.inputCheckmark} />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.premiumNextBtn, !businessAddress.trim() && styles.premiumNextBtnDisabled]}
+                  onPress={handleRegister}
+                  disabled={!businessAddress.trim() || isLoading}
+                  activeOpacity={0.8}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color={TOKENS.card} size="small" />
+                  ) : (
+                    <>
+                      <Text style={styles.premiumNextBtnText}>Launch POS Terminal 🚀</Text>
+                      <Feather name="check-circle" size={16} color={TOKENS.card} />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -598,5 +698,132 @@ const styles = StyleSheet.create({
   formInputDisabled: {
     backgroundColor: "#F3F4F6",
     color: TOKENS.muted,
+  },
+  onboardingHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  progressBarBg: {
+    flex: 1,
+    height: 6,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 3,
+    marginRight: 16,
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: TOKENS.primary,
+    borderRadius: 3,
+  },
+  stepIndicatorText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: TOKENS.primary,
+  },
+  onboardingTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: TOKENS.dark,
+    lineHeight: 30,
+    marginBottom: 8,
+  },
+  onboardingSubtitle: {
+    fontSize: 13,
+    color: TOKENS.muted,
+    lineHeight: 18,
+    marginBottom: 24,
+  },
+  premiumInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: TOKENS.border,
+    borderRadius: 12,
+    backgroundColor: "#F9FAFB",
+    paddingHorizontal: 16,
+    marginBottom: 32,
+  },
+  premiumInputWrapperFocused: {
+    borderColor: TOKENS.primary,
+    backgroundColor: TOKENS.card,
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  premiumTextInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 15,
+    color: TOKENS.dark,
+    fontWeight: "600",
+  },
+  inputCheckmark: {
+    marginLeft: 10,
+  },
+  chipsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 32,
+  },
+  chipBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: TOKENS.border,
+    backgroundColor: TOKENS.card,
+    gap: 8,
+  },
+  chipBoxSelected: {
+    borderColor: TOKENS.primary,
+    backgroundColor: "#EFF6FF",
+  },
+  chipEmoji: {
+    fontSize: 15,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: TOKENS.dark,
+  },
+  chipTextSelected: {
+    color: TOKENS.primary,
+  },
+  chipCheck: {
+    marginLeft: 2,
+  },
+  premiumNextBtn: {
+    flexDirection: "row",
+    height: 48,
+    backgroundColor: TOKENS.primary,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  premiumNextBtnDisabled: {
+    backgroundColor: "#E5E7EB",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  premiumNextBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: TOKENS.card,
   },
 });
