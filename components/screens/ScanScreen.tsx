@@ -3,7 +3,6 @@ import {
   StyleSheet,
   Text,
   View,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Animated,
@@ -13,24 +12,37 @@ import {
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CameraView } from "expo-camera";
+import { usePermission } from "../../hooks/usePermissionHandler";
 import { TOKENS } from "../../constants/tokens";
-import { Header } from "../common/Header";
-import { BottomTabBar } from "../common/BottomTabBar";
-import { cartState } from "../data/cartState";
+import { cartState, CartItem } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
 
 export const ScanScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
+  const { requestCameraAccess, hasCameraAccess } = usePermission();
 
-  const [addedItemsCount, setAddedItemsCount] = useState(0);
+  const [invoiceItems, setInvoiceItems] = useState<CartItem[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const scanAnim = useRef(new Animated.Value(0)).current;
+  const lastScanTime = useRef<number>(0);
 
-  // Real scan products fetched dynamically from WatermelonDB via React Query
-  const { data: recentProducts = [] } = useProducts(undefined, searchQuery || undefined, "Recents");
+  // Real products catalog from WatermelonDB via React Query
+  const { data: catalogProducts = [] } = useProducts();
+
+  useEffect(() => {
+    const syncInvoice = () => {
+      setInvoiceItems(cartState.getCart());
+    };
+    syncInvoice();
+    return cartState.subscribe(syncInvoice);
+  }, []);
+
+  const totalInvoiceAmount = useMemo(() => {
+    return invoiceItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  }, [invoiceItems]);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -54,9 +66,9 @@ export const ScanScreen: React.FC = () => {
     return () => loop.stop();
   }, [scanAnim]);
 
-  const translateY = scanAnim.interpolate({
+  const laserTranslateY = scanAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [6, 134],
+    outputRange: [6, 174],
   });
 
   const triggerToast = (msg: string) => {
@@ -66,36 +78,23 @@ export const ScanScreen: React.FC = () => {
     }, 1500);
   };
 
-  const handlePlusAction = (item: any) => {
-    cartState.addCartItem(item.name, item.price, item.icon);
-    setAddedItemsCount((prev) => prev + 1);
-    triggerToast(`Scanned & added ${item.name}`);
-  };
+  const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
+    // 2-second debounce to avoid rapid double-scans
+    if (lastScanTime.current && Date.now() - lastScanTime.current < 2000) return;
+    lastScanTime.current = Date.now();
 
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "home") {
-      router.push("/");
-    } else if (tabId === "pos") {
-      router.push("/pos");
+    const matched = catalogProducts.find((p) => p.barcode === data);
+    if (matched) {
+      const skuCode = matched.barcode || `SKU 23400${matched.id}`;
+      cartState.addCartItem(matched.name, matched.price, matched.icon, skuCode, matched.stockCount);
+      triggerToast(`Added ${matched.name} 🛒`);
     } else {
-      triggerToast(`${tabId.toUpperCase()} view tab selected`);
+      triggerToast(`Barcode ${data} not in catalog ⚠️`);
     }
   };
 
-  const filteredRecents = recentProducts;
-
   return (
-    <View style={styles.container}>
-      {/* Primary Blue Top Header */}
-      <View style={{ paddingTop: Platform.OS === "android" ? insets.top : 10, backgroundColor: TOKENS.primary }}>
-        <Header
-          variant="primary"
-          title="Mini POS"
-          subtitle={`Cart · ${addedItemsCount} items`}
-          onBackPress={() => router.back()}
-        />
-      </View>
-
+    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
       {/* Popover feedback toast */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -104,96 +103,159 @@ export const ScanScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Camera Viewfinder Area */}
-      <View style={styles.viewfinderContainer}>
-        <View style={styles.bracketFrame}>
-          <View style={[styles.cornerBracket, styles.topLeftBracket]} />
-          <View style={[styles.cornerBracket, styles.topRightBracket]} />
-          <View style={[styles.cornerBracket, styles.bottomLeftBracket]} />
-          <View style={[styles.cornerBracket, styles.bottomRightBracket]} />
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          activeOpacity={0.7}
+          onPress={() => router.back()}
+        >
+          <Feather name="chevron-left" size={24} color={TOKENS.dark} />
+        </TouchableOpacity>
 
-          {/* Static barcode graphic representation */}
-          <View style={styles.barcodeGraphic}>
-            <View style={[styles.bar, { width: 3 }]} />
-            <View style={[styles.bar, { width: 6 }]} />
-            <View style={[styles.bar, { width: 2 }]} />
-            <View style={[styles.bar, { width: 4 }]} />
-            <View style={[styles.bar, { width: 2 }]} />
-            <View style={[styles.bar, { width: 5 }]} />
-            <View style={[styles.bar, { width: 2 }]} />
-            <View style={[styles.bar, { width: 8 }]} />
-            <View style={[styles.bar, { width: 3 }]} />
-            <View style={[styles.bar, { width: 2 }]} />
-            <View style={[styles.bar, { width: 5 }]} />
-            <View style={[styles.bar, { width: 3 }]} />
-          </View>
-
-          {/* Animated looped sweep laser line */}
-          <Animated.View style={[styles.laserLine, { transform: [{ translateY }] }]} />
+        <View style={styles.headerTitleWrapper}>
+          <Text style={styles.headerTitle}>Scan Products</Text>
+          <Text style={styles.headerSubtitle}>Invoice Cart</Text>
         </View>
 
-        <Text style={styles.viewfinderText}>Scan · Hold steady</Text>
+        <View style={styles.headerRightActions}>
+          {invoiceItems.length > 0 && (
+            <TouchableOpacity
+              style={styles.headerCartBtn}
+              activeOpacity={0.8}
+              onPress={() => router.push("/pos/cart")}
+            >
+              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
+              <View style={styles.headerCartBadge}>
+                <Text style={styles.headerCartBadgeText}>
+                  {invoiceItems.reduce((sum, item) => sum + item.quantity, 0)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      {/* Below Viewfinder Recents Layout */}
-      <View style={styles.contentSection}>
-        {/* Search input paired with manual trigger edit icon */}
-        <View style={styles.searchRow}>
-          <View style={styles.searchInputWrapper}>
-            <Feather name="search" size={18} color={TOKENS.muted} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search products..."
-              placeholderTextColor="#9CA3AF"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <Feather name="x-circle" size={18} color={TOKENS.muted} />
-              </TouchableOpacity>
-            )}
+      {/* Scanned Items list */}
+      <ScrollView
+        style={styles.itemsList}
+        contentContainerStyle={styles.itemsListContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {invoiceItems.map((item) => (
+          <View key={item.id} style={styles.itemCard}>
+            <View style={styles.itemIconBox}>
+              <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+            </View>
+            <View style={styles.itemMainInfo}>
+              <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.itemQuantities}>
+                {item.quantity} × Rs. {item.price.toLocaleString()}
+              </Text>
+            </View>
+
+            <View style={styles.itemRightRow}>
+              <Text style={styles.itemTotal}>
+                Rs. {(item.price * item.quantity).toLocaleString()}
+              </Text>
+
+              <View style={styles.cardActions}>
+                <TouchableOpacity
+                  style={styles.smallActionBtn}
+                  onPress={() => cartState.updateQuantity(item.id, -1)}
+                >
+                  <Feather name="minus" size={12} color={TOKENS.muted} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.smallActionBtn}
+                  onPress={() => cartState.updateQuantity(item.id, 1)}
+                >
+                  <Feather name="plus" size={12} color={TOKENS.muted} />
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
+        ))}
 
-          <TouchableOpacity
-            style={styles.editButton}
-            activeOpacity={0.75}
-            onPress={() => triggerToast("Manual input lookup mode")}
-          >
-            <Feather name="edit" size={18} color={TOKENS.dark} />
-          </TouchableOpacity>
-        </View>
+        {invoiceItems.length === 0 && (
+          <View style={styles.emptyInvoiceState}>
+            <Ionicons name="barcode-outline" size={48} color={TOKENS.muted} />
+            <Text style={styles.emptyInvoiceTitle}>No items scanned yet</Text>
+            <Text style={styles.emptyInvoiceSub}>Align product barcode in the scanner below</Text>
+          </View>
+        )}
+      </ScrollView>
 
-        <Text style={styles.recentsLabel}>RECENTS</Text>
-
-        <ScrollView style={styles.recentsList} showsVerticalScrollIndicator={false}>
-          {filteredRecents.map((item) => (
-            <View key={item.id} style={styles.recentItemRow}>
-              <View style={styles.itemIconBox}>
-                <Text style={{ fontSize: 18 }}>{item.icon}</Text>
-              </View>
-
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemSku}>{item.barcode || item.quickCode || "No Code"}</Text>
-              </View>
-
-              <Text style={styles.itemPrice}>Rs. {item.price}</Text>
-
+      {/* Bottom Panel - Live Camera Viewfinder & Proceed to Checkout Button */}
+      <View style={[styles.bottomPanel, { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 }]}>
+        <Text style={styles.scannerLabel}>CAMERA VIEWFINDER ACTIVE</Text>
+        
+        <View style={styles.mockViewfinder}>
+          {hasCameraAccess ? (
+            <CameraView
+              style={StyleSheet.absoluteFillObject}
+              barcodeScannerSettings={{
+                barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
+              }}
+              onBarcodeScanned={handleBarcodeScanned}
+            />
+          ) : (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16 }}>
+              <Text style={{ color: "#fff", fontSize: 12, textAlign: "center", marginBottom: 10 }}>
+                Camera Access Required
+              </Text>
               <TouchableOpacity
-                style={styles.plusButton}
-                activeOpacity={0.75}
-                onPress={() => handlePlusAction(item)}
+                onPress={() => requestCameraAccess()}
+                style={{ backgroundColor: TOKENS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
               >
-                <Feather name="plus" size={18} color={TOKENS.card} />
+                <Text style={{ color: "#fff", fontSize: 11, fontWeight: "bold" }}>Grant Permission</Text>
               </TouchableOpacity>
             </View>
-          ))}
-        </ScrollView>
+          )}
+
+          {/* Viewfinder corner brackets overlay */}
+          <View style={styles.bracketContainer}>
+            <View style={[styles.scanCorner, styles.topLeftScan]} />
+            <View style={[styles.scanCorner, styles.topRightScan]} />
+            <View style={[styles.scanCorner, styles.bottomLeftScan]} />
+            <View style={[styles.scanCorner, styles.bottomRightScan]} />
+
+            {/* Animated Laser line */}
+            <Animated.View
+              style={[styles.scanLaser, { transform: [{ translateY: laserTranslateY }] }]}
+            />
+          </View>
+        </View>
+
+        {/* Proceed to Checkout button placed below the scan view/viewfinder */}
+        <TouchableOpacity
+          style={[
+            styles.summaryBarButton,
+            invoiceItems.length === 0 && styles.summaryBarButtonDisabled
+          ]}
+          disabled={invoiceItems.length === 0}
+          activeOpacity={0.85}
+          onPress={() => router.push("/pos/cart")}
+        >
+          <View style={styles.summaryBarLeft}>
+            <Feather 
+              name="shopping-bag" 
+              size={16} 
+              color={invoiceItems.length === 0 ? TOKENS.muted : TOKENS.card} 
+            />
+            <Text style={[
+              styles.summaryLabelActive,
+              invoiceItems.length === 0 && styles.summaryLabelDisabled
+            ]}>
+              Proceed to Checkout
+            </Text>
+          </View>
+          {invoiceItems.length > 0 && (
+            <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()} ➡️</Text>
+          )}
+        </TouchableOpacity>
       </View>
-
-
     </View>
   );
 };
@@ -205,7 +267,7 @@ const styles = StyleSheet.create({
   },
   toastContainer: {
     position: "absolute",
-    top: 110,
+    top: 90,
     alignSelf: "center",
     backgroundColor: TOKENS.success,
     flexDirection: "row",
@@ -214,10 +276,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
-    zIndex: 50,
+    zIndex: 999,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 5,
   },
@@ -226,68 +288,211 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  viewfinderContainer: {
-    width: "100%",
-    height: 280,
-    backgroundColor: "#111827",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bracketFrame: {
-    width: 220,
-    height: 144,
-    position: "relative",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cornerBracket: {
-    position: "absolute",
-    width: 24,
-    height: 24,
-    borderColor: TOKENS.yellow,
-  },
-  topLeftBracket: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderTopLeftRadius: 4,
-  },
-  topRightBracket: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderTopRightRadius: 4,
-  },
-  bottomLeftBracket: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomLeftRadius: 4,
-  },
-  bottomRightBracket: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderBottomRightRadius: 4,
-  },
-  barcodeGraphic: {
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    height: 64,
-    gap: 3,
-    opacity: 0.9,
-  },
-  bar: {
-    height: "100%",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
     backgroundColor: TOKENS.card,
-    borderRadius: 1,
   },
-  laserLine: {
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitleWrapper: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    marginTop: 1,
+  },
+  headerRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerCartBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  headerCartBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: TOKENS.error,
+    borderRadius: 9,
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerCartBadgeText: {
+    color: TOKENS.card,
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  itemsList: {
+    flex: 1,
+  },
+  itemsListContent: {
+    padding: 16,
+    gap: 12,
+  },
+  itemCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: TOKENS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 12,
+  },
+  itemIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "#F9FAFB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+  },
+  itemMainInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  itemQuantities: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    marginTop: 4,
+  },
+  itemRightRow: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  itemTotal: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  cardActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  smallActionBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyInvoiceState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 64,
+    gap: 8,
+  },
+  emptyInvoiceTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    marginTop: 12,
+  },
+  emptyInvoiceSub: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    textAlign: "center",
+    paddingHorizontal: 32,
+  },
+  bottomPanel: {
+    backgroundColor: TOKENS.card,
+    borderTopWidth: 1,
+    borderTopColor: TOKENS.border,
+    padding: 16,
+    gap: 12,
+  },
+  scannerLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: TOKENS.muted,
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+  mockViewfinder: {
+    width: "100%",
+    height: 180,
+    backgroundColor: "#111827",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
+  },
+  bracketContainer: {
+    width: 200,
+    height: 120,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scanCorner: {
+    position: "absolute",
+    width: 16,
+    height: 16,
+    borderColor: TOKENS.yellow,
+  },
+  topLeftScan: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+  },
+  topRightScan: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+  },
+  bottomLeftScan: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+  },
+  bottomRightScan: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+  },
+  scanLaser: {
     position: "absolute",
     left: 4,
     right: 4,
@@ -295,110 +500,40 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.yellow,
     shadowColor: TOKENS.yellow,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.8,
+    shadowRadius: 3,
   },
-  viewfinderText: {
-    marginTop: 24,
-    fontSize: 13,
-    color: "#9CA3AF",
-    fontWeight: "500",
-  },
-  contentSection: {
-    flex: 1,
-    backgroundColor: TOKENS.card,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  searchRow: {
+  summaryBarButton: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 10,
-  },
-  searchInputWrapper: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 15,
-    color: TOKENS.dark,
-  },
-  editButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-    backgroundColor: TOKENS.card,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  recentsLabel: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: TOKENS.muted,
-    marginTop: 20,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  recentsList: {
-    flex: 1,
-  },
-  recentItemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: TOKENS.border,
-  },
-  itemIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: TOKENS.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  itemDetails: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  itemSku: {
-    fontSize: 12,
-    color: TOKENS.muted,
-    marginTop: 2,
-  },
-  itemPrice: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: TOKENS.primary,
-    marginRight: 12,
-  },
-  plusButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
     backgroundColor: TOKENS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    width: "100%",
+    marginTop: 4,
+  },
+  summaryBarButtonDisabled: {
+    backgroundColor: "#E5E7EB",
+    borderColor: "#E5E7EB",
+  },
+  summaryBarLeft: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 8,
+  },
+  summaryLabelActive: {
+    color: TOKENS.card,
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  summaryLabelDisabled: {
+    color: TOKENS.muted,
+  },
+  summaryValueActive: {
+    color: TOKENS.card,
+    fontWeight: "bold",
+    fontSize: 14,
   },
 });

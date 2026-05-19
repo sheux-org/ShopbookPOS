@@ -363,24 +363,23 @@ export const HomeScreen: React.FC = () => {
       >
         <TouchableOpacity
           style={styles.fabTouchable}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           onPress={() => router.push("/(modules)/stocks/scan")}
         >
           <View style={styles.fabIconWrapper}>
             <Ionicons name="qr-code-outline" size={18} color="#FFFFFF" />
           </View>
-          <Animated.Text
-            numberOfLines={1}
+          <Animated.View
             style={[
-              styles.fabText,
+              styles.fabTextWrapper,
               {
                 opacity: fabTextOpacityAnim,
                 transform: [{ scale: fabTextScaleAnim }],
               }
             ]}
           >
-            Scan
-          </Animated.Text>
+            <Text style={styles.fabText}>Scan</Text>
+          </Animated.View>
         </TouchableOpacity>
       </Animated.View>
 
@@ -712,17 +711,21 @@ const styles = StyleSheet.create({
   },
   fabIconWrapper: {
     position: "absolute",
-    left: 13.5,
-    top: 13.5,
+    left: 15,
+    top: 0,
+    bottom: 0,
     width: 18,
-    height: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  fabText: {
+  fabTextWrapper: {
     position: "absolute",
-    left: 42,
-    top: 13,
+    left: 44,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+  },
+  fabText: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "800",
