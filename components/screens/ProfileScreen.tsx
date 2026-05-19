@@ -22,31 +22,31 @@ import { BusinessAvatar } from "../common/BusinessAvatar";
 
 const FAQS = [
   {
-    q: "Does Shopbook work without an internet connection?",
-    a: "Yes! Shopbook uses a local database (WatermelonDB). You can perform billing, scan barcodes, and manage inventory offline. All transactions sync to the cloud database automatically once backup is enabled and connection is restored.",
+    q: "Does Shopbook Mini POS work without an internet connection?",
+    a: "Yes! Shopbook Mini POS saves all transactions to a secure local database. You can perform billing, scan barcodes, and manage inventory offline. Cloud backup and synchronization is a premium feature available in the Shopbook Mini POS Pro version.",
   },
   {
     q: "What is a 'Quick Code' and how do cashiers use it?",
     a: "Quick Codes are short numeric shortcuts (e.g., '101' for Bread) assigned to products. Cashiers can type these in the Search bar to add items to the invoice instantly without using a scanner.",
   },
   {
-    q: "How do I scan barcodes to add items?",
+    q: "How do I scan barcodes to add items in Shopbook Mini POS?",
     a: "Tap 'Scan' in the bottom navigation or tap the search icon in the header and click the camera icon. Line up the product barcode within the viewfinder to search and add it.",
   },
   {
     q: "How do I connect a Bluetooth thermal printer?",
-    a: "Go to Profile Settings > Bluetooth Thermal Printer. Scan for nearby devices, select your printer, and pair it. Once connected, a 'Print Receipt' option will appear on completed transactions.",
+    a: "Go to Profile Settings > Bluetooth Thermal Printer. Scan for nearby devices, select your printer, and pair it. Once connected, printing receipts via Bluetooth thermal printers is a premium feature available for Shopbook Mini POS Pro users.",
   },
   {
-    q: "What can Managers and Cashiers access in Shopbook?",
-    a: "Cashiers can only perform sales, scan barcodes, and view items. Managers can manage stock and view histories. Administrative actions like adding staff, managing multiple businesses, or editing cloud sync settings are restricted to Owners.",
+    q: "What can Managers and Cashiers access in Shopbook Mini POS?",
+    a: "Cashiers can only perform sales and scan barcodes, while Managers can manage stock. Granting multi-user access for staff (Managers/Cashiers) is a premium feature included in the Shopbook Mini POS Pro plan.",
   },
   {
     q: "Can I manage multiple store locations or branches?",
-    a: "Yes! If you are an Owner or Admin, you can switch locations using the business switcher dropdown at the top of the Home Screen, allowing separate staff, products, and order histories for each branch.",
+    a: "Yes! Creating and switching between multiple business branches is a premium feature in Shopbook Mini POS Pro. Upgrading lets you manage separate staff, products, and order histories for each branch.",
   },
   {
-    q: "How do Low Stock Alerts work?",
+    q: "How do Low Stock Alerts work in Shopbook Mini POS?",
     a: "When adding/editing a product, you can set a 'Low Stock Alert' threshold. When the item count drops below this, the stock text turns orange on the Home Screen to warn cashiers.",
   },
 ];
