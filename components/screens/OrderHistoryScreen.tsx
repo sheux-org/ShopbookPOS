@@ -18,7 +18,7 @@ import { TOKENS } from "../../constants/tokens";
 import { useGetOrders, useGetOrderItems, DBOrder } from "../../hooks/useOrders";
 import { cartState } from "../data/cartState";
 
-export const OrderHistoryScreen: React.FC = () => {
+export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = false }) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -101,15 +101,17 @@ Thank you for shopping with us!
     <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.7}
-          onPress={() => router.back()}
-        >
-          <Feather name="chevron-left" size={24} color={TOKENS.dark} />
-        </TouchableOpacity>
+        {!isTab && (
+          <TouchableOpacity
+            style={styles.backButton}
+            activeOpacity={0.7}
+            onPress={() => router.back()}
+          >
+            <Feather name="chevron-left" size={24} color={TOKENS.dark} />
+          </TouchableOpacity>
+        )}
 
-        <View style={styles.headerTitleWrapper}>
+        <View style={[styles.headerTitleWrapper, !isTab ? { marginLeft: 12 } : { marginLeft: 4 }]}>
           <Text style={styles.headerTitle}>Order History</Text>
           <Text style={styles.headerSubtitle}>Completed Sales Logs</Text>
         </View>

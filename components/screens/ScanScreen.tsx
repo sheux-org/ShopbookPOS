@@ -17,11 +17,13 @@ import { usePermission } from "../../hooks/usePermissionHandler";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CartItem } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
+import { useUserPermissions } from "../../hooks/useUserPermissions";
 
 export const ScanScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestCameraAccess, hasCameraAccess } = usePermission();
+  const { role } = useUserPermissions();
 
   const [invoiceItems, setInvoiceItems] = useState<CartItem[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -119,6 +121,17 @@ export const ScanScreen: React.FC = () => {
         </View>
 
         <View style={styles.headerRightActions}>
+          {role === "admin" && (
+            <TouchableOpacity
+              style={styles.headerHistoryBtn}
+              activeOpacity={0.7}
+              onPress={() => router.push("/pos/history")}
+            >
+              <Feather name="list" size={16} color={TOKENS.primary} />
+              <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Orders</Text>
+            </TouchableOpacity>
+          )}
+
           {invoiceItems.length > 0 && (
             <TouchableOpacity
               style={styles.headerCartBtn}
@@ -327,6 +340,17 @@ const styles = StyleSheet.create({
   headerRightActions: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
+  },
+  headerHistoryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    paddingHorizontal: 12,
   },
   headerCartBtn: {
     width: 36,

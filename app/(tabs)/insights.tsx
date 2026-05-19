@@ -1,12 +1,16 @@
 import React from "react";
 import { Stack } from "expo-router";
 import { InsightsScreen } from "@/components/screens/InsightsScreen";
+import { OrderHistoryScreen } from "@/components/screens/OrderHistoryScreen";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 export default function InsightsRoute() {
+  const { role } = useUserPermissions();
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <InsightsScreen />
+      {role === "cashier" ? <OrderHistoryScreen isTab={true} /> : <InsightsScreen />}
     </>
   );
 }

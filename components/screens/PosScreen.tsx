@@ -224,7 +224,8 @@ export const PosScreen: React.FC = () => {
               activeOpacity={0.7}
               onPress={() => router.push("/pos/history")}
             >
-              <Feather name="list" size={18} color={TOKENS.primary} />
+              <Feather name="list" size={16} color={TOKENS.primary} />
+              <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Orders</Text>
             </TouchableOpacity>
           )}
 
@@ -1029,14 +1030,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerHistoryBtn: {
-    width: 38,
+    flexDirection: "row",
+    alignItems: "center",
     height: 38,
     borderRadius: 19,
     backgroundColor: TOKENS.lightBlue,
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 12,
   },
   headerCartBtn: {
     width: 38,

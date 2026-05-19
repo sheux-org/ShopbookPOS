@@ -17,9 +17,9 @@ export default function TabLayout() {
     }).start();
   }, [tabBarVisible]);
 
-  const mapRouteToTab = (routeName: string): "home" | "pos" | "stocks" | "insights" | "profile" => {
+  const mapRouteToTab = (routeName: string): any => {
     if (routeName === "index") return "home";
-    return routeName as any;
+    return routeName;
   };
 
   return (
@@ -41,7 +41,7 @@ export default function TabLayout() {
             <BottomTabBar
               activeTab={activeTab}
               onTabPress={(tabId) => {
-                const routeName = tabId === "home" ? "index" : tabId;
+                const routeName = tabId === "home" ? "index" : (tabId === "orders" ? "insights" : tabId);
                 props.navigation.navigate(routeName);
               }}
             />

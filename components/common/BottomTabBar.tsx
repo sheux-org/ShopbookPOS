@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 
 interface BottomTabBarProps {
-  activeTab?: "home" | "pos" | "stocks" | "insights" | "profile";
+  activeTab?: "home" | "pos" | "stocks" | "insights" | "orders" | "profile";
   onTabPress?: (tab: string) => void;
 }
 
@@ -16,13 +16,17 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
   const insets = useSafeAreaInsets();
 
   const { useUserPermissions } = require("../../hooks/useUserPermissions");
-  const { canPerform } = useUserPermissions();
+  const { canPerform, role } = useUserPermissions();
 
   const allTabs = [
     { id: "home", label: "Home", icon: "home" },
     { id: "pos", label: "POS", icon: "shopping-cart" },
     { id: "stocks", label: "Stocks", icon: "package" },
-    { id: "insights", label: "Insights", icon: "bar-chart-2" },
+    {
+      id: role === "cashier" ? "orders" : "insights",
+      label: role === "cashier" ? "Orders" : "Insights",
+      icon: role === "cashier" ? "list" : "bar-chart-2",
+    },
     { id: "profile", label: "Profile", icon: "user" },
   ];
 
@@ -41,7 +45,10 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
       ]}
     >
       {tabs.map((tab) => {
-        const isActive = activeTab === tab.id;
+        const isActive =
+          activeTab === tab.id ||
+          (tab.id === "orders" && activeTab === "insights") ||
+          (tab.id === "insights" && activeTab === "orders");
         return (
           <TouchableOpacity
             key={tab.id}
