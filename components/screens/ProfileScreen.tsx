@@ -7,6 +7,8 @@ import {
   ScrollView,
   Platform,
   Alert,
+  Modal,
+  Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -16,6 +18,25 @@ import { cartState } from "../data/cartState";
 import { useSettingsStore } from "../../stores/useSettingsStore";
 import { syncDatabase } from "../../services/sync";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
+
+const FAQS = [
+  {
+    q: "How do I perform a manual cloud sync?",
+    a: "Go to Data Sync & Backup section on your profile and tap 'Sync Database Now' to sync offline records.",
+  },
+  {
+    q: "Can cashiers add new store branches?",
+    a: "No, cashier profiles have read-only store access. Branch creation is restricted strictly to Admins/Owners.",
+  },
+  {
+    q: "How do I print receipts?",
+    a: "When tender succeeds on the Payment Screen, tap 'Print Invoice' to connect to your Bluetooth thermal printer.",
+  },
+  {
+    q: "How is standard tax computed?",
+    a: "A standard sales tax of 8% is applied automatically to dairy/grocery items during active billing.",
+  },
+];
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -29,6 +50,10 @@ export const ProfileScreen: React.FC = () => {
   
   // Real business details from local SQLite database
   const [activeBusiness, setActiveBusiness] = useState(cartState.getActiveBusiness());
+  
+  // Help & Support Modal state
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const updateCount = () => {
@@ -328,7 +353,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => Alert.alert("Help & Support", "Priority customer care is active 24/7. Call us at +94 11 234 5678.")}
+            onPress={() => setIsHelpModalOpen(true)}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#F3F4F6" }]}>
               <Feather name="help-circle" size={18} color={TOKENS.dark} />
@@ -364,12 +389,111 @@ export const ProfileScreen: React.FC = () => {
             </View>
             <View style={styles.optionTextWrapper}>
               <Text style={[styles.optionTitle, { color: TOKENS.error }]}>Sign Out</Text>
-              <Text style={styles.optionSubtitle}>Disconnect POS session safely from this iPad</Text>
+              <Text style={styles.optionSubtitle}>Disconnect POS session safely</Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
         </View>
+{/* Footer info: Made in Sri Lanka & App Version */}
+        <View style={styles.footerContainer}>
+          <Text style={styles.versionText}>Version: 1.0.4</Text>
+          <Text style={styles.madeInText}>Made in 🇱🇰 with ❤️</Text>
+        </View>
       </ScrollView>
+
+      {/* Help & Customer Support Modal */}
+      <Modal
+        visible={isHelpModalOpen}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsHelpModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalHelpContent, { paddingBottom: insets.bottom + 20 }]}>
+            {/* Bottom Sheet Drag Handle */}
+            <View style={styles.dragHandle} />
+
+            {/* Modal Header */}
+            <View style={styles.modalHelpHeader}>
+              <Text style={styles.modalHelpTitle}>Help & Support</Text>
+              <TouchableOpacity
+                style={styles.modalHelpCloseBtn}
+                onPress={() => setIsHelpModalOpen(false)}
+              >
+                <Feather name="x" size={20} color={TOKENS.dark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalHelpScroll}>
+              <Text style={styles.supportIntro}>
+                Need assistance with your Shopbook POS terminal? Get priority response 24/7.
+              </Text>
+
+              {/* Action Buttons as Premium Card Rows */}
+              <View style={styles.supportActions}>
+                <TouchableOpacity
+                  style={styles.premiumSupportCard}
+                  activeOpacity={0.7}
+                  onPress={() => Linking.openURL("tel:+94771234567")}
+                >
+                  <View style={[styles.supportIconCircle, { backgroundColor: "#EFF6FF" }]}>
+                    <Feather name="phone" size={18} color={TOKENS.primary} />
+                  </View>
+                  <View style={styles.supportCardTextWrapper}>
+                    <Text style={styles.supportCardTitle}>Call Helpline</Text>
+                    <Text style={styles.supportCardSubtitle}>Call +94 77 123 4567 · Active 24/7</Text>
+                  </View>
+                  <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.premiumSupportCard}
+                  activeOpacity={0.7}
+                  onPress={() => Linking.openURL("https://wa.me/94771234567")}
+                >
+                  <View style={[styles.supportIconCircle, { backgroundColor: "#E8FDF0" }]}>
+                    <Feather name="message-circle" size={18} color="#10B981" />
+                  </View>
+                  <View style={styles.supportCardTextWrapper}>
+                    <Text style={styles.supportCardTitle}>WhatsApp Support</Text>
+                    <Text style={styles.supportCardSubtitle}>Chat immediately & send screenshots</Text>
+                  </View>
+                  <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* FAQs Section */}
+              <Text style={styles.faqHeader}>Frequently Asked Questions</Text>
+              <View style={styles.faqList}>
+                {FAQS.map((faq, index) => {
+                  const isExpanded = expandedFaqIndex === index;
+                  return (
+                    <View key={index} style={styles.faqCard}>
+                      <TouchableOpacity
+                        style={styles.faqQuestionRow}
+                        activeOpacity={0.7}
+                        onPress={() => setExpandedFaqIndex(isExpanded ? null : index)}
+                      >
+                        <Text style={styles.faqQuestionText}>{faq.q}</Text>
+                        <Feather
+                          name={isExpanded ? "chevron-up" : "chevron-down"}
+                          size={16}
+                          color={TOKENS.muted}
+                        />
+                      </TouchableOpacity>
+                      {isExpanded && (
+                        <View style={styles.faqAnswerWrapper}>
+                          <Text style={styles.faqAnswerText}>{faq.a}</Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
 
 
@@ -725,5 +849,208 @@ const styles = StyleSheet.create({
   },
   switchThumbInactive: {
     alignSelf: "flex-start",
+  },
+  footerContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 32,
+    marginBottom: 8,
+    gap: 4,
+  },
+  madeInText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: TOKENS.muted,
+  },
+  versionText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: TOKENS.muted,
+    opacity: 0.7,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalHelpContent: {
+    backgroundColor: TOKENS.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  dragHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#E5E7EB",
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  modalHelpHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+    backgroundColor: TOKENS.card,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+  },
+  premiumSupportCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: TOKENS.card,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: TOKENS.border,
+    padding: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  supportIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  supportCardTextWrapper: {
+    flex: 1,
+  },
+  supportCardTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: TOKENS.dark,
+  },
+  supportCardSubtitle: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    marginTop: 2,
+    lineHeight: 14,
+  },
+  modalHelpTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  modalHelpCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalHelpScroll: {
+    padding: 20,
+  },
+  supportIntro: {
+    fontSize: 13,
+    color: TOKENS.muted,
+    lineHeight: 18,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  supportActions: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  callSupportBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: TOKENS.primary,
+    height: 48,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  callSupportText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  whatsappBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#25D366",
+    height: 48,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: "#25D366",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  whatsappText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  supportIcon: {
+    marginRight: 4,
+  },
+  faqHeader: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  faqList: {
+    gap: 10,
+    marginBottom: 40,
+  },
+  faqCard: {
+    backgroundColor: TOKENS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    overflow: "hidden",
+  },
+  faqQuestionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 14,
+  },
+  faqQuestionText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: TOKENS.dark,
+    flex: 1,
+    marginRight: 8,
+  },
+  faqAnswerWrapper: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    paddingTop: 10,
+  },
+  faqAnswerText: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    lineHeight: 16,
   },
 });
