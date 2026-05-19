@@ -105,7 +105,7 @@ export const PaymentTenderScreen: React.FC = () => {
       ? activeBiz.logoUri.length <= 2 
         ? `<div style="font-size: 38px; text-align: center; margin-bottom: 5px;">${activeBiz.logoUri}</div>`
         : `<div style="text-align: center; margin-bottom: 5px;"><img src="${activeBiz.logoUri}" style="width: 60px; height: 60px; border-radius: 30px; object-fit: cover;" /></div>`
-      : `<div style="font-size: 38px; text-align: center; margin-bottom: 5px;">🏠</div>`;
+      : `<div style="text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 8px; font-family: monospace; color: #000; letter-spacing: 2px;">★ MINI POS ★</div>`;
 
     const itemsHtml = cart.map(item => `
       <div class="flex-row">

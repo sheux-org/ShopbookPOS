@@ -10,17 +10,15 @@ import {
   TouchableOpacity,
   View,
   Alert,
-  Image,
-  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { Business, cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
-import { useUpdateActiveBusiness } from "../../../hooks/useBusinesses";
+import { useUpdateActiveBusiness, useUploadBusinessLogo } from "../../../hooks/useBusinesses";
 import { useBusinessStore } from "../../../stores/useBusinessStore";
 import { BottomSheet } from "../../../components/common/BottomSheet";
+import { BusinessAvatar } from "../../../components/common/BusinessAvatar";
 
 const PRESET_EMOJIS = ["🛒", "🛍️", "🥛", "👕", "💊", "☕", "🍔", "📦", "🌾", "🏢", "🛠️", "📚"];
 
@@ -31,6 +29,8 @@ export default function BusinessDetailsRoute() {
 
   const activeBusiness = useBusinessStore((state) => state.activeBusiness);
   const updateActiveBizMutation = useUpdateActiveBusiness();
+  const uploadLogoMutation = useUploadBusinessLogo();
+  const isUploading = uploadLogoMutation.isPending;
   
   // Edit form states
   const [isEditing, setIsEditing] = useState(false);
@@ -73,8 +73,17 @@ export default function BusinessDetailsRoute() {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setLogoUri(result.assets[0].uri);
+        const localUri = result.assets[0].uri;
         setShowLogoSelector(false);
+        
+        try {
+          const publicUrl = await uploadLogoMutation.mutateAsync({ uri: localUri, businessId: activeBusiness.id });
+          setLogoUri(publicUrl);
+          triggerToast("Logo uploaded successfully! 🚀");
+        } catch (uploadError: any) {
+          console.error("Upload failed:", uploadError);
+          Alert.alert("Upload Failed", uploadError?.message || "Could not upload image to cloud storage.");
+        }
       }
     } catch (error) {
       console.error("Failed to pick image:", error);
@@ -168,21 +177,18 @@ export default function BusinessDetailsRoute() {
         <View style={styles.detailCard}>
           <TouchableOpacity 
             style={[styles.storeIconBox, isEditing && styles.storeIconBoxEditing]} 
-            disabled={!isEditing}
+            disabled={!isEditing || isUploading}
             onPress={() => setShowLogoSelector(true)}
             activeOpacity={0.75}
           >
-            {logoUri ? (
-              logoUri.length <= 2 ? (
-                <Text style={{ fontSize: 32 }}>{logoUri}</Text>
-              ) : (
-                <Image source={{ uri: logoUri }} style={styles.storeLogoImage} />
-              )
-            ) : (
-              <Feather name="home" size={28} color={TOKENS.primary} />
-            )}
+            <BusinessAvatar 
+              logoUri={logoUri} 
+              name={name || activeBusiness.name} 
+              size={72} 
+              isUploading={isUploading}
+            />
             
-            {isEditing && (
+            {isEditing && !isUploading && (
               <View style={styles.cameraOverlay}>
                 <Feather name="camera" size={16} color={TOKENS.card} />
               </View>
@@ -432,7 +438,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: TOKENS.lightBlue,
+    backgroundColor: TOKENS.primary,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -645,5 +651,10 @@ const styles = StyleSheet.create({
     color: TOKENS.error,
     fontSize: 13,
     fontWeight: "bold",
+  },
+  storeInitialsText: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: TOKENS.primary,
   },
 });

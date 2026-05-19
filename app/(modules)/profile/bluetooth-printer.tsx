@@ -341,17 +341,17 @@ export default function BluetoothPrinterRoute() {
 
             {/* Simulated Receipt Feed */}
             <ScrollView style={styles.receiptScroll} contentContainerStyle={styles.receiptContent}>
-              <View style={styles.receiptLogoWrapper}>
-                {activeBusiness.logoUri ? (
-                  activeBusiness.logoUri.length <= 2 ? (
+              {activeBusiness.logoUri ? (
+                <View style={styles.receiptLogoWrapper}>
+                  {activeBusiness.logoUri.length <= 2 ? (
                     <Text style={{ fontSize: 32 }}>{activeBusiness.logoUri}</Text>
                   ) : (
                     <Image source={{ uri: activeBusiness.logoUri }} style={styles.receiptLogoImg} />
-                  )
-                ) : (
-                  <Text style={{ fontSize: 32 }}>🏠</Text>
-                )}
-              </View>
+                  )}
+                </View>
+              ) : (
+                <Text style={styles.receiptLogoText}>★ MINI POS ★</Text>
+              )}
               
               <Text style={styles.receiptStoreName}>{activeBusiness.name}</Text>
               <Text style={styles.receiptStoreSub}>{activeBusiness.category}</Text>
@@ -755,6 +755,21 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     borderRadius: 30,
+  },
+  receiptInitialsText: {
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#000",
+  },
+  receiptLogoText: {
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#000",
+    marginBottom: 8,
+    letterSpacing: 2,
   },
   receiptStoreName: {
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",

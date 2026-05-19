@@ -312,3 +312,35 @@ export function useDeleteBusiness() {
     },
   });
 }
+
+export function useUploadBusinessLogo() {
+  return useMutation({
+    mutationFn: async (params: { uri: string; businessId: string }) => {
+      const { uri, businessId } = params;
+      const { supabase } = require("../services/sync");
+      
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      
+      const fileExt = uri.split('.').pop() || 'jpg';
+      const fileName = `${businessId}/logo_${Date.now()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('business-logos')
+        .upload(fileName, blob, {
+          contentType: `image/${fileExt === 'png' ? 'png' : fileExt === 'svg' ? 'svg+xml' : 'jpeg'}`,
+          upsert: true
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('business-logos')
+        .getPublicUrl(fileName);
+        
+      return publicUrl;
+    }
+  });
+}

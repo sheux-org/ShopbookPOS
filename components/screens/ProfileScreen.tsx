@@ -7,9 +7,7 @@ import {
   ScrollView,
   Platform,
   Alert,
-  Modal,
   Linking,
-  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -20,6 +18,7 @@ import { useSettingsStore } from "../../stores/useSettingsStore";
 import { syncDatabase } from "../../services/sync";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { BottomSheet } from "../common/BottomSheet";
+import { BusinessAvatar } from "../common/BusinessAvatar";
 
 const FAQS = [
   {
@@ -73,10 +72,6 @@ export const ProfileScreen: React.FC = () => {
     setTimeout(() => setToastMessage(null), 1500);
   };
 
-  const initials = activeBusiness?.name
-    ? activeBusiness.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
-    : "SP";
-
   const { canPerform, role: userRole } = useUserPermissions();
 
   return (
@@ -117,17 +112,11 @@ export const ProfileScreen: React.FC = () => {
       >
         {/* Avatar Card Glassmorphic Premium */}
         <View style={styles.avatarCard}>
-          <View style={styles.avatarCircle}>
-            {activeBusiness?.logoUri ? (
-              activeBusiness.logoUri.length <= 2 ? (
-                <Text style={{ fontSize: 32 }}>{activeBusiness.logoUri}</Text>
-              ) : (
-                <Image source={{ uri: activeBusiness.logoUri }} style={{ width: 72, height: 72, borderRadius: 36 }} />
-              )
-            ) : (
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            )}
-          </View>
+          <BusinessAvatar 
+            logoUri={activeBusiness?.logoUri} 
+            name={activeBusiness?.name || "SP"} 
+            size={72} 
+          />
 
           <Text style={styles.partnerName}>{activeBusiness?.name || "Shopbook Partner Store"}</Text>
           <Text style={styles.partnerPlan}>🛡️ {userRole === "admin" ? "Administrator / Store Owner" : userRole === "manager" ? "Store Manager" : "Store Cashier"}</Text>
