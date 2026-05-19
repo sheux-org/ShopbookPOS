@@ -171,6 +171,16 @@ export function useRegisterBusiness() {
       
       useBusinessStore.getState().setActiveBusiness(newBiz.id);
       useAuthStore.getState().setActiveBusinessId(newBiz.id);
+
+      // Trigger automatic background sync to Supabase without blocking the UX
+      const { syncDatabase } = require("../services/sync");
+      syncDatabase().then((synced: boolean) => {
+        if (synced) {
+          console.log("Background sync successfully pushed new business to Supabase.");
+        }
+      }).catch((err: any) => {
+        console.error("Background auto-sync failed:", err);
+      });
     },
   });
 }
@@ -225,6 +235,16 @@ export function useUpdateActiveBusiness() {
           logoUri: updatedBiz.logoUri,
         }
       });
+
+      // Trigger automatic background sync to Supabase without blocking the UX
+      const { syncDatabase } = require("../services/sync");
+      syncDatabase().then((synced: boolean) => {
+        if (synced) {
+          console.log("Background sync successfully pushed business profile changes to Supabase.");
+        }
+      }).catch((err: any) => {
+        console.error("Background auto-sync failed:", err);
+      });
     },
   });
 }
@@ -275,6 +295,16 @@ export function useUpdateBusiness() {
           }
         });
       }
+
+      // Trigger automatic background sync to Supabase without blocking the UX
+      const { syncDatabase } = require("../services/sync");
+      syncDatabase().then((synced: boolean) => {
+        if (synced) {
+          console.log("Background sync successfully pushed business profile changes to Supabase.");
+        }
+      }).catch((err: any) => {
+        console.error("Background auto-sync failed:", err);
+      });
     },
   });
 }
@@ -309,26 +339,91 @@ export function useDeleteBusiness() {
           useBusinessStore.setState({ activeBusiness: PLACEHOLDER_BUSINESS });
         }
       }
+
+      // Trigger automatic background sync to Supabase without blocking the UX
+      const { syncDatabase } = require("../services/sync");
+      syncDatabase().then((synced: boolean) => {
+        if (synced) {
+          console.log("Background sync successfully pushed business deletion to Supabase.");
+        }
+      }).catch((err: any) => {
+        console.error("Background auto-sync failed:", err);
+      });
     },
   });
 }
 
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  let cleanBase64 = base64;
+  if (cleanBase64.startsWith('data:')) {
+    const commaIndex = cleanBase64.indexOf(',');
+    if (commaIndex !== -1) {
+      cleanBase64 = cleanBase64.substring(commaIndex + 1);
+    }
+  }
+  cleanBase64 = cleanBase64.replace(/[^A-Za-z0-9+/=]/g, "");
+
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const lookup = new Uint8Array(256);
+  for (let i = 0; i < chars.length; i++) {
+    lookup[chars.charCodeAt(i)] = i;
+  }
+  
+  let bufferLength = cleanBase64.length * 0.75;
+  if (cleanBase64[cleanBase64.length - 1] === '=') {
+    bufferLength--;
+    if (cleanBase64[cleanBase64.length - 2] === '=') {
+      bufferLength--;
+    }
+  }
+  
+  const arrayBuffer = new ArrayBuffer(bufferLength);
+  const bytes = new Uint8Array(arrayBuffer);
+  
+  let p = 0;
+  for (let i = 0; i < cleanBase64.length; i += 4) {
+    const base64Part1 = lookup[cleanBase64.charCodeAt(i)];
+    const base64Part2 = lookup[cleanBase64.charCodeAt(i + 1)];
+    const base64Part3 = lookup[cleanBase64.charCodeAt(i + 2)];
+    const base64Part4 = lookup[cleanBase64.charCodeAt(i + 3)];
+    
+    bytes[p++] = (base64Part1 << 2) | (base64Part2 >> 4);
+    if (p < bufferLength) {
+      bytes[p++] = ((base64Part2 & 15) << 4) | (base64Part3 >> 2);
+    }
+    if (p < bufferLength) {
+      bytes[p++] = ((base64Part3 & 3) << 6) | (base64Part4 & 63);
+    }
+  }
+  
+  return arrayBuffer;
+}
+
 export function useUploadBusinessLogo() {
   return useMutation({
-    mutationFn: async (params: { uri: string; businessId: string }) => {
-      const { uri, businessId } = params;
+    mutationFn: async (params: { uri: string; base64?: string; businessId: string }) => {
+      const { uri, base64, businessId } = params;
       const { supabase } = require("../services/sync");
+      const { syncDatabase } = require("../services/sync");
       
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      
+      let uploadData: any;
+      let contentType = 'image/jpeg';
       const fileExt = uri.split('.').pop() || 'jpg';
+      contentType = `image/${fileExt === 'png' ? 'png' : fileExt === 'svg' ? 'svg+xml' : 'jpeg'}`;
+      
+      if (base64) {
+        uploadData = base64ToArrayBuffer(base64);
+      } else {
+        const response = await fetch(uri);
+        uploadData = await response.blob();
+      }
+      
       const fileName = `${businessId}/logo_${Date.now()}.${fileExt}`;
       
       const { data, error } = await supabase.storage
         .from('business-logos')
-        .upload(fileName, blob, {
-          contentType: `image/${fileExt === 'png' ? 'png' : fileExt === 'svg' ? 'svg+xml' : 'jpeg'}`,
+        .upload(fileName, uploadData, {
+          contentType,
           upsert: true
         });
         
@@ -340,6 +435,39 @@ export function useUploadBusinessLogo() {
         .from('business-logos')
         .getPublicUrl(fileName);
         
+      // Save directly to local WatermelonDB
+      const db = require("../components/data/db").default;
+      const { Q } = require("@nozbe/watermelondb");
+      const businesses = await db.get("businesses").query(Q.where("id", businessId)).fetch();
+      if (businesses.length > 0) {
+        const targetBiz = businesses[0];
+        await db.write(async () => {
+          await targetBiz.update((b: any) => {
+            b.logoUri = publicUrl;
+          });
+        });
+      }
+      
+      // Update active business in store so all components re-render immediately
+      useBusinessStore.setState((state) => {
+        if (state.activeBusiness.id === businessId) {
+          return {
+            activeBusiness: {
+              ...state.activeBusiness,
+              logoUri: publicUrl
+            }
+          };
+        }
+        return {};
+      });
+
+      // Trigger automatic background sync to Supabase without blocking the UX
+      try {
+        await syncDatabase();
+      } catch (syncErr) {
+        console.error("Auto sync after logo upload failed:", syncErr);
+      }
+      
       return publicUrl;
     }
   });

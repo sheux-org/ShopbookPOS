@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { TOKENS } from '../../constants/tokens';
 import { getBusinessInitials } from '../../utils/business';
@@ -18,6 +18,12 @@ export const BusinessAvatar: React.FC<BusinessAvatarProps> = ({
 }) => {
   const radius = size / 2;
   const initials = getBusinessInitials(name);
+  const [imageError, setImageError] = useState(false);
+
+  // Reset error state if logoUri changes
+  useEffect(() => {
+    setImageError(false);
+  }, [logoUri]);
 
   if (isUploading) {
     return (
@@ -27,10 +33,14 @@ export const BusinessAvatar: React.FC<BusinessAvatarProps> = ({
     );
   }
 
-  if (logoUri && logoUri.length > 2) {
+  if (logoUri && logoUri.length > 2 && !imageError) {
     return (
       <View style={[styles.avatarCircle, { width: size, height: size, borderRadius: radius, overflow: 'hidden' }]}>
-        <Image source={{ uri: logoUri }} style={{ width: '100%', height: '100%' }} />
+        <Image 
+          source={{ uri: logoUri }} 
+          style={{ width: '100%', height: '100%' }} 
+          onError={() => setImageError(true)}
+        />
       </View>
     );
   }

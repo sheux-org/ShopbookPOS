@@ -70,14 +70,21 @@ export default function BusinessDetailsRoute() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const localUri = result.assets[0].uri;
+        const asset = result.assets[0];
+        const localUri = asset.uri;
+        const base64Str = asset.base64;
         setShowLogoSelector(false);
         
         try {
-          const publicUrl = await uploadLogoMutation.mutateAsync({ uri: localUri, businessId: activeBusiness.id });
+          const publicUrl = await uploadLogoMutation.mutateAsync({ 
+            uri: localUri, 
+            base64: base64Str ?? undefined,
+            businessId: activeBusiness.id 
+          });
           setLogoUri(publicUrl);
           triggerToast("Logo uploaded successfully! 🚀");
         } catch (uploadError: any) {
@@ -88,6 +95,47 @@ export default function BusinessDetailsRoute() {
     } catch (error) {
       console.error("Failed to pick image:", error);
       Alert.alert("Error", "Failed to select image from photo library.");
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert("Permission Denied", "We need camera permissions to capture a photo.");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const localUri = asset.uri;
+        const base64Str = asset.base64;
+        setShowLogoSelector(false);
+        
+        try {
+          const publicUrl = await uploadLogoMutation.mutateAsync({ 
+            uri: localUri, 
+            base64: base64Str ?? undefined,
+            businessId: activeBusiness.id 
+          });
+          setLogoUri(publicUrl);
+          triggerToast("Logo uploaded successfully! 🚀");
+        } catch (uploadError: any) {
+          console.error("Upload failed:", uploadError);
+          Alert.alert("Upload Failed", uploadError?.message || "Could not upload image to cloud storage.");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to take photo:", error);
+      Alert.alert("Error", "Failed to launch camera.");
     }
   };
 
@@ -306,6 +354,20 @@ export default function BusinessDetailsRoute() {
             <View style={{ flex: 1 }}>
               <Text style={styles.pickerOptionTitle}>Select from Gallery</Text>
               <Text style={styles.pickerOptionSub}>Choose a custom photo or logo</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          {/* Option 2: Live Camera Capture */}
+          <TouchableOpacity style={styles.pickerOptionBtn} onPress={handleTakePhoto}>
+            <View style={styles.pickerOptionIcon}>
+              <Feather name="camera" size={20} color={TOKENS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pickerOptionTitle}>Take Photo</Text>
+              <Text style={styles.pickerOptionSub}>Capture a live image via camera</Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
