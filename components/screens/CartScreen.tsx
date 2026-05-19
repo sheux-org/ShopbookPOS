@@ -8,12 +8,51 @@ import {
   Platform,
   Alert,
   TextInput,
+  Modal,
+  FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Contacts from "expo-contacts";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CartItem } from "../data/cartState";
+
+// Static mock contacts for offline fallback and simulator testing
+const MOCK_CONTACTS = [
+  { id: "mock-1", name: "Pasan Pahasara", phone: "0771234567" },
+  { id: "mock-2", name: "Shenal Jayasinghe", phone: "0718765432" },
+  { id: "mock-3", name: "John Doe", phone: "0751112223" },
+  { id: "mock-4", name: "Jane Smith", phone: "0723334445" },
+  { id: "mock-5", name: "Amara Perera", phone: "0777778888" },
+  { id: "mock-6", name: "Kasun Silva", phone: "0766543210" },
+  { id: "mock-7", name: "Nimal Fernando", phone: "0701234789" },
+  { id: "mock-8", name: "Ruwan Bandara", phone: "0719876543" },
+  { id: "mock-9", name: "Dilini Weerasinghe", phone: "0771122334" },
+  { id: "mock-10", name: "Suresh Kumar", phone: "0788899001" },
+];
+
+// Helper colors for premium initials avatars
+const getAvatarColor = (name: string) => {
+  const colors = [
+    "#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#6366F1", "#8B5CF6", "#EC4899",
+    "#14B8A6", "#06B6D4", "#059669", "#4F46E5", "#D97706", "#2563EB", "#DB2777"
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
+const getInitials = (name: string) => {
+  if (!name) return "";
+  const parts = name.trim().split(" ");
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 export const CartScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -25,9 +64,20 @@ export const CartScreen: React.FC = () => {
   const [isEditingDiscount, setIsEditingDiscount] = useState(false);
   const [tempDiscount, setTempDiscount] = useState("100");
 
+  // Customer state hooks
+  const [isCustomerModalVisible, setIsCustomerModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<"contacts" | "new">("contacts");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deviceContacts, setDeviceContacts] = useState<{ id: string; name: string; phone: string }[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [attachedCustomer, setAttachedCustomer] = useState<{ name: string; phone: string } | null>(null);
+
   useEffect(() => {
     const syncCart = () => {
       setInvoiceItems(cartState.getCart());
+      setAttachedCustomer(cartState.getCustomer());
     };
     syncCart();
     return cartState.subscribe(syncCart);
@@ -36,6 +86,119 @@ export const CartScreen: React.FC = () => {
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 1500);
+  };
+
+  // Load native contacts
+  const loadContacts = async () => {
+    setIsLoadingContacts(true);
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status === "granted") {
+        const { data } = await Contacts.getContactsAsync({
+          fields: [Contacts.Fields.PhoneNumbers],
+        });
+        
+        if (data && data.length > 0) {
+          const formatted = data
+            .map((c) => {
+              const phone = c.phoneNumbers && c.phoneNumbers.length > 0 ? c.phoneNumbers[0].number || "" : "";
+              return {
+                id: c.id || Math.random().toString(),
+                name: c.name || "Unknown Name",
+                phone: phone,
+              };
+            })
+            .filter((c) => c.name.trim() !== "");
+          
+          formatted.sort((a, b) => a.name.localeCompare(b.name));
+          setDeviceContacts(formatted);
+        } else {
+          setDeviceContacts(MOCK_CONTACTS);
+        }
+      } else {
+        setDeviceContacts(MOCK_CONTACTS);
+      }
+    } catch (error) {
+      console.log("Failed to fetch native contacts:", error);
+      setDeviceContacts(MOCK_CONTACTS);
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isCustomerModalVisible) {
+      loadContacts();
+    }
+  }, [isCustomerModalVisible]);
+
+  const filteredContacts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    const source = deviceContacts.length > 0 ? deviceContacts : MOCK_CONTACTS;
+    if (!q) return source;
+    return source.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.phone.replace(/[^0-9]/g, "").includes(q)
+    );
+  }, [searchQuery, deviceContacts]);
+
+  const handleAddManualCustomer = () => {
+    if (!newCustomerName.trim()) {
+      Alert.alert("Required Fields", "Please enter a customer name.");
+      return;
+    }
+    const customer = {
+      name: newCustomerName.trim(),
+      phone: newCustomerPhone.trim() || "Walking Customer",
+    };
+    cartState.setCustomer(customer);
+    setAttachedCustomer(customer);
+    setIsCustomerModalVisible(false);
+    setNewCustomerName("");
+    setNewCustomerPhone("");
+    triggerToast(`Customer ${customer.name} attached`);
+  };
+
+  const handleSelectWalkingCustomer = () => {
+    cartState.setCustomer(null);
+    setAttachedCustomer(null);
+    setIsCustomerModalVisible(false);
+    triggerToast("Set as Walking Customer");
+  };
+
+  const handleRemoveCustomer = () => {
+    cartState.setCustomer(null);
+    setAttachedCustomer(null);
+    triggerToast("Customer removed (Walking checkout)");
+  };
+
+  const renderContactItem = ({ item }: { item: { id: string; name: string; phone: string } }) => {
+    const avatarColor = getAvatarColor(item.name);
+    const initials = getInitials(item.name);
+    
+    return (
+      <TouchableOpacity
+        style={styles.contactItem}
+        activeOpacity={0.7}
+        onPress={() => {
+          const customer = { name: item.name, phone: item.phone || "Walking Customer" };
+          cartState.setCustomer(customer);
+          setAttachedCustomer(customer);
+          setIsCustomerModalVisible(false);
+          triggerToast(`Attached: ${item.name}`);
+        }}
+      >
+        <View style={[styles.contactAvatar, { backgroundColor: avatarColor }]}>
+          <Text style={styles.contactInitials}>{initials}</Text>
+        </View>
+        <View style={styles.contactInfo}>
+          <Text style={styles.contactName}>{item.name}</Text>
+          <Text style={styles.contactPhone}>{item.phone || "No phone number"}</Text>
+        </View>
+        <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+      </TouchableOpacity>
+    );
   };
 
   const handleClearCart = () => {
@@ -195,100 +358,253 @@ export const CartScreen: React.FC = () => {
           </View>
         )}
 
-        {invoiceItems.length > 0 && (
-          <>
-            {/* Summary Box exactly matching Image 7 */}
-            <View style={styles.summaryCard}>
-              {/* Subtotal */}
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Subtotal</Text>
-                <Text style={styles.summaryValue}>Rs. {subtotal.toLocaleString()}.00</Text>
-              </View>
-
-              {/* Discount editable */}
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabelActive}>Discount</Text>
-                {isEditingDiscount ? (
-                  <View style={styles.editDiscountRow}>
-                    <TextInput
-                      style={styles.discountInput}
-                      keyboardType="numeric"
-                      value={tempDiscount}
-                      onChangeText={setTempDiscount}
-                      autoFocus
-                    />
-                    <TouchableOpacity onPress={handleSaveDiscount}>
-                      <Feather name="check" size={16} color={TOKENS.success} />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.summaryDiscountWrapper}>
-                    <Text style={styles.summaryDiscountValue}>- Rs. {discountAmount.toLocaleString()}.00</Text>
-                    <TouchableOpacity onPress={() => { setTempDiscount(discountAmount.toString()); setIsEditingDiscount(true); }}>
-                      <Feather name="edit-3" size={14} color={TOKENS.primary} style={styles.editIcon} />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-
-              {/* Tax */}
-              <View style={styles.summaryRow}>
-                <View style={styles.taxLabelWrapper}>
-                  <Text style={styles.summaryLabel}>Tax (8%)</Text>
-                  <TouchableOpacity onPress={() => Alert.alert("Tax details", "A standard sales tax of 8% is automatically applied to dairy/grocery items.")}>
-                    <Text style={styles.taxChangeLink}>change</Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
-              </View>
-
-              <View style={styles.dividerLine} />
-
-              {/* Total bold blue */}
-              <View style={styles.summaryRow}>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalValue}>Rs. {total.toLocaleString()}.00</Text>
-              </View>
-            </View>
-
-            {/* Attach Customer / Notes actions */}
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={styles.actionPill}
-                activeOpacity={0.7}
-                onPress={() => Alert.alert("Attach Customer", "Open client profiles list.")}
-              >
-                <Ionicons name="person-outline" size={16} color={TOKENS.dark} />
-                <Text style={styles.actionPillText}>Attach Customer</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.actionPill}
-                activeOpacity={0.7}
-                onPress={() => Alert.prompt("Add Note", "Enter custom checkout note:", (txt) => triggerToast(`Note saved: "${txt}"`))}
-              >
-                <Ionicons name="pricetag-outline" size={16} color={TOKENS.dark} />
-                <Text style={styles.actionPillText}>Note</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
       </ScrollView>
 
-      {/* Massive checkout pay button */}
+      {/* Sticky Bottom Actions & Summary Container */}
       {invoiceItems.length > 0 && (
-        <TouchableOpacity
+        <View
           style={[
-            styles.checkoutPayButton,
-            { marginBottom: Platform.OS === "ios" ? Math.max(insets.bottom, 12) : 16 },
+            styles.bottomStickyContainer,
+            { paddingBottom: Platform.OS === "ios" ? Math.max(insets.bottom, 12) : 16 },
           ]}
-          activeOpacity={0.85}
-          onPress={handleProceedToPayment}
         >
-          <Text style={styles.checkoutPayText}>Proceed to Pay (Rs. {total.toLocaleString()})</Text>
-          <Feather name="arrow-right" size={18} color={TOKENS.card} />
-        </TouchableOpacity>
+          {/* Summary Box exactly matching Image 7 */}
+          <View style={styles.summaryCard}>
+            {/* Subtotal */}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryValue}>Rs. {subtotal.toLocaleString()}.00</Text>
+            </View>
+
+            {/* Discount editable */}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabelActive}>Discount</Text>
+              {isEditingDiscount ? (
+                <View style={styles.editDiscountRow}>
+                  <TextInput
+                    style={styles.discountInput}
+                    keyboardType="numeric"
+                    value={tempDiscount}
+                    onChangeText={setTempDiscount}
+                    autoFocus
+                  />
+                  <TouchableOpacity onPress={handleSaveDiscount}>
+                    <Feather name="check" size={16} color={TOKENS.success} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.summaryDiscountWrapper}>
+                  <Text style={styles.summaryDiscountValue}>- Rs. {discountAmount.toLocaleString()}.00</Text>
+                  <TouchableOpacity onPress={() => { setTempDiscount(discountAmount.toString()); setIsEditingDiscount(true); }}>
+                    <Feather name="edit-3" size={14} color={TOKENS.primary} style={styles.editIcon} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Tax */}
+            <View style={styles.summaryRow}>
+              <View style={styles.taxLabelWrapper}>
+                <Text style={styles.summaryLabel}>Tax (8%)</Text>
+                <TouchableOpacity onPress={() => Alert.alert("Tax details", "A standard sales tax of 8% is automatically applied to dairy/grocery items.")}>
+                  <Text style={styles.taxChangeLink}>change</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
+            </View>
+
+            <View style={styles.dividerLine} />
+
+            {/* Total bold blue */}
+            <View style={styles.summaryRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>Rs. {total.toLocaleString()}.00</Text>
+            </View>
+          </View>
+
+          {/* Attach Customer / Notes actions */}
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[
+                styles.actionPill,
+                attachedCustomer && { backgroundColor: TOKENS.lightBlue, borderColor: TOKENS.accentBlue, borderWidth: 1 }
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setIsCustomerModalVisible(true)}
+            >
+              <Ionicons
+                name={attachedCustomer ? "person" : "person-outline"}
+                size={16}
+                color={attachedCustomer ? TOKENS.primary : TOKENS.dark}
+              />
+              <Text
+                style={[
+                  styles.actionPillText,
+                  attachedCustomer && { color: TOKENS.primary, fontWeight: "700" }
+                ]}
+                numberOfLines={1}
+              >
+                {attachedCustomer ? attachedCustomer.name : "Attach Customer"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionPill}
+              activeOpacity={0.7}
+              onPress={() => Alert.prompt("Add Note", "Enter custom checkout note:", (txt) => triggerToast(`Note saved: "${txt}"`))}
+            >
+              <Ionicons name="pricetag-outline" size={16} color={TOKENS.dark} />
+              <Text style={styles.actionPillText}>Note</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Massive checkout pay button */}
+          <TouchableOpacity
+            style={styles.checkoutPayButton}
+            activeOpacity={0.85}
+            onPress={handleProceedToPayment}
+          >
+            <Text style={styles.checkoutPayText}>Proceed to Pay (Rs. {total.toLocaleString()})</Text>
+            <Feather name="arrow-right" size={18} color={TOKENS.card} />
+          </TouchableOpacity>
+        </View>
       )}
+
+      {/* Select Customer Modal */}
+      <Modal
+        visible={isCustomerModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsCustomerModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { height: "85%", paddingBottom: Platform.OS === "ios" ? insets.bottom : 16 }]}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Customer</Text>
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={() => setIsCustomerModalVisible(false)}
+              >
+                <Feather name="x" size={20} color={TOKENS.dark} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Segmented Control / Tabs */}
+            <View style={styles.tabBar}>
+              <TouchableOpacity
+                style={[styles.tabItem, activeTab === "contacts" && styles.activeTabItem]}
+                onPress={() => setActiveTab("contacts")}
+              >
+                <Text style={[styles.tabText, activeTab === "contacts" && styles.activeTabText]}>
+                  Search Contacts
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tabItem, activeTab === "new" && styles.activeTabItem]}
+                onPress={() => setActiveTab("new")}
+              >
+                <Text style={[styles.tabText, activeTab === "new" && styles.activeTabText]}>
+                  Create Customer
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Content based on tab */}
+            {activeTab === "contacts" ? (
+              <View style={styles.tabContent}>
+                {/* Search Bar */}
+                <View style={styles.searchBarWrapper}>
+                  <Feather name="search" size={16} color={TOKENS.muted} style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search name or phone..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    clearButtonMode="while-editing"
+                  />
+                </View>
+
+                {/* Walking Customer Option */}
+                <TouchableOpacity
+                  style={styles.walkingCustomerRow}
+                  activeOpacity={0.7}
+                  onPress={handleSelectWalkingCustomer}
+                >
+                  <View style={[styles.contactAvatar, { backgroundColor: "#E5E7EB" }]}>
+                    <Ionicons name="people" size={18} color={TOKENS.muted} />
+                  </View>
+                  <View style={styles.contactInfo}>
+                    <Text style={styles.walkingText}>Walking Customer</Text>
+                    <Text style={styles.contactPhone}>Default non-attached checkout</Text>
+                  </View>
+                  <Feather name="check" size={16} color={TOKENS.primary} />
+                </TouchableOpacity>
+
+                <View style={styles.listHeader}>
+                  <Text style={styles.listHeaderText}>CONTACTS LIST</Text>
+                </View>
+
+                {/* List of Contacts */}
+                {isLoadingContacts ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={TOKENS.primary} />
+                    <Text style={styles.loadingText}>Loading contacts...</Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={filteredContacts}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderContactItem}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.listContent}
+                    ListEmptyComponent={
+                      <View style={styles.emptyList}>
+                        <Feather name="users" size={36} color={TOKENS.muted} />
+                        <Text style={styles.emptyListText}>No contacts found</Text>
+                      </View>
+                    }
+                  />
+                )}
+              </View>
+            ) : (
+              <View style={[styles.tabContent, styles.newFormContainer]}>
+                <Text style={styles.formLabel}>Customer Name *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. Pasan Pahasara"
+                  value={newCustomerName}
+                  onChangeText={setNewCustomerName}
+                />
+
+                <Text style={styles.formLabel}>Phone Number</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. 077 123 4567"
+                  keyboardType="phone-pad"
+                  value={newCustomerPhone}
+                  onChangeText={setNewCustomerPhone}
+                />
+
+                <TouchableOpacity
+                  style={styles.submitBtn}
+                  activeOpacity={0.8}
+                  onPress={handleAddManualCustomer}
+                >
+                  <Text style={styles.submitBtnText}>Attach Customer</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={handleSelectWalkingCustomer}
+                >
+                  <Text style={styles.cancelBtnText}>Or set as Walking Customer</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -553,7 +869,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: TOKENS.primary,
-    marginHorizontal: 16,
     height: 48,
     borderRadius: 24,
     gap: 10,
@@ -563,9 +878,215 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
+  bottomStickyContainer: {
+    backgroundColor: TOKENS.background,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 12,
+  },
   checkoutPayText: {
     color: TOKENS.card,
     fontSize: 15,
     fontWeight: "bold",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: TOKENS.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 16,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  closeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabBar: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    gap: 12,
+  },
+  tabItem: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  activeTabItem: {
+    borderBottomColor: TOKENS.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: TOKENS.muted,
+  },
+  activeTabText: {
+    color: TOKENS.primary,
+  },
+  tabContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  searchBarWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 40,
+    marginBottom: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 14,
+    color: TOKENS.dark,
+  },
+  walkingCustomerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+  },
+  walkingText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  listHeader: {
+    paddingVertical: 10,
+  },
+  listHeaderText: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: TOKENS.muted,
+    letterSpacing: 1,
+  },
+  listContent: {
+    paddingBottom: 24,
+  },
+  contactItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  contactAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  contactInitials: {
+    color: TOKENS.card,
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  contactInfo: {
+    flex: 1,
+  },
+  contactName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: TOKENS.dark,
+  },
+  contactPhone: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    marginTop: 2,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: TOKENS.muted,
+  },
+  emptyList: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    gap: 8,
+  },
+  emptyListText: {
+    fontSize: 13,
+    color: TOKENS.muted,
+  },
+  newFormContainer: {
+    gap: 16,
+    paddingTop: 24,
+  },
+  formLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: TOKENS.dark,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 44,
+    fontSize: 14,
+    color: TOKENS.dark,
+    backgroundColor: "#F9FAFB",
+  },
+  submitBtn: {
+    backgroundColor: TOKENS.primary,
+    height: 46,
+    borderRadius: 23,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+  },
+  submitBtnText: {
+    color: TOKENS.card,
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  cancelBtn: {
+    height: 46,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelBtnText: {
+    color: TOKENS.muted,
+    fontSize: 13,
+    fontWeight: "500",
   },
 });

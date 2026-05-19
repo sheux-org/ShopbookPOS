@@ -12,17 +12,25 @@ export interface CartItem {
   stock?: number;
 }
 
+export interface Customer {
+  name: string;
+  phone: string;
+}
+
 interface CartState {
   cart: CartItem[];
+  customer: Customer | null;
   addCartItem: (name: string, price: number, icon?: string, sku?: string, stock?: number) => void;
   updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
+  setCustomer: (customer: Customer | null) => void;
 }
 
 export const useCart = create<CartState>()(
   persist(
     (set, get) => ({
       cart: [],
+      customer: null,
       addCartItem: (name, price, icon = '📦', sku, stock = 15) => {
         const currentCart = get().cart;
         const existing = currentCart.find((item) => item.name === name);
@@ -57,7 +65,8 @@ export const useCart = create<CartState>()(
             .filter((item) => item.quantity > 0),
         });
       },
-      clearCart: () => set({ cart: [] }),
+      clearCart: () => set({ cart: [], customer: null }),
+      setCustomer: (customer) => set({ customer }),
     }),
     {
       name: 'cart-storage',

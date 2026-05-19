@@ -99,7 +99,9 @@ export function useCreateOrder() {
           throw new Error("No business record found in SQLite database!");
         }
 
-        const invoiceNum = `INV-${Math.floor(100000 + Math.random() * 900000)} (Staff: ${cashierName})`;
+        const customer = cartState.getCustomer();
+        const customerText = customer ? ` | Cust: ${customer.name}` : "";
+        const invoiceNum = `INV-${Math.floor(100000 + Math.random() * 900000)} (Staff: ${cashierName}${customerText})`;
 
         const newOrder = await db.get("orders").create((ord: any) => {
           ord.business.set(dbBiz);

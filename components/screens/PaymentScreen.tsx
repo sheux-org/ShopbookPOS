@@ -10,12 +10,14 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
+import { cartState } from "../data/cartState";
 
 type PaymentMethodType = "cash" | "card";
 
 export const PaymentScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const customer = cartState.getCustomer();
   const params = useLocalSearchParams();
 
   // Parse params passed from Checkout cart
@@ -131,6 +133,17 @@ export const PaymentScreen: React.FC = () => {
         ]}
       >
         <View style={styles.summaryCard}>
+          {customer && (
+            <>
+              <View style={styles.summarySubrow}>
+                <Text style={styles.summaryLabel}>Customer</Text>
+                <Text style={[styles.summaryValue, { color: TOKENS.primary, fontWeight: "700" }]}>
+                  {customer.name} ({customer.phone})
+                </Text>
+              </View>
+              <View style={styles.dividerLine} />
+            </>
+          )}
           <View style={styles.summarySubrow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
             <Text style={styles.summaryValue}>Rs. {subtotal.toLocaleString()}.00</Text>

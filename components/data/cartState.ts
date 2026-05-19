@@ -1,4 +1,4 @@
-import { useCart } from '../../stores/useCart';
+import { useCart, Customer } from '../../stores/useCart';
 import { useBusinessStore, Business } from '../../stores/useBusinessStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 
@@ -27,11 +27,15 @@ export interface CatalogProduct {
   barcode?: string;
 }
 
-export type { Business };
+export type { Business, Customer };
 
 export const cartState = {
   // Cart Actions mapped cleanly to useCart store
   getCart: () => useCart.getState().cart,
+  getCustomer: () => useCart.getState().customer,
+  setCustomer: (customer: Customer | null) => {
+    useCart.getState().setCustomer(customer);
+  },
   addCartItem: (name: string, price: number, icon?: string, sku?: string, stock?: number) => {
     useCart.getState().addCartItem(name, price, icon, sku, stock);
   },

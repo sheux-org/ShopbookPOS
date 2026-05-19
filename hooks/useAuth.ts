@@ -62,6 +62,40 @@ export function useVerifyOtp() {
         };
       }
 
+      // If not found locally, check if there is a synced account in the Supabase database
+      try {
+        const { supabase } = require("../services/sync");
+        const { data: remoteData, error: remoteError } = await supabase.rpc("check_synced_account", {
+          input_phone: cleanPhone,
+        });
+
+        if (remoteError) {
+          console.error("Failed to query remote synced account from Supabase:", remoteError);
+        } else if (remoteData && remoteData.exists) {
+          // Set backup/sync as enabled in settings store
+          const { useSettingsStore } = require("../stores/useSettingsStore");
+          useSettingsStore.getState().setBackupEnabled(true);
+
+          // Force sync to pull all tables (businesses, employees, products, orders, etc.) from Supabase
+          const { syncDatabase } = require("../services/sync");
+          console.log("Found synced account on Supabase. Triggering database sync...");
+          const syncSuccess = await syncDatabase();
+          console.log("Database sync finished with success status:", syncSuccess);
+
+          return {
+            status: "success" as const,
+            type: remoteData.type as "employee" | "owner",
+            phone: cleanPhone,
+            role: remoteData.role,
+            name: remoteData.name,
+            businessId: remoteData.business_id,
+            employeeId: remoteData.employee_id,
+          };
+        }
+      } catch (supabaseErr) {
+        console.error("Error checking remote synced account on Supabase:", supabaseErr);
+      }
+
       return {
         status: "register" as const,
         phone: cleanPhone,
