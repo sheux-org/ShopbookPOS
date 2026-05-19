@@ -67,7 +67,7 @@ export function useVerifyOtp() {
         phone: cleanPhone,
       };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (data.status === "success") {
         useAuthStore.getState().loginWithEmployee(
           data.phone!,
@@ -76,6 +76,7 @@ export function useVerifyOtp() {
           data.businessId!,
           data.employeeId!
         );
+        await useBusinessStore.getState().loadBusinessesFromDb();
         useBusinessStore.getState().setActiveBusiness(data.businessId!);
         
         // Invalidate businesses query cache so it reloads immediately!
@@ -165,7 +166,7 @@ export function useRegisterUser() {
         employeeId: newEmpRecord.id,
       };
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       useAuthStore.getState().loginWithEmployee(
         data.phone,
         "admin",
@@ -173,6 +174,7 @@ export function useRegisterUser() {
         data.businessId,
         data.employeeId
       );
+      await useBusinessStore.getState().loadBusinessesFromDb();
       useBusinessStore.getState().setActiveBusiness(data.businessId);
 
       // Invalidate businesses query cache!
