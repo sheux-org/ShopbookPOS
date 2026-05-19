@@ -22,11 +22,9 @@ export const supabase = createClient(
 const PUSH_TABLE_ORDER = [
   'businesses',
   'employees',
-  'customers',
-  'items',
+  'products',
   'orders',
   'order_items',
-  'stock_logs',
 ] as const
 
 type SyncTableName = (typeof PUSH_TABLE_ORDER)[number]

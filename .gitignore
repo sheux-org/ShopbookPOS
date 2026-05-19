@@ -5,6 +5,9 @@ node_modules/
 
 # Expo
 .expo/
+.cursor/
+.agents/
+.env
 dist/
 web-build/
 expo-env.d.ts
