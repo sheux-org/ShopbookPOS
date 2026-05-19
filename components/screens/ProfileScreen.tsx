@@ -19,6 +19,7 @@ import { cartState } from "../data/cartState";
 import { useSettingsStore } from "../../stores/useSettingsStore";
 import { syncDatabase } from "../../services/sync";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
+import { BottomSheet } from "../common/BottomSheet";
 
 const FAQS = [
   {
@@ -429,99 +430,80 @@ export const ProfileScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* Help & Customer Support Modal */}
-      <Modal
+      {/* Help & Customer Support Bottom Sheet */}
+      <BottomSheet
         visible={isHelpModalOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsHelpModalOpen(false)}
+        onClose={() => setIsHelpModalOpen(false)}
+        title="Help & Support"
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalHelpContent, { paddingBottom: insets.bottom + 20 }]}>
-            {/* Bottom Sheet Drag Handle */}
-            <View style={styles.dragHandle} />
+        <ScrollView showsVerticalScrollIndicator={false} style={[styles.modalHelpScroll, { maxHeight: 500 }]}>
+          <Text style={styles.supportIntro}>
+            Need assistance with your Shopbook POS terminal? Get priority response 24/7.
+          </Text>
 
-            {/* Modal Header */}
-            <View style={styles.modalHelpHeader}>
-              <Text style={styles.modalHelpTitle}>Help & Support</Text>
-              <TouchableOpacity
-                style={styles.modalHelpCloseBtn}
-                onPress={() => setIsHelpModalOpen(false)}
-              >
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalHelpScroll}>
-              <Text style={styles.supportIntro}>
-                Need assistance with your Shopbook POS terminal? Get priority response 24/7.
-              </Text>
-
-              {/* Action Buttons as Premium Card Rows */}
-              <View style={styles.supportActions}>
-                <TouchableOpacity
-                  style={styles.premiumSupportCard}
-                  activeOpacity={0.7}
-                  onPress={() => Linking.openURL("tel:+94771234567")}
-                >
-                  <View style={[styles.supportIconCircle, { backgroundColor: "#EFF6FF" }]}>
-                    <Feather name="phone" size={18} color={TOKENS.primary} />
-                  </View>
-                  <View style={styles.supportCardTextWrapper}>
-                    <Text style={styles.supportCardTitle}>Call Helpline</Text>
-                    <Text style={styles.supportCardSubtitle}>Call +94 77 123 4567 · Active 24/7</Text>
-                  </View>
-                  <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.premiumSupportCard}
-                  activeOpacity={0.7}
-                  onPress={() => Linking.openURL("https://wa.me/94771234567")}
-                >
-                  <View style={[styles.supportIconCircle, { backgroundColor: "#E8FDF0" }]}>
-                    <Feather name="message-circle" size={18} color="#10B981" />
-                  </View>
-                  <View style={styles.supportCardTextWrapper}>
-                    <Text style={styles.supportCardTitle}>WhatsApp Support</Text>
-                    <Text style={styles.supportCardSubtitle}>Chat immediately & send screenshots</Text>
-                  </View>
-                  <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-                </TouchableOpacity>
+          {/* Action Buttons as Premium Card Rows */}
+          <View style={styles.supportActions}>
+            <TouchableOpacity
+              style={styles.premiumSupportCard}
+              activeOpacity={0.7}
+              onPress={() => Linking.openURL("tel:+94771234567")}
+            >
+              <View style={[styles.supportIconCircle, { backgroundColor: "#EFF6FF" }]}>
+                <Feather name="phone" size={18} color={TOKENS.primary} />
               </View>
-
-              {/* FAQs Section */}
-              <Text style={styles.faqHeader}>Frequently Asked Questions</Text>
-              <View style={styles.faqList}>
-                {FAQS.map((faq, index) => {
-                  const isExpanded = expandedFaqIndex === index;
-                  return (
-                    <View key={index} style={styles.faqCard}>
-                      <TouchableOpacity
-                        style={styles.faqQuestionRow}
-                        activeOpacity={0.7}
-                        onPress={() => setExpandedFaqIndex(isExpanded ? null : index)}
-                      >
-                        <Text style={styles.faqQuestionText}>{faq.q}</Text>
-                        <Feather
-                          name={isExpanded ? "chevron-up" : "chevron-down"}
-                          size={16}
-                          color={TOKENS.muted}
-                        />
-                      </TouchableOpacity>
-                      {isExpanded && (
-                        <View style={styles.faqAnswerWrapper}>
-                          <Text style={styles.faqAnswerText}>{faq.a}</Text>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
+              <View style={styles.supportCardTextWrapper}>
+                <Text style={styles.supportCardTitle}>Call Helpline</Text>
+                <Text style={styles.supportCardSubtitle}>Call +94 77 123 4567 · Active 24/7</Text>
               </View>
-            </ScrollView>
+              <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.premiumSupportCard}
+              activeOpacity={0.7}
+              onPress={() => Linking.openURL("https://wa.me/94771234567")}
+            >
+              <View style={[styles.supportIconCircle, { backgroundColor: "#E8FDF0" }]}>
+                <Feather name="message-circle" size={18} color="#10B981" />
+              </View>
+              <View style={styles.supportCardTextWrapper}>
+                <Text style={styles.supportCardTitle}>WhatsApp Support</Text>
+                <Text style={styles.supportCardSubtitle}>Chat immediately & send screenshots</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+
+          {/* FAQs Section */}
+          <Text style={styles.faqHeader}>Frequently Asked Questions</Text>
+          <View style={styles.faqList}>
+            {FAQS.map((faq, index) => {
+              const isExpanded = expandedFaqIndex === index;
+              return (
+                <View key={index} style={styles.faqCard}>
+                  <TouchableOpacity
+                    style={styles.faqQuestionRow}
+                    activeOpacity={0.7}
+                    onPress={() => setExpandedFaqIndex(isExpanded ? null : index)}
+                  >
+                    <Text style={styles.faqQuestionText}>{faq.q}</Text>
+                    <Feather
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={16}
+                      color={TOKENS.muted}
+                    />
+                  </TouchableOpacity>
+                  {isExpanded && (
+                    <View style={styles.faqAnswerWrapper}>
+                      <Text style={styles.faqAnswerText}>{faq.a}</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </BottomSheet>
 
 
 

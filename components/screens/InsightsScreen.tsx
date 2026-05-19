@@ -19,6 +19,7 @@ import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useBusinessInsights } from "../../hooks/useInsights";
+import { BottomSheet } from "../common/BottomSheet";
 
 export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -530,249 +531,211 @@ export const InsightsScreen: React.FC = () => {
       </Modal>
 
       {/* Low Stock Items Details Drawer Modal */}
-      <Modal
+      <BottomSheet
         visible={isLowStockModalOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsLowStockModalOpen(false)}
+        onClose={() => setIsLowStockModalOpen(false)}
+        title="Low Stock Products List"
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.lowStockModalContent, { paddingBottom: insets.bottom + 20 }]}>
-            <View style={styles.dragHandle} />
-            <View style={styles.lowStockModalHeader}>
-              <View style={styles.lowStockModalTitleWrapper}>
-                <Feather name="alert-triangle" size={20} color={TOKENS.error} />
-                <Text style={styles.lowStockModalTitle}>Low Stock Products List</Text>
+        <Text style={styles.lowStockModalSubtitle}>
+          The following inventory items are running critically low (5 units or less):
+        </Text>
+
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          style={[styles.lowStockItemsScroll, { maxHeight: 350 }]}
+          contentContainerStyle={{ gap: 10, paddingVertical: 10 }}
+        >
+          {stats?.lowStockItems && stats.lowStockItems.length > 0 ? (
+            stats.lowStockItems.map((item: any) => (
+              <View key={item.id} style={styles.lowStockItemRow}>
+                <View style={styles.lowStockIconWrapper}>
+                  <Text style={{ fontSize: 16 }}>{item.icon || "📦"}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.lowStockItemName}>{item.name}</Text>
+                  <Text style={styles.lowStockItemSku}>SKU: {item.sku}</Text>
+                </View>
+                <View style={styles.lowStockCountBadge}>
+                  <Text style={styles.lowStockCountText}>{item.stockCount} left</Text>
+                  <Text style={styles.lowStockLimitText}>Alert Threshold: {item.lowStockAlert}</Text>
+                </View>
               </View>
-              <TouchableOpacity
-                style={styles.closeLowStockBtn}
-                onPress={() => setIsLowStockModalOpen(false)}
-              >
-                <Feather name="x" size={20} color={TOKENS.muted} />
-              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyLowStockState}>
+              <Feather name="check-circle" size={32} color="#10B981" />
+              <Text style={styles.emptyLowStockText}>All products are sufficiently stocked!</Text>
             </View>
+          )}
+        </ScrollView>
+      </BottomSheet>
 
-            <Text style={styles.lowStockModalSubtitle}>
-              The following inventory items are running critically low (5 units or less):
-            </Text>
-
-            <ScrollView 
-              showsVerticalScrollIndicator={false}
-              style={styles.lowStockItemsScroll}
-              contentContainerStyle={{ gap: 10, paddingVertical: 10 }}
+      {/* Reports & Refills Modal Drawer */}
+      <BottomSheet
+        visible={isReportsModalOpen}
+        onClose={() => setIsReportsModalOpen(false)}
+        title="Reports & Management"
+      >
+        <View style={{ height: 500 }}>
+          {/* Premium Subheader Tabs */}
+          <View style={styles.modalTabsRow}>
+            <TouchableOpacity
+              style={[styles.modalTab, reportsActiveTab === "orders" && styles.modalTabActive]}
+              onPress={() => setReportsActiveTab("orders")}
             >
-              {stats?.lowStockItems && stats.lowStockItems.length > 0 ? (
-                stats.lowStockItems.map((item: any) => (
-                  <View key={item.id} style={styles.lowStockItemRow}>
-                    <View style={styles.lowStockIconWrapper}>
-                      <Text style={{ fontSize: 16 }}>{item.icon || "📦"}</Text>
+              <Feather name="list" size={14} color={reportsActiveTab === "orders" ? TOKENS.primary : TOKENS.muted} />
+              <Text style={[styles.modalTabText, reportsActiveTab === "orders" && styles.modalTabTextActive]}>
+                Order History
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalTab, reportsActiveTab === "inventory" && styles.modalTabActive]}
+              onPress={() => setReportsActiveTab("inventory")}
+            >
+              <Feather name="plus-circle" size={14} color={reportsActiveTab === "inventory" ? TOKENS.primary : TOKENS.muted} />
+              <Text style={[styles.modalTabText, reportsActiveTab === "inventory" && styles.modalTabTextActive]}>
+                Stock-In Refills
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* TAB CONTENT: ORDER HISTORY */}
+          {reportsActiveTab === "orders" && (
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
+              {stats?.resolvedOrders && stats.resolvedOrders.length > 0 ? (
+                stats.resolvedOrders.map((order: any) => {
+                  const isExpanded = expandedOrderId === order.id;
+                  const orderDate = new Date(order.createdAt);
+                  return (
+                    <View key={order.id} style={styles.historyOrderCard}>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        style={styles.historyCardHeader}
+                        onPress={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.historyInvoiceNum}>Invoice #{order.invoiceNumber}</Text>
+                          <Text style={styles.historyDateText}>
+                            {orderDate.toLocaleDateString()} at {orderDate.toLocaleTimeString()}
+                          </Text>
+                        </View>
+                        <View style={{ alignItems: "flex-end", gap: 4 }}>
+                          <Text style={styles.historyTotalAmount}>Rs. {order.totalAmount.toLocaleString()}</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+                            <Text style={styles.historyItemCount}>{order.items.length} items</Text>
+                            <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+
+                      {isExpanded && (
+                        <View style={styles.historyItemsExpandedPanel}>
+                          <View style={styles.expandedDivider} />
+                          {order.items.map((item: any) => (
+                            <View key={item.id} style={styles.expandedItemRow}>
+                              <Text style={styles.expandedItemName}>{item.name}</Text>
+                              <Text style={styles.expandedItemQty}>
+                                {item.quantity} x Rs. {item.price.toLocaleString()}
+                              </Text>
+                              <Text style={styles.expandedItemSubtotal}>
+                                Rs. {(item.quantity * item.price).toLocaleString()}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.lowStockItemName}>{item.name}</Text>
-                      <Text style={styles.lowStockItemSku}>SKU: {item.sku}</Text>
-                    </View>
-                    <View style={styles.lowStockCountBadge}>
-                      <Text style={styles.lowStockCountText}>{item.stockCount} left</Text>
-                      <Text style={styles.lowStockLimitText}>Alert Threshold: {item.lowStockAlert}</Text>
-                    </View>
-                  </View>
-                ))
+                  );
+                })
               ) : (
                 <View style={styles.emptyLowStockState}>
-                  <Feather name="check-circle" size={32} color="#10B981" />
-                  <Text style={styles.emptyLowStockText}>All products are sufficiently stocked!</Text>
+                  <Feather name="file-text" size={32} color={TOKENS.muted} />
+                  <Text style={styles.emptyLowStockText}>No invoices found for this active period!</Text>
                 </View>
               )}
             </ScrollView>
-          </View>
+          )}
+
+          {/* TAB CONTENT: STOCK-IN INVENTORY REFILL */}
+          {reportsActiveTab === "inventory" && (
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
+              <Text style={styles.refillSectionLabel}>Select a product below to refill / Stock-In units:</Text>
+              {stats?.productsList && stats.productsList.length > 0 ? (
+                stats.productsList.map((prod: any) => {
+                  const isExpanded = expandedProductId === prod.id;
+                  const val = refillValues[prod.id] || "";
+                  return (
+                    <View key={prod.id} style={styles.historyOrderCard}>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        style={styles.historyCardHeader}
+                        onPress={() => setExpandedProductId(isExpanded ? null : prod.id)}
+                      >
+                        <View style={styles.lowStockIconWrapper}>
+                          <Text style={{ fontSize: 16 }}>{prod.icon || "📦"}</Text>
+                        </View>
+                        <View style={{ flex: 1, marginLeft: 8 }}>
+                          <Text style={styles.historyInvoiceNum}>{prod.name}</Text>
+                          <Text style={styles.historyDateText}>SKU: {prod.sku} | Price: Rs. {prod.price}</Text>
+                        </View>
+                        <View style={{ alignItems: "flex-end", gap: 4 }}>
+                          <Text style={[styles.historyTotalAmount, prod.stockCount <= 5 && { color: TOKENS.error }]}>
+                            {prod.stockCount} left
+                          </Text>
+                          <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
+                        </View>
+                      </TouchableOpacity>
+
+                      {isExpanded && (
+                        <View style={styles.historyItemsExpandedPanel}>
+                          <View style={styles.expandedDivider} />
+                          <View style={styles.refillActionForm}>
+                            <TextInput
+                              style={styles.refillInput}
+                              placeholder="Refill amount (e.g. 10)"
+                              placeholderTextColor="#9CA3AF"
+                              keyboardType="number-pad"
+                              value={val}
+                              onChangeText={(text) => setRefillValues({ ...refillValues, [prod.id]: text })}
+                            />
+                            <TouchableOpacity
+                              style={styles.refillSubmitBtn}
+                              activeOpacity={0.7}
+                              onPress={() => {
+                                const refillAmt = parseInt(val, 10);
+                                if (isNaN(refillAmt) || refillAmt <= 0) {
+                                  Alert.alert("Invalid Quantity", "Please enter a valid stock refill quantity!");
+                                  return;
+                                }
+                                refillMutation.mutate({ productId: prod.id, refillAmount: refillAmt });
+                              }}
+                            >
+                              {refillMutation.isPending ? (
+                                <ActivityIndicator size="small" color="#fff" />
+                              ) : (
+                                <>
+                                  <Feather name="plus" size={14} color="#fff" />
+                                  <Text style={styles.refillSubmitBtnText}>Stock-In</Text>
+                                </>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })
+              ) : (
+                <View style={styles.emptyLowStockState}>
+                  <Feather name="package" size={32} color={TOKENS.muted} />
+                  <Text style={styles.emptyLowStockText}>No products found for this business!</Text>
+                </View>
+              )}
+            </ScrollView>
+          )}
         </View>
-      </Modal>
-
-      {/* Reports & Refills Modal Drawer */}
-      <Modal
-        visible={isReportsModalOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsReportsModalOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.lowStockModalContent, { paddingBottom: insets.bottom + 20, height: "85%" }]}>
-            <View style={styles.dragHandle} />
-            
-            {/* Modal Header */}
-            <View style={styles.lowStockModalHeader}>
-              <View style={styles.lowStockModalTitleWrapper}>
-                <Feather name="clipboard" size={20} color={TOKENS.primary} />
-                <Text style={styles.lowStockModalTitle}>Reports & Management</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.closeLowStockBtn}
-                onPress={() => setIsReportsModalOpen(false)}
-              >
-                <Feather name="x" size={20} color={TOKENS.muted} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Premium Subheader Tabs */}
-            <View style={styles.modalTabsRow}>
-              <TouchableOpacity
-                style={[styles.modalTab, reportsActiveTab === "orders" && styles.modalTabActive]}
-                onPress={() => setReportsActiveTab("orders")}
-              >
-                <Feather name="list" size={14} color={reportsActiveTab === "orders" ? TOKENS.primary : TOKENS.muted} />
-                <Text style={[styles.modalTabText, reportsActiveTab === "orders" && styles.modalTabTextActive]}>
-                  Order History
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalTab, reportsActiveTab === "inventory" && styles.modalTabActive]}
-                onPress={() => setReportsActiveTab("inventory")}
-              >
-                <Feather name="plus-circle" size={14} color={reportsActiveTab === "inventory" ? TOKENS.primary : TOKENS.muted} />
-                <Text style={[styles.modalTabText, reportsActiveTab === "inventory" && styles.modalTabTextActive]}>
-                  Stock-In Refills
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* TAB CONTENT: ORDER HISTORY */}
-            {reportsActiveTab === "orders" && (
-              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
-                {stats?.resolvedOrders && stats.resolvedOrders.length > 0 ? (
-                  stats.resolvedOrders.map((order: any) => {
-                    const isExpanded = expandedOrderId === order.id;
-                    const orderDate = new Date(order.createdAt);
-                    return (
-                      <View key={order.id} style={styles.historyOrderCard}>
-                        <TouchableOpacity
-                          activeOpacity={0.7}
-                          style={styles.historyCardHeader}
-                          onPress={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                        >
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.historyInvoiceNum}>Invoice #{order.invoiceNumber}</Text>
-                            <Text style={styles.historyDateText}>
-                              {orderDate.toLocaleDateString()} at {orderDate.toLocaleTimeString()}
-                            </Text>
-                          </View>
-                          <View style={{ alignItems: "flex-end", gap: 4 }}>
-                            <Text style={styles.historyTotalAmount}>Rs. {order.totalAmount.toLocaleString()}</Text>
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                              <Text style={styles.historyItemCount}>{order.items.length} items</Text>
-                              <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-
-                        {isExpanded && (
-                          <View style={styles.historyItemsExpandedPanel}>
-                            <View style={styles.expandedDivider} />
-                            {order.items.map((item: any) => (
-                              <View key={item.id} style={styles.expandedItemRow}>
-                                <Text style={styles.expandedItemName}>{item.name}</Text>
-                                <Text style={styles.expandedItemQty}>
-                                  {item.quantity} x Rs. {item.price.toLocaleString()}
-                                </Text>
-                                <Text style={styles.expandedItemSubtotal}>
-                                  Rs. {(item.quantity * item.price).toLocaleString()}
-                                </Text>
-                              </View>
-                            ))}
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })
-                ) : (
-                  <View style={styles.emptyLowStockState}>
-                    <Feather name="file-text" size={32} color={TOKENS.muted} />
-                    <Text style={styles.emptyLowStockText}>No invoices found for this active period!</Text>
-                  </View>
-                )}
-              </ScrollView>
-            )}
-
-            {/* TAB CONTENT: STOCK-IN INVENTORY REFILL */}
-            {reportsActiveTab === "inventory" && (
-              <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
-                <Text style={styles.refillSectionLabel}>Select a product below to refill / Stock-In units:</Text>
-                {stats?.productsList && stats.productsList.length > 0 ? (
-                  stats.productsList.map((prod: any) => {
-                    const isExpanded = expandedProductId === prod.id;
-                    const val = refillValues[prod.id] || "";
-                    return (
-                      <View key={prod.id} style={styles.historyOrderCard}>
-                        <TouchableOpacity
-                          activeOpacity={0.7}
-                          style={styles.historyCardHeader}
-                          onPress={() => setExpandedProductId(isExpanded ? null : prod.id)}
-                        >
-                          <View style={styles.lowStockIconWrapper}>
-                            <Text style={{ fontSize: 16 }}>{prod.icon || "📦"}</Text>
-                          </View>
-                          <View style={{ flex: 1, marginLeft: 8 }}>
-                            <Text style={styles.historyInvoiceNum}>{prod.name}</Text>
-                            <Text style={styles.historyDateText}>SKU: {prod.sku} | Price: Rs. {prod.price}</Text>
-                          </View>
-                          <View style={{ alignItems: "flex-end", gap: 4 }}>
-                            <Text style={[styles.historyTotalAmount, prod.stockCount <= 5 && { color: TOKENS.error }]}>
-                              {prod.stockCount} left
-                            </Text>
-                            <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
-                          </View>
-                        </TouchableOpacity>
-
-                        {isExpanded && (
-                          <View style={styles.historyItemsExpandedPanel}>
-                            <View style={styles.expandedDivider} />
-                            <View style={styles.refillActionForm}>
-                              <TextInput
-                                style={styles.refillInput}
-                                placeholder="Refill amount (e.g. 10)"
-                                placeholderTextColor="#9CA3AF"
-                                keyboardType="number-pad"
-                                value={val}
-                                onChangeText={(text) => setRefillValues({ ...refillValues, [prod.id]: text })}
-                              />
-                              <TouchableOpacity
-                                style={styles.refillSubmitBtn}
-                                activeOpacity={0.7}
-                                onPress={() => {
-                                  const refillAmt = parseInt(val, 10);
-                                  if (isNaN(refillAmt) || refillAmt <= 0) {
-                                    Alert.alert("Invalid Quantity", "Please enter a valid stock refill quantity!");
-                                    return;
-                                  }
-                                  refillMutation.mutate({ productId: prod.id, refillAmount: refillAmt });
-                                }}
-                              >
-                                {refillMutation.isPending ? (
-                                  <ActivityIndicator size="small" color="#fff" />
-                                ) : (
-                                  <>
-                                    <Feather name="plus" size={14} color="#fff" />
-                                    <Text style={styles.refillSubmitBtnText}>Stock-In</Text>
-                                  </>
-                                )}
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })
-                ) : (
-                  <View style={styles.emptyLowStockState}>
-                    <Feather name="package" size={32} color={TOKENS.muted} />
-                    <Text style={styles.emptyLowStockText}>No products found for this business!</Text>
-                  </View>
-                )}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+      </BottomSheet>
 
       {/* Export Progress Modal */}
       <Modal visible={isExporting} transparent={true} animationType="fade">
@@ -785,45 +748,39 @@ export const InsightsScreen: React.FC = () => {
       </Modal>
 
       {/* Export Result Success Sheet */}
-      <Modal
+      <BottomSheet
         visible={exportResultModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setExportResultModal(false)}
+        onClose={() => setExportResultModal(false)}
+        title={`${exportType} Export Successful!`}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.exportResultCard, { paddingBottom: insets.bottom + 20 }]}>
-            <View style={styles.dragHandle} />
-            
-            <View style={styles.successIconCircle}>
-              <Feather name="check" size={28} color="#fff" />
-            </View>
+        <View style={{ alignItems: "center", gap: 16 }}>
+          <View style={styles.successIconCircle}>
+            <Feather name="check" size={28} color="#fff" />
+          </View>
 
-            <Text style={styles.successTitle}>{exportType} Export Successful!</Text>
-            <Text style={styles.successSubtitle}>
-              Your business statement files for {activeBiz.name} are structured and ready to distribute.
-            </Text>
+          <Text style={styles.successSubtitle}>
+            Your business statement files for {activeBiz.name} are structured and ready to distribute.
+          </Text>
 
-            <View style={styles.successActions}>
-              <TouchableOpacity
-                style={styles.shareReportBtn}
-                activeOpacity={0.8}
-                onPress={handleShare}
-              >
-                <Feather name="share-2" size={16} color="#fff" style={{ marginRight: 6 }} />
-                <Text style={styles.shareReportBtnText}>Share & Save Statement</Text>
-              </TouchableOpacity>
+          <View style={styles.successActions}>
+            <TouchableOpacity
+              style={styles.shareReportBtn}
+              activeOpacity={0.8}
+              onPress={handleShare}
+            >
+              <Feather name="share-2" size={16} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.shareReportBtnText}>Share & Save Statement</Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.dismissBtn}
-                onPress={() => setExportResultModal(false)}
-              >
-                <Text style={styles.dismissBtnText}>Dismiss</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.dismissBtn}
+              onPress={() => setExportResultModal(false)}
+            >
+              <Text style={styles.dismissBtnText}>Dismiss</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 };

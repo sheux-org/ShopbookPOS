@@ -20,6 +20,7 @@ import { TOKENS } from "../../../constants/tokens";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
 import { useUpdateActiveBusiness } from "../../../hooks/useBusinesses";
 import { useBusinessStore } from "../../../stores/useBusinessStore";
+import { BottomSheet } from "../../../components/common/BottomSheet";
 
 const PRESET_EMOJIS = ["🛒", "🛍️", "🥛", "👕", "💊", "☕", "🍔", "📦", "🌾", "🏢", "🛠️", "📚"];
 
@@ -283,76 +284,64 @@ export default function BusinessDetailsRoute() {
         </View>
       )}
 
-      {/* LOGO SELECTOR MODAL SHEET */}
-      <Modal
+      {/* LOGO SELECTOR BOTTOM SHEET */}
+      <BottomSheet
         visible={showLogoSelector}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowLogoSelector(false)}
+        onClose={() => setShowLogoSelector(false)}
+        title="Choose Profile Image"
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.bottomSheet, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Choose Profile Image</Text>
-              <TouchableOpacity onPress={() => setShowLogoSelector(false)}>
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
+        <View style={styles.sheetBody}>
+          {/* Option 1: Gallery Picker */}
+          <TouchableOpacity style={styles.pickerOptionBtn} onPress={handlePickImage}>
+            <View style={styles.pickerOptionIcon}>
+              <Feather name="image" size={20} color={TOKENS.primary} />
             </View>
-
-            <View style={styles.sheetBody}>
-              {/* Option 1: Gallery Picker */}
-              <TouchableOpacity style={styles.pickerOptionBtn} onPress={handlePickImage}>
-                <View style={styles.pickerOptionIcon}>
-                  <Feather name="image" size={20} color={TOKENS.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.pickerOptionTitle}>Select from Gallery</Text>
-                  <Text style={styles.pickerOptionSub}>Choose a custom photo or logo</Text>
-                </View>
-                <Feather name="chevron-right" size={16} color={TOKENS.muted} />
-              </TouchableOpacity>
-
-              <View style={styles.divider} />
-
-              {/* Option 2: Presets */}
-              <Text style={styles.sectionLabel}>Quick Emoji Presets</Text>
-              <View style={styles.presetsGrid}>
-                {PRESET_EMOJIS.map((emoji) => (
-                  <TouchableOpacity
-                    key={emoji}
-                    style={[
-                      styles.presetCell,
-                      logoUri === emoji && styles.presetCellSelected
-                    ]}
-                    onPress={() => {
-                      setLogoUri(emoji);
-                      setShowLogoSelector(false);
-                    }}
-                  >
-                    <Text style={styles.presetEmojiText}>{emoji}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {logoUri ? (
-                <>
-                  <View style={styles.divider} />
-                  <TouchableOpacity
-                    style={styles.removeLogoBtn}
-                    onPress={() => {
-                      setLogoUri("");
-                      setShowLogoSelector(false);
-                    }}
-                  >
-                    <Feather name="trash-2" size={16} color={TOKENS.error} />
-                    <Text style={styles.removeLogoText}>Remove Custom Logo</Text>
-                  </TouchableOpacity>
-                </>
-              ) : null}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pickerOptionTitle}>Select from Gallery</Text>
+              <Text style={styles.pickerOptionSub}>Choose a custom photo or logo</Text>
             </View>
+            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          {/* Option 2: Presets */}
+          <Text style={styles.sectionLabel}>Quick Emoji Presets</Text>
+          <View style={styles.presetsGrid}>
+            {PRESET_EMOJIS.map((emoji) => (
+              <TouchableOpacity
+                key={emoji}
+                style={[
+                  styles.presetCell,
+                  logoUri === emoji && styles.presetCellSelected
+                ]}
+                onPress={() => {
+                  setLogoUri(emoji);
+                  setShowLogoSelector(false);
+                }}
+              >
+                <Text style={styles.presetEmojiText}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
+
+          {logoUri ? (
+            <>
+              <View style={styles.divider} />
+              <TouchableOpacity
+                style={styles.removeLogoBtn}
+                onPress={() => {
+                  setLogoUri("");
+                  setShowLogoSelector(false);
+                }}
+              >
+                <Feather name="trash-2" size={16} color={TOKENS.error} />
+                <Text style={styles.removeLogoText}>Remove Custom Logo</Text>
+              </TouchableOpacity>
+            </>
+          ) : null}
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 }

@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { useGetOrders, useGetOrderItems, DBOrder } from "../../hooks/useOrders";
 import { cartState } from "../data/cartState";
+import { BottomSheet } from "../common/BottomSheet";
 
 export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = false }) => {
   const insets = useSafeAreaInsets();
@@ -182,148 +183,134 @@ Thank you for shopping with us!
         </ScrollView>
       )}
 
-      {/* Invoice Detail Modal */}
-      <Modal
+      {/* Invoice Detail Bottom Sheet */}
+      <BottomSheet
         visible={selectedOrder !== null}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setSelectedOrder(null)}
+        onClose={() => setSelectedOrder(null)}
+        title="Receipt Invoice"
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom > 0 ? insets.bottom : 20 }]}>
-            {/* Modal Header */}
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Receipt Invoice</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setSelectedOrder(null)}
-              >
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
+        <View style={{ height: 500 }}>
+          {selectedOrder && (
+            <ScrollView
+              style={styles.receiptScroll}
+              contentContainerStyle={styles.receiptScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Receipt Card Graphic */}
+              <View style={styles.receiptCard}>
+                {/* Shop Details */}
+                <Text style={styles.receiptShopName}>{activeBiz.name}</Text>
+                <Text style={styles.receiptShopCategory}>{activeBiz.category}</Text>
+                <Text style={styles.receiptShopAddress}>
+                  {activeBiz.address || "Sri Lanka"}
+                </Text>
 
-            {selectedOrder && (
-              <ScrollView
-                style={styles.receiptScroll}
-                contentContainerStyle={styles.receiptScrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                {/* Receipt Card Graphic */}
-                <View style={styles.receiptCard}>
-                  {/* Shop Details */}
-                  <Text style={styles.receiptShopName}>{activeBiz.name}</Text>
-                  <Text style={styles.receiptShopCategory}>{activeBiz.category}</Text>
-                  <Text style={styles.receiptShopAddress}>
-                    {activeBiz.address || "Sri Lanka"}
+                <View style={styles.dashedDivider} />
+
+                {/* Transaction Metadata */}
+                <View style={styles.metadataRow}>
+                  <Text style={styles.metaLabel}>Invoice</Text>
+                  <Text style={styles.metaValue}>
+                    {selectedOrder.invoiceNumber.split(" ")[0]}
                   </Text>
+                </View>
+                <View style={styles.metadataRow}>
+                  <Text style={styles.metaLabel}>Staff</Text>
+                  <Text style={styles.metaValue}>
+                    {selectedOrder.invoiceNumber.includes("Staff:")
+                      ? selectedOrder.invoiceNumber.split("Staff:")[1].trim().replace(")", "")
+                      : "Admin"}
+                  </Text>
+                </View>
+                <View style={styles.metadataRow}>
+                  <Text style={styles.metaLabel}>Date</Text>
+                  <Text style={styles.metaValue}>
+                    {new Date(selectedOrder.createdAt).toLocaleString()}
+                  </Text>
+                </View>
+                <View style={styles.metadataRow}>
+                  <Text style={styles.metaLabel}>Status</Text>
+                  <Text style={styles.metaValueActive}>
+                    {selectedOrder.status.toUpperCase()}
+                  </Text>
+                </View>
 
-                  <View style={styles.dashedDivider} />
+                <View style={styles.dashedDivider} />
 
-                  {/* Transaction Metadata */}
-                  <View style={styles.metadataRow}>
-                    <Text style={styles.metaLabel}>Invoice</Text>
-                    <Text style={styles.metaValue}>
-                      {selectedOrder.invoiceNumber.split(" ")[0]}
-                    </Text>
-                  </View>
-                  <View style={styles.metadataRow}>
-                    <Text style={styles.metaLabel}>Staff</Text>
-                    <Text style={styles.metaValue}>
-                      {selectedOrder.invoiceNumber.includes("Staff:")
-                        ? selectedOrder.invoiceNumber.split("Staff:")[1].trim().replace(")", "")
-                        : "Admin"}
-                    </Text>
-                  </View>
-                  <View style={styles.metadataRow}>
-                    <Text style={styles.metaLabel}>Date</Text>
-                    <Text style={styles.metaValue}>
-                      {new Date(selectedOrder.createdAt).toLocaleString()}
-                    </Text>
-                  </View>
-                  <View style={styles.metadataRow}>
-                    <Text style={styles.metaLabel}>Status</Text>
-                    <Text style={styles.metaValueActive}>
-                      {selectedOrder.status.toUpperCase()}
-                    </Text>
-                  </View>
-
-                  <View style={styles.dashedDivider} />
-
-                  {/* Items List inside Invoice */}
-                  <Text style={styles.sectionTitle}>Items Details</Text>
-                  {itemsLoading ? (
-                    <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 12 }} />
-                  ) : (
-                    <View style={styles.itemsWrapper}>
-                      {orderItems.map((item) => (
-                        <View key={item.id} style={styles.receiptItemRow}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.receiptItemName}>{item.name}</Text>
-                            <Text style={styles.receiptItemQty}>
-                              {item.quantity} × Rs. {item.price.toLocaleString()}
-                            </Text>
-                          </View>
-                          <Text style={styles.receiptItemTotal}>
-                            Rs. {(item.price * item.quantity).toLocaleString()}
+                {/* Items List inside Invoice */}
+                <Text style={styles.sectionTitle}>Items Details</Text>
+                {itemsLoading ? (
+                  <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 12 }} />
+                ) : (
+                  <View style={styles.itemsWrapper}>
+                    {orderItems.map((item) => (
+                      <View key={item.id} style={styles.receiptItemRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.receiptItemName}>{item.name}</Text>
+                          <Text style={styles.receiptItemQty}>
+                            {item.quantity} × Rs. {item.price.toLocaleString()}
                           </Text>
                         </View>
-                      ))}
-                    </View>
-                  )}
-
-                  <View style={styles.solidDivider} />
-
-                  {/* Financial calculations summary */}
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Subtotal</Text>
-                    <Text style={styles.summaryValue}>Rs. {subtotal.toLocaleString()}.00</Text>
+                        <Text style={styles.receiptItemTotal}>
+                          Rs. {(item.price * item.quantity).toLocaleString()}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Tax (8%)</Text>
-                    <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabelActive}>Discount</Text>
-                    <Text style={styles.summaryDiscountValue}>- Rs. {discount.toLocaleString()}.00</Text>
-                  </View>
+                )}
 
-                  <View style={styles.solidDivider} />
+                <View style={styles.solidDivider} />
 
-                  <View style={styles.receiptTotalRow}>
-                    <Text style={styles.receiptTotalLabel}>Grand Total</Text>
-                    <Text style={styles.receiptTotalValue}>
-                      Rs. {selectedOrder.totalAmount.toLocaleString()}.00
-                    </Text>
-                  </View>
-
-                  <Text style={styles.thankYouText}>Thank you for shopping with us!</Text>
+                {/* Financial calculations summary */}
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Subtotal</Text>
+                  <Text style={styles.summaryValue}>Rs. {subtotal.toLocaleString()}.00</Text>
                 </View>
-              </ScrollView>
-            )}
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Tax (8%)</Text>
+                  <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabelActive}>Discount</Text>
+                  <Text style={styles.summaryDiscountValue}>- Rs. {discount.toLocaleString()}.00</Text>
+                </View>
 
-            {/* Actions Footer */}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.actionBtnShare}
-                activeOpacity={0.8}
-                onPress={handleShareInvoice}
-              >
-                <Feather name="share-2" size={16} color={TOKENS.card} />
-                <Text style={styles.actionBtnText}>Share Receipt</Text>
-              </TouchableOpacity>
+                <View style={styles.solidDivider} />
 
-              <TouchableOpacity
-                style={styles.actionBtnDownload}
-                activeOpacity={0.8}
-                onPress={handleDownloadInvoice}
-              >
-                <Feather name="download" size={16} color={TOKENS.primary} />
-                <Text style={styles.actionBtnDownloadText}>Download PDF</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.receiptTotalRow}>
+                  <Text style={styles.receiptTotalLabel}>Grand Total</Text>
+                  <Text style={styles.receiptTotalValue}>
+                    Rs. {selectedOrder.totalAmount.toLocaleString()}.00
+                  </Text>
+                </View>
+
+                <Text style={styles.thankYouText}>Thank you for shopping with us!</Text>
+              </View>
+            </ScrollView>
+          )}
+
+          {/* Actions Footer */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={styles.actionBtnShare}
+              activeOpacity={0.8}
+              onPress={handleShareInvoice}
+            >
+              <Feather name="share-2" size={16} color={TOKENS.card} />
+              <Text style={styles.actionBtnText}>Share Receipt</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionBtnDownload}
+              activeOpacity={0.8}
+              onPress={handleDownloadInvoice}
+            >
+              <Feather name="download" size={16} color={TOKENS.primary} />
+              <Text style={styles.actionBtnDownloadText}>Download PDF</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 };

@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../../constants/tokens";
+import { BottomSheet } from "../../../components/common/BottomSheet";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, StaffMember } from "../../../hooks/useStaff";
 import { useBusinessStore } from "../../../stores/useBusinessStore";
@@ -243,197 +244,159 @@ export default function ManageStaffRoute() {
       </ScrollView>
 
       {/* Modal for adding staff member */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <BottomSheet
         visible={isModalOpen}
-        onRequestClose={() => setIsModalOpen(false)}
+        onClose={() => setIsModalOpen(false)}
+        title="Add Staff Member"
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.dismissArea} onPress={() => setIsModalOpen(false)} />
-          <View style={styles.modalContent}>
-            {/* Modal Handle */}
-            <View style={styles.modalHandle} />
-
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Staff Member</Text>
-              <TouchableOpacity onPress={() => setIsModalOpen(false)} style={styles.modalCloseBtn}>
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.modalScroll}>
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Staff Full Name</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Aruni Silva"
-                  placeholderTextColor="#9CA3AF"
-                  value={newName}
-                  onChangeText={setNewName}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Staff Role</Text>
-                <View style={styles.rolesSelectorRow}>
-                  {(["Admin", "Manager", "Cashier"] as const).map((role) => {
-                    const isSelected = newRole === role;
-                    return (
-                      <TouchableOpacity
-                        key={role}
-                        style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
-                        activeOpacity={0.8}
-                        onPress={() => setNewRole(role)}
-                      >
-                        <Text style={[styles.roleSelectTabText, isSelected && styles.roleSelectTabTextActive]}>
-                          {role}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Email Address</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. aruni@shopbook.lk"
-                  placeholderTextColor="#9CA3AF"
-                  value={newEmail}
-                  onChangeText={setNewEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Mobile Number</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. +94 77 987 6543"
-                  placeholderTextColor="#9CA3AF"
-                  value={newPhone}
-                  onChangeText={setNewPhone}
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.submitButton, (!newName.trim() || !newEmail.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
-                activeOpacity={0.8}
-                onPress={handleAddStaff}
-                disabled={!newName.trim() || !newEmail.trim() || !newPhone.trim()}
-              >
-                <Text style={styles.submitButtonText}>Authorize Staff Member</Text>
-                <Feather name="user-plus" size={16} color={TOKENS.card} />
-              </TouchableOpacity>
-            </ScrollView>
+        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Staff Full Name</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. Aruni Silva"
+              placeholderTextColor="#9CA3AF"
+              value={newName}
+              onChangeText={setNewName}
+            />
           </View>
-        </View>
-      </Modal>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Staff Role</Text>
+            <View style={styles.rolesSelectorRow}>
+              {(["Admin", "Manager", "Cashier"] as const).map((role) => {
+                const isSelected = newRole === role;
+                return (
+                  <TouchableOpacity
+                    key={role}
+                    style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
+                    activeOpacity={0.8}
+                    onPress={() => setNewRole(role)}
+                  >
+                    <Text style={[styles.roleSelectTabText, isSelected && styles.roleSelectTabTextActive]}>
+                      {role}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Email Address</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. aruni@shopbook.lk"
+              placeholderTextColor="#9CA3AF"
+              value={newEmail}
+              onChangeText={setNewEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Mobile Number</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. +94 77 987 6543"
+              placeholderTextColor="#9CA3AF"
+              value={newPhone}
+              onChangeText={setNewPhone}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, (!newName.trim() || !newEmail.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
+            activeOpacity={0.8}
+            onPress={handleAddStaff}
+            disabled={!newName.trim() || !newEmail.trim() || !newPhone.trim()}
+          >
+            <Text style={styles.submitButtonText}>Authorize Staff Member</Text>
+            <Feather name="user-plus" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        </ScrollView>
+      </BottomSheet>
 
       {/* Modal for editing a staff member */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <BottomSheet
         visible={isEditModalOpen}
-        onRequestClose={() => {
+        onClose={() => {
           setIsEditModalOpen(false);
           setEditingStaff(null);
         }}
+        title="Edit Staff Details"
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.dismissArea} onPress={() => {
-            setIsEditModalOpen(false);
-            setEditingStaff(null);
-          }} />
-          <View style={styles.modalContent}>
-            {/* Modal Handle */}
-            <View style={styles.modalHandle} />
-
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Staff Details</Text>
-              <TouchableOpacity onPress={() => {
-                setIsEditModalOpen(false);
-                setEditingStaff(null);
-              }} style={styles.modalCloseBtn}>
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.modalScroll}>
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Staff Full Name</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Aruni Silva"
-                  placeholderTextColor="#9CA3AF"
-                  value={editName}
-                  onChangeText={setEditName}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Staff Role</Text>
-                <View style={styles.rolesSelectorRow}>
-                  {(["Admin", "Manager", "Cashier"] as const).map((role) => {
-                    const isSelected = editRole === role;
-                    return (
-                      <TouchableOpacity
-                        key={role}
-                        style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
-                        activeOpacity={0.8}
-                        onPress={() => setEditRole(role)}
-                      >
-                        <Text style={[styles.roleSelectTabText, isSelected && styles.roleSelectTabTextActive]}>
-                          {role}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Email Address</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. aruni@shopbook.lk"
-                  placeholderTextColor="#9CA3AF"
-                  value={editEmail}
-                  onChangeText={setEditEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Mobile Number</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. +94 77 987 6543"
-                  placeholderTextColor="#9CA3AF"
-                  value={editPhone}
-                  onChangeText={setEditPhone}
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.submitButton, (!editName.trim() || !editEmail.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
-                activeOpacity={0.8}
-                onPress={handleSaveEditStaff}
-                disabled={!editName.trim() || !editEmail.trim() || !editPhone.trim()}
-              >
-                <Text style={styles.submitButtonText}>Update Staff Details</Text>
-                <Feather name="check" size={16} color={TOKENS.card} />
-              </TouchableOpacity>
-            </ScrollView>
+        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Staff Full Name</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. Aruni Silva"
+              placeholderTextColor="#9CA3AF"
+              value={editName}
+              onChangeText={setEditName}
+            />
           </View>
-        </View>
-      </Modal>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Staff Role</Text>
+            <View style={styles.rolesSelectorRow}>
+              {(["Admin", "Manager", "Cashier"] as const).map((role) => {
+                const isSelected = editRole === role;
+                return (
+                  <TouchableOpacity
+                    key={role}
+                    style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
+                    activeOpacity={0.8}
+                    onPress={() => setEditRole(role)}
+                  >
+                    <Text style={[styles.roleSelectTabText, isSelected && styles.roleSelectTabTextActive]}>
+                      {role}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Email Address</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. aruni@shopbook.lk"
+              placeholderTextColor="#9CA3AF"
+              value={editEmail}
+              onChangeText={setEditEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+                />
+              </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Mobile Number</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. +94 77 987 6543"
+              placeholderTextColor="#9CA3AF"
+              value={editPhone}
+              onChangeText={setEditPhone}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, (!editName.trim() || !editEmail.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
+            activeOpacity={0.8}
+            onPress={handleSaveEditStaff}
+            disabled={!editName.trim() || !editEmail.trim() || !editPhone.trim()}
+          >
+            <Text style={styles.submitButtonText}>Update Staff Details</Text>
+            <Feather name="check" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        </ScrollView>
+      </BottomSheet>
     </View>
   );
 }

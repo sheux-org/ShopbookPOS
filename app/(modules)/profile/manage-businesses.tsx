@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Business, cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
+import { BottomSheet } from "../../../components/common/BottomSheet";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
 import { useBusinesses, useRegisterBusiness, useUpdateBusiness, useDeleteBusiness } from "../../../hooks/useBusinesses";
 import { useBusinessStore } from "../../../stores/useBusinessStore";
@@ -313,173 +314,135 @@ export default function ManageBusinessesRoute() {
       </ScrollView>
 
       {/* Modal for creating a new business */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <BottomSheet
         visible={isModalOpen}
-        onRequestClose={() => setIsModalOpen(false)}
+        onClose={() => setIsModalOpen(false)}
+        title="Create New Business"
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.dismissArea} onPress={() => setIsModalOpen(false)} />
-          <View style={styles.modalContent}>
-            {/* Modal Handle */}
-            <View style={styles.modalHandle} />
-
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create New Business</Text>
-              <TouchableOpacity onPress={() => setIsModalOpen(false)} style={styles.modalCloseBtn}>
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.modalScroll}>
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Business / Brand Name</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Shopbook Retail Store"
-                  placeholderTextColor="#9CA3AF"
-                  value={newName}
-                  onChangeText={setNewName}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Business Category / Type</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Electronics, Clothing, Groceries"
-                  placeholderTextColor="#9CA3AF"
-                  value={newCategory}
-                  onChangeText={setNewCategory}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Store Address</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 142 Galle Road, Colombo 03"
-                  placeholderTextColor="#9CA3AF"
-                  value={newAddress}
-                  onChangeText={setNewAddress}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Phone Number</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. +94 11 234 5678"
-                  placeholderTextColor="#9CA3AF"
-                  value={newPhone}
-                  onChangeText={setNewPhone}
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.submitButton, (!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
-                activeOpacity={0.8}
-                onPress={handleCreateBusiness}
-                disabled={!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()}
-              >
-                <Text style={styles.submitButtonText}>Create & Activate Business</Text>
-                <Feather name="plus-circle" size={16} color={TOKENS.card} />
-              </TouchableOpacity>
-            </ScrollView>
+        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Business / Brand Name</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. Shopbook Retail Store"
+              placeholderTextColor="#9CA3AF"
+              value={newName}
+              onChangeText={setNewName}
+            />
           </View>
-        </View>
-      </Modal>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Business Category / Type</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. Electronics, Clothing, Groceries"
+              placeholderTextColor="#9CA3AF"
+              value={newCategory}
+              onChangeText={setNewCategory}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Store Address</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. 142 Galle Road, Colombo 03"
+              placeholderTextColor="#9CA3AF"
+              value={newAddress}
+              onChangeText={setNewAddress}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Phone Number</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. +94 11 234 5678"
+              placeholderTextColor="#9CA3AF"
+              value={newPhone}
+              onChangeText={setNewPhone}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, (!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
+            activeOpacity={0.8}
+            onPress={handleCreateBusiness}
+            disabled={!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()}
+          >
+            <Text style={styles.submitButtonText}>Create & Activate Business</Text>
+            <Feather name="plus-circle" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        </ScrollView>
+      </BottomSheet>
 
       {/* Modal for editing a business */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <BottomSheet
         visible={isEditModalOpen}
-        onRequestClose={() => {
+        onClose={() => {
           setIsEditModalOpen(false);
           setEditingBusiness(null);
         }}
+        title="Edit Business Details"
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.dismissArea} onPress={() => {
-            setIsEditModalOpen(false);
-            setEditingBusiness(null);
-          }} />
-          <View style={styles.modalContent}>
-            {/* Modal Handle */}
-            <View style={styles.modalHandle} />
-
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Business Details</Text>
-              <TouchableOpacity onPress={() => {
-                setIsEditModalOpen(false);
-                setEditingBusiness(null);
-              }} style={styles.modalCloseBtn}>
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.modalScroll}>
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Business / Brand Name</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Shopbook Retail Store"
-                  placeholderTextColor="#9CA3AF"
-                  value={editName}
-                  onChangeText={setEditName}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Business Category / Type</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Electronics, Clothing, Groceries"
-                  placeholderTextColor="#9CA3AF"
-                  value={editCategory}
-                  onChangeText={setEditCategory}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Store Address</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 142 Galle Road, Colombo 03"
-                  placeholderTextColor="#9CA3AF"
-                  value={editAddress}
-                  onChangeText={setEditAddress}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Phone Number</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. +94 11 234 5678"
-                  placeholderTextColor="#9CA3AF"
-                  value={editPhone}
-                  onChangeText={setEditPhone}
-                  keyboardType="phone-pad"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.submitButton, (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
-                activeOpacity={0.8}
-                onPress={handleSaveEditBusiness}
-                disabled={!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()}
-              >
-                <Text style={styles.submitButtonText}>Update Business Details</Text>
-                <Feather name="check" size={16} color={TOKENS.card} />
-              </TouchableOpacity>
-            </ScrollView>
+        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Business / Brand Name</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. Shopbook Retail Store"
+              placeholderTextColor="#9CA3AF"
+              value={editName}
+              onChangeText={setEditName}
+            />
           </View>
-        </View>
-      </Modal>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Business Category / Type</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. Electronics, Clothing, Groceries"
+              placeholderTextColor="#9CA3AF"
+              value={editCategory}
+              onChangeText={setEditCategory}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Store Address</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. 142 Galle Road, Colombo 03"
+              placeholderTextColor="#9CA3AF"
+              value={editAddress}
+              onChangeText={setEditAddress}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Phone Number</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. +94 11 234 5678"
+              placeholderTextColor="#9CA3AF"
+              value={editPhone}
+              onChangeText={setEditPhone}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
+            activeOpacity={0.8}
+            onPress={handleSaveEditBusiness}
+            disabled={!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()}
+          >
+            <Text style={styles.submitButtonText}>Update Business Details</Text>
+            <Feather name="check" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        </ScrollView>
+      </BottomSheet>
     </View>
   );
 }

@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, Business } from "../data/cartState";
 import { useTabBarVisible } from "../../hooks/useTabBarVisible";
+import { BottomSheet } from "../common/BottomSheet";
 import { useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
 
 interface HomeProduct {
@@ -384,65 +385,46 @@ export const HomeScreen: React.FC = () => {
       </Animated.View>
 
       {/* Premium Business Swapping Bottom Sheet */}
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <BottomSheet
         visible={isBusinessSheetOpen}
-        onRequestClose={() => setIsBusinessSheetOpen(false)}
+        onClose={() => setIsBusinessSheetOpen(false)}
+        title="Select Active Business"
       >
-        <View style={styles.sheetOverlay}>
-          <Pressable style={styles.sheetDismissArea} onPress={() => setIsBusinessSheetOpen(false)} />
-          <View style={styles.sheetContent}>
-            {/* Sheet Handle */}
-            <View style={styles.sheetHandle} />
-
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Select Active Business</Text>
+        <ScrollView contentContainerStyle={styles.sheetScrollContent} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+          {cartState.getBusinesses().map((biz) => {
+            const isSelected = activeBusiness.id === biz.id;
+            return (
               <TouchableOpacity
-                onPress={() => setIsBusinessSheetOpen(false)}
-                style={styles.sheetCloseBtn}
+                key={biz.id}
+                style={[
+                  styles.bizCard,
+                  isSelected && styles.bizCardSelected
+                ]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  cartState.setActiveBusiness(biz.id);
+                  setIsBusinessSheetOpen(false);
+                  triggerToast(`Switched to ${biz.name}`);
+                }}
               >
-                <Feather name="x" size={20} color={TOKENS.dark} />
+                <View style={styles.bizCardLeft}>
+                  <View style={[styles.bizIconBox, isSelected && styles.bizIconBoxActive]}>
+                    <Feather name="home" size={18} color={isSelected ? TOKENS.card : TOKENS.primary} />
+                  </View>
+                  <View style={styles.bizDetails}>
+                    <Text style={styles.bizName}>{biz.name}</Text>
+                    <Text style={styles.bizAddress}>{biz.address}</Text>
+                    <Text style={styles.bizPhone}>{biz.phone}</Text>
+                  </View>
+                </View>
+                {isSelected && (
+                  <Feather name="check-circle" size={20} color={TOKENS.success} />
+                )}
               </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.sheetScrollContent}>
-              {cartState.getBusinesses().map((biz) => {
-                const isSelected = activeBusiness.id === biz.id;
-                return (
-                  <TouchableOpacity
-                    key={biz.id}
-                    style={[
-                      styles.bizCard,
-                      isSelected && styles.bizCardSelected
-                    ]}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      cartState.setActiveBusiness(biz.id);
-                      setIsBusinessSheetOpen(false);
-                      triggerToast(`Switched to ${biz.name}`);
-                    }}
-                  >
-                    <View style={styles.bizCardLeft}>
-                      <View style={[styles.bizIconBox, isSelected && styles.bizIconBoxActive]}>
-                        <Feather name="home" size={18} color={isSelected ? TOKENS.card : TOKENS.primary} />
-                      </View>
-                      <View style={styles.bizDetails}>
-                        <Text style={styles.bizName}>{biz.name}</Text>
-                        <Text style={styles.bizAddress}>{biz.address}</Text>
-                        <Text style={styles.bizPhone}>{biz.phone}</Text>
-                      </View>
-                    </View>
-                    {isSelected && (
-                      <Feather name="check-circle" size={20} color={TOKENS.success} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+            );
+          })}
+        </ScrollView>
+      </BottomSheet>
     </View>
   );
 };

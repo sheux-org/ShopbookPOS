@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Contacts from "expo-contacts";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CartItem } from "../data/cartState";
+import { BottomSheet } from "../common/BottomSheet";
 
 // Static mock contacts for offline fallback and simulator testing
 const MOCK_CONTACTS = [
@@ -470,141 +471,127 @@ export const CartScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Select Customer Modal */}
-      <Modal
+      {/* Select Customer Bottom Sheet */}
+      <BottomSheet
         visible={isCustomerModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsCustomerModalVisible(false)}
+        onClose={() => setIsCustomerModalVisible(false)}
+        title="Select Customer"
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { height: "85%", paddingBottom: Platform.OS === "ios" ? insets.bottom : 16 }]}>
-            {/* Header */}
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Customer</Text>
-              <TouchableOpacity
-                style={styles.closeBtn}
-                onPress={() => setIsCustomerModalVisible(false)}
-              >
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Segmented Control / Tabs */}
-            <View style={styles.tabBar}>
-              <TouchableOpacity
-                style={[styles.tabItem, activeTab === "contacts" && styles.activeTabItem]}
-                onPress={() => setActiveTab("contacts")}
-              >
-                <Text style={[styles.tabText, activeTab === "contacts" && styles.activeTabText]}>
-                  Search Contacts
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tabItem, activeTab === "new" && styles.activeTabItem]}
-                onPress={() => setActiveTab("new")}
-              >
-                <Text style={[styles.tabText, activeTab === "new" && styles.activeTabText]}>
-                  Create Customer
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Content based on tab */}
-            {activeTab === "contacts" ? (
-              <View style={styles.tabContent}>
-                {/* Search Bar */}
-                <View style={styles.searchBarWrapper}>
-                  <Feather name="search" size={16} color={TOKENS.muted} style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search name or phone..."
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    clearButtonMode="while-editing"
-                  />
-                </View>
-
-                {/* Walking Customer Option */}
-                <TouchableOpacity
-                  style={styles.walkingCustomerRow}
-                  activeOpacity={0.7}
-                  onPress={handleSelectWalkingCustomer}
-                >
-                  <View style={[styles.contactAvatar, { backgroundColor: "#E5E7EB" }]}>
-                    <Ionicons name="people" size={18} color={TOKENS.muted} />
-                  </View>
-                  <View style={styles.contactInfo}>
-                    <Text style={styles.walkingText}>Walking Customer</Text>
-                    <Text style={styles.contactPhone}>Default non-attached checkout</Text>
-                  </View>
-                  <Feather name="check" size={16} color={TOKENS.primary} />
-                </TouchableOpacity>
-
-                <View style={styles.listHeader}>
-                  <Text style={styles.listHeaderText}>CONTACTS LIST</Text>
-                </View>
-
-                {/* List of Contacts */}
-                {isLoadingContacts ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={TOKENS.primary} />
-                    <Text style={styles.loadingText}>Loading contacts...</Text>
-                  </View>
-                ) : (
-                  <FlatList
-                    data={filteredContacts}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderContactItem}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.listContent}
-                    ListEmptyComponent={
-                      <View style={styles.emptyList}>
-                        <Feather name="users" size={36} color={TOKENS.muted} />
-                        <Text style={styles.emptyListText}>No contacts found</Text>
-                      </View>
-                    }
-                  />
-                )}
-              </View>
-            ) : (
-              <View style={[styles.tabContent, styles.newFormContainer]}>
-                <Text style={styles.formLabel}>Customer Name *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. Pasan Pahasara"
-                  value={newCustomerName}
-                  onChangeText={setNewCustomerName}
-                />
-
-                <Text style={styles.formLabel}>Phone Number</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 077 123 4567"
-                  keyboardType="phone-pad"
-                  value={newCustomerPhone}
-                  onChangeText={setNewCustomerPhone}
-                />
-
-                <TouchableOpacity
-                  style={styles.submitBtn}
-                  activeOpacity={0.8}
-                  onPress={handleAddManualCustomer}
-                >
-                  <Text style={styles.submitBtnText}>Attach Customer</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={handleSelectWalkingCustomer}
-                >
-                  <Text style={styles.cancelBtnText}>Or set as Walking Customer</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+        <View style={{ height: 500 }}>
+          {/* Segmented Control / Tabs */}
+          <View style={styles.tabBar}>
+            <TouchableOpacity
+              style={[styles.tabItem, activeTab === "contacts" && styles.activeTabItem]}
+              onPress={() => setActiveTab("contacts")}
+            >
+              <Text style={[styles.tabText, activeTab === "contacts" && styles.activeTabText]}>
+                Search Contacts
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabItem, activeTab === "new" && styles.activeTabItem]}
+              onPress={() => setActiveTab("new")}
+            >
+              <Text style={[styles.tabText, activeTab === "new" && styles.activeTabText]}>
+                Create Customer
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          {/* Content based on tab */}
+          {activeTab === "contacts" ? (
+            <View style={styles.tabContent}>
+              {/* Search Bar */}
+              <View style={styles.searchBarWrapper}>
+                <Feather name="search" size={16} color={TOKENS.muted} style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search name or phone..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  clearButtonMode="while-editing"
+                />
+              </View>
+
+              {/* Walking Customer Option */}
+              <TouchableOpacity
+                style={styles.walkingCustomerRow}
+                activeOpacity={0.7}
+                onPress={handleSelectWalkingCustomer}
+              >
+                <View style={[styles.contactAvatar, { backgroundColor: "#E5E7EB" }]}>
+                  <Ionicons name="people" size={18} color={TOKENS.muted} />
+                </View>
+                <View style={styles.contactInfo}>
+                  <Text style={styles.walkingText}>Walking Customer</Text>
+                  <Text style={styles.contactPhone}>Default non-attached checkout</Text>
+                </View>
+                <Feather name="check" size={16} color={TOKENS.primary} />
+              </TouchableOpacity>
+
+              <View style={styles.listHeader}>
+                <Text style={styles.listHeaderText}>CONTACTS LIST</Text>
+              </View>
+
+              {/* List of Contacts */}
+              {isLoadingContacts ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={TOKENS.primary} />
+                  <Text style={styles.loadingText}>Loading contacts...</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={filteredContacts}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderContactItem}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.listContent}
+                  ListEmptyComponent={
+                    <View style={styles.emptyList}>
+                      <Feather name="users" size={36} color={TOKENS.muted} />
+                      <Text style={styles.emptyListText}>No contacts found</Text>
+                    </View>
+                  }
+                />
+              )}
+            </View>
+          ) : (
+            <View style={[styles.tabContent, styles.newFormContainer]}>
+              <Text style={styles.formLabel}>Customer Name *</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. Pasan Pahasara"
+                value={newCustomerName}
+                onChangeText={setNewCustomerName}
+              />
+
+              <Text style={styles.formLabel}>Phone Number</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="e.g. 077 123 4567"
+                keyboardType="phone-pad"
+                value={newCustomerPhone}
+                onChangeText={setNewCustomerPhone}
+              />
+
+              <TouchableOpacity
+                style={styles.submitBtn}
+                activeOpacity={0.8}
+                onPress={handleAddManualCustomer}
+              >
+                <Text style={styles.submitBtnText}>Attach Customer</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={handleSelectWalkingCustomer}
+              >
+                <Text style={styles.cancelBtnText}>Or set as Walking Customer</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 };
