@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   Platform,
   Pressable,
@@ -15,10 +16,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Business, cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
+import { useUserPermissions } from "../../../hooks/useUserPermissions";
 
 export default function ManageBusinessesRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { canPerform } = useUserPermissions();
 
   const [businesses, setBusinesses] = useState<Business[]>(cartState.getBusinesses());
   const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
@@ -29,6 +32,14 @@ export default function ManageBusinessesRoute() {
   const [newCategory, setNewCategory] = useState("");
   const [newAddress, setNewAddress] = useState("");
   const [newPhone, setNewPhone] = useState("");
+
+  // Edit Modal states
+  const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -45,7 +56,66 @@ export default function ManageBusinessesRoute() {
     setTimeout(() => setToastMessage(null), 2000);
   };
 
+  const handleOpenEditModal = (biz: Business) => {
+    setEditingBusiness(biz);
+    setEditName(biz.name);
+    setEditCategory(biz.category);
+    setEditAddress(biz.address);
+    setEditPhone(biz.phone);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEditBusiness = async () => {
+    if (!editingBusiness) return;
+    if (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) {
+      triggerToast("All fields are required!");
+      return;
+    }
+    
+    const { updateBusinessDetails } = cartState as any;
+    if (updateBusinessDetails) {
+      await updateBusinessDetails(editingBusiness.id, editName.trim(), editCategory.trim(), editAddress.trim(), editPhone.trim());
+    }
+    setIsEditModalOpen(false);
+    setEditingBusiness(null);
+    triggerToast("Business details updated successfully! 🚀");
+  };
+
+  const handleConfirmDelete = (biz: Business) => {
+    if (businesses.length <= 1) {
+      Alert.alert(
+        "Action Restricted",
+        "You cannot delete the only business in the catalog. You must have at least one active store branch."
+      );
+      return;
+    }
+
+    const { deleteBusiness } = cartState as any;
+    if (!deleteBusiness) return;
+
+    Alert.alert(
+      "Delete Business Branch",
+      `Are you sure you want to permanently delete "${biz.name}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Branch",
+          style: "destructive",
+          onPress: async () => {
+            await deleteBusiness(biz.id);
+            triggerToast("Business branch deleted successfully! 🗑️");
+          },
+        },
+      ]
+    );
+  };
+
   const handleCreateBusiness = () => {
+    if (!canPerform("create", "settings")) {
+      triggerToast("Access Denied: Cashiers are not authorized to create branches.");
+      return;
+    }
+
     if (!newName.trim()) {
       triggerToast("Please enter business name!");
       return;
@@ -98,9 +168,7 @@ export default function ManageBusinessesRoute() {
         <Text style={styles.headerTitle}>Business Management</Text>
 
         {(() => {
-          const { useAuthStore } = require("../../../stores/useAuthStore");
-          const role = useAuthStore.getState().userRole || "admin";
-          if (role === "cashier") return null;
+          if (!canPerform("create", "settings")) return null;
 
           return (
             <TouchableOpacity
@@ -156,11 +224,39 @@ export default function ManageBusinessesRoute() {
                   <Text style={styles.bizSub}>📞 {biz.phone}</Text>
                 </View>
               </View>
-              {isActive ? (
-                <Feather name="check-circle" size={20} color={TOKENS.primary} />
-              ) : (
-                <Feather name="chevron-right" size={16} color={TOKENS.muted} />
-              )}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                {isActive && <Feather name="check-circle" size={20} color={TOKENS.primary} style={{ marginRight: 4 }} />}
+                
+                {canPerform("delete", "settings") && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#E8F0FE", alignItems: "center", justifyContent: "center" }}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditModal(biz);
+                      }}
+                    >
+                      <Feather name="edit-2" size={14} color={TOKENS.primary} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#FCE8E6", alignItems: "center", justifyContent: "center" }}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        handleConfirmDelete(biz);
+                      }}
+                    >
+                      <Feather name="trash-2" size={14} color={TOKENS.error} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {!canPerform("delete", "settings") && !isActive && (
+                  <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+                )}
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -245,6 +341,95 @@ export default function ManageBusinessesRoute() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal for editing a business */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isEditModalOpen}
+        onRequestClose={() => {
+          setIsEditModalOpen(false);
+          setEditingBusiness(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.dismissArea} onPress={() => {
+            setIsEditModalOpen(false);
+            setEditingBusiness(null);
+          }} />
+          <View style={styles.modalContent}>
+            {/* Modal Handle */}
+            <View style={styles.modalHandle} />
+
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Business Details</Text>
+              <TouchableOpacity onPress={() => {
+                setIsEditModalOpen(false);
+                setEditingBusiness(null);
+              }} style={styles.modalCloseBtn}>
+                <Feather name="x" size={20} color={TOKENS.dark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalScroll}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Business / Brand Name</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. Shopbook Retail Store"
+                  placeholderTextColor="#9CA3AF"
+                  value={editName}
+                  onChangeText={setEditName}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Business Category / Type</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. Electronics, Clothing, Groceries"
+                  placeholderTextColor="#9CA3AF"
+                  value={editCategory}
+                  onChangeText={setEditCategory}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Store Address</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. 142 Galle Road, Colombo 03"
+                  placeholderTextColor="#9CA3AF"
+                  value={editAddress}
+                  onChangeText={setEditAddress}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Phone Number</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. +94 11 234 5678"
+                  placeholderTextColor="#9CA3AF"
+                  value={editPhone}
+                  onChangeText={setEditPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.submitButton, (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
+                activeOpacity={0.8}
+                onPress={handleSaveEditBusiness}
+                disabled={!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()}
+              >
+                <Text style={styles.submitButtonText}>Update Business Details</Text>
+                <Feather name="check" size={16} color={TOKENS.card} />
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -276,6 +461,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: TOKENS.dark,
+    position: "absolute",
+    left: 60,
+    right: 60,
+    textAlign: "center",
   },
   createHeaderBtn: {
     width: 36,

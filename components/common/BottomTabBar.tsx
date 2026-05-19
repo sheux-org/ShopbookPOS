@@ -15,8 +15,8 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
-  const { useAuthStore } = require("../../stores/useAuthStore");
-  const userRole = useAuthStore((s: any) => s.userRole) || "admin";
+  const { useUserPermissions } = require("../../hooks/useUserPermissions");
+  const { canPerform } = useUserPermissions();
 
   const allTabs = [
     { id: "home", label: "Home", icon: "home" },
@@ -26,7 +26,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
   ];
 
   const tabs = allTabs.filter((tab) => {
-    if (tab.id === "stocks" && userRole === "cashier") {
+    if (tab.id === "stocks" && !canPerform("update", "products")) {
       return false;
     }
     return true;

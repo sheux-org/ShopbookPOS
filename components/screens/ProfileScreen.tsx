@@ -15,6 +15,7 @@ import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useSettingsStore } from "../../stores/useSettingsStore";
 import { syncDatabase } from "../../services/sync";
+import { useUserPermissions } from "../../hooks/useUserPermissions";
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -48,8 +49,7 @@ export const ProfileScreen: React.FC = () => {
     ? activeBusiness.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     : "SP";
 
-  const { useAuthStore } = require("../../stores/useAuthStore");
-  const userRole = useAuthStore((s: any) => s.userRole) || "admin";
+  const { canPerform, role: userRole } = useUserPermissions();
 
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
@@ -139,7 +139,7 @@ export const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
 
           {/* Option: Staff Management (Hidden for Manager & Cashier!) */}
-          {userRole === "admin" && (
+          {canPerform("create", "staff") && (
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
@@ -155,9 +155,9 @@ export const ProfileScreen: React.FC = () => {
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
           )}
-
+ 
           {/* Option: Payments Setup (Hidden for Manager & Cashier!) */}
-          {userRole === "admin" && (
+          {canPerform("create", "settings") && (
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
@@ -174,9 +174,9 @@ export const ProfileScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
-
-        {/* Option Group: Sync & Backup (Hidden for Manager & Cashier!) */}
-        {userRole === "admin" && (
+ 
+        {/* Option Group: Sync & Backup (Hidden for Cashier!) */}
+        {canPerform("read", "sync") && (
           <View style={styles.optionsGroup}>
             <Text style={styles.groupHeader}>Data Sync & Backup</Text>
 
@@ -240,7 +240,7 @@ export const ProfileScreen: React.FC = () => {
         )}
 
         {/* Payments & Subscriptions visual carousel plans (Hidden for Manager & Cashier!) */}
-        {userRole === "admin" && (
+        {canPerform("create", "settings") && (
           <View style={styles.optionsGroup}>
             <Text style={styles.groupHeader}>Premium Plans</Text>
             

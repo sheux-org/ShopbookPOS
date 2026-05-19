@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { CameraView } from "expo-camera";
 import { usePermission } from "../../hooks/usePermissionHandler";
+import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -79,6 +80,7 @@ export const StocksScreen: React.FC = () => {
   const [formStockIn, setFormStockIn] = useState("");
   const [formLowStock, setFormLowStock] = useState("");
   const { requestCameraAccess } = usePermission();
+  const { canPerform } = useUserPermissions();
 
   const [formQuickCode, setFormQuickCode] = useState("");
   const [formBarcode, setFormBarcode] = useState("");
@@ -111,6 +113,11 @@ export const StocksScreen: React.FC = () => {
   };
 
   const handleSaveProduct = () => {
+    if (!canPerform("create", "products")) {
+      Alert.alert("Access Denied", "Your profile role is not authorized to add new catalog items.");
+      return;
+    }
+
     if (!formName || !formSalesPrice || !formStockIn) {
       Alert.alert("Required Fields Missing", "Please enter product name, selling price, and initial stock quantity.");
       return;
@@ -218,215 +225,228 @@ export const StocksScreen: React.FC = () => {
         </TouchableOpacity>
 
         {/* ➕ ADD NEW PRODUCT FORM CARD (Sleek and beautiful border card) ➕ */}
-        <View style={styles.formCard}>
-          <Text style={styles.formTitle}>➕ Add Product to Catalog</Text>
-          <Text style={styles.formSubtitle}>Enter item specifications to dynamically update sales catalog list</Text>
-          
-          <View style={styles.formGrid}>
-            {/* Field: Name */}
-            <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Product Name *</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. Munchee Chocolate Puff"
-                placeholderTextColor="#9CA3AF"
-                value={formName}
-                onChangeText={setFormName}
-              />
-            </View>
-
-            {/* Field: Quick Code & Barcode Row */}
-            <View style={styles.fieldColumnsRow}>
-              <View style={styles.flexField}>
-                <Text style={styles.fieldLabel}>Quick Code</Text>
+        {/* ➕ ADD NEW PRODUCT FORM CARD (Sleek and beautiful border card) ➕ */}
+        {canPerform("create", "products") ? (
+          <View style={styles.formCard}>
+            <Text style={styles.formTitle}>➕ Add Product to Catalog</Text>
+            <Text style={styles.formSubtitle}>Enter item specifications to dynamically update sales catalog list</Text>
+            
+            <View style={styles.formGrid}>
+              {/* Field: Name */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Product Name *</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="e.g. QC-302"
+                  placeholder="e.g. Munchee Chocolate Puff"
                   placeholderTextColor="#9CA3AF"
-                  value={formQuickCode}
-                  onChangeText={setFormQuickCode}
+                  value={formName}
+                  onChangeText={setFormName}
                 />
               </View>
 
-              <View style={styles.flexField}>
-                <Text style={styles.fieldLabel}>Barcode</Text>
-                <View style={styles.barcodeInputContainer}>
+              {/* Field: Quick Code & Barcode Row */}
+              <View style={styles.fieldColumnsRow}>
+                <View style={styles.flexField}>
+                  <Text style={styles.fieldLabel}>Quick Code</Text>
                   <TextInput
-                    style={styles.barcodeInput}
-                    placeholder="Type or Scan 890..."
+                    style={styles.formInput}
+                    placeholder="e.g. QC-302"
                     placeholderTextColor="#9CA3AF"
-                    keyboardType="numeric"
-                    value={formBarcode}
-                    onChangeText={setFormBarcode}
+                    value={formQuickCode}
+                    onChangeText={setFormQuickCode}
                   />
-                  <TouchableOpacity
-                    style={styles.barcodeScanBtn}
-                    activeOpacity={0.8}
-                    onPress={triggerBarcodeScanner}
-                  >
-                    <Ionicons name="scan-outline" size={15} color={TOKENS.primary} />
-                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.flexField}>
+                  <Text style={styles.fieldLabel}>Barcode</Text>
+                  <View style={styles.barcodeInputContainer}>
+                    <TextInput
+                      style={styles.barcodeInput}
+                      placeholder="Type or Scan 890..."
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="numeric"
+                      value={formBarcode}
+                      onChangeText={setFormBarcode}
+                    />
+                    <TouchableOpacity
+                      style={styles.barcodeScanBtn}
+                      activeOpacity={0.8}
+                      onPress={triggerBarcodeScanner}
+                    >
+                      <Ionicons name="scan-outline" size={15} color={TOKENS.primary} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
 
-            {/* Field: Category Chips selector */}
-            <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Category</Text>
-              <View style={styles.chipsSelector}>
-                {CATEGORIES_LIST.map((cat) => {
-                  const isSelected = formCategory === cat;
-                  return (
-                    <TouchableOpacity
-                      key={cat}
-                      style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                      onPress={() => setFormCategory(cat)}
-                    >
-                      <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
-                        {cat.toUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Field: Unit Type Chips selector */}
-            <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Unit Type</Text>
-              <View style={styles.chipsSelector}>
-                {UNIT_TYPES.map((u) => {
-                  const isSelected = formUnitType === u;
-                  return (
-                    <TouchableOpacity
-                      key={u}
-                      style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                      onPress={() => setFormUnitType(u)}
-                    >
-                      <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
-                        {u}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Field: Cost & Selling Price Row */}
-            <View style={styles.fieldColumnsRow}>
-              <View style={styles.flexField}>
-                <Text style={styles.fieldLabel}>Cost Price (Rs.)</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 140"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                  value={formCostPrice}
-                  onChangeText={setFormCostPrice}
-                />
-              </View>
-
-              <View style={styles.flexField}>
-                <Text style={styles.fieldLabel}>Selling Price * (Rs.)</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 180"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                  value={formSalesPrice}
-                  onChangeText={setFormSalesPrice}
-                />
-              </View>
-            </View>
-
-            {/* Field: Initial Stock & Low Threshold Row */}
-            <View style={styles.fieldColumnsRow}>
-              <View style={styles.flexField}>
-                <Text style={styles.fieldLabel}>Stock Quantity *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 50"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                  value={formStockIn}
-                  onChangeText={setFormStockIn}
-                />
-              </View>
-
-              <View style={styles.flexField}>
-                <Text style={styles.fieldLabel}>Low Alert Level</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 5"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                  value={formLowStock}
-                  onChangeText={setFormLowStock}
-                />
-              </View>
-            </View>
-
-            {/* Field: Product Image Picker */}
-            <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Product Image / Icon *</Text>
-              <Text style={styles.fieldHelpText}>Select an image/emoji representing the product catalog icon</Text>
-              
-              <View style={styles.imagePickerContainer}>
-                {/* Current Active Preview */}
-                <View style={styles.imagePreviewBox}>
-                  <Text style={styles.imagePreviewText}>{formImage}</Text>
-                </View>
-                
-                {/* Horizontal Emojis selector list */}
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.imageOptionsScroll}
-                >
-                  {["🍎", "🥛", "🥤", "🍪", "🧼", "🍞", "🥚", "🌾", "🥣", "🧴", "🍫", "🥦", "🥩", "🧅", "🍌", "🥫", "🔋"].map((emoji) => {
-                    const isSelected = formImage === emoji;
+              {/* Field: Category Chips selector */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Category</Text>
+                <View style={styles.chipsSelector}>
+                  {CATEGORIES_LIST.map((cat) => {
+                    const isSelected = formCategory === cat;
                     return (
                       <TouchableOpacity
-                        key={emoji}
-                        style={[
-                          styles.imageOptionChip,
-                          isSelected && styles.imageOptionChipActive
-                        ]}
-                        onPress={() => setFormImage(emoji)}
+                        key={cat}
+                        style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
+                        onPress={() => setFormCategory(cat)}
                       >
-                        <Text style={styles.imageOptionText}>{emoji}</Text>
+                        <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
+                          {cat.toUpperCase()}
+                        </Text>
                       </TouchableOpacity>
                     );
                   })}
-                  
-                  {/* Simulated Gallery custom upload box */}
-                  <TouchableOpacity
-                    style={styles.imageOptionChipUpload}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      const mockCustoms = ["🍕", "🍔", "🍟", "🍩", "🍦", "🍗", "🍣", "🍇"];
-                      const picked = mockCustoms[Math.floor(Math.random() * mockCustoms.length)];
-                      setFormImage(picked);
-                      triggerToast("Simulated Photo uploaded successfully! 📸");
-                    }}
-                  >
-                    <Feather name="camera" size={14} color={TOKENS.primary} />
-                    <Text style={styles.imageUploadText}>Upload</Text>
-                  </TouchableOpacity>
-                </ScrollView>
+                </View>
               </View>
-            </View>
 
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={styles.submitBtn}
-              activeOpacity={0.8}
-              onPress={handleSaveProduct}
-            >
-              <Text style={styles.submitBtnText}>Save Product to Catalog</Text>
-            </TouchableOpacity>
+              {/* Field: Unit Type Chips selector */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Unit Type</Text>
+                <View style={styles.chipsSelector}>
+                  {UNIT_TYPES.map((u) => {
+                    const isSelected = formUnitType === u;
+                    return (
+                      <TouchableOpacity
+                        key={u}
+                        style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
+                        onPress={() => setFormUnitType(u)}
+                      >
+                        <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
+                          {u}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Field: Cost & Selling Price Row */}
+              <View style={styles.fieldColumnsRow}>
+                <View style={styles.flexField}>
+                  <Text style={styles.fieldLabel}>Cost Price (Rs.)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. 140"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    value={formCostPrice}
+                    onChangeText={setFormCostPrice}
+                  />
+                </View>
+
+                <View style={styles.flexField}>
+                  <Text style={styles.fieldLabel}>Selling Price * (Rs.)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. 180"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    value={formSalesPrice}
+                    onChangeText={setFormSalesPrice}
+                  />
+                </View>
+              </View>
+
+              {/* Field: Initial Stock & Low Threshold Row */}
+              <View style={styles.fieldColumnsRow}>
+                <View style={styles.flexField}>
+                  <Text style={styles.fieldLabel}>Stock Quantity *</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. 50"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    value={formStockIn}
+                    onChangeText={setFormStockIn}
+                  />
+                </View>
+
+                <View style={styles.flexField}>
+                  <Text style={styles.fieldLabel}>Low Alert Level</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. 5"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    value={formLowStock}
+                    onChangeText={setFormLowStock}
+                  />
+                </View>
+              </View>
+
+              {/* Field: Product Image Picker */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>Product Image / Icon *</Text>
+                <Text style={styles.fieldHelpText}>Select an image/emoji representing the product catalog icon</Text>
+                
+                <View style={styles.imagePickerContainer}>
+                  {/* Current Active Preview */}
+                  <View style={styles.imagePreviewBox}>
+                    <Text style={styles.imagePreviewText}>{formImage}</Text>
+                  </View>
+                  
+                  {/* Horizontal Emojis selector list */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.imageOptionsScroll}
+                  >
+                    {["🍎", "🥛", "🥤", "🍪", "🧼", "🍞", "🥚", "🌾", "🥣", "🧴", "🍫", "🥦", "🥩", "🧅", "🍌", "🥫", "🔋"].map((emoji) => {
+                      const isSelected = formImage === emoji;
+                      return (
+                        <TouchableOpacity
+                          key={emoji}
+                          style={[
+                            styles.imageOptionChip,
+                            isSelected && styles.imageOptionChipActive
+                          ]}
+                          onPress={() => setFormImage(emoji)}
+                        >
+                          <Text style={styles.imageOptionText}>{emoji}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                    
+                    {/* Simulated Gallery custom upload box */}
+                    <TouchableOpacity
+                      style={styles.imageOptionChipUpload}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        const mockCustoms = ["🍕", "🍔", "🍟", "🍩", "🍦", "🍗", "🍣", "🍇"];
+                        const picked = mockCustoms[Math.floor(Math.random() * mockCustoms.length)];
+                        setFormImage(picked);
+                        triggerToast("Simulated Photo uploaded successfully! 📸");
+                      }}
+                    >
+                      <Feather name="camera" size={14} color={TOKENS.primary} />
+                      <Text style={styles.imageUploadText}>Upload</Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
+              </View>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={styles.submitBtn}
+                activeOpacity={0.8}
+                onPress={handleSaveProduct}
+              >
+                <Text style={styles.submitBtnText}>Save Product to Catalog</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={[styles.formCard, { alignItems: "center", paddingVertical: 32, gap: 12 }]}>
+            <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FECACA" }}>
+              <Feather name="lock" size={24} color={TOKENS.error} />
+            </View>
+            <Text style={{ fontSize: 16, fontWeight: "bold", color: TOKENS.dark }}>Inventory Operations Restricted</Text>
+            <Text style={{ fontSize: 12, color: TOKENS.muted, textAlign: "center", lineHeight: 17, paddingHorizontal: 24 }}>
+              Cashier profiles are not authorized to create, update, or edit products in the catalog list.
+            </Text>
+          </View>
+        )}
 
         {/* Favorites section exactly like Image 3 */}
         <View style={styles.favoritesSection}>

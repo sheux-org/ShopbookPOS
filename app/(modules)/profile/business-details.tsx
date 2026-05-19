@@ -14,10 +14,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Business, cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
+import { useUserPermissions } from "../../../hooks/useUserPermissions";
 
 export default function BusinessDetailsRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { canPerform } = useUserPermissions();
 
   const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
   
@@ -48,6 +50,11 @@ export default function BusinessDetailsRoute() {
   };
 
   const handleSaveChanges = async () => {
+    if (!canPerform("update", "settings")) {
+      Alert.alert("Access Denied", "Your profile role is not authorized to edit business settings.");
+      return;
+    }
+
     if (!name.trim() || !category.trim() || !address.trim() || !phone.trim()) {
       Alert.alert("Required Fields", "All business profile fields must be filled out.");
       return;
@@ -90,9 +97,7 @@ export default function BusinessDetailsRoute() {
         <Text style={styles.headerTitle}>Store Details</Text>
         
         {(() => {
-          const { useAuthStore } = require("../../../stores/useAuthStore");
-          const role = useAuthStore.getState().userRole || "admin";
-          if (role === "cashier") return null;
+          if (!canPerform("update", "settings")) return null;
 
           return (
             <TouchableOpacity
@@ -285,6 +290,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: TOKENS.dark,
+    position: "absolute",
+    left: 60,
+    right: 60,
+    textAlign: "center",
   },
   scrollWrapper: {
     flex: 1,

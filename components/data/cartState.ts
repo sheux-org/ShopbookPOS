@@ -54,6 +54,12 @@ export const cartState = {
   updateActiveBusinessDetails: async (details: { name: string; category: string; address: string; phone: string }) => {
     await useBusinessStore.getState().updateActiveBusinessDetails(details);
   },
+  updateBusinessDetails: async (id: string, name: string, category: string, address: string, phone: string) => {
+    await useBusinessStore.getState().updateBusinessDetails(id, { name, category, address, phone });
+  },
+  deleteBusiness: async (id: string) => {
+    await useBusinessStore.getState().deleteBusiness(id);
+  },
 
   // Auth Actions mapped cleanly to useAuthStore store
   getIsLoggedIn: () => useAuthStore.getState().isLoggedIn,

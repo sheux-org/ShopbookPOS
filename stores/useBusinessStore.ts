@@ -17,6 +17,8 @@ interface BusinessState {
   loadBusinessesFromDb: () => Promise<void>;
   registerBusiness: (name: string, address: string, phone: string, category?: string) => Promise<void>;
   updateActiveBusinessDetails: (details: { name: string; category: string; address: string; phone: string }) => Promise<void>;
+  updateBusinessDetails: (id: string, details: { name: string; category: string; address: string; phone: string }) => Promise<void>;
+  deleteBusiness: (id: string) => Promise<void>;
 }
 
 // Clean onboarding placeholder when no business is registered yet
@@ -233,6 +235,54 @@ export const useBusinessStore = create<BusinessState>()(
           await get().loadBusinessesFromDb();
         } catch (err) {
           console.error('Failed to update business details in WatermelonDB:', err);
+        }
+      },
+      updateBusinessDetails: async (id, details) => {
+        try {
+          const db = require('../components/data/db').default;
+          const { Q } = require('@nozbe/watermelondb');
+          
+          const businesses = await db.get('businesses').query(Q.where('id', id)).fetch();
+          if (businesses.length > 0) {
+            const targetBiz = businesses[0];
+            await db.write(async () => {
+              await targetBiz.update((b: any) => {
+                b.name = details.name;
+                b.businessType = details.category;
+                b.address = details.address;
+                b.phoneNumber = details.phone;
+              });
+            });
+            console.log('Successfully updated business details in local WatermelonDB database');
+          }
+          await get().loadBusinessesFromDb();
+        } catch (err) {
+          console.error('Failed to update business details in WatermelonDB:', err);
+        }
+      },
+      deleteBusiness: async (id) => {
+        try {
+          const db = require('../components/data/db').default;
+          const { Q } = require('@nozbe/watermelondb');
+          
+          const businesses = await db.get('businesses').query(Q.where('id', id)).fetch();
+          if (businesses.length > 0) {
+            const targetBiz = businesses[0];
+            await db.write(async () => {
+              await targetBiz.destroyPermanently();
+            });
+            console.log('Successfully deleted business record');
+          }
+          await get().loadBusinessesFromDb();
+          
+          if (get().activeBusiness.id === id) {
+            const remaining = get().businesses;
+            if (remaining.length > 0) {
+              set({ activeBusiness: remaining[0] });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to delete business from WatermelonDB:', err);
         }
       },
     }),
