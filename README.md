@@ -123,7 +123,68 @@ pnpm lint
 
 ---
 
+## ☁️ Supabase Integration & Database Migrations
+
+This project uses **Supabase** for its offline-first backend synchronization. Local database records inside WatermelonDB are synced with a cloud Supabase database through RPC synchronization functions.
+
+### 1. Environment Configuration
+
+Create a `.env` file in the root directory and add your Supabase credentials:
+
+```env
+# Supabase Configuration
+EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-api-key
+```
+
+> [!IMPORTANT]
+> The environment variables **must** start with `EXPO_PUBLIC_` so they are accessible within the Expo client runtime.
+
+### 2. Database Schema Setup & Migrations
+
+The database tables, triggers, indexes, and synchronization RPC functions are defined in [supabase_migration.sql](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase_migration.sql). You can apply this schema to your Supabase project in three ways:
+
+#### Option A: Using the Supabase MCP Server (Recommended for Model/Agent usage)
+If you are using an agentic assistant with the Supabase MCP Server, the schema can be applied and verified using the following tools:
+1. **Apply Schema**: Run `mcp_supabase_execute_sql` passing the contents of the `supabase_migration.sql` file.
+2. **Verify Tables**: Run `mcp_supabase_list_tables` on the `public` schema to verify that `businesses`, `employees`, `products`, `orders`, `order_items`, and `deleted_records` have been successfully created.
+3. **Verify Connection**: Call the `pull_watermelondb_changes` RPC from an external runner to ensure the API permissions are correct.
+
+#### Option B: Using the Supabase Dashboard
+1. Open the [Supabase Dashboard](https://supabase.com/dashboard).
+2. Go to **SQL Editor** -> **New Query**.
+3. Copy and paste the entire contents of the `supabase_migration.sql` file.
+4. Click **Run**.
+
+#### Option C: Using the Supabase CLI
+If you prefer managing migrations locally:
+```bash
+# Link your local CLI to your Supabase project
+npx supabase link --project-ref <your-project-ref>
+
+# Apply the SQL schema to the remote database
+npx supabase db push
+```
+
+### 3. Row Level Security (RLS) Recommendations
+
+By default, the tables created in the public schema are accessible via the Supabase REST API using the client's `anon` key. 
+
+Since the WatermelonDB synchronization mechanism uses `SECURITY DEFINER` RPC functions (`pull_watermelondb_changes` and `push_watermelondb_changes`), they run with owner privileges and bypass RLS. Therefore, it is highly recommended to enable RLS on the tables to block unauthorized direct REST API access:
+
+```sql
+ALTER TABLE public.businesses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.deleted_records ENABLE ROW LEVEL SECURITY;
+```
+
+---
+
 ## 🎨 Premium UI Styles & Design System
+
 
 Theme variables are configured centrally inside `constants/tokens.ts` for uniform visual styling:
 * **Primary Blue (`#3B82F6`)**: Premium accents for core POS actions and tab navigations.
