@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Animated } from 'react-native';
 import { TOKENS } from '../../constants/tokens';
 import { getBusinessInitials } from '../../utils/business';
 
@@ -19,9 +19,12 @@ export const BusinessAvatar: React.FC<BusinessAvatarProps> = ({
   const radius = size / 2;
   const initials = getBusinessInitials(name);
   const [imageError, setImageError] = useState(false);
+  
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Reset error state if logoUri changes
+  // Reset state and opacity on logoUri change
   useEffect(() => {
+    fadeAnim.setValue(0);
     setImageError(false);
   }, [logoUri]);
 
@@ -33,23 +36,39 @@ export const BusinessAvatar: React.FC<BusinessAvatarProps> = ({
     );
   }
 
-  if (logoUri && logoUri.length > 2 && !imageError) {
-    return (
-      <View style={[styles.avatarCircle, { width: size, height: size, borderRadius: radius, overflow: 'hidden' }]}>
-        <Image 
-          source={{ uri: logoUri }} 
-          style={{ width: '100%', height: '100%' }} 
-          onError={() => setImageError(true)}
-        />
-      </View>
-    );
-  }
+  const showImage = logoUri && logoUri.length > 2 && !imageError;
+
+  const handleImageLoad = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  };
 
   return (
-    <View style={[styles.avatarCircle, { width: size, height: size, borderRadius: radius }]}>
+    <View style={[styles.avatarCircle, { width: size, height: size, borderRadius: radius, overflow: 'hidden' }]}>
+      {/* Background Initials (always rendered behind/underneath the image) */}
       <Text style={[styles.avatarInitials, { fontSize: size * 0.36 }]}>
         {logoUri && logoUri.length <= 2 ? logoUri : initials}
       </Text>
+
+      {/* Absolutely positioned Image on top that fades in smoothly upon loading */}
+      {showImage && (
+        <Animated.Image
+          source={{ uri: logoUri }}
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              width: '100%',
+              height: '100%',
+              opacity: fadeAnim,
+            },
+          ]}
+          onLoad={handleImageLoad}
+          onError={() => setImageError(true)}
+        />
+      )}
     </View>
   );
 };
