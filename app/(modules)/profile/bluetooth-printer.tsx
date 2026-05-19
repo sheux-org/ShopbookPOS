@@ -17,19 +17,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../../constants/tokens";
 import { useSettingsStore } from "../../../stores/useSettingsStore";
 import { useBusinessStore } from "../../../stores/useBusinessStore";
-import * as Print from 'expo-print';
+import { PermissionsAndroid } from "react-native";
+import RNBluetoothClassic, { BluetoothDevice } from 'react-native-bluetooth-classic';
+import Barcode from 'react-native-barcode-svg';
 
-interface ScannedDevice {
-  name: string;
-  address: string;
-  type: string;
-}
-
-const MOCK_DEVICES: ScannedDevice[] = [
-  { name: "MPT-II (Thermal Receipt)", address: "00:11:22:33:44:55", type: "ESC/POS (58mm)" },
-  { name: "POS-58 Bluetooth Printer", address: "AA:BB:CC:DD:EE:FF", type: "ESC/POS (58mm)" },
-  { name: "XP-80 Thermal Printer", address: "12:34:56:78:90:AB", type: "ESC/POS (80mm)" },
-];
 
 export default function BluetoothPrinterRoute() {
   const insets = useSafeAreaInsets();
@@ -40,7 +31,7 @@ export default function BluetoothPrinterRoute() {
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
 
   const [isScanning, setIsScanning] = useState(false);
-  const [devices, setDevices] = useState<ScannedDevice[]>([]);
+  const [devices, setDevices] = useState<BluetoothDevice[]>([]);
   const [connectingDevice, setConnectingDevice] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -52,27 +43,72 @@ export default function BluetoothPrinterRoute() {
     setTimeout(() => setToastMessage(null), 2000);
   };
 
-  const handleStartScan = () => {
+  const handleStartScan = async () => {
     setIsScanning(true);
     setDevices([]);
     
-    // Simulate Bluetooth discovery scan with delay
-    setTimeout(() => {
-      setDevices(MOCK_DEVICES);
-      setIsScanning(false);
+    try {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+        ]);
+
+        if (
+          granted['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.DENIED ||
+          granted['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.DENIED
+        ) {
+          triggerToast("Bluetooth permissions are required to scan.");
+          setIsScanning(false);
+          return;
+        }
+      }
+
+      // First try to get bonded (paired) devices, which are usually what printers are
+      const bonded = await RNBluetoothClassic.getBondedDevices();
+      
+      // Also start discovery for new devices
+      const discovered = await RNBluetoothClassic.startDiscovery();
+      
+      const allDevices = [...bonded];
+      for (const d of discovered) {
+        if (!allDevices.find((x) => x.address === d.address)) {
+          allDevices.push(d);
+        }
+      }
+      
+      setDevices(allDevices);
       triggerToast("Scan completed! Nearby devices found.");
-    }, 2500);
+    } catch (err) {
+      console.warn(err);
+      triggerToast("Failed to scan for Bluetooth devices.");
+    } finally {
+      setIsScanning(false);
+    }
   };
 
-  const handleConnectDevice = (device: ScannedDevice) => {
-    setConnectingDevice(device.name);
-    
-    // Simulate connection delay
-    setTimeout(() => {
-      setPairedPrinter(device.name);
+  const handleConnectDevice = async (device: BluetoothDevice) => {
+    setConnectingDevice(device.address);
+    try {
+      let isConnected = await device.isConnected();
+      if (!isConnected) {
+        const connectedDevice = await RNBluetoothClassic.connectToDevice(device.address);
+        isConnected = connectedDevice ? true : false;
+      }
+      
+      if (isConnected) {
+        setPairedPrinter({ name: device.name || "Unknown Printer", address: device.address });
+        triggerToast(`Connected to ${device.name}`);
+      } else {
+        triggerToast(`Failed to connect to ${device.name}`);
+      }
+    } catch (err) {
+      console.warn(err);
+      triggerToast("Connection error occurred.");
+    } finally {
       setConnectingDevice(null);
-      triggerToast(`Connected to ${device.name} ✅`);
-    }, 2000);
+    }
   };
 
   const handleDisconnect = () => {
@@ -103,86 +139,54 @@ export default function BluetoothPrinterRoute() {
   };
 
   const executePhysicalPrint = async () => {
-    // Generate beautiful receipt HTML containing store details
-    const logoHtml = activeBusiness.logoUri 
-      ? activeBusiness.logoUri.length <= 2 
-        ? `<div style="font-size: 38px; text-align: center; margin-bottom: 5px;">${activeBusiness.logoUri}</div>`
-        : `<div style="text-align: center; margin-bottom: 5px;"><img src="${activeBusiness.logoUri}" style="width: 60px; height: 60px; border-radius: 30px; object-fit: cover;" /></div>`
-      : `<div style="font-size: 38px; text-align: center; margin-bottom: 5px;">🏠</div>`;
-
-    const htmlContent = `
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <style>
-            body {
-              font-family: 'Courier New', Courier, monospace;
-              padding: 10px;
-              color: #000;
-              font-size: 14px;
-            }
-            .center { text-align: center; }
-            .header-title { font-size: 18px; font-weight: bold; margin: 4px 0; }
-            .separator { border-top: 1px dashed #000; margin: 10px 0; }
-            .flex-row { display: flex; justify-content: space-between; margin: 4px 0; }
-            .bold { font-weight: bold; }
-            .barcode { font-size: 11px; text-align: center; margin-top: 15px; color: #555; }
-          </style>
-        </head>
-        <body>
-          ${logoHtml}
-          <div class="center header-title">${activeBusiness.name}</div>
-          <div class="center">${activeBusiness.category}</div>
-          <div class="center">${activeBusiness.address}</div>
-          <div class="center">Tel: ${activeBusiness.phone}</div>
-          
-          <div class="separator"></div>
-          
-          <div class="center bold">*** TEST PRINT RECEIPT ***</div>
-          <div class="center">Printer: ${pairedPrinter}</div>
-          <div class="center">Connection Status: ONLINE</div>
-          
-          <div class="separator"></div>
-          
-          <div class="flex-row">
-            <span>1x Anchor Milk 1L</span>
-            <span>Rs. 680.00</span>
-          </div>
-          <div class="flex-row">
-            <span>2x Marie Biscuits</span>
-            <span>Rs. 360.00</span>
-          </div>
-          
-          <div class="separator"></div>
-          
-          <div class="flex-row bold">
-            <span>Subtotal</span>
-            <span>Rs. 1,040.00</span>
-          </div>
-          <div class="flex-row">
-            <span>Standard Tax (8%)</span>
-            <span>Rs. 83.20</span>
-          </div>
-          <div class="flex-row bold" style="font-size: 16px;">
-            <span>TOTAL</span>
-            <span>Rs. 1,123.20</span>
-          </div>
-          
-          <div class="separator"></div>
-          <div class="center">Thank you for visiting!</div>
-          <div class="center">Powered by Shopbook POS</div>
-          <div class="barcode">|||| | ||||| | ||| ||||||| 0192381</div>
-        </body>
-      </html>
-    `;
+    if (!pairedPrinter) {
+      Alert.alert("No Printer", "No printer connected.");
+      return;
+    }
 
     try {
-      await Print.printAsync({ html: htmlContent });
+      const device = await RNBluetoothClassic.connectToDevice(pairedPrinter.address);
+      
+      // Build ESC/POS payload
+      let receiptText = "";
+      receiptText += "\x1B\x40"; // Initialize
+      receiptText += "\x1B\x61\x01"; // Center align
+      receiptText += "\x1D\x21\x00"; // Normal size
+      
+      receiptText += `\n${activeBusiness.name}\n`;
+      receiptText += `${activeBusiness.address}\n`;
+      receiptText += `Tel: ${activeBusiness.phone}\n`;
+      
+      receiptText += "--------------------------------\n";
+      receiptText += "*** TEST PRINT RECEIPT ***\n";
+      receiptText += "--------------------------------\n";
+      
+      receiptText += "\x1B\x61\x00"; // Left align
+      receiptText += "1x Anchor Milk 1L       Rs. 680\n";
+      receiptText += "2x Marie Biscuits       Rs. 360\n";
+      
+      receiptText += "--------------------------------\n";
+      receiptText += "Subtotal               Rs. 1040\n";
+      receiptText += "Tax                      Rs. 83\n";
+      
+      receiptText += "\x1B\x61\x01"; // Center align
+      receiptText += "\x1D\x21\x11"; // Double size
+      receiptText += "TOTAL       Rs. 1123\n";
+      receiptText += "\x1D\x21\x00"; // Normal size
+      receiptText += "\x1B\x61\x01"; // Center align
+      receiptText += "--------------------------------\n";
+      
+      receiptText += "\nThank you for visiting!\n";
+      receiptText += "Powered by Shopbook POS\n\n\n\n";
+
+      // Write data to printer
+      await device.write(receiptText, 'utf-8');
+      
       setShowReceiptPreview(false);
-      triggerToast("Test page sent to printer! 🖨️");
+      triggerToast("Receipt sent to physical printer! 🖨️");
     } catch (error) {
-      console.error(error);
-      Alert.alert("Print Error", "Could not complete printing operation.");
+      console.warn("Print error", error);
+      Alert.alert("Print Error", "Could not communicate with the printer.");
     }
   };
 
@@ -218,7 +222,7 @@ export default function BluetoothPrinterRoute() {
               <Feather name="printer" size={28} color="#137333" />
             </View>
             <View style={styles.pairedInfo}>
-              <Text style={styles.pairedTitle}>{pairedPrinter}</Text>
+              <Text style={styles.pairedTitle}>{pairedPrinter.name}</Text>
               <View style={styles.onlineBadge}>
                 <View style={styles.onlineDot} />
                 <Text style={styles.onlineText}>Connected & Ready</Text>
@@ -298,8 +302,8 @@ export default function BluetoothPrinterRoute() {
                       <Ionicons name="bluetooth" size={18} color={TOKENS.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.deviceName}>{device.name}</Text>
-                      <Text style={styles.deviceDetails}>{device.type} · Mac: {device.address}</Text>
+                      <Text style={styles.deviceName}>{device.name || "Unknown Device"}</Text>
+                      <Text style={styles.deviceDetails}>{device.address}</Text>
                     </View>
                     {isConnecting ? (
                       <ActivityIndicator size="small" color={TOKENS.primary} />
@@ -358,7 +362,7 @@ export default function BluetoothPrinterRoute() {
               <Text style={[styles.receiptStoreSub, { fontWeight: "bold", textAlign: "center" }]}>
                 *** TEST PRINT RECEIPT ***
               </Text>
-              <Text style={styles.receiptStoreSub}>Printer: {pairedPrinter}</Text>
+              <Text style={styles.receiptStoreSub}>Printer: {pairedPrinter?.name}</Text>
               <Text style={styles.receiptStoreSub}>Status: ONLINE</Text>
               <Text style={styles.dashedSeparator}>- - - - - - - - - - - - - - - -</Text>
 
@@ -396,10 +400,9 @@ export default function BluetoothPrinterRoute() {
               </Text>
               <Text style={[styles.receiptStoreSub, { textAlign: "center" }]}>Powered by Shopbook POS</Text>
 
-              {/* Mock Barcode */}
               <View style={styles.barcodeBox}>
-                <View style={styles.barcodeLines} />
-                <Text style={styles.barcodeText}>|||| | ||||| | ||| ||||||| 0192381</Text>
+                <Barcode value="0192381" format="CODE128" singleBarWidth={1.8} height={40} maxWidth={200} />
+                <Text style={styles.barcodeText}>0192381</Text>
               </View>
             </ScrollView>
 
@@ -409,7 +412,7 @@ export default function BluetoothPrinterRoute() {
               onPress={executePhysicalPrint}
             >
               <Feather name="printer" size={16} color={TOKENS.card} />
-              <Text style={styles.printActionBtnText}>Trigger Hardware Print (expo-print)</Text>
+              <Text style={styles.printActionBtnText}>Trigger Hardware Print</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -809,12 +812,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     gap: 4,
   },
-  barcodeLines: {
-    width: 140,
-    height: 32,
-    backgroundColor: "#000",
-    opacity: 0.85,
-  },
+
   barcodeText: {
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
     fontSize: 10,

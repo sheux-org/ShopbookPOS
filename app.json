@@ -16,6 +16,14 @@
     },
     "android": {
       "package": "com.pasanpahasara.shopbookpos",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -41,6 +49,16 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "with-rn-bluetooth-classic",
+        {
+          "peripheralUsageDescription": "Shopbook POS uses Bluetooth to connect with your thermal printer.",
+          "alwaysUsageDescription": "Shopbook POS requires Bluetooth to print invoices in the background.",
+          "protocols": [
+            "com.shopbook.pos"
+          ]
         }
       ]
     ],
