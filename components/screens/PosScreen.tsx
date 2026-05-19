@@ -495,7 +495,10 @@ export const PosScreen: React.FC = () => {
               <Feather name="shopping-bag" size={16} color={TOKENS.card} style={styles.bagIcon} />
               <Text style={styles.summaryLabelActive}>Proceed to Checkout</Text>
             </View>
-            <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()} ➡️</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()}</Text>
+              <Feather name="arrow-right" size={16} color={TOKENS.card} />
+            </View>
           </TouchableOpacity>
         )}
       </View>

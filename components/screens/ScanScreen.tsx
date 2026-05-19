@@ -251,8 +251,13 @@ export const ScanScreen: React.FC = () => {
               Proceed to Checkout
             </Text>
           </View>
-          {invoiceItems.length > 0 && (
-            <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()} ➡️</Text>
+          {invoiceItems.length > 0 ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()}</Text>
+              <Feather name="arrow-right" size={16} color={TOKENS.card} />
+            </View>
+          ) : (
+            <Feather name="arrow-right" size={16} color={TOKENS.muted} />
           )}
         </TouchableOpacity>
       </View>
@@ -508,15 +513,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: TOKENS.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: 20,
+    height: 48,
+    borderRadius: 24,
     width: "100%",
-    marginTop: 4,
+    marginTop: 10,
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
   summaryBarButtonDisabled: {
-    backgroundColor: "#E5E7EB",
-    borderColor: "#E5E7EB",
+    backgroundColor: "#F3F4F6",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   summaryBarLeft: {
     flexDirection: "row",
