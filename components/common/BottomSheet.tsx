@@ -8,7 +8,6 @@ import {
   Animated,
   Dimensions,
   TouchableWithoutFeedback,
-  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -31,7 +30,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [showModal, setShowModal] = useState(visible);
-  
+
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const sheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
@@ -97,36 +96,46 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       animationType="none"
       onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
-        {/* Backdrop fades in/out independently */}
+      <View style={StyleSheet.absoluteFill}>
+        {/* Backdrop fades in/out independently and stays 100% static */}
         <TouchableWithoutFeedback onPress={handleClose}>
-          <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor: "#000",
+                opacity: backdropOpacity,
+              },
+            ]}
+          />
         </TouchableWithoutFeedback>
 
-        {/* Sheet slides up/down independently */}
-        <Animated.View
-          style={[
-            styles.sheetContainer,
-            {
-              transform: [{ translateY: sheetTranslateY }],
-              paddingBottom: Math.max(insets.bottom, 16),
-            },
-          ]}
-        >
-          {/* Visual drag handle indictator */}
-          <View style={styles.dragHandle} />
+        {/* Sheet container sits on top and slides up/down */}
+        <View style={styles.overlay} pointerEvents="box-none">
+          <Animated.View
+            style={[
+              styles.sheetContainer,
+              {
+                transform: [{ translateY: sheetTranslateY }],
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
+            ]}
+          >
+            {/* Visual drag handle indictator */}
+            <View style={styles.dragHandle} />
 
-          {title ? (
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{title}</Text>
-              <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-          ) : null}
+            {title ? (
+              <View style={styles.sheetHeader}>
+                <Text style={styles.sheetTitle}>{title}</Text>
+                <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
+                  <Feather name="x" size={20} color={TOKENS.dark} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
-          <View style={styles.sheetBody}>{children}</View>
-        </Animated.View>
+            <View style={styles.sheetBody}>{children}</View>
+          </Animated.View>
+        </View>
       </View>
     </Modal>
   );
