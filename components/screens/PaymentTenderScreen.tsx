@@ -172,7 +172,7 @@ export const PaymentTenderScreen: React.FC = () => {
           
           <div class="separator"></div>
           <div class="center">Thank you for visiting!</div>
-          <div class="center">Powered by Shopbook POS</div>
+          <div class="center">Powered by Mini POS</div>
           <div class="barcode">|||| | ||||| | ||| ||||||| 0192381</div>
         </body>
       </html>

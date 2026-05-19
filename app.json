@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "shopbook-pos",
+    "name": "Mini POS",
     "slug": "shopbook-pos",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -54,8 +54,8 @@
       [
         "with-rn-bluetooth-classic",
         {
-          "peripheralUsageDescription": "Shopbook POS uses Bluetooth to connect with your thermal printer.",
-          "alwaysUsageDescription": "Shopbook POS requires Bluetooth to print invoices in the background.",
+          "peripheralUsageDescription": "Mini POS uses Bluetooth to connect with your thermal printer.",
+          "alwaysUsageDescription": "Mini POS requires Bluetooth to print invoices in the background.",
           "protocols": [
             "com.shopbook.pos"
           ]

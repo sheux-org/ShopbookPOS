@@ -97,7 +97,7 @@ export default function NumberInputRoute() {
         setIsLoading(false);
         if (data.status === "success") {
           setOtpError(false);
-          triggerToast("Welcome back to Shopbook!");
+          triggerToast("Welcome back to Mini POS!");
           router.replace("/(tabs)");
         } else {
           triggerToast("Number not registered. Let's create your shop profile!");
@@ -174,7 +174,7 @@ export default function NumberInputRoute() {
           <View style={styles.logoSquare}>
             <Feather name="book-open" size={32} color={TOKENS.card} />
           </View>
-          <Text style={styles.appName}>Shopbook POS</Text>
+          <Text style={styles.appName}>Mini POS</Text>
           <Text style={styles.appTagline}>Sleek & Modular Retail Terminal</Text>
         </View>
 
