@@ -1,5 +1,71 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cartState } from "../components/data/cartState";
+
+export interface DBOrder {
+  id: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  status: string;
+  createdAt: number;
+}
+
+export interface DBOrderItem {
+  id: string;
+  orderId: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+export function useGetOrders() {
+  const activeBiz = cartState.getActiveBusiness();
+  return useQuery<DBOrder[]>({
+    queryKey: ["orders", activeBiz.id],
+    queryFn: async () => {
+      const db = require("../components/data/db").default;
+      const { Q } = require("@nozbe/watermelondb");
+      
+      const query = db.get("orders").query(
+        Q.where("business_id", activeBiz.id),
+        Q.sortBy("created_at", Q.desc)
+      );
+      
+      const dbOrders = await query.fetch();
+      return dbOrders.map((o: any) => ({
+        id: o.id,
+        invoiceNumber: o.invoiceNumber,
+        totalAmount: o.totalAmount,
+        status: o.status,
+        createdAt: o.createdAt ? new Date(o.createdAt).getTime() : Date.now(),
+      }));
+    },
+  });
+}
+
+export function useGetOrderItems(orderId?: string) {
+  return useQuery<DBOrderItem[]>({
+    queryKey: ["order_items", orderId],
+    enabled: !!orderId,
+    queryFn: async () => {
+      if (!orderId) return [];
+      const db = require("../components/data/db").default;
+      const { Q } = require("@nozbe/watermelondb");
+      
+      const query = db.get("order_items").query(
+        Q.where("order_id", orderId)
+      );
+      
+      const dbOrderItems = await query.fetch();
+      return dbOrderItems.map((oi: any) => ({
+        id: oi.id,
+        orderId: orderId,
+        name: oi.name,
+        quantity: oi.quantity,
+        price: oi.price,
+      }));
+    },
+  });
+}
 
 export function useCreateOrder() {
   const queryClient = useQueryClient();
@@ -63,8 +129,9 @@ export function useCreateOrder() {
       });
     },
     onSuccess: () => {
-      // Invalidate products query cache so inventory stock changes are instantly visible!
+      // Invalidate products and orders query cache so changes are instantly visible!
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
 }

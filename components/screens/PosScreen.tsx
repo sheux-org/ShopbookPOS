@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
+import { useUserPermissions } from "../../hooks/useUserPermissions";
 
 interface InvoiceItem {
   id: string;
@@ -33,6 +34,7 @@ export const PosScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestCameraAccess, hasCameraAccess } = usePermission();
+  const { role } = useUserPermissions();
 
   const [activeMode, setActiveMode] = useState<"scan" | "quick_code">("scan");
   
@@ -216,6 +218,16 @@ export const PosScreen: React.FC = () => {
         </View>
 
         <View style={styles.headerRightActions}>
+          {role === "admin" && (
+            <TouchableOpacity
+              style={styles.headerHistoryBtn}
+              activeOpacity={0.7}
+              onPress={() => router.push("/pos/history")}
+            >
+              <Feather name="list" size={18} color={TOKENS.primary} />
+            </TouchableOpacity>
+          )}
+
           {invoiceItems.length > 0 && (
             <TouchableOpacity
               style={styles.headerCartBtn}
@@ -1015,6 +1027,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  headerHistoryBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerCartBtn: {
     width: 38,
