@@ -134,6 +134,17 @@ export function useCreateOrder() {
       // Invalidate products and orders query cache so changes are instantly visible!
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["insights"] });
+
+      // Trigger automatic background sync to Supabase without blocking the UX
+      const { syncDatabase } = require("../services/sync");
+      syncDatabase().then((synced: boolean) => {
+        if (synced) {
+          console.log("Background sync successfully pushed new order and stock changes to Supabase.");
+        }
+      }).catch((err: any) => {
+        console.error("Background auto-sync failed:", err);
+      });
     },
   });
 }

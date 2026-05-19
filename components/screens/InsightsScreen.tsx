@@ -17,14 +17,8 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Q } from "@nozbe/watermelondb";
-
-interface ProductStat {
-  name: string;
-  quantity: number;
-  revenue: number;
-}
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useBusinessInsights } from "../../hooks/useInsights";
 
 export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -69,176 +63,34 @@ export const InsightsScreen: React.FC = () => {
     return cartState.subscribe(updateBiz);
   }, []);
 
-  // Real-time WatermelonDB statistics fetch
-  const { data: stats, isLoading, refetch } = useQuery({
-    queryKey: ["insights", activeBiz.id, period, resolvedStartDate, resolvedEndDate],
-    queryFn: async () => {
-      const db = require("../data/db").default;
+  // Real-time WatermelonDB statistics fetch using custom hook
+  const { data: stats, isLoading, refetch } = useBusinessInsights(
+    activeBiz.id,
+    period,
+    resolvedStartDate,
+    resolvedEndDate
+  );
 
-      // 1. Fetch active business SQLite record
-      const businesses = await db.get("businesses").query(Q.where("id", activeBiz.id)).fetch();
-      const dbBiz = businesses[0] || (await db.get("businesses").query().fetch())[0];
-      if (!dbBiz) {
-        return {
-          grossRevenue: 0,
-          ordersCount: 0,
-          avgTicket: 0,
-          lowStockCount: 0,
-          lowStockItems: [],
-          bestSellers: [],
-          slowMovers: [],
-          chartData: [],
-          resolvedOrders: [],
-          productsList: [],
-        };
+  // Sync state
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncDatabase = async () => {
+    setIsSyncing(true);
+    try {
+      const { syncDatabase } = require("../../services/sync");
+      const result = await syncDatabase();
+      if (result) {
+        queryClient.invalidateQueries({ queryKey: ["insights"] });
+        Alert.alert("Sync Success", "Database successfully synchronized with Cloud Storage!");
+      } else {
+        Alert.alert("Sync Skipped", "Backup/sync is disabled or environment is not configured. Please enable it in Settings.");
       }
-
-      // 2. Fetch completed orders for active business
-      const orders = await db.get("orders").query(
-        Q.where("business_id", dbBiz.id),
-        Q.where("status", "paid")
-      ).fetch();
-
-      // 3. Filter orders in JS based on active period
-      const filteredOrders = orders.filter((order: any) => {
-        const orderDate = new Date(order.createdAt);
-        const today = new Date();
-
-        if (period === "daily") {
-          return orderDate.toDateString() === today.toDateString();
-        } else if (period === "monthly") {
-          return (
-            orderDate.getMonth() === today.getMonth() &&
-            orderDate.getFullYear() === today.getFullYear()
-          );
-        } else if (period === "yearly") {
-          return orderDate.getFullYear() === today.getFullYear();
-        } else if (period === "custom" && resolvedStartDate && resolvedEndDate) {
-          return orderDate >= resolvedStartDate && orderDate <= resolvedEndDate;
-        }
-        return true;
-      });
-
-      // 4. Fetch low stock alert products
-      const lowStockProducts = await db.get("products").query(
-        Q.where("business_id", dbBiz.id),
-        Q.where("stock_count", Q.lte(5))
-      ).fetch();
-
-      const lowStockItems = lowStockProducts.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        sku: p.sku || "N/A",
-        category: p.category || "General",
-        stockCount: p.stockCount,
-        lowStockAlert: p.lowStockAlert || 5,
-        icon: p.icon || "package",
-      }));
-
-      // 5. Gather order items details
-      let totalRevenue = 0;
-      const productSalesMap: Record<string, { quantity: number; revenue: number }> = {};
-      const itemsByOrderMap: Record<string, any[]> = {};
-
-      if (filteredOrders.length > 0) {
-        const orderIds = filteredOrders.map((o: any) => o.id);
-        const orderItems = await db.get("order_items").query(
-          Q.where("order_id", Q.oneOf(orderIds))
-        ).fetch();
-
-        for (const order of filteredOrders) {
-          totalRevenue += order.totalAmount;
-        }
-
-        for (const item of orderItems) {
-          const qty = item.quantity || 0;
-          const price = item.price || 0;
-          const cost = qty * price;
-
-          if (!productSalesMap[item.name]) {
-            productSalesMap[item.name] = { quantity: 0, revenue: 0 };
-          }
-          productSalesMap[item.name].quantity += qty;
-          productSalesMap[item.name].revenue += cost;
-
-          // Map items per order for history drawer
-          const orderId = item._raw.order_id;
-          if (!itemsByOrderMap[orderId]) {
-            itemsByOrderMap[orderId] = [];
-          }
-          itemsByOrderMap[orderId].push({
-            id: item.id,
-            name: item.name,
-            quantity: qty,
-            price: price,
-          });
-        }
-      }
-
-      // 5b. Map resolved orders for history display
-      const resolvedOrders = filteredOrders.map((order: any) => ({
-        id: order.id,
-        invoiceNumber: order.invoiceNumber,
-        totalAmount: order.totalAmount,
-        createdAt: order.createdAt,
-        items: itemsByOrderMap[order.id] || [],
-      }));
-
-      // 5c. Fetch all products of this business for refill
-      const allProducts = await db.get("products").query(
-        Q.where("business_id", dbBiz.id)
-      ).fetch();
-
-      const productsList = allProducts.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        sku: p.sku || "N/A",
-        category: p.category || "General",
-        stockCount: p.stockCount,
-        price: p.price,
-        icon: p.icon || "📦",
-      }));
-
-      // 6. Format product lists
-      const salesList: ProductStat[] = Object.keys(productSalesMap).map((name) => ({
-        name,
-        quantity: productSalesMap[name].quantity,
-        revenue: productSalesMap[name].revenue,
-      }));
-
-      const bestSellers = [...salesList].sort((a, b) => b.quantity - a.quantity).slice(0, 5);
-      const slowMovers = [...salesList].sort((a, b) => a.quantity - b.quantity).slice(0, 5);
-
-      // Generate colorful flexible bar graph values by category/day of week
-      const daySales: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-      for (const order of filteredOrders) {
-        const dStr = days[new Date(order.createdAt).getDay()];
-        if (daySales[dStr] !== undefined) {
-          daySales[dStr] += order.totalAmount;
-        }
-      }
-
-      const chartData = Object.keys(daySales).map((day) => ({
-        label: day,
-        value: daySales[day],
-      }));
-
-      return {
-        grossRevenue: totalRevenue,
-        ordersCount: filteredOrders.length,
-        avgTicket: filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0,
-        lowStockCount: lowStockProducts.length,
-        lowStockItems,
-        bestSellers,
-        slowMovers,
-        chartData,
-        resolvedOrders,
-        productsList,
-      };
-    },
-  });
+    } catch (err: any) {
+      Alert.alert("Sync Failed", err.message || "Failed to synchronize database.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Refill Inventory Stocks Mutation
   const refillMutation = useMutation({
@@ -261,67 +113,6 @@ export const InsightsScreen: React.FC = () => {
     },
     onError: (err: any) => {
       Alert.alert("Refill Failed", err.message);
-    },
-  });
-
-  // Seeder Mutation for loading dummy testing database records
-  const seederMutation = useMutation({
-    mutationFn: async () => {
-      const db = require("../data/db").default;
-      const businesses = await db.get("businesses").query(Q.where("id", activeBiz.id)).fetch();
-      const dbBiz = businesses[0] || (await db.get("businesses").query().fetch())[0];
-      if (!dbBiz) {
-        throw new Error("Add a business profile first before seeding database sales!");
-      }
-
-      const productNames = ["🥛 Fresh Milk", "🥤 Apple Juice", "🍪 Chocolate Cookies", "🛒 Premium Rice", "🏠 Detergent Soap"];
-      const prices = [320, 240, 180, 580, 420];
-
-      await db.write(async () => {
-        // Create 15 orders spread over the current month
-        for (let i = 0; i < 15; i++) {
-          const daysAgo = Math.floor(Math.random() * 20);
-          const orderDate = new Date();
-          orderDate.setDate(orderDate.getDate() - daysAgo);
-
-          const invoiceNum = `INV-${Math.floor(100000 + Math.random() * 900000)} (Demo)`;
-          const itemCount = Math.floor(Math.random() * 3) + 1;
-          let total = 0;
-
-          const newOrder = await db.get("orders").create((ord: any) => {
-            ord.business.set(dbBiz);
-            ord.invoiceNumber = invoiceNum;
-            ord.status = "paid";
-            ord.totalAmount = 0; // Temp placeholder
-            ord._raw.created_at = orderDate.getTime();
-          });
-
-          for (let j = 0; j < itemCount; j++) {
-            const pIdx = Math.floor(Math.random() * productNames.length);
-            const name = productNames[pIdx];
-            const price = prices[pIdx];
-            const qty = Math.floor(Math.random() * 4) + 1;
-            total += price * qty;
-
-            await db.get("order_items").create((item: any) => {
-              item.order.set(newOrder);
-              item.name = name;
-              item.quantity = qty;
-              item.price = price;
-              item._raw.created_at = orderDate.getTime();
-            });
-          }
-
-          // Update total sales revenue on the parent order
-          await newOrder.update((ord: any) => {
-            ord.totalAmount = total;
-          });
-        }
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["insights"] });
-      Alert.alert("Demo Seeding Completed", "15 mock invoices successfully generated inside SQLite! Charts and reports are now active.");
     },
   });
 
@@ -405,11 +196,18 @@ export const InsightsScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.headerTextBtn}
             activeOpacity={0.7}
-            onPress={() => refetch()}
+            onPress={handleSyncDatabase}
+            disabled={isSyncing}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Feather name="refresh-cw" size={12} color={TOKENS.muted} />
-              <Text style={styles.headerTextBtnLabel}>Sync</Text>
+              {isSyncing ? (
+                <ActivityIndicator size="small" color={TOKENS.primary} />
+              ) : (
+                <Feather name="refresh-cw" size={12} color={TOKENS.muted} />
+              )}
+              <Text style={styles.headerTextBtnLabel}>
+                {isSyncing ? "Syncing..." : "Sync"}
+              </Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -525,17 +323,23 @@ export const InsightsScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* Seeder Button if sales count is zero */}
+            {/* Sync database helper card if sales count is zero */}
             {stats?.ordersCount === 0 && (
               <View style={styles.seederContainer}>
-                <Feather name="database" size={24} color={TOKENS.muted} />
+                <Feather name="refresh-cw" size={24} color={TOKENS.muted} />
                 <Text style={styles.seederText}>No sales invoices recorded for this active branch yet.</Text>
                 <TouchableOpacity
                   style={styles.seederBtn}
                   activeOpacity={0.8}
-                  onPress={() => seederMutation.mutate()}
+                  onPress={handleSyncDatabase}
+                  disabled={isSyncing}
                 >
-                  <Text style={styles.seederBtnText}>Seed 15 Demo Sales Invoices</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    {isSyncing && <ActivityIndicator size="small" color="#fff" />}
+                    <Text style={styles.seederBtnText}>
+                      {isSyncing ? "Syncing..." : "Sync Database Now"}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             )}
@@ -609,6 +413,28 @@ export const InsightsScreen: React.FC = () => {
                 </View>
               </View>
             )}
+
+            {/* Manual Sync Database Button at the bottom */}
+            <View style={styles.syncDatabaseSection}>
+              <TouchableOpacity
+                style={styles.syncDatabaseBtn}
+                activeOpacity={0.8}
+                onPress={handleSyncDatabase}
+                disabled={isSyncing}
+              >
+                {isSyncing ? (
+                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                ) : (
+                  <Feather name="refresh-cw" size={16} color="#fff" style={{ marginRight: 8 }} />
+                )}
+                <Text style={styles.syncDatabaseBtnText}>
+                  {isSyncing ? "Syncing Database..." : "Sync Database Now"}
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.syncDatabaseHelpText}>
+                Pull latest transaction reports and product inventory directly from your remote Cloud Storage.
+              </Text>
+            </View>
           </>
         )}
       </ScrollView>
@@ -1198,6 +1024,33 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 13,
     fontWeight: "bold",
+  },
+  syncDatabaseSection: {
+    marginTop: 16,
+    gap: 8,
+    alignItems: "center",
+  },
+  syncDatabaseBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: TOKENS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    width: "100%",
+  },
+  syncDatabaseBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  syncDatabaseHelpText: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    textAlign: "center",
+    lineHeight: 15,
+    paddingHorizontal: 24,
   },
   statsSection: {
     gap: 12,
