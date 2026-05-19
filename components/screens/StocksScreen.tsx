@@ -462,7 +462,15 @@ export const StocksScreen: React.FC = () => {
 
           <View style={styles.favGrid}>
             {favoriteProducts.length === 0 ? (
-              <Text style={{ color: TOKENS.muted, fontSize: 13, fontStyle: "italic", padding: 10 }}>No favorites added yet. Tap the heart on products in home catalog!</Text>
+              <View style={styles.emptyStateCard}>
+                <View style={[styles.emptyIconContainer, { backgroundColor: "#FFF1F2" }]}>
+                  <Ionicons name="heart-outline" size={20} color="#F43F5E" />
+                </View>
+                <Text style={styles.emptyStateTitle}>No Favorites Added</Text>
+                <Text style={styles.emptyStateSubtitle}>
+                  Tap the heart icon on products in the home catalog to access them quickly here.
+                </Text>
+              </View>
             ) : (
               favoriteProducts.map((item) => (
                 <TouchableOpacity
@@ -491,7 +499,15 @@ export const StocksScreen: React.FC = () => {
 
           <View style={styles.recentsList}>
             {recentProducts.length === 0 ? (
-              <Text style={{ color: TOKENS.muted, fontSize: 13, fontStyle: "italic", padding: 10 }}>No recently added items. Save a product to populate list!</Text>
+              <View style={styles.emptyStateCard}>
+                <View style={[styles.emptyIconContainer, { backgroundColor: TOKENS.lightBlue }]}>
+                  <Feather name="clock" size={20} color={TOKENS.primary} />
+                </View>
+                <Text style={styles.emptyStateTitle}>No Recent Items</Text>
+                <Text style={styles.emptyStateSubtitle}>
+                  Products you add or update in the catalog will appear here for fast lookup.
+                </Text>
+              </View>
             ) : (
               recentProducts.map((item) => (
                 <View key={item.id} style={styles.recentRow}>
@@ -1139,5 +1155,39 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
     fontSize: 14,
     fontWeight: "bold",
+  },
+  emptyStateCard: {
+    width: "100%",
+    backgroundColor: TOKENS.card,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: TOKENS.border,
+    borderStyle: "dashed",
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  emptyStateTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    textAlign: "center",
+  },
+  emptyStateSubtitle: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    textAlign: "center",
+    marginTop: 4,
+    lineHeight: 16,
+    paddingHorizontal: 12,
   },
 });

@@ -177,8 +177,12 @@ export const SearchScreen: React.FC = () => {
                 {item.name}
               </Text>
               <View style={styles.skuStockRow}>
-                <Text style={styles.skuText}>SKU 23400{item.id}</Text>
-                <Text style={styles.dividerDot}>·</Text>
+                {item.quickCode ? (
+                  <>
+                    <Text style={styles.skuText}>QC: {item.quickCode}</Text>
+                    <Text style={styles.dividerDot}>·</Text>
+                  </>
+                ) : null}
                 {item.stockType === "low" ? (
                   <Text style={styles.stockLowText}>{item.stockText}</Text>
                 ) : item.stockType === "out" ? (

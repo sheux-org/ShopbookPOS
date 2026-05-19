@@ -34,7 +34,7 @@ export const PosScreen: React.FC = () => {
   const router = useRouter();
   const { requestCameraAccess, hasCameraAccess } = usePermission();
 
-  const [activeMode, setActiveMode] = useState<"search" | "scan" | "quick_code">("search");
+  const [activeMode, setActiveMode] = useState<"scan" | "quick_code">("scan");
   
   // Sync state with shared cartState store
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
@@ -65,11 +65,8 @@ export const PosScreen: React.FC = () => {
   const [quickCode, setQuickCode] = useState("");
   const [cursorVisible, setCursorVisible] = useState(true);
 
-  // Search query for search mode
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Real search products fetched dynamically from WatermelonDB via React Query
-  const { data: searchProducts = [] } = useProducts(undefined, searchQuery || undefined);
+  // Real products fetched dynamically from WatermelonDB via React Query for barcode/quick-code matching
+  const { data: searchProducts = [] } = useProducts();
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -161,10 +158,7 @@ export const PosScreen: React.FC = () => {
     }
   }, [quickCode, searchProducts]);
 
-  // Search filtered products
-  const filteredSearchProducts = useMemo(() => {
-    return searchQuery ? searchProducts : searchProducts.slice(0, 4);
-  }, [searchQuery, searchProducts]);
+
 
   const handleTabPress = (tabId: string) => {
     if (tabId === "home") {
@@ -487,47 +481,7 @@ export const PosScreen: React.FC = () => {
              </View>
           )}
 
-          {activeMode === "search" && (
-            <View style={styles.searchWrapper}>
-              {/* Search text input */}
-              <View style={styles.searchRow}>
-                <Feather name="search" size={16} color={TOKENS.muted} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search products by name..."
-                  placeholderTextColor="#9CA3AF"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  clearButtonMode="while-editing"
-                />
-              </View>
 
-              <Text style={styles.searchResultLabel}>TAP PRODUCT TO ADD</Text>
-
-              {/* Mini Grid / List of matches */}
-              <ScrollView
-                style={styles.searchResultsContainer}
-                contentContainerStyle={styles.searchResultsGrid}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                {filteredSearchProducts.map((prod) => (
-                  <TouchableOpacity
-                    key={prod.id}
-                    style={styles.searchResultCard}
-                    activeOpacity={0.7}
-                    onPress={() => addItemToInvoice(prod.name, prod.price, prod.icon)}
-                  >
-                    <Text style={styles.searchProdIcon}>{prod.icon}</Text>
-                    <Text style={styles.searchProdName} numberOfLines={1}>
-                      {prod.name}
-                    </Text>
-                    <Text style={styles.searchProdPrice}>Rs. {prod.price}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
         </View>
 
         {/* Proceed to Checkout button placed perfectly below inputs */}
