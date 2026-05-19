@@ -9,6 +9,7 @@ const PLACEHOLDER_BUSINESS: Business = {
   category: "General Retail",
   address: "Complete onboarding setup",
   phone: "",
+  logoUri: "",
 };
 
 export function useBusinesses() {
@@ -70,6 +71,7 @@ export function useBusinesses() {
         category: b.businessType,
         address: b.address || "No Address Provided",
         phone: b.phoneNumber || "+94 ** *** ****",
+        logoUri: b.logoUri || "",
       }));
 
       // Synchronize back to the business store list for backward compatibility
@@ -151,7 +153,7 @@ export function useRegisterBusiness() {
         });
       }
 
-      return { id: newBusinessRecord.id, name, category, address, phone };
+      return { id: newBusinessRecord.id, name, category, address, phone, logoUri: "" };
     },
     onSuccess: (newBiz) => {
       // Invalidate businesses query cache so all components refetch instantly!
@@ -164,6 +166,7 @@ export function useRegisterBusiness() {
         category: newBiz.category,
         address: newBiz.address,
         phone: newBiz.phone,
+        logoUri: newBiz.logoUri,
       };
       
       useBusinessStore.getState().setActiveBusiness(newBiz.id);
@@ -176,7 +179,7 @@ export function useUpdateActiveBusiness() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (details: { name: string; category: string; address: string; phone: string }) => {
+    mutationFn: async (details: { name: string; category: string; address: string; phone: string; logoUri?: string }) => {
       const activeBiz = useBusinessStore.getState().activeBusiness;
       const db = require("../components/data/db").default;
       const { Q } = require("@nozbe/watermelondb");
@@ -190,6 +193,9 @@ export function useUpdateActiveBusiness() {
             b.businessType = details.category;
             b.address = details.address;
             b.phoneNumber = details.phone;
+            if (details.logoUri !== undefined) {
+              b.logoUri = details.logoUri;
+            }
           });
         });
       } else {
@@ -199,6 +205,7 @@ export function useUpdateActiveBusiness() {
             b.businessType = details.category;
             b.address = details.address;
             b.phoneNumber = details.phone;
+            b.logoUri = details.logoUri || "";
           });
         });
       }
@@ -215,6 +222,7 @@ export function useUpdateActiveBusiness() {
           category: updatedBiz.category,
           address: updatedBiz.address,
           phone: updatedBiz.phone,
+          logoUri: updatedBiz.logoUri,
         }
       });
     },
@@ -227,7 +235,7 @@ export function useUpdateBusiness() {
   return useMutation({
     mutationFn: async (params: {
       id: string;
-      details: { name: string; category: string; address: string; phone: string };
+      details: { name: string; category: string; address: string; phone: string; logoUri?: string };
     }) => {
       const { id, details } = params;
       const db = require("../components/data/db").default;
@@ -242,6 +250,9 @@ export function useUpdateBusiness() {
             b.businessType = details.category;
             b.address = details.address;
             b.phoneNumber = details.phone;
+            if (details.logoUri !== undefined) {
+              b.logoUri = details.logoUri;
+            }
           });
         });
       }
@@ -260,6 +271,7 @@ export function useUpdateBusiness() {
             category: updatedBiz.category,
             address: updatedBiz.address,
             phone: updatedBiz.phone,
+            logoUri: updatedBiz.logoUri,
           }
         });
       }

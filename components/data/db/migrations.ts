@@ -3,6 +3,17 @@ import { schemaMigrations, addColumns } from '@nozbe/watermelondb/Schema/migrati
 export default schemaMigrations({
   migrations: [
     {
+      toVersion: 3,
+      steps: [
+        addColumns({
+          table: 'businesses',
+          columns: [
+            { name: 'logo_uri', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
+    {
       toVersion: 2,
       steps: [
         addColumns({

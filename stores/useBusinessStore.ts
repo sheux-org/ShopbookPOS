@@ -8,6 +8,7 @@ export interface Business {
   category: string;
   address: string;
   phone: string;
+  logoUri?: string;
 }
 
 interface BusinessState {
@@ -16,8 +17,8 @@ interface BusinessState {
   setActiveBusiness: (id: string) => void;
   loadBusinessesFromDb: () => Promise<void>;
   registerBusiness: (name: string, address: string, phone: string, category?: string) => Promise<void>;
-  updateActiveBusinessDetails: (details: { name: string; category: string; address: string; phone: string }) => Promise<void>;
-  updateBusinessDetails: (id: string, details: { name: string; category: string; address: string; phone: string }) => Promise<void>;
+  updateActiveBusinessDetails: (details: { name: string; category: string; address: string; phone: string; logoUri?: string }) => Promise<void>;
+  updateBusinessDetails: (id: string, details: { name: string; category: string; address: string; phone: string; logoUri?: string }) => Promise<void>;
   deleteBusiness: (id: string) => Promise<void>;
 }
 
@@ -28,6 +29,7 @@ const PLACEHOLDER_BUSINESS: Business = {
   category: "General Retail",
   address: "Complete onboarding setup",
   phone: "",
+  logoUri: "",
 };
 
 const DEFAULT_BUSINESSES: Business[] = [PLACEHOLDER_BUSINESS];
@@ -109,6 +111,7 @@ export const useBusinessStore = create<BusinessState>()(
             category: b.businessType,
             address: b.address || "No Address Provided",
             phone: b.phoneNumber || "+94 ** *** ****",
+            logoUri: b.logoUri || "",
           }));
           
           // Determine target business to activate
@@ -217,6 +220,9 @@ export const useBusinessStore = create<BusinessState>()(
                 b.businessType = details.category;
                 b.address = details.address;
                 b.phoneNumber = details.phone;
+                if (details.logoUri !== undefined) {
+                  b.logoUri = details.logoUri;
+                }
               });
             });
             console.log('Successfully updated business details in local WatermelonDB database');
@@ -227,6 +233,7 @@ export const useBusinessStore = create<BusinessState>()(
                 b.businessType = details.category;
                 b.address = details.address;
                 b.phoneNumber = details.phone;
+                b.logoUri = details.logoUri || "";
               });
             });
             console.log('Successfully created business details in local WatermelonDB database');
@@ -251,6 +258,9 @@ export const useBusinessStore = create<BusinessState>()(
                 b.businessType = details.category;
                 b.address = details.address;
                 b.phoneNumber = details.phone;
+                if (details.logoUri !== undefined) {
+                  b.logoUri = details.logoUri;
+                }
               });
             });
             console.log('Successfully updated business details in local WatermelonDB database');

@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   Linking,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -43,6 +44,7 @@ export const ProfileScreen: React.FC = () => {
   const router = useRouter();
   const isBackupEnabled = useSettingsStore((s) => s.isBackupEnabled);
   const toggleBackup = useSettingsStore((s) => s.toggleBackup);
+  const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
@@ -115,7 +117,15 @@ export const ProfileScreen: React.FC = () => {
         {/* Avatar Card Glassmorphic Premium */}
         <View style={styles.avatarCard}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitials}>{initials}</Text>
+            {activeBusiness?.logoUri ? (
+              activeBusiness.logoUri.length <= 2 ? (
+                <Text style={{ fontSize: 32 }}>{activeBusiness.logoUri}</Text>
+              ) : (
+                <Image source={{ uri: activeBusiness.logoUri }} style={{ width: 72, height: 72, borderRadius: 36 }} />
+              )
+            ) : (
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            )}
           </View>
 
           <Text style={styles.partnerName}>{activeBusiness?.name || "Shopbook Partner Store"}</Text>
@@ -159,6 +169,24 @@ export const ProfileScreen: React.FC = () => {
             <View style={styles.optionTextWrapper}>
               <Text style={styles.optionTitle}>Business Management</Text>
               <Text style={styles.optionSubtitle}>{userRole === "cashier" ? "View registered businesses and branches" : "Create and manage multiple businesses or branches"}</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+          </TouchableOpacity>
+
+          {/* Option: Bluetooth Printer Setup */}
+          <TouchableOpacity
+            style={styles.optionRow}
+            activeOpacity={0.7}
+            onPress={() => router.push("/profile/bluetooth-printer")}
+          >
+            <View style={[styles.optionIconBox, { backgroundColor: "#EFF6FF" }]}>
+              <Feather name="printer" size={18} color={TOKENS.primary} />
+            </View>
+            <View style={styles.optionTextWrapper}>
+              <Text style={styles.optionTitle}>Bluetooth Thermal Printer</Text>
+              <Text style={styles.optionSubtitle}>
+                {pairedPrinter ? `Connected: ${pairedPrinter} ✅` : "Scan and connect to receipt printers"}
+              </Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>

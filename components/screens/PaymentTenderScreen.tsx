@@ -16,6 +16,8 @@ import { cartState } from "../data/cartState";
 import { useCreateOrder } from "../../hooks/useOrders";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useBusinessStore } from "../../stores/useBusinessStore";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import * as Print from "expo-print";
 
 type TenderMethod = "cash" | "card";
 
@@ -66,6 +68,7 @@ export const PaymentTenderScreen: React.FC = () => {
   const activeBiz = useBusinessStore((state) => state.activeBusiness);
   const authStore = useAuthStore();
   const cashierName = authStore.employeeName || "Owner / Admin";
+  const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
 
   const handleCompleteSale = () => {
     if (activeMethod === "cash" && parsedTendered < totalAmount) {
@@ -93,6 +96,94 @@ export const PaymentTenderScreen: React.FC = () => {
         setShowSuccessModal(true);
       }
     });
+  };
+
+  const handlePrintReceipt = async () => {
+    const cart = cartState.getCart();
+    
+    const logoHtml = activeBiz.logoUri 
+      ? activeBiz.logoUri.length <= 2 
+        ? `<div style="font-size: 38px; text-align: center; margin-bottom: 5px;">${activeBiz.logoUri}</div>`
+        : `<div style="text-align: center; margin-bottom: 5px;"><img src="${activeBiz.logoUri}" style="width: 60px; height: 60px; border-radius: 30px; object-fit: cover;" /></div>`
+      : `<div style="font-size: 38px; text-align: center; margin-bottom: 5px;">🏠</div>`;
+
+    const itemsHtml = cart.map(item => `
+      <div class="flex-row">
+        <span>${item.quantity}x ${item.name}</span>
+        <span>Rs. ${(item.price * item.quantity).toFixed(2)}</span>
+      </div>
+    `).join("");
+
+    const htmlContent = `
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+          <style>
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              padding: 10px;
+              color: #000;
+              font-size: 14px;
+            }
+            .center { text-align: center; }
+            .header-title { font-size: 18px; font-weight: bold; margin: 4px 0; }
+            .separator { border-top: 1px dashed #000; margin: 10px 0; }
+            .flex-row { display: flex; justify-content: space-between; margin: 4px 0; }
+            .bold { font-weight: bold; }
+            .barcode { font-size: 11px; text-align: center; margin-top: 15px; color: #555; }
+          </style>
+        </head>
+        <body>
+          ${logoHtml}
+          <div class="center header-title">${activeBiz.name}</div>
+          <div class="center">${activeBiz.category}</div>
+          <div class="center">${activeBiz.address}</div>
+          <div class="center">Tel: ${activeBiz.phone}</div>
+          
+          <div class="separator"></div>
+          
+          <div class="flex-row">
+            <span>Cashier</span>
+            <span>${cashierName}</span>
+          </div>
+          <div class="flex-row">
+            <span>Payment Method</span>
+            <span>${activeMethod.toUpperCase()}</span>
+          </div>
+          
+          <div class="separator"></div>
+          
+          ${itemsHtml}
+          
+          <div class="separator"></div>
+          
+          <div class="flex-row bold">
+            <span>Subtotal</span>
+            <span>Rs. ${totalAmount.toFixed(2)}</span>
+          </div>
+          <div class="flex-row">
+            <span>Standard Tax (8%)</span>
+            <span>Rs. ${(totalAmount * 0.08).toFixed(2)}</span>
+          </div>
+          <div class="flex-row bold" style="font-size: 16px;">
+            <span>TOTAL</span>
+            <span>Rs. ${(totalAmount * 1.08).toFixed(2)}</span>
+          </div>
+          
+          <div class="separator"></div>
+          <div class="center">Thank you for visiting!</div>
+          <div class="center">Powered by Shopbook POS</div>
+          <div class="barcode">|||| | ||||| | ||| ||||||| 0192381</div>
+        </body>
+      </html>
+    `;
+
+    try {
+      await Print.printAsync({ html: htmlContent });
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Print Error", "Could not complete printing operation.");
+    }
   };
 
   const handleFinishSuccess = () => {
@@ -333,15 +424,30 @@ export const PaymentTenderScreen: React.FC = () => {
               )}
             </View>
 
-            <Text style={styles.printMessage}>Receipt printed successfully. Cash drawer unlocked.</Text>
+            <Text style={styles.printMessage}>
+              {pairedPrinter 
+                ? `Connected printer: ${pairedPrinter} 🖨️` 
+                : "No printer connected. Enable in Settings."}
+            </Text>
 
-            <TouchableOpacity
-              style={styles.doneBtn}
-              activeOpacity={0.85}
-              onPress={handleFinishSuccess}
-            >
-              <Text style={styles.doneBtnText}>Done</Text>
-            </TouchableOpacity>
+            <View style={styles.modalActionsContainer}>
+              <TouchableOpacity
+                style={styles.printBtn}
+                activeOpacity={0.8}
+                onPress={handlePrintReceipt}
+              >
+                <Feather name="printer" size={16} color={TOKENS.card} />
+                <Text style={styles.printBtnText}>Print Invoice</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.doneBtn}
+                activeOpacity={0.85}
+                onPress={handleFinishSuccess}
+              >
+                <Text style={styles.doneBtnText}>Done</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -690,17 +796,38 @@ const styles = StyleSheet.create({
     marginTop: 16,
     lineHeight: 16,
   },
-  doneBtn: {
+  modalActionsContainer: {
+    width: "100%",
+    gap: 12,
+    marginTop: 16,
+  },
+  printBtn: {
     backgroundColor: TOKENS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    width: "100%",
+    height: 44,
+    borderRadius: 22,
+  },
+  printBtnText: {
+    color: TOKENS.card,
+    fontWeight: "bold",
+    fontSize: 15,
+  },
+  doneBtn: {
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: TOKENS.border,
     width: "100%",
     height: 44,
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 24,
   },
   doneBtnText: {
-    color: TOKENS.card,
+    color: TOKENS.dark,
     fontWeight: "bold",
     fontSize: 15,
   },

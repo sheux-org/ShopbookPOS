@@ -10,13 +10,18 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  Image,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 import { Business, cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
 import { useUpdateActiveBusiness } from "../../../hooks/useBusinesses";
 import { useBusinessStore } from "../../../stores/useBusinessStore";
+
+const PRESET_EMOJIS = ["🛒", "🛍️", "🥛", "👕", "💊", "☕", "🍔", "📦", "🌾", "🏢", "🛠️", "📚"];
 
 export default function BusinessDetailsRoute() {
   const insets = useSafeAreaInsets();
@@ -32,8 +37,10 @@ export default function BusinessDetailsRoute() {
   const [category, setCategory] = useState(activeBusiness.category);
   const [address, setAddress] = useState(activeBusiness.address);
   const [phone, setPhone] = useState(activeBusiness.phone);
+  const [logoUri, setLogoUri] = useState(activeBusiness.logoUri || "");
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showLogoSelector, setShowLogoSelector] = useState(false);
 
   // Sync edit form states if activeBusiness changes externally
   useEffect(() => {
@@ -41,11 +48,37 @@ export default function BusinessDetailsRoute() {
     setCategory(activeBusiness.category);
     setAddress(activeBusiness.address);
     setPhone(activeBusiness.phone);
+    setLogoUri(activeBusiness.logoUri || "");
   }, [activeBusiness]);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2000);
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert("Permission Denied", "We need camera roll permissions to upload a custom logo.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setLogoUri(result.assets[0].uri);
+        setShowLogoSelector(false);
+      }
+    } catch (error) {
+      console.error("Failed to pick image:", error);
+      Alert.alert("Error", "Failed to select image from photo library.");
+    }
   };
 
   const handleSaveChanges = () => {
@@ -64,6 +97,7 @@ export default function BusinessDetailsRoute() {
       category: category.trim(),
       address: address.trim(),
       phone: phone.trim(),
+      logoUri: logoUri,
     }, {
       onSuccess: () => {
         setIsEditing(false);
@@ -85,7 +119,7 @@ export default function BusinessDetailsRoute() {
         </View>
       )}
 
-        {/* Header */}
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -111,6 +145,7 @@ export default function BusinessDetailsRoute() {
                   setCategory(activeBusiness.category);
                   setAddress(activeBusiness.address);
                   setPhone(activeBusiness.phone);
+                  setLogoUri(activeBusiness.logoUri || "");
                 }
                 setIsEditing(!isEditing);
               }}
@@ -130,11 +165,32 @@ export default function BusinessDetailsRoute() {
       >
         {/* Business Main Card */}
         <View style={styles.detailCard}>
-          <View style={styles.storeIconBox}>
-            <Feather name="home" size={28} color={TOKENS.primary} />
-          </View>
-          <Text style={styles.storeName}>{activeBusiness.name}</Text>
-          <Text style={styles.storeStatus}>🛡️ Admin Control Terminal</Text>
+          <TouchableOpacity 
+            style={[styles.storeIconBox, isEditing && styles.storeIconBoxEditing]} 
+            disabled={!isEditing}
+            onPress={() => setShowLogoSelector(true)}
+            activeOpacity={0.75}
+          >
+            {logoUri ? (
+              logoUri.length <= 2 ? (
+                <Text style={{ fontSize: 32 }}>{logoUri}</Text>
+              ) : (
+                <Image source={{ uri: logoUri }} style={styles.storeLogoImage} />
+              )
+            ) : (
+              <Feather name="home" size={28} color={TOKENS.primary} />
+            )}
+            
+            {isEditing && (
+              <View style={styles.cameraOverlay}>
+                <Feather name="camera" size={16} color={TOKENS.card} />
+              </View>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.storeName}>{isEditing ? name : activeBusiness.name}</Text>
+          <Text style={styles.storeStatus}>
+            {isEditing ? "Tap icon to change profile image 📸" : "🛡️ Admin Control Terminal"}
+          </Text>
         </View>
 
         {/* Info Group */}
@@ -226,6 +282,77 @@ export default function BusinessDetailsRoute() {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* LOGO SELECTOR MODAL SHEET */}
+      <Modal
+        visible={showLogoSelector}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLogoSelector(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.bottomSheet, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Choose Profile Image</Text>
+              <TouchableOpacity onPress={() => setShowLogoSelector(false)}>
+                <Feather name="x" size={20} color={TOKENS.dark} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.sheetBody}>
+              {/* Option 1: Gallery Picker */}
+              <TouchableOpacity style={styles.pickerOptionBtn} onPress={handlePickImage}>
+                <View style={styles.pickerOptionIcon}>
+                  <Feather name="image" size={20} color={TOKENS.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.pickerOptionTitle}>Select from Gallery</Text>
+                  <Text style={styles.pickerOptionSub}>Choose a custom photo or logo</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+              </TouchableOpacity>
+
+              <View style={styles.divider} />
+
+              {/* Option 2: Presets */}
+              <Text style={styles.sectionLabel}>Quick Emoji Presets</Text>
+              <View style={styles.presetsGrid}>
+                {PRESET_EMOJIS.map((emoji) => (
+                  <TouchableOpacity
+                    key={emoji}
+                    style={[
+                      styles.presetCell,
+                      logoUri === emoji && styles.presetCellSelected
+                    ]}
+                    onPress={() => {
+                      setLogoUri(emoji);
+                      setShowLogoSelector(false);
+                    }}
+                  >
+                    <Text style={styles.presetEmojiText}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {logoUri ? (
+                <>
+                  <View style={styles.divider} />
+                  <TouchableOpacity
+                    style={styles.removeLogoBtn}
+                    onPress={() => {
+                      setLogoUri("");
+                      setShowLogoSelector(false);
+                    }}
+                  >
+                    <Feather name="trash-2" size={16} color={TOKENS.error} />
+                    <Text style={styles.removeLogoText}>Remove Custom Logo</Text>
+                  </TouchableOpacity>
+                </>
+              ) : null}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -312,13 +439,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   storeIconBox: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: TOKENS.lightBlue,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+    overflow: "hidden",
+    position: "relative",
+  },
+  storeIconBoxEditing: {
+    borderWidth: 2,
+    borderColor: TOKENS.primary,
+    borderStyle: "dashed",
+  },
+  storeLogoImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 36,
+  },
+  cameraOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 24,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   storeName: {
     fontSize: 18,
@@ -404,5 +553,107 @@ const styles = StyleSheet.create({
     borderTopColor: TOKENS.border,
     paddingHorizontal: 16,
     paddingTop: 12,
+  },
+  // Modal Bottom Sheet Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "flex-end",
+  },
+  bottomSheet: {
+    backgroundColor: TOKENS.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  sheetBody: {
+    gap: 16,
+  },
+  pickerOptionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  pickerOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: TOKENS.lightBlue,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  pickerOptionTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  pickerOptionSub: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: TOKENS.border,
+    marginVertical: 4,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: TOKENS.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  presetsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginVertical: 4,
+  },
+  presetCell: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  presetCellSelected: {
+    borderColor: TOKENS.primary,
+    backgroundColor: TOKENS.lightBlue,
+  },
+  presetEmojiText: {
+    fontSize: 22,
+  },
+  removeLogoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  removeLogoText: {
+    color: TOKENS.error,
+    fontSize: 13,
+    fontWeight: "bold",
   },
 });

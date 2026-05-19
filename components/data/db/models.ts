@@ -18,6 +18,7 @@ export class Business extends Model {
   @text('phone_number') phoneNumber!: string;
   @text('tax_id') taxId?: string;
   @text('operating_hours') operatingHours?: string;
+  @text('logo_uri') logoUri?: string;
   
   @children('employees') employees!: any;
   @children('products') products!: any;
