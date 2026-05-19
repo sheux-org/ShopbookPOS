@@ -22,20 +22,32 @@ import { BusinessAvatar } from "../common/BusinessAvatar";
 
 const FAQS = [
   {
-    q: "How do I perform a manual cloud sync?",
-    a: "Go to Data Sync & Backup section on your profile and tap 'Sync Database Now' to sync offline records.",
+    q: "Does Shopbook work without an internet connection?",
+    a: "Yes! Shopbook uses a local database (WatermelonDB). You can perform billing, scan barcodes, and manage inventory offline. All transactions sync to the cloud database automatically once backup is enabled and connection is restored.",
   },
   {
-    q: "Can cashiers add new store branches?",
-    a: "No, cashier profiles have read-only store access. Branch creation is restricted strictly to Admins/Owners.",
+    q: "What is a 'Quick Code' and how do cashiers use it?",
+    a: "Quick Codes are short numeric shortcuts (e.g., '101' for Bread) assigned to products. Cashiers can type these in the Search bar to add items to the invoice instantly without using a scanner.",
   },
   {
-    q: "How do I print receipts?",
-    a: "When tender succeeds on the Payment Screen, tap 'Print Invoice' to connect to your Bluetooth thermal printer.",
+    q: "How do I scan barcodes to add items?",
+    a: "Tap 'Scan' in the bottom navigation or tap the search icon in the header and click the camera icon. Line up the product barcode within the viewfinder to search and add it.",
   },
   {
-    q: "How is standard tax computed?",
-    a: "A standard sales tax of 8% is applied automatically to dairy/grocery items during active billing.",
+    q: "How do I connect a Bluetooth thermal printer?",
+    a: "Go to Profile Settings > Bluetooth Thermal Printer. Scan for nearby devices, select your printer, and pair it. Once connected, a 'Print Receipt' option will appear on completed transactions.",
+  },
+  {
+    q: "What can Managers and Cashiers access in Shopbook?",
+    a: "Cashiers can only perform sales, scan barcodes, and view items. Managers can manage stock and view histories. Administrative actions like adding staff, managing multiple businesses, or editing cloud sync settings are restricted to Owners.",
+  },
+  {
+    q: "Can I manage multiple store locations or branches?",
+    a: "Yes! If you are an Owner or Admin, you can switch locations using the business switcher dropdown at the top of the Home Screen, allowing separate staff, products, and order histories for each branch.",
+  },
+  {
+    q: "How do Low Stock Alerts work?",
+    a: "When adding/editing a product, you can set a 'Low Stock Alert' threshold. When the item count drops below this, the stock text turns orange on the Home Screen to warn cashiers.",
   },
 ];
 
@@ -955,7 +967,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalHelpScroll: {
-    padding: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 0,
   },
   supportIntro: {
     fontSize: 13,

@@ -188,7 +188,12 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   closeBtn: {
-    padding: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
   },
   sheetBody: {
     // Allows inner components to render freely

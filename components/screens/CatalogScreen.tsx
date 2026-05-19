@@ -94,7 +94,13 @@ export const CatalogScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/")}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(tabs)");
+            }
+          }}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>

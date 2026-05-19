@@ -793,7 +793,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   sheetScrollContent: {
-    padding: 20,
+    paddingHorizontal: 0,
+    paddingTop: 16,
+    paddingBottom: 0,
     gap: 12,
   },
   bizCard: {
