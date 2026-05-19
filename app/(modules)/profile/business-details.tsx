@@ -269,6 +269,7 @@ export default function BusinessDetailsRoute() {
             <Text style={[styles.infoVal, { color: TOKENS.success }]}>FULL READ-WRITE PRIVILEGES</Text>
           </View>
         </View>
+
       </ScrollView>
 
       {isEditing && (

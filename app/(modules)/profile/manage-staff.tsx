@@ -65,8 +65,8 @@ export default function ManageStaffRoute() {
 
   const handleSaveEditStaff = () => {
     if (!editingStaff) return;
-    if (!editName.trim() || !editEmail.trim() || !editPhone.trim()) {
-      triggerToast("All fields are required!");
+    if (!editName.trim() || !editPhone.trim()) {
+      triggerToast("Name and phone number are required!");
       return;
     }
 
@@ -118,10 +118,7 @@ export default function ManageStaffRoute() {
       triggerToast("Please enter staff name!");
       return;
     }
-    if (!newEmail.trim()) {
-      triggerToast("Please enter email address!");
-      return;
-    }
+    // Email is optional
     if (!newPhone.trim()) {
       triggerToast("Please enter phone number!");
       return;
@@ -136,7 +133,7 @@ export default function ManageStaffRoute() {
       onSuccess: () => {
         triggerToast(`${newName} added as ${newRole} successfully! 🎉`);
         setIsModalOpen(false);
-        
+
         // Clear inputs
         setNewName("");
         setNewRole("Cashier");
@@ -249,12 +246,12 @@ export default function ManageStaffRoute() {
         onClose={() => setIsModalOpen(false)}
         title="Add Staff Member"
       >
-        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Staff Full Name</Text>
             <TextInput
               style={styles.formInput}
-              placeholder="e.g. Aruni Silva"
+              placeholder="e.g. Pahasara"
               placeholderTextColor="#9CA3AF"
               value={newName}
               onChangeText={setNewName}
@@ -283,19 +280,6 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Email Address</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. aruni@shopbook.lk"
-              placeholderTextColor="#9CA3AF"
-              value={newEmail}
-              onChangeText={setNewEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Mobile Number</Text>
             <TextInput
               style={styles.formInput}
@@ -307,16 +291,29 @@ export default function ManageStaffRoute() {
             />
           </View>
 
-          <TouchableOpacity
-            style={[styles.submitButton, (!newName.trim() || !newEmail.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
-            activeOpacity={0.8}
-            onPress={handleAddStaff}
-            disabled={!newName.trim() || !newEmail.trim() || !newPhone.trim()}
-          >
-            <Text style={styles.submitButtonText}>Authorize Staff Member</Text>
-            <Feather name="user-plus" size={16} color={TOKENS.card} />
-          </TouchableOpacity>
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Email Address <Text style={{ fontWeight: "normal", color: TOKENS.muted }}>(Optional)</Text></Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. pahasara@shopbook.lk"
+              placeholderTextColor="#9CA3AF"
+              value={newEmail}
+              onChangeText={setNewEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
         </ScrollView>
+
+        <TouchableOpacity
+          style={[styles.submitButton, (!newName.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
+          activeOpacity={0.8}
+          onPress={handleAddStaff}
+          disabled={!newName.trim() || !newPhone.trim()}
+        >
+          <Text style={styles.submitButtonText}>Authorize Staff Member</Text>
+          <Feather name="user-plus" size={16} color={TOKENS.card} />
+        </TouchableOpacity>
       </BottomSheet>
 
       {/* Modal for editing a staff member */}
@@ -328,7 +325,7 @@ export default function ManageStaffRoute() {
         }}
         title="Edit Staff Details"
       >
-        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Staff Full Name</Text>
             <TextInput
@@ -362,7 +359,7 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Email Address</Text>
+            <Text style={styles.formLabel}>Email Address <Text style={{ fontWeight: "normal", color: TOKENS.muted }}>(Optional)</Text></Text>
             <TextInput
               style={styles.formInput}
               placeholder="e.g. aruni@shopbook.lk"
@@ -371,8 +368,8 @@ export default function ManageStaffRoute() {
               onChangeText={setEditEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-                />
-              </View>
+            />
+          </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Mobile Number</Text>
@@ -385,17 +382,17 @@ export default function ManageStaffRoute() {
               keyboardType="phone-pad"
             />
           </View>
-
-          <TouchableOpacity
-            style={[styles.submitButton, (!editName.trim() || !editEmail.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
-            activeOpacity={0.8}
-            onPress={handleSaveEditStaff}
-            disabled={!editName.trim() || !editEmail.trim() || !editPhone.trim()}
-          >
-            <Text style={styles.submitButtonText}>Update Staff Details</Text>
-            <Feather name="check" size={16} color={TOKENS.card} />
-          </TouchableOpacity>
         </ScrollView>
+
+        <TouchableOpacity
+          style={[styles.submitButton, (!editName.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
+          activeOpacity={0.8}
+          onPress={handleSaveEditStaff}
+          disabled={!editName.trim() || !editPhone.trim()}
+        >
+          <Text style={styles.submitButtonText}>Update Staff Details</Text>
+          <Feather name="check" size={16} color={TOKENS.card} />
+        </TouchableOpacity>
       </BottomSheet>
     </View>
   );
@@ -569,7 +566,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalScroll: {
-    padding: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
+    paddingHorizontal: 0,
     gap: 16,
   },
   formGroup: {

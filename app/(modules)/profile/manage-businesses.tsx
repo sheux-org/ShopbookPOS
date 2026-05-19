@@ -319,7 +319,7 @@ export default function ManageBusinessesRoute() {
         onClose={() => setIsModalOpen(false)}
         title="Create New Business"
       >
-        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Business / Brand Name</Text>
             <TextInput
@@ -364,17 +364,17 @@ export default function ManageBusinessesRoute() {
               keyboardType="phone-pad"
             />
           </View>
-
-          <TouchableOpacity
-            style={[styles.submitButton, (!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
-            activeOpacity={0.8}
-            onPress={handleCreateBusiness}
-            disabled={!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()}
-          >
-            <Text style={styles.submitButtonText}>Create & Activate Business</Text>
-            <Feather name="plus-circle" size={16} color={TOKENS.card} />
-          </TouchableOpacity>
         </ScrollView>
+
+        <TouchableOpacity
+          style={[styles.submitButton, (!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
+          activeOpacity={0.8}
+          onPress={handleCreateBusiness}
+          disabled={!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()}
+        >
+          <Text style={styles.submitButtonText}>Create & Activate Business</Text>
+          <Feather name="plus-circle" size={16} color={TOKENS.card} />
+        </TouchableOpacity>
       </BottomSheet>
 
       {/* Modal for editing a business */}
@@ -386,7 +386,7 @@ export default function ManageBusinessesRoute() {
         }}
         title="Edit Business Details"
       >
-        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Business / Brand Name</Text>
             <TextInput
@@ -431,17 +431,17 @@ export default function ManageBusinessesRoute() {
               keyboardType="phone-pad"
             />
           </View>
-
-          <TouchableOpacity
-            style={[styles.submitButton, (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
-            activeOpacity={0.8}
-            onPress={handleSaveEditBusiness}
-            disabled={!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()}
-          >
-            <Text style={styles.submitButtonText}>Update Business Details</Text>
-            <Feather name="check" size={16} color={TOKENS.card} />
-          </TouchableOpacity>
         </ScrollView>
+
+        <TouchableOpacity
+          style={[styles.submitButton, (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
+          activeOpacity={0.8}
+          onPress={handleSaveEditBusiness}
+          disabled={!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()}
+        >
+          <Text style={styles.submitButtonText}>Update Business Details</Text>
+          <Feather name="check" size={16} color={TOKENS.card} />
+        </TouchableOpacity>
       </BottomSheet>
     </View>
   );
@@ -622,7 +622,9 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalScroll: {
-    padding: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
+    paddingHorizontal: 0,
     gap: 16,
   },
   formGroup: {

@@ -8,6 +8,8 @@ import {
   Animated,
   Dimensions,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -111,7 +113,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         </TouchableWithoutFeedback>
 
         {/* Sheet container sits on top and slides up/down */}
-        <View style={styles.overlay} pointerEvents="box-none">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.overlay}
+          pointerEvents="box-none"
+        >
           <Animated.View
             style={[
               styles.sheetContainer,
@@ -135,7 +141,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
             <View style={styles.sheetBody}>{children}</View>
           </Animated.View>
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
