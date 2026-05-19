@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
+import { useVerifyOtp, useRegisterUser } from "../../../hooks/useAuth";
 
 export default function NumberInputRoute() {
   const insets = useSafeAreaInsets();
@@ -33,6 +34,9 @@ export default function NumberInputRoute() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const verifyOtpMutation = useVerifyOtp();
+  const registerUserMutation = useRegisterUser();
 
   useEffect(() => {
     const syncState = () => {
@@ -69,102 +73,32 @@ export default function NumberInputRoute() {
     }
     setIsLoading(true);
     setOtpError(false);
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, "");
-        if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
-        return cleaned;
-      };
-      
-      const cleanPhone = normalizePhone(phone);
 
-      if (codeToVerify === "1111") {
-        setOtpError(false);
-        
-        // Execute dynamic SQLite lookup to see if a staff member exists for this phone!
-        const db = require('../../../components/data/db').default;
-        const { Q } = require('@nozbe/watermelondb');
-        
-        db.get('employees').query().fetch().then(async (employees: any[]) => {
-          const matchedEmployee = employees.find((emp: any) => {
-            const dbPhoneClean = normalizePhone(emp.phone || "");
-            return dbPhoneClean === cleanPhone;
-          });
-          
-          if (matchedEmployee) {
-            // Found employee! Retrieve their parent business
-            const bizRelation = matchedEmployee.business;
-            const activeBiz = await bizRelation.fetch();
-            
-            if (activeBiz) {
-              const { useAuthStore } = require('../../../stores/useAuthStore');
-              useAuthStore.getState().loginWithEmployee(
-                cleanPhone,
-                matchedEmployee.role || 'cashier',
-                matchedEmployee.name || 'Staff Member',
-                activeBiz.id,
-                matchedEmployee.id
-              );
-              
-              const { useBusinessStore } = require('../../../stores/useBusinessStore');
-              useBusinessStore.getState().setActiveBusiness(activeBiz.id);
-              await useBusinessStore.getState().loadBusinessesFromDb();
-              
-              triggerToast(`Welcome back, ${matchedEmployee.name}!`);
-              router.replace("/(tabs)");
-            } else {
-              triggerToast("No business registered for this staff member!");
-              setStep("register");
-            }
-          } else {
-            // Not in staff: Check if direct business owner in businesses!
-            db.get('businesses').query().fetch().then(async (businesses: any[]) => {
-              const matchedBiz = businesses.find((biz: any) => {
-                const dbPhoneClean = normalizePhone(biz.phoneNumber || "");
-                return dbPhoneClean === cleanPhone;
-              });
-              
-              if (matchedBiz) {
-                const { useAuthStore } = require('../../../stores/useAuthStore');
-                useAuthStore.getState().loginWithEmployee(
-                  cleanPhone,
-                  'admin',
-                  'Owner / Admin',
-                  matchedBiz.id,
-                  'owner'
-                );
-                
-                const { useBusinessStore } = require('../../../stores/useBusinessStore');
-                useBusinessStore.getState().setActiveBusiness(matchedBiz.id);
-                await useBusinessStore.getState().loadBusinessesFromDb();
-                
-                triggerToast("Welcome back to Shopbook!");
-                router.replace("/(tabs)");
-              } else {
-                // New user! Go to registration onboarding!
-                triggerToast("Number not registered. Let's create your shop profile!");
-                setStep("register");
-              }
-            }).catch(() => {
-              setStep("register");
-            });
-          }
-        }).catch((err: any) => {
-          console.error('Failed to lookup employee in SQLite:', err);
+    verifyOtpMutation.mutate({
+      phone,
+      otp: codeToVerify,
+    }, {
+      onSuccess: (data) => {
+        setIsLoading(false);
+        if (data.status === "success") {
+          setOtpError(false);
+          triggerToast("Welcome back to Shopbook!");
+          router.replace("/(tabs)");
+        } else {
+          triggerToast("Number not registered. Let's create your shop profile!");
           setStep("register");
-        });
-      } else {
+        }
+      },
+      onError: (err: any) => {
+        setIsLoading(false);
         setOtpError(true);
-        triggerToast("Invalid OTP. Hint: Use 1111");
+        triggerToast(err.message || "Invalid OTP. Hint: Use 1111");
         setOtp("");
       }
-    }, 800);
+    });
   };
 
-  const handleRegister = async () => {
+  const handleRegister = () => {
     if (!businessName.trim()) {
       triggerToast("Please enter your Shop/Business Name!");
       return;
@@ -177,100 +111,25 @@ export default function NumberInputRoute() {
       triggerToast("Please enter your Store Address!");
       return;
     }
-    
-    setIsLoading(true);
-    try {
-      const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, "");
-        if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
-        return cleaned;
-      };
-      
-      const cleanPhone = normalizePhone(phone);
-      
-      // 1. Await database record insertion
-      const db = require('../../../components/data/db').default;
-      const { Q } = require('@nozbe/watermelondb');
-      
-      let newBizRecord: any;
-      let newEmpRecord: any;
-      
-      await db.write(async () => {
-        newBizRecord = await db.get('businesses').create((biz: any) => {
-          biz.name = businessName;
-          biz.businessType = newCategory;
-          biz.address = businessAddress;
-          biz.phoneNumber = cleanPhone; // Save normalized phone number
-        });
 
-        newEmpRecord = await db.get('employees').create((emp: any) => {
-          emp.business.set(newBizRecord);
-          emp.name = "Owner / Admin";
-          emp.role = "admin";
-          emp.phone = cleanPhone; // Save normalized phone number
-        });
-      });
-      
-      console.log('Successfully registered business and owner employee in SQLite:', newBizRecord.id);
-      
-      // Seed products ONLY for the very first registered store in SQLite!
-      const dbBizs = await db.get('businesses').query().fetch();
-      if (dbBizs.length === 1) {
-        console.log('Seeding initial products for the first store...');
-        const SEEDING_PRODUCTS = [
-          { name: "Anchor Milk 1L", price: 680, category: "dairy", icon: "🥛", stockCount: 24, unitType: "Liters", costPrice: 580, quickCode: "1001" },
-          { name: "Highland Yogurt", price: 95, category: "dairy", icon: "🥣", stockCount: 38, unitType: "Pieces", costPrice: 75, quickCode: "1008" },
-          { name: "Marie Biscuits", price: 180, category: "snacks", icon: "🍪", stockCount: 4, unitType: "Packets", costPrice: 140, quickCode: "1002" },
-          { name: "Lemon Puff 200g", price: 250, category: "snacks", icon: "🥮", stockCount: 16, unitType: "Packets", costPrice: 200, quickCode: "1004" },
-          { name: "Cream Soda 1.5L", price: 320, category: "drinks", icon: "🥤", stockCount: 22, unitType: "Liters", costPrice: 260, quickCode: "1003" },
-          { name: "Pepsi 1L", price: 280, category: "drinks", icon: "🥤", stockCount: 0, unitType: "Liters", costPrice: 220, quickCode: "1009" },
-          { name: "Sunlight Soap", price: 130, category: "grocery", icon: "🧼", stockCount: 15, unitType: "Pieces", costPrice: 100, quickCode: "1005" },
-          { name: "Red Rice 1kg", price: 280, category: "grocery", icon: "🌾", stockCount: 18, unitType: "kg", costPrice: 230, quickCode: "1006" },
-          { name: "Ceylon Tea", price: 450, category: "drinks", icon: "☕", stockCount: 2, unitType: "Packets", costPrice: 380, quickCode: "1007" },
-          { name: "Bread Loaf", price: 110, category: "grocery", icon: "🍞", stockCount: 12, unitType: "Pieces", costPrice: 85, quickCode: "1010" },
-        ];
-        
-        await db.write(async () => {
-          for (const item of SEEDING_PRODUCTS) {
-            await db.get('products').create((p: any) => {
-              p.business.set(newBizRecord);
-              p.name = item.name;
-              p.price = item.price;
-              p.category = item.category;
-              p.icon = item.icon;
-              p.stockCount = item.stockCount;
-              p.unitType = item.unitType;
-              p.costPrice = item.costPrice;
-              p.quickCode = item.quickCode;
-            });
-          }
-        });
+    setIsLoading(true);
+    registerUserMutation.mutate({
+      phone,
+      businessName: businessName.trim(),
+      category: newCategory.trim(),
+      address: businessAddress.trim(),
+    }, {
+      onSuccess: () => {
+        setIsLoading(false);
+        triggerToast("Account registered and logged in successfully! 🎉");
+        router.replace("/(tabs)");
+      },
+      onError: (err: any) => {
+        console.error("Failed to register business in SQLite:", err);
+        setIsLoading(false);
+        triggerToast("Failed to create profile. Please try again.");
       }
-      
-      // 2. Perform dynamic login & update session state immediately
-      const { useAuthStore } = require('../../../stores/useAuthStore');
-      useAuthStore.getState().loginWithEmployee(
-        cleanPhone,
-        'admin',
-        'Owner / Admin',
-        newBizRecord.id,
-        newEmpRecord.id
-      );
-      
-      // 3. Hydrate businesses list in SQLite store
-      const { useBusinessStore } = require('../../../stores/useBusinessStore');
-      await useBusinessStore.getState().loadBusinessesFromDb();
-      useBusinessStore.getState().setActiveBusiness(newBizRecord.id);
-      
-      setIsLoading(false);
-      triggerToast("Account registered and logged in successfully! 🎉");
-      router.replace("/(tabs)");
-    } catch (err) {
-      console.error('Failed to register business in SQLite:', err);
-      setIsLoading(false);
-      triggerToast("Failed to create profile. Please try again.");
-    }
+    });
   };
 
   // If already logged in, redirect automatically to tabs!

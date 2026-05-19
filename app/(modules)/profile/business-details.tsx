@@ -15,13 +15,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Business, cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
+import { useUpdateActiveBusiness } from "../../../hooks/useBusinesses";
+import { useBusinessStore } from "../../../stores/useBusinessStore";
 
 export default function BusinessDetailsRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { canPerform } = useUserPermissions();
 
-  const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
+  const activeBusiness = useBusinessStore((state) => state.activeBusiness);
+  const updateActiveBizMutation = useUpdateActiveBusiness();
   
   // Edit form states
   const [isEditing, setIsEditing] = useState(false);
@@ -32,24 +35,20 @@ export default function BusinessDetailsRoute() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Sync edit form states if activeBusiness changes externally
   useEffect(() => {
-    const syncState = () => {
-      const biz = cartState.getActiveBusiness();
-      setActiveBusiness(biz);
-      setName(biz.name);
-      setCategory(biz.category);
-      setAddress(biz.address);
-      setPhone(biz.phone);
-    };
-    return cartState.subscribe(syncState);
-  }, []);
+    setName(activeBusiness.name);
+    setCategory(activeBusiness.category);
+    setAddress(activeBusiness.address);
+    setPhone(activeBusiness.phone);
+  }, [activeBusiness]);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2000);
   };
 
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = () => {
     if (!canPerform("update", "settings")) {
       Alert.alert("Access Denied", "Your profile role is not authorized to edit business settings.");
       return;
@@ -60,18 +59,20 @@ export default function BusinessDetailsRoute() {
       return;
     }
 
-    try {
-      await cartState.updateActiveBusinessDetails({
-        name: name.trim(),
-        category: category.trim(),
-        address: address.trim(),
-        phone: phone.trim(),
-      });
-      setIsEditing(false);
-      triggerToast("Store Profile updated successfully! 🚀");
-    } catch (error) {
-      Alert.alert("Update Error", "Failed to persist business profile changes.");
-    }
+    updateActiveBizMutation.mutate({
+      name: name.trim(),
+      category: category.trim(),
+      address: address.trim(),
+      phone: phone.trim(),
+    }, {
+      onSuccess: () => {
+        setIsEditing(false);
+        triggerToast("Store Profile updated successfully! 🚀");
+      },
+      onError: () => {
+        Alert.alert("Update Error", "Failed to persist business profile changes.");
+      }
+    });
   };
 
   return (

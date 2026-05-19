@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Modal,
@@ -17,14 +17,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Business, cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
+import { useBusinesses, useRegisterBusiness, useUpdateBusiness, useDeleteBusiness } from "../../../hooks/useBusinesses";
+import { useBusinessStore } from "../../../stores/useBusinessStore";
 
 export default function ManageBusinessesRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { canPerform } = useUserPermissions();
 
-  const [businesses, setBusinesses] = useState<Business[]>(cartState.getBusinesses());
-  const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
+  const { data: businesses = [] } = useBusinesses();
+  const activeBusiness = useBusinessStore((state) => state.activeBusiness);
+
+  // Mutations
+  const registerMutation = useRegisterBusiness();
+  const updateMutation = useUpdateBusiness();
+  const deleteMutation = useDeleteBusiness();
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,14 +50,6 @@ export default function ManageBusinessesRoute() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    const syncState = () => {
-      setBusinesses([...cartState.getBusinesses()]);
-      setActiveBusiness(cartState.getActiveBusiness());
-    };
-    return cartState.subscribe(syncState);
-  }, []);
-
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2000);
@@ -65,20 +64,31 @@ export default function ManageBusinessesRoute() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEditBusiness = async () => {
+  const handleSaveEditBusiness = () => {
     if (!editingBusiness) return;
     if (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) {
       triggerToast("All fields are required!");
       return;
     }
     
-    const { updateBusinessDetails } = cartState as any;
-    if (updateBusinessDetails) {
-      await updateBusinessDetails(editingBusiness.id, editName.trim(), editCategory.trim(), editAddress.trim(), editPhone.trim());
-    }
-    setIsEditModalOpen(false);
-    setEditingBusiness(null);
-    triggerToast("Business details updated successfully! 🚀");
+    updateMutation.mutate({
+      id: editingBusiness.id,
+      details: {
+        name: editName.trim(),
+        category: editCategory.trim(),
+        address: editAddress.trim(),
+        phone: editPhone.trim(),
+      }
+    }, {
+      onSuccess: () => {
+        setIsEditModalOpen(false);
+        setEditingBusiness(null);
+        triggerToast("Business details updated successfully! 🚀");
+      },
+      onError: () => {
+        triggerToast("Failed to update business details.");
+      }
+    });
   };
 
   const handleConfirmDelete = (biz: Business) => {
@@ -90,9 +100,6 @@ export default function ManageBusinessesRoute() {
       return;
     }
 
-    const { deleteBusiness } = cartState as any;
-    if (!deleteBusiness) return;
-
     Alert.alert(
       "Delete Business Branch",
       `Are you sure you want to permanently delete "${biz.name}"? This action cannot be undone.`,
@@ -101,9 +108,15 @@ export default function ManageBusinessesRoute() {
         {
           text: "Delete Branch",
           style: "destructive",
-          onPress: async () => {
-            await deleteBusiness(biz.id);
-            triggerToast("Business branch deleted successfully! 🗑️");
+          onPress: () => {
+            deleteMutation.mutate(biz.id, {
+              onSuccess: () => {
+                triggerToast("Business branch deleted successfully! 🗑️");
+              },
+              onError: () => {
+                triggerToast("Failed to delete business branch.");
+              }
+            });
           },
         },
       ]
@@ -133,16 +146,24 @@ export default function ManageBusinessesRoute() {
       return;
     }
 
-    cartState.register(newName, newAddress, newPhone, newCategory);
-    setIsModalOpen(false);
-
-    // Clear inputs
-    setNewName("");
-    setNewCategory("");
-    setNewAddress("");
-    setNewPhone("");
-
-    triggerToast("Business store created successfully!");
+    registerMutation.mutate({
+      name: newName.trim(),
+      address: newAddress.trim(),
+      phone: newPhone.trim(),
+      category: newCategory.trim(),
+    }, {
+      onSuccess: () => {
+        setIsModalOpen(false);
+        setNewName("");
+        setNewCategory("");
+        setNewAddress("");
+        setNewPhone("");
+        triggerToast("Business store created successfully!");
+      },
+      onError: () => {
+        triggerToast("Failed to register business.");
+      }
+    });
   };
 
   const getCategoryColor = (cat: string) => {

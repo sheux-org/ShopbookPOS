@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Modal,
   Platform,
@@ -13,26 +13,23 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Business, cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
-
-interface StaffMember {
-  id: string;
-  name: string;
-  role: "Admin" | "Manager" | "Cashier";
-  email: string;
-  phone: string;
-}
+import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, StaffMember } from "../../../hooks/useStaff";
+import { useBusinessStore } from "../../../stores/useBusinessStore";
 
 export default function ManageStaffRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { canPerform } = useUserPermissions();
 
-  const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
+  const activeBusiness = useBusinessStore((state) => state.activeBusiness);
 
-  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  // React Query Custom Hooks
+  const { data: staffList = [] } = useStaff(activeBusiness.id);
+  const createMutation = useCreateStaff(activeBusiness.id);
+  const updateMutation = useUpdateStaff(activeBusiness.id);
+  const deleteMutation = useDeleteStaff(activeBusiness.id);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,48 +57,34 @@ export default function ManageStaffRoute() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEditStaff = async () => {
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2000);
+  };
+
+  const handleSaveEditStaff = () => {
     if (!editingStaff) return;
     if (!editName.trim() || !editEmail.trim() || !editPhone.trim()) {
       triggerToast("All fields are required!");
       return;
     }
 
-    try {
-      const db = require('../../../components/data/db').default;
-      const { Q } = require('@nozbe/watermelondb');
-      
-      const employees = await db.get('employees').query(Q.where('id', editingStaff.id)).fetch();
-      if (employees.length > 0) {
-        const targetEmp = employees[0];
-        
-        const normalizePhone = (phoneStr: string): string => {
-          let cleaned = phoneStr.replace(/\D/g, "");
-          if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-          if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
-          return cleaned;
-        };
-        const cleanPhone = normalizePhone(editPhone);
-        const dbRole = editRole === 'Admin' ? 'admin' : editRole === 'Manager' ? 'manager' : 'cashier';
-
-        await db.write(async () => {
-          await targetEmp.update((emp: any) => {
-            emp.name = editName.trim();
-            emp.role = dbRole;
-            emp.phone = cleanPhone;
-            emp.email = editEmail.trim();
-          });
-        });
-
+    updateMutation.mutate({
+      id: editingStaff.id,
+      name: editName.trim(),
+      role: editRole,
+      email: editEmail.trim(),
+      phone: editPhone.trim(),
+    }, {
+      onSuccess: () => {
         triggerToast("Staff details updated successfully! 🚀");
         setIsEditModalOpen(false);
         setEditingStaff(null);
-        await loadStaffFromDb();
+      },
+      onError: () => {
+        triggerToast("Failed to update staff details.");
       }
-    } catch (err) {
-      console.error('Failed to update employee in database:', err);
-      triggerToast("Failed to update staff details.");
-    }
+    });
   };
 
   const handleConfirmDeleteStaff = (staff: StaffMember) => {
@@ -114,73 +97,22 @@ export default function ManageStaffRoute() {
         {
           text: "Remove Staff",
           style: "destructive",
-          onPress: async () => {
-            try {
-              const db = require('../../../components/data/db').default;
-              const { Q } = require('@nozbe/watermelondb');
-              
-              const employees = await db.get('employees').query(Q.where('id', staff.id)).fetch();
-              if (employees.length > 0) {
-                const targetEmp = employees[0];
-                await db.write(async () => {
-                  await targetEmp.destroyPermanently();
-                });
+          onPress: () => {
+            deleteMutation.mutate(staff.id, {
+              onSuccess: () => {
                 triggerToast("Staff member removed successfully! 🗑️");
-                await loadStaffFromDb();
+              },
+              onError: () => {
+                triggerToast("Failed to delete staff member.");
               }
-            } catch (err) {
-              console.error('Failed to delete employee from database:', err);
-              triggerToast("Failed to delete staff member.");
-            }
+            });
           },
         },
       ]
     );
   };
 
-  const loadStaffFromDb = async () => {
-    try {
-      const db = require('../../../components/data/db').default;
-      const { Q } = require('@nozbe/watermelondb');
-      
-      const activeBiz = cartState.getActiveBusiness();
-      if (!activeBiz || activeBiz.id === "0") return;
-      
-      const dbEmployees = await db.get('employees').query(
-        Q.where('business_id', activeBiz.id)
-      ).fetch();
-      
-      const list: StaffMember[] = dbEmployees.map((emp: any) => ({
-        id: emp.id,
-        name: emp.name,
-        role: emp.role === 'admin' ? 'Admin' : emp.role === 'manager' ? 'Manager' : 'Cashier',
-        email: emp.email || "no-email@shopbook.lk",
-        phone: emp.phone,
-      }));
-      
-      setStaffList(list);
-    } catch (err) {
-      console.error('Failed to load staff from database:', err);
-    }
-  };
-
-  useEffect(() => {
-    loadStaffFromDb();
-  }, [activeBusiness]);
-
-  useEffect(() => {
-    const syncState = () => {
-      setActiveBusiness(cartState.getActiveBusiness());
-    };
-    return cartState.subscribe(syncState);
-  }, []);
-
-  const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2000);
-  };
-
-  const handleAddStaff = async () => {
+  const handleAddStaff = () => {
     if (!newName.trim()) {
       triggerToast("Please enter staff name!");
       return;
@@ -194,55 +126,26 @@ export default function ManageStaffRoute() {
       return;
     }
 
-    try {
-      const db = require('../../../components/data/db').default;
-      const { Q } = require('@nozbe/watermelondb');
-      
-      const activeBiz = cartState.getActiveBusiness();
-      const businesses = await db.get('businesses').query(Q.where('id', activeBiz.id)).fetch();
-      const dbBiz = businesses[0];
-      
-      if (!dbBiz) {
-        triggerToast("No business registered in SQLite!");
-        return;
+    createMutation.mutate({
+      name: newName.trim(),
+      role: newRole,
+      email: newEmail.trim(),
+      phone: newPhone.trim(),
+    }, {
+      onSuccess: () => {
+        triggerToast(`${newName} added as ${newRole} successfully! 🎉`);
+        setIsModalOpen(false);
+        
+        // Clear inputs
+        setNewName("");
+        setNewRole("Cashier");
+        setNewEmail("");
+        setNewPhone("");
+      },
+      onError: () => {
+        triggerToast("Failed to add staff member.");
       }
-      
-      const dbRole = newRole === 'Admin' ? 'admin' : newRole === 'Manager' ? 'manager' : 'cashier';
-      
-      const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, "");
-        if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
-        return cleaned;
-      };
-      
-      const cleanPhone = normalizePhone(newPhone);
-
-      await db.write(async () => {
-        await db.get('employees').create((emp: any) => {
-          emp.business.set(dbBiz);
-          emp.name = newName;
-          emp.role = dbRole;
-          emp.phone = cleanPhone;
-          emp.email = newEmail;
-        });
-      });
-      
-      triggerToast(`${newName} added as ${newRole} successfully! 🎉`);
-      setIsModalOpen(false);
-      
-      // Clear inputs
-      setNewName("");
-      setNewRole("Cashier");
-      setNewEmail("");
-      setNewPhone("");
-      
-      // Reload list dynamically
-      await loadStaffFromDb();
-    } catch (err) {
-      console.error('Failed to save staff to WatermelonDB database:', err);
-      triggerToast("Failed to add staff member.");
-    }
+    });
   };
 
   const getRoleBadgeStyle = (role: string) => {
