@@ -6,14 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Platform,
   Alert,
   Modal,
   Animated,
   ActivityIndicator,
   Pressable,
-  FlatList,
-  KeyboardAvoidingView,
 } from "react-native";
 import { CameraView } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -22,27 +19,13 @@ import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useAddProduct, useProducts, useUpdateProductImage, useRemoveProductImage, useToggleFavoriteProduct } from "../../hooks/useProducts";
 import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
 import { ProductImage } from "../common/ProductImage";
 
-interface FavoriteProduct {
-  id: string;
-  name: string;
-  price: number;
-  icon: string;
-  category?: string;
-}
-
-interface RecentAdd {
-  id: string;
-  name: string;
-  timeAgo: string;
-  price: number;
-  icon: string;
-}
 
 function getRelativeTimeAgo(timestamp?: number): string {
   if (!timestamp) return "Just now";
@@ -270,7 +253,7 @@ export const StocksScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper withKeyboard noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -345,7 +328,7 @@ export const StocksScreen: React.FC = () => {
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>➕ Add Product to Catalog</Text>
             <Text style={styles.formSubtitle}>Enter item specifications to dynamically update sales catalog list</Text>
-            
+
             <View style={styles.formGrid}>
               {/* Field: Name */}
               <View style={styles.fieldRow}>
@@ -795,12 +778,12 @@ export const StocksScreen: React.FC = () => {
                 <Feather name="x" size={20} color={TOKENS.dark} />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={styles.scannerInstruction}>
               Align the retail product barcode within the viewfinder to automatically scan and catalog
             </Text>
-            
-             {/* Viewfinder area with blinking animation and moving laser line */}
+
+            {/* Viewfinder area with blinking animation and moving laser line */}
             <View style={styles.scannerViewfinder}>
               {isScanning ? (
                 <CameraView
@@ -821,13 +804,13 @@ export const StocksScreen: React.FC = () => {
               <View style={[styles.viewfinderCorner, styles.cornerTR]} />
               <View style={[styles.viewfinderCorner, styles.cornerBL]} />
               <View style={[styles.viewfinderCorner, styles.cornerBR]} />
-              
+
               {/* Moving Laser line */}
               <View style={styles.scannerLaserLine} />
-              
+
               <Text style={styles.scanningText}>SCANNING...</Text>
             </View>
-            
+
             <TouchableOpacity
               style={styles.scannerForceScanBtn}
               activeOpacity={0.8}
@@ -851,8 +834,7 @@ export const StocksScreen: React.FC = () => {
       </Modal>
 
 
-
-    </View>
+    </ScreenWrapper>
   );
 };
 

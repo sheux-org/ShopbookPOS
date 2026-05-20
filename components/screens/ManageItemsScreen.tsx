@@ -10,7 +10,6 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +18,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { useDeleteProduct, useProducts, useUpdateProduct } from "../../hooks/useProducts";
 import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
@@ -280,7 +280,7 @@ export const ManageItemsScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper withKeyboard noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -443,10 +443,7 @@ export const ManageItemsScreen: React.FC = () => {
         visible={editModalVisible}
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={[styles.modalContainer, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}
-        >
+        <ScreenWrapper withKeyboard style={styles.modalContainer}>
           {/* Modal Header */}
           <View style={styles.modalHeader}>
             <TouchableOpacity
@@ -683,7 +680,7 @@ export const ManageItemsScreen: React.FC = () => {
               <Text style={styles.saveSubmitBtnText}>Save Changes</Text>
             </TouchableOpacity>
           </ScrollView>
-        </KeyboardAvoidingView>
+        </ScreenWrapper>
       </Modal>
 
       {/* SIMULATED HIGH-FIDELITY BARCODE SCANNER OVERLAY MODAL */}
@@ -786,7 +783,7 @@ export const ManageItemsScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </ScreenWrapper>
   );
 };
 

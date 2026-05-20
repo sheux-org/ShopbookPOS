@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Platform,
   Modal,
   Alert,
   FlatList,
@@ -15,14 +14,13 @@ import { CameraView } from "expo-camera";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CatalogProduct } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
 import { ProductImage } from "../common/ProductImage";
 
 export const SearchScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestCameraAccess } = usePermission();
 
@@ -67,7 +65,7 @@ export const SearchScreen: React.FC = () => {
   const filteredProducts = productsList;
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper withKeyboard style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -317,7 +315,7 @@ export const SearchScreen: React.FC = () => {
         </View>
       </Modal>
 
-    </View>
+    </ScreenWrapper>
   );
 };
 

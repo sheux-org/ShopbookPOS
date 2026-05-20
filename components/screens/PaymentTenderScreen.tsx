@@ -11,6 +11,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useCreateOrder } from "../../hooks/useOrders";
@@ -193,7 +194,7 @@ export const PaymentTenderScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       
       {/* Header exactly matching Image 5 */}
       <View style={styles.header}>
@@ -451,7 +452,7 @@ export const PaymentTenderScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </ScreenWrapper>
   );
 };
 

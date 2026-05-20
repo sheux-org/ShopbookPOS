@@ -7,11 +7,11 @@ import {
   ScrollView,
   Animated,
   Easing,
-  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { CameraView } from "expo-camera";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import { TOKENS } from "../../constants/tokens";
@@ -97,7 +97,7 @@ export const ScanScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Popover feedback toast */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -277,7 +277,7 @@ export const ScanScreen: React.FC = () => {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 };
 

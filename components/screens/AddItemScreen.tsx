@@ -5,15 +5,12 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  TextInput,
-  Platform,
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
-import { BottomTabBar } from "../common/BottomTabBar";
 import { cartState } from "../data/cartState";
 
 interface FavoriteProduct {
@@ -49,7 +46,6 @@ const RECENTS: RecentAdd[] = [
 ];
 
 export const AddItemScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -76,22 +72,10 @@ export const AddItemScreen: React.FC = () => {
     triggerToast(`Added ${name} to invoice`);
   };
 
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "home") {
-      router.push("/");
-    } else if (tabId === "pos") {
-      router.push("/pos");
-    } else if (tabId === "stocks") {
-      router.push("/stocks");
-    } else if (tabId === "profile") {
-      router.push("/profile");
-    } else {
-      triggerToast(`${tabId.toUpperCase()} view tab selected`);
-    }
-  };
+
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper withKeyboard style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -212,7 +196,7 @@ export const AddItemScreen: React.FC = () => {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </ScreenWrapper>
   );
 };
 

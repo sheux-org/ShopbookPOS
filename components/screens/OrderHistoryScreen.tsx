@@ -19,6 +19,7 @@ import {
 import * as Print from "expo-print";
 import Barcode from "react-native-barcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { DBOrder, useGetOrderItems, useGetOrders } from "../../hooks/useOrders";
 import { useStaff } from "../../hooks/useStaff";
@@ -243,7 +244,7 @@ Thank you for shopping with us!
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         {!isTab && (
@@ -445,7 +446,7 @@ Thank you for shopping with us!
           </View>
         </View>
       </BottomSheet>
-    </View>
+    </ScreenWrapper>
   );
 };
 

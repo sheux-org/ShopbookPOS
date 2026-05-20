@@ -15,6 +15,7 @@ import {
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import * as Contacts from "expo-contacts";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CartItem } from "../data/cartState";
@@ -270,7 +271,7 @@ export const CartScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper withKeyboard noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -595,7 +596,7 @@ export const CartScreen: React.FC = () => {
           )}
         </View>
       </BottomSheet>
-    </View>
+    </ScreenWrapper>
   );
 };
 

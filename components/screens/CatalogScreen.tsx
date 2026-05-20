@@ -6,11 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
-  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
@@ -44,7 +43,6 @@ const CATEGORIES: CategoryItem[] = [
 ];
 
 export const CatalogScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -81,7 +79,7 @@ export const CatalogScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper style={styles.container}>
       {/* Toast popup */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -246,7 +244,7 @@ export const CatalogScreen: React.FC = () => {
 
 
 
-    </View>
+    </ScreenWrapper>
   );
 };
 

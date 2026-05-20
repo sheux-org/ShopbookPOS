@@ -5,13 +5,13 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Platform,
   Alert,
   Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useSettingsStore } from "../../stores/useSettingsStore";
@@ -87,7 +87,7 @@ export const ProfileScreen: React.FC = () => {
   const { canPerform, role: userRole } = useUserPermissions();
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -509,7 +509,7 @@ export const ProfileScreen: React.FC = () => {
 
 
 
-    </View>
+    </ScreenWrapper>
   );
 };
 

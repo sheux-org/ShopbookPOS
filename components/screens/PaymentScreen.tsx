@@ -7,8 +7,9 @@ import {
   Platform,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 
@@ -44,7 +45,7 @@ export const PaymentScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Header exactly matching Image 4 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -177,7 +178,7 @@ export const PaymentScreen: React.FC = () => {
           <Feather name="arrow-right" size={16} color={TOKENS.card} />
         </TouchableOpacity>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 };
 

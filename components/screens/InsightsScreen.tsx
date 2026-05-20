@@ -5,7 +5,6 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Platform,
   Alert,
   Modal,
   ActivityIndicator,
@@ -15,6 +14,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -167,7 +167,7 @@ export const InsightsScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Dashboard Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -781,7 +781,7 @@ export const InsightsScreen: React.FC = () => {
           </View>
         </View>
       </BottomSheet>
-    </View>
+    </ScreenWrapper>
   );
 };
 

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
-  Platform,
   TextInput,
   Modal,
   Pressable,
@@ -15,13 +14,14 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, Business } from "../data/cartState";
 import { useTabBarVisible } from "../../hooks/useTabBarVisible";
 import { BottomSheet } from "../common/BottomSheet";
 import { useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
 import { ProductImage } from "../common/ProductImage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface HomeProduct {
   id: string;
@@ -147,23 +147,12 @@ export const HomeScreen: React.FC = () => {
     triggerToast(`Added ${prod.name} to active invoice`);
   };
 
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "pos") {
-      router.push("/pos");
-    } else if (tabId === "stocks") {
-      router.push("/stocks");
-    } else if (tabId === "profile") {
-      router.push("/profile");
-    } else if (tabId !== "home") {
-      triggerToast(`${tabId.toUpperCase()} view tab selected`);
-    }
-  };
 
   // WatermelonDB performs search & filter queries directly
   const filteredProducts = productsList;
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Toast popup */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -444,7 +433,7 @@ export const HomeScreen: React.FC = () => {
           })}
         </ScrollView>
       </BottomSheet>
-    </View>
+    </ScreenWrapper>
   );
 };
 
