@@ -40,6 +40,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mini POS shares approximate device location with your store admin on the Activation Devices panel."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
@@ -56,9 +62,7 @@
         {
           "peripheralUsageDescription": "Mini POS uses Bluetooth to connect with your thermal printer.",
           "alwaysUsageDescription": "Mini POS requires Bluetooth to print invoices in the background.",
-          "protocols": [
-            "com.shopbook.pos"
-          ]
+          "protocols": ["com.shopbook.pos"]
         }
       ]
     ],
