@@ -18,6 +18,7 @@ import { TOKENS } from "../../constants/tokens";
 import { cartState, CartItem } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
+import { ProductImage } from "../common/ProductImage";
 
 export const ScanScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -157,9 +158,11 @@ export const ScanScreen: React.FC = () => {
       >
         {invoiceItems.map((item) => (
           <View key={item.id} style={styles.itemCard}>
-            <View style={styles.itemIconBox}>
-              <Text style={{ fontSize: 20 }}>{item.icon}</Text>
-            </View>
+            <ProductImage
+              icon={item.icon}
+              size={40}
+              style={styles.itemIconBox}
+            />
             <View style={styles.itemMainInfo}>
               <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
               <Text style={styles.itemQuantities}>

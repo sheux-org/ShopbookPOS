@@ -11,6 +11,7 @@ import {
   Modal,
 } from "react-native";
 import { CameraView } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { useRouter } from "expo-router";
@@ -19,12 +20,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useAddProduct, useProducts } from "../../hooks/useProducts";
+import { ProductImage } from "../common/ProductImage";
 
 interface FavoriteProduct {
   id: string;
   name: string;
   price: number;
   icon: string;
+  category?: string;
 }
 
 interface RecentAdd {
@@ -110,6 +113,56 @@ export const StocksScreen: React.FC = () => {
     requestCameraAccess(() => {
       setIsScanning(true);
     });
+  };
+
+  const handlePickImage = () => {
+    Alert.alert(
+      "Product Image",
+      "Choose how to add a product image",
+      [
+        {
+          text: "📷 Camera",
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== "granted") {
+              Alert.alert("Permission needed", "Camera permission is required to take photos.");
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets[0]?.uri) {
+              setFormImage(result.assets[0].uri);
+              triggerToast("Photo taken successfully! 📸");
+            }
+          },
+        },
+        {
+          text: "🖼️ Gallery",
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== "granted") {
+              Alert.alert("Permission needed", "Photo library permission is required.");
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets[0]?.uri) {
+              setFormImage(result.assets[0].uri);
+              triggerToast("Image selected! 🖼️");
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
   };
 
   const handleSaveProduct = () => {
@@ -378,13 +431,24 @@ export const StocksScreen: React.FC = () => {
               {/* Field: Product Image Picker */}
               <View style={styles.fieldRow}>
                 <Text style={styles.fieldLabel}>Product Image / Icon *</Text>
-                <Text style={styles.fieldHelpText}>Select an image/emoji representing the product catalog icon</Text>
+                <Text style={styles.fieldHelpText}>Upload a photo or pick an emoji for this product</Text>
                 
                 <View style={styles.imagePickerContainer}>
-                  {/* Current Active Preview */}
-                  <View style={styles.imagePreviewBox}>
-                    <Text style={styles.imagePreviewText}>{formImage}</Text>
-                  </View>
+                  {/* Current Active Preview using ProductImage */}
+                  <TouchableOpacity
+                    style={styles.imagePreviewBox}
+                    activeOpacity={0.8}
+                    onPress={handlePickImage}
+                  >
+                    <ProductImage
+                      icon={formImage}
+                      category={formCategory}
+                      style={{ width: 56, height: 56, borderRadius: 10 }}
+                    />
+                    <View style={styles.imagePreviewCameraOverlay}>
+                      <Feather name="camera" size={10} color={TOKENS.card} />
+                    </View>
+                  </TouchableOpacity>
                   
                   {/* Horizontal Emojis selector list */}
                   <ScrollView
@@ -408,18 +472,13 @@ export const StocksScreen: React.FC = () => {
                       );
                     })}
                     
-                    {/* Simulated Gallery custom upload box */}
+                    {/* Real photo upload button */}
                     <TouchableOpacity
                       style={styles.imageOptionChipUpload}
                       activeOpacity={0.7}
-                      onPress={() => {
-                        const mockCustoms = ["🍕", "🍔", "🍟", "🍩", "🍦", "🍗", "🍣", "🍇"];
-                        const picked = mockCustoms[Math.floor(Math.random() * mockCustoms.length)];
-                        setFormImage(picked);
-                        triggerToast("Simulated Photo uploaded successfully! 📸");
-                      }}
+                      onPress={handlePickImage}
                     >
-                      <Feather name="camera" size={14} color={TOKENS.primary} />
+                      <Feather name="upload" size={14} color={TOKENS.primary} />
                       <Text style={styles.imageUploadText}>Upload</Text>
                     </TouchableOpacity>
                   </ScrollView>
@@ -479,7 +538,11 @@ export const StocksScreen: React.FC = () => {
                   activeOpacity={0.75}
                   onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
                 >
-                  <Text style={styles.favIcon}>{item.icon}</Text>
+                  <ProductImage
+                    icon={item.icon}
+                    category={item.category}
+                    style={{ width: "100%", height: 50, borderRadius: 0 }}
+                  />
                   <Text style={styles.favName} numberOfLines={1}>
                     {item.name}
                   </Text>
@@ -823,27 +886,31 @@ const styles = StyleSheet.create({
   favCard: {
     width: "23.5%",
     backgroundColor: TOKENS.card,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    padding: 8,
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 1,
-    elevation: 0.5,
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  favIcon: {
-    fontSize: 22,
-    marginBottom: 4,
+  favImageBox: {
+    width: "100%",
+    height: 50,
+    borderRadius: 0,
+    marginBottom: 6,
   },
   favName: {
     fontSize: 10,
     fontWeight: "bold",
     color: TOKENS.dark,
     textAlign: "center",
+    paddingHorizontal: 4,
   },
   favPrice: {
     fontSize: 10,
@@ -981,22 +1048,34 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   imagePreviewBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: "#EFF6FF",
+    width: 56,
+    height: 56,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    overflow: "hidden",
+    position: "relative",
     shadowColor: TOKENS.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
-  imagePreviewText: {
-    fontSize: 28,
+  imagePreviewInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+  },
+  imagePreviewCameraOverlay: {
+    position: "absolute",
+    bottom: 3,
+    right: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: TOKENS.primary,
+    alignItems: "center",
+    justifyContent: "center",
   },
   imageOptionsScroll: {
     alignItems: "center",
