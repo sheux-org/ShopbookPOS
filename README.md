@@ -121,6 +121,19 @@ pnpm tsc --noEmit
 pnpm lint
 ```
 
+### 4. Expo dependency & project health
+
+Run these from the project root when upgrading Expo or before a release. They do not start the dev server.
+
+- **`npx expo install --check`** — Compares installed dependency versions with the [Expo SDK compatibility table](https://docs.expo.dev/versions/latest/) and reports mismatches. Use `npx expo install --fix` (or install the packages it names) to align versions.
+
+- **`npx expo-doctor`** — Runs Expo’s project health checks (config, native tooling, peer deps, React Native Directory hints, etc.). The local `expo` CLI does not include `expo doctor`; use **`expo-doctor`** as above, or **`pnpm doctor`** (same command via `package.json`).
+
+```bash
+npx expo install --check
+npx expo-doctor
+```
+
 ---
 
 ## ☁️ Supabase Integration & Database Migrations
