@@ -117,9 +117,17 @@ export const cartState = {
           p.costPrice = product.costPrice;
           p.quickCode = product.quickCode;
           p.barcode = product.barcode;
+
+          const iconUri = product.icon ?? '';
+          const isLocal = iconUri.startsWith('file://') || iconUri.startsWith('/');
+          p.iconPendingUpload = isLocal;
         });
       });
       console.log('Successfully saved new catalog product to WatermelonDB database');
+
+      // Trigger background upload queue process if a local image needs upload
+      const { processUploadQueue } = require('../../services/uploadQueue');
+      processUploadQueue();
     } catch (err) {
       console.error('Failed to write new catalog product to WatermelonDB:', err);
     }

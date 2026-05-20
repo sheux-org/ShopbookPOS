@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,11 @@ import {
   Platform,
   Alert,
   Modal,
+  Animated,
+  ActivityIndicator,
+  Pressable,
+  FlatList,
+  KeyboardAvoidingView,
 } from "react-native";
 import { CameraView } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -19,7 +24,8 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
-import { useAddProduct, useProducts } from "../../hooks/useProducts";
+import { useAddProduct, useProducts, useUpdateProductImage, useRemoveProductImage, useToggleFavoriteProduct } from "../../hooks/useProducts";
+import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
 import { ProductImage } from "../common/ProductImage";
 
 interface FavoriteProduct {
@@ -55,26 +61,45 @@ function getRelativeTimeAgo(timestamp?: number): string {
 
 const CATEGORIES_LIST = ["grocery", "dairy", "drinks", "snacks", "household"];
 const UNIT_TYPES = ["Pieces", "kg", "Liters", "Packets"];
-const CATEGORY_ICONS: Record<string, string> = {
-  grocery: "🧼",
-  dairy: "🥛",
-  drinks: "🥤",
-  snacks: "🍪",
-  household: "🧹",
-};
 
 export const StocksScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const addProductMutation = useAddProduct();
+  const { pickAndUpload } = useUpdateProductImage();
+  const { confirmAndRemove } = useRemoveProductImage();
   const { data: favoriteProducts = [] } = useProducts(undefined, undefined, "Favorites");
   const { data: recentProducts = [] } = useProducts(undefined, undefined, "Recents");
+
+  const toggleFavoriteMutation = useToggleFavoriteProduct();
+  const [isEditingFavorites, setIsEditingFavorites] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
 
-  // Form states
+  // Image picker bottom sheet state
+  const [imgSheetVisible, setImgSheetVisible] = useState(false);
+  const [formImageUploading, setFormImageUploading] = useState(false);
+  const imgSheetAnim = useRef(new Animated.Value(300)).current;
+
+  const openImgSheet = () => {
+    setImgSheetVisible(true);
+    Animated.spring(imgSheetAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 4,
+    }).start();
+  };
+
+  const closeImgSheet = () => {
+    Animated.timing(imgSheetAnim, {
+      toValue: 300,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => setImgSheetVisible(false));
+  };
+
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("grocery");
   const [formUnitType, setFormUnitType] = useState("Pieces");
@@ -87,7 +112,7 @@ export const StocksScreen: React.FC = () => {
 
   const [formQuickCode, setFormQuickCode] = useState("");
   const [formBarcode, setFormBarcode] = useState("");
-  const [formImage, setFormImage] = useState("🍎");
+  const [formImage, setFormImage] = useState("");
   const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
@@ -115,54 +140,80 @@ export const StocksScreen: React.FC = () => {
     });
   };
 
-  const handlePickImage = () => {
-    Alert.alert(
-      "Product Image",
-      "Choose how to add a product image",
-      [
-        {
-          text: "📷 Camera",
-          onPress: async () => {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== "granted") {
-              Alert.alert("Permission needed", "Camera permission is required to take photos.");
-              return;
-            }
-            const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [1, 1],
-              quality: 0.8,
-            });
-            if (!result.canceled && result.assets[0]?.uri) {
-              setFormImage(result.assets[0].uri);
-              triggerToast("Photo taken successfully! 📸");
-            }
-          },
-        },
-        {
-          text: "🖼️ Gallery",
-          onPress: async () => {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== "granted") {
-              Alert.alert("Permission needed", "Photo library permission is required.");
-              return;
-            }
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [1, 1],
-              quality: 0.8,
-            });
-            if (!result.canceled && result.assets[0]?.uri) {
-              setFormImage(result.assets[0].uri);
-              triggerToast("Image selected! 🖼️");
-            }
-          },
-        },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
+  const handlePickImage = async (source: 'camera' | 'gallery') => {
+    closeImgSheet();
+
+    // Small delay to let the sheet close before opening picker
+    await new Promise((r) => setTimeout(r, 280));
+
+    let localUri: string | null = null;
+
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Camera permission is required.');
+        return;
+      }
+      try {
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [1, 1] as [number, number],
+          quality: 0.85,
+        });
+        if (!result.canceled && result.assets[0]?.uri) {
+          localUri = result.assets[0].uri;
+        }
+      } catch {
+        Alert.alert('Camera Unavailable', 'Camera is not available. Please use Gallery.');
+        return;
+      }
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Photo library permission is required.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1] as [number, number],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets[0]?.uri) {
+        localUri = result.assets[0].uri;
+      }
+    }
+
+    if (!localUri) return;
+
+    // Show local image immediately while uploading
+    setFormImage(localUri);
+    setFormImageUploading(true);
+    triggerToast('Uploading image... ⏳');
+
+    try {
+      const remoteUrl = await uploadToUploadThing(localUri);
+      if (remoteUrl) {
+        setFormImage(remoteUrl);
+        triggerToast('Image uploaded! ✅');
+      } else {
+        // Keep local URI if upload failed — will try again on save
+        triggerToast('Upload failed — image saved locally');
+      }
+    } catch {
+      triggerToast('Upload error — image saved locally');
+    } finally {
+      setFormImageUploading(false);
+    }
+  };
+
+  const handleRemoveFormImage = async () => {
+    // If there's a remote UploadThing URL, delete it from storage
+    if (formImage.startsWith('http')) {
+      await deleteUploadThingFile(formImage);
+    }
+    setFormImage("");
   };
 
   const handleSaveProduct = () => {
@@ -196,7 +247,8 @@ export const StocksScreen: React.FC = () => {
       name: formName,
       price: priceNum,
       category: formCategory,
-      icon: formImage || CATEGORY_ICONS[formCategory] || "📦",
+      // icon is the real uploaded photo URL, or empty string if no photo was set
+      icon: formImage,
       stockCount: stockCount,
       unitType: formUnitType,
       costPrice: costNum,
@@ -214,7 +266,7 @@ export const StocksScreen: React.FC = () => {
     setFormLowStock("");
     setFormQuickCode("");
     setFormBarcode("");
-    setFormImage("🍎");
+    setFormImage("");
   };
 
   return (
@@ -237,10 +289,22 @@ export const StocksScreen: React.FC = () => {
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Stocks Manager</Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>Stocks</Text>
+          <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 1 }}>Catalog Manager</Text>
+        </View>
 
         <View style={styles.headerRightActions}>
-          {cartCount > 0 ? (
+          <TouchableOpacity
+            style={styles.headerHistoryBtn}
+            activeOpacity={0.7}
+            onPress={() => router.push("/stocks/items")}
+          >
+            <Feather name="archive" size={15} color={TOKENS.primary} />
+            <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Items</Text>
+          </TouchableOpacity>
+
+          {cartCount > 0 && (
             <TouchableOpacity
               style={styles.headerCartBtn}
               activeOpacity={0.8}
@@ -251,8 +315,6 @@ export const StocksScreen: React.FC = () => {
                 <Text style={styles.headerCartBadgeText}>{cartCount}</Text>
               </View>
             </TouchableOpacity>
-          ) : (
-            <View style={styles.placeholderWidth} />
           )}
         </View>
       </View>
@@ -428,60 +490,76 @@ export const StocksScreen: React.FC = () => {
                 </View>
               </View>
 
-              {/* Field: Product Image Picker */}
+              {/* ────── Product Image / Icon field ────── */}
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Product Image / Icon *</Text>
-                <Text style={styles.fieldHelpText}>Upload a photo or pick an emoji for this product</Text>
-                
-                <View style={styles.imagePickerContainer}>
-                  {/* Current Active Preview using ProductImage */}
+                <Text style={styles.fieldLabel}>Product Image *</Text>
+                <Text style={styles.fieldHelpText}>Tap the image to take a photo or pick from gallery</Text>
+
+                <View style={styles.imgPickerPanel}>
+
+                  {/* Tappable image preview — opens bottom sheet */}
                   <TouchableOpacity
-                    style={styles.imagePreviewBox}
-                    activeOpacity={0.8}
-                    onPress={handlePickImage}
+                    style={styles.imgPreviewWrap}
+                    activeOpacity={0.85}
+                    onPress={openImgSheet}
+                    disabled={formImageUploading}
                   >
-                    <ProductImage
-                      icon={formImage}
-                      category={formCategory}
-                      style={{ width: 56, height: 56, borderRadius: 10 }}
-                    />
-                    <View style={styles.imagePreviewCameraOverlay}>
-                      <Feather name="camera" size={10} color={TOKENS.card} />
-                    </View>
+                    {formImage ? (
+                      <ProductImage
+                        icon={formImage}
+                        category={formCategory}
+                        style={{ width: 110, height: 110, borderRadius: 16 }}
+                      />
+                    ) : (
+                      <View style={styles.standardPhotoPlaceholder}>
+                        <Ionicons name="images-outline" size={32} color="#94A3B8" />
+                        <Text style={styles.standardPhotoPlaceholderText}>Add Photo</Text>
+                      </View>
+                    )}
+
+                    {/* Camera badge overlay */}
+                    {!formImageUploading && formImage ? (
+                      <View style={styles.imgCameraBadge}>
+                        <Feather name="camera" size={14} color="#FFFFFF" />
+                      </View>
+                    ) : null}
+
+                    {/* Loading spinner while uploading */}
+                    {formImageUploading && (
+                      <View style={styles.imgUploadingOverlay}>
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      </View>
+                    )}
                   </TouchableOpacity>
-                  
-                  {/* Horizontal Emojis selector list */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.imageOptionsScroll}
-                  >
-                    {["🍎", "🥛", "🥤", "🍪", "🧼", "🍞", "🥚", "🌾", "🥣", "🧴", "🍫", "🥦", "🥩", "🧅", "🍌", "🥫", "🔋"].map((emoji) => {
-                      const isSelected = formImage === emoji;
-                      return (
-                        <TouchableOpacity
-                          key={emoji}
-                          style={[
-                            styles.imageOptionChip,
-                            isSelected && styles.imageOptionChipActive
-                          ]}
-                          onPress={() => setFormImage(emoji)}
-                        >
-                          <Text style={styles.imageOptionText}>{emoji}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                    
-                    {/* Real photo upload button */}
-                    <TouchableOpacity
-                      style={styles.imageOptionChipUpload}
-                      activeOpacity={0.7}
-                      onPress={handlePickImage}
-                    >
-                      <Feather name="upload" size={14} color={TOKENS.primary} />
-                      <Text style={styles.imageUploadText}>Upload</Text>
-                    </TouchableOpacity>
-                  </ScrollView>
+
+                  {/* Info below the preview */}
+                  {formImageUploading ? (
+                    <View style={styles.imgUploadingInfo}>
+                      <ActivityIndicator size="small" color={TOKENS.primary} />
+                      <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                    </View>
+                  ) : (formImage.startsWith('http') || formImage.startsWith('file://') || formImage.startsWith('/')) ? (
+                    <View style={styles.imgRealPhotoInfo}>
+                      <View style={styles.imgSuccessBadge}>
+                        <Feather name="check-circle" size={16} color="#16A34A" />
+                        <Text style={styles.imgSuccessText}>Photo ready</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.imgRemovePillBtn}
+                        activeOpacity={0.8}
+                        onPress={handleRemoveFormImage}
+                      >
+                        <Feather name="x" size={13} color={TOKENS.error} />
+                        <Text style={styles.imgRemovePillText}>Remove photo</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.imgHintCol}>
+                      <Feather name="upload-cloud" size={20} color="#94A3B8" />
+                      <Text style={styles.imgHintTitle}>Tap to add a product photo</Text>
+                      <Text style={styles.imgHintSub}>Take a photo or pick from gallery</Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -511,12 +589,16 @@ export const StocksScreen: React.FC = () => {
         <View style={styles.favoritesSection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionHeaderTitle}>Favorites</Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => Alert.alert("Edit Favorites", "Favorites items unlocked.")}
-            >
-              <Text style={styles.editLink}>Edit</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setIsEditingFavorites(!isEditingFavorites)}
+              >
+                <Text style={[styles.editLink, isEditingFavorites && { color: TOKENS.primary, fontWeight: "700" }]}>
+                  {isEditingFavorites ? "Done" : "Edit"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.favGrid}>
@@ -536,13 +618,31 @@ export const StocksScreen: React.FC = () => {
                   key={item.id}
                   style={styles.favCard}
                   activeOpacity={0.75}
-                  onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
+                  onPress={() => {
+                    if (isEditingFavorites) {
+                      toggleFavoriteMutation.mutate(item.id);
+                    } else {
+                      handleAddProductToCart(item.name, item.price, item.icon);
+                    }
+                  }}
                 >
-                  <ProductImage
-                    icon={item.icon}
-                    category={item.category}
-                    style={{ width: "100%", height: 50, borderRadius: 0 }}
-                  />
+                  {/* Product image */}
+                  <View style={{ width: "100%", height: 65, position: "relative" }}>
+                    <ProductImage
+                      icon={item.icon}
+                      category={item.category}
+                      style={{ width: "100%", height: 65, borderTopLeftRadius: 11, borderTopRightRadius: 11 }}
+                    />
+                    {isEditingFavorites && (
+                      <TouchableOpacity
+                        style={styles.favRemoveBtn}
+                        activeOpacity={0.8}
+                        onPress={() => toggleFavoriteMutation.mutate(item.id)}
+                      >
+                        <Ionicons name="close-circle" size={22} color="#EF4444" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   <Text style={styles.favName} numberOfLines={1}>
                     {item.name}
                   </Text>
@@ -574,24 +674,105 @@ export const StocksScreen: React.FC = () => {
             ) : (
               recentProducts.map((item) => (
                 <View key={item.id} style={styles.recentRow}>
-                  <View style={styles.recentInfoWrapper}>
-                    <Text style={styles.recentItemName}>{item.name}</Text>
-                    <Text style={styles.recentTimeAgo}>{getRelativeTimeAgo(item.createdAt)}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+                    <ProductImage
+                      icon={item.icon}
+                      category={item.category}
+                      style={{ width: 58, height: 58, borderRadius: 10 }}
+                    />
+                    <View style={styles.recentInfoWrapper}>
+                      <Text style={styles.recentItemName} numberOfLines={1}>{item.name}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
+                        <Text style={{ fontSize: 12, fontWeight: "600", color: TOKENS.primary }}>
+                          Rs. {item.price.toLocaleString()}
+                        </Text>
+                        <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#E2E8F0" }} />
+                        <Text style={styles.recentTimeAgo}>{getRelativeTimeAgo(item.createdAt)}</Text>
+                      </View>
+                    </View>
                   </View>
 
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    activeOpacity={0.8}
-                    onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
-                  >
-                    <Text style={styles.addButtonText}>+ Add</Text>
-                  </TouchableOpacity>
+                  <View style={styles.recentActions}>
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      activeOpacity={0.8}
+                      onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
+                    >
+                      <Text style={styles.addButtonText}>+ Add</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             )}
           </View>
         </View>
       </ScrollView>
+
+      {/* ── Image Picker Bottom Sheet ── */}
+      <Modal
+        visible={imgSheetVisible}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={closeImgSheet}
+      >
+        {/* Scrim — tap to dismiss */}
+        <Pressable style={styles.sheetScrim} onPress={closeImgSheet}>
+          <Animated.View
+            style={[styles.sheetContainer, { transform: [{ translateY: imgSheetAnim }] }]}
+          >
+            {/* Stop tap-through on the sheet itself */}
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              {/* Drag handle */}
+              <View style={styles.sheetHandle} />
+
+              <Text style={styles.sheetTitle}>Product Photo</Text>
+              <Text style={styles.sheetSubtitle}>Choose how to add an image for this product</Text>
+
+              {/* Camera option */}
+              <TouchableOpacity
+                style={styles.sheetOption}
+                activeOpacity={0.75}
+                onPress={() => handlePickImage('camera')}
+              >
+                <View style={[styles.sheetOptionIcon, { backgroundColor: TOKENS.lightBlue }]}>
+                  <Feather name="camera" size={22} color={TOKENS.primary} />
+                </View>
+                <View style={styles.sheetOptionText}>
+                  <Text style={styles.sheetOptionTitle}>Camera</Text>
+                  <Text style={styles.sheetOptionSub}>Take a new photo right now</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+              </TouchableOpacity>
+
+              {/* Gallery option */}
+              <TouchableOpacity
+                style={styles.sheetOption}
+                activeOpacity={0.75}
+                onPress={() => handlePickImage('gallery')}
+              >
+                <View style={[styles.sheetOptionIcon, { backgroundColor: '#F0FDF4' }]}>
+                  <Feather name="image" size={22} color="#16A34A" />
+                </View>
+                <View style={styles.sheetOptionText}>
+                  <Text style={styles.sheetOptionTitle}>Photo Library</Text>
+                  <Text style={styles.sheetOptionSub}>Pick from your gallery</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+              </TouchableOpacity>
+
+              {/* Cancel */}
+              <TouchableOpacity
+                style={styles.sheetCancelBtn}
+                activeOpacity={0.8}
+                onPress={closeImgSheet}
+              >
+                <Text style={styles.sheetCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
 
       {/* SIMULATED HIGH-FIDELITY BARCODE SCANNER OVERLAY MODAL */}
       <Modal
@@ -665,6 +846,8 @@ export const StocksScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+
 
     </View>
   );
@@ -884,7 +1067,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   favCard: {
-    width: "23.5%",
+    width: "31.5%",
     backgroundColor: TOKENS.card,
     borderRadius: 12,
     borderWidth: 1,
@@ -892,7 +1075,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 8,
+    paddingBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
@@ -901,19 +1084,20 @@ const styles = StyleSheet.create({
   },
   favImageBox: {
     width: "100%",
-    height: 50,
+    height: 65,
     borderRadius: 0,
     marginBottom: 6,
   },
   favName: {
-    fontSize: 10,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "600",
     color: TOKENS.dark,
     textAlign: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
+    marginTop: 6,
   },
   favPrice: {
-    fontSize: 10,
+    fontSize: 11,
     color: TOKENS.primary,
     fontWeight: "bold",
     marginTop: 2,
@@ -940,11 +1124,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingRight: 16,
+    paddingLeft: 3,
+    paddingTop: 3,
+    paddingBottom: 3,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    minHeight: 64,
   },
   recentInfoWrapper: {
     flex: 1,
@@ -979,6 +1166,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  headerHistoryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    paddingHorizontal: 12,
   },
   headerCartBtn: {
     width: 38,
@@ -1039,11 +1236,143 @@ const styles = StyleSheet.create({
   fieldHelpText: {
     fontSize: 11,
     color: TOKENS.muted,
-    marginBottom: 4,
+    marginBottom: 6,
   },
+  // ── Redesigned image picker panel — centered vertical layout ──
+  imgPickerPanel: {
+    alignItems: 'center' as const,
+    backgroundColor: '#FAFAFA',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed' as const,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  imgPreviewWrap: {
+    position: 'relative' as const,
+    width: 110,
+    height: 110,
+    borderRadius: 16,
+    overflow: 'hidden' as const,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  imgCameraBadge: {
+    position: 'absolute' as const,
+    bottom: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  imgUploadingOverlay: {
+    position: 'absolute' as const,
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderRadius: 16,
+  },
+  imgUploadingInfo: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  imgUploadingText: {
+    fontSize: 13,
+    color: TOKENS.primary,
+    fontWeight: '600' as const,
+  },
+  imgRealPhotoInfo: {
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  imgSuccessBadge: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+  },
+  imgSuccessText: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: '#16A34A',
+  },
+  imgRemovePillBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 5,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  imgRemovePillText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: TOKENS.error,
+  },
+  imgHintCol: {
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  imgHintTitle: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: TOKENS.dark,
+  },
+  imgHintSub: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    textAlign: 'center' as const,
+  },
+  // ── Standard upload placeholder & Fav edit styles ──
+  standardPhotoPlaceholder: {
+    width: '100%' as const,
+    height: '100%' as const,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    backgroundColor: '#F8FAFC',
+  },
+  standardPhotoPlaceholderText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: '#64748B',
+    marginTop: 6,
+  },
+  favRemoveBtn: {
+    position: 'absolute' as const,
+    top: 6,
+    right: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 11,
+    width: 22,
+    height: 22,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+    zIndex: 10,
+  },
+  // ── (old picker styles kept for reference, unused) ──
   imagePickerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     marginTop: 4,
   },
@@ -1053,13 +1382,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: TOKENS.accentBlue,
-    overflow: "hidden",
-    position: "relative",
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    overflow: 'hidden',
+    position: 'relative',
   },
   imagePreviewInner: {
     width: 56,
@@ -1067,18 +1391,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   imagePreviewCameraOverlay: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 3,
     right: 3,
     width: 18,
     height: 18,
     borderRadius: 9,
     backgroundColor: TOKENS.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   imageOptionsScroll: {
-    alignItems: "center",
+    alignItems: 'center',
     gap: 8,
     paddingRight: 16,
   },
@@ -1086,9 +1410,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: TOKENS.border,
   },
@@ -1101,8 +1425,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   imageOptionChipUpload: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
     paddingHorizontal: 10,
     height: 36,
@@ -1113,7 +1437,7 @@ const styles = StyleSheet.create({
   },
   imageUploadText: {
     fontSize: 11,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.primary,
   },
   scannerBg: {
@@ -1268,5 +1592,120 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 16,
     paddingHorizontal: 12,
+  },
+  // Camera overlay button on favorites grid cards
+  favCameraBtn: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(37, 99, 235, 0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  // Row wrapper for camera + add button in recents
+  recentActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  // Camera icon button in recents rows
+  recentCameraBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // ── Image picker bottom sheet ──
+  sheetScrim: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheetContainer: {
+    backgroundColor: TOKENS.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    paddingTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: TOKENS.dark,
+    marginBottom: 4,
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: TOKENS.muted,
+    marginBottom: 20,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+  },
+  sheetOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetOptionText: {
+    flex: 1,
+    gap: 2,
+  },
+  sheetOptionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: TOKENS.dark,
+  },
+  sheetOptionSub: {
+    fontSize: 12,
+    color: TOKENS.muted,
+  },
+  sheetCancelBtn: {
+    marginTop: 16,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+  },
+  sheetCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: TOKENS.dark,
   },
 });

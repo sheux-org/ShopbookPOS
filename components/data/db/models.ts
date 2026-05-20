@@ -69,6 +69,7 @@ export class Product extends Model {
   @field('low_stock_alert') lowStockAlert?: number;
   @text('icon') icon?: string;
   @field('is_favorite') isFavorite!: boolean;
+  @field('icon_pending_upload') iconPendingUpload?: boolean;
 
   @relation('businesses', 'business_id') business!: Relation<any>;
   @children('order_items') orderItems!: any;

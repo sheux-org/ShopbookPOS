@@ -2,6 +2,11 @@ import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PermissionProvider } from "../hooks/usePermissionHandler";
+import { useEffect } from "react";
+import {
+  startUploadQueueMonitor,
+  setQueryInvalidator,
+} from "../services/uploadQueue";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -12,7 +17,18 @@ const queryClient = new QueryClient({
   },
 });
 
+// Register React Query invalidator with the upload queue service
+// so it can refresh all screens after a deferred upload completes
+setQueryInvalidator(() => {
+  queryClient.invalidateQueries({ queryKey: ["products"] });
+});
+
 export default function RootLayout() {
+  useEffect(() => {
+    // Start the NetInfo connectivity monitor for the offline upload queue
+    startUploadQueueMonitor();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>

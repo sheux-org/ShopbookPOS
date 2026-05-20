@@ -3,6 +3,17 @@ import { schemaMigrations, addColumns } from '@nozbe/watermelondb/Schema/migrati
 export default schemaMigrations({
   migrations: [
     {
+      toVersion: 4,
+      steps: [
+        addColumns({
+          table: 'products',
+          columns: [
+            { name: 'icon_pending_upload', type: 'boolean', isOptional: true },
+          ],
+        }),
+      ],
+    },
+    {
       toVersion: 3,
       steps: [
         addColumns({
