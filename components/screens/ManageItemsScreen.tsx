@@ -317,24 +317,21 @@ export const ManageItemsScreen: React.FC = () => {
               setSearchQuery(text);
               if (scannedBarcode) setScannedBarcode(null);
             }}
-            placeholderTextColor={TOKENS.muted}
-            clearButtonMode="while-editing"
+            placeholderTextColor="#9CA3AF"
+            returnKeyType="search"
           />
-          {searchQuery !== "" && (
+          {searchQuery.length > 0 ? (
             <TouchableOpacity onPress={() => {
               setSearchQuery("");
               setScannedBarcode(null);
             }}>
-              <Feather name="x" size={16} color={TOKENS.muted} />
+              <Feather name="x-circle" size={16} color={TOKENS.muted} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={triggerBarcodeScanner}>
+              <Ionicons name="qr-code-outline" size={16} color={TOKENS.primary} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            style={styles.searchScanBtn}
-            activeOpacity={0.8}
-            onPress={triggerBarcodeScanner}
-          >
-            <Ionicons name="scan-outline" size={18} color={TOKENS.primary} />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -862,14 +859,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F3F4F6",
-    borderRadius: 10,
+    borderRadius: 20,
     paddingHorizontal: 12,
-    height: 42,
-    gap: 8,
+    height: 40,
+    gap: 6,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     color: TOKENS.dark,
   },
   loaderContainer: {

@@ -9,6 +9,7 @@ import {
   Platform,
   Modal,
   Alert,
+  FlatList,
 } from "react-native";
 import { CameraView } from "expo-camera";
 import { usePermission } from "../../hooks/usePermissionHandler";
@@ -164,9 +165,13 @@ export const SearchScreen: React.FC = () => {
       </View>
 
       {/* Results Scrollable list */}
-      <ScrollView style={styles.resultsList} showsVerticalScrollIndicator={false}>
-        {filteredProducts.map((item) => (
-          <View key={item.id} style={styles.resultItemRow}>
+      <FlatList
+        data={filteredProducts}
+        keyExtractor={(item) => item.id.toString()}
+        style={styles.resultsList}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <View style={styles.resultItemRow}>
             {/* Left Box Icon */}
             <ProductImage
               icon={item.icon}
@@ -226,9 +231,8 @@ export const SearchScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
-
-        {filteredProducts.length === 0 && (
+        )}
+        ListEmptyComponent={
           <View style={styles.emptySearchState}>
             <Feather name="search" size={48} color="#D1D5DB" />
             <Text style={styles.emptySearchTitle}>No items found</Text>
@@ -236,8 +240,8 @@ export const SearchScreen: React.FC = () => {
               Try searching for another product or add a new one to catalog.
             </Text>
           </View>
-        )}
-      </ScrollView>
+        }
+      />
 
       {/* REAL HIGH-PERFORMANCE CAMERA BARCODE SCANNER OVERLAY MODAL */}
       <Modal
