@@ -356,6 +356,7 @@ export const ManageItemsScreen: React.FC = () => {
                 <ProductImage
                   icon={item.icon}
                   category={item.category}
+                  size={47}
                   style={styles.productImage}
                 />
 
@@ -372,59 +373,60 @@ export const ManageItemsScreen: React.FC = () => {
                     )}
                   </View>
 
-                <View style={styles.badgesRow}>
-                  <Text style={styles.productPriceText}>Rs. {item.price.toLocaleString()}</Text>
-                  <View style={styles.dotDivider} />
-                  <Text
-                    style={[
-                      styles.productStockText,
-                      item.stockType === "low" && styles.stockLowText,
-                      item.stockType === "out" && styles.stockOutText,
-                    ]}
-                  >
-                    {item.stockCount} {item.unitType || "pcs"}
-                  </Text>
-                </View>
-
-                <View style={styles.codesRow}>
-                  {item.quickCode ? (
-                    <View style={styles.codePill}>
-                      <Text style={styles.codeText}>Code: {item.quickCode}</Text>
-                    </View>
-                  ) : null}
-                  {item.barcode ? (
-                    <View style={[styles.codePill, { backgroundColor: "#F1F5F9" }]}>
-                      <Text style={styles.codeText}>Barcode: {item.barcode}</Text>
-                    </View>
-                  ) : null}
-                  <View style={[styles.codePill, { backgroundColor: "#EFF6FF" }]}>
-                    <Text style={[styles.codeText, { color: TOKENS.primary }]}>
-                      {item.category.toUpperCase()}
+                  <View style={styles.badgesRow}>
+                    <Text style={styles.productPriceText}>Rs. {item.price.toLocaleString()}</Text>
+                    <View style={styles.dotDivider} />
+                    <Text
+                      style={[
+                        styles.productStockText,
+                        item.stockType === "low" && styles.stockLowText,
+                        item.stockType === "out" && styles.stockOutText,
+                      ]}
+                    >
+                      {item.stockCount} {item.unitType || "pcs"}
                     </Text>
                   </View>
+
+                  <View style={styles.codesRow}>
+                    {item.quickCode ? (
+                      <View style={styles.codePill}>
+                        <Text style={styles.codeText}>Code: {item.quickCode}</Text>
+                      </View>
+                    ) : null}
+                    {item.barcode ? (
+                      <View style={[styles.codePill, { backgroundColor: "#F1F5F9" }]}>
+                        <Text style={styles.codeText}>Barcode: {item.barcode}</Text>
+                      </View>
+                    ) : null}
+                    <View style={[styles.codePill, { backgroundColor: "#EFF6FF" }]}>
+                      <Text style={[styles.codeText, { color: TOKENS.primary }]}>
+                        {item.category.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Actions row */}
+                <View style={styles.itemActionCol}>
+                  <TouchableOpacity
+                    style={styles.editIconBtn}
+                    activeOpacity={0.7}
+                    onPress={() => handleEditPress(item)}
+                  >
+                    <Feather name="edit-2" size={15} color={TOKENS.primary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.deleteIconBtn}
+                    activeOpacity={0.7}
+                    onPress={() => handleDeletePress(item)}
+                  >
+                    <Feather name="trash-2" size={15} color={TOKENS.error} />
+                  </TouchableOpacity>
                 </View>
               </View>
-
-              {/* Actions row */}
-              <View style={styles.itemActionCol}>
-                <TouchableOpacity
-                  style={styles.editIconBtn}
-                  activeOpacity={0.7}
-                  onPress={() => handleEditPress(item)}
-                >
-                  <Feather name="edit-2" size={15} color={TOKENS.primary} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.deleteIconBtn}
-                  activeOpacity={0.7}
-                  onPress={() => handleDeletePress(item)}
-                >
-                  <Feather name="trash-2" size={15} color={TOKENS.error} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}}
+            )
+          }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Feather name="box" size={48} color={TOKENS.muted} />
@@ -628,6 +630,7 @@ export const ManageItemsScreen: React.FC = () => {
                   <ProductImage
                     icon={editImage}
                     category={editCategory}
+                    size={47}
                     style={{ width: 110, height: 110, borderRadius: 16 }}
                   />
 
@@ -704,12 +707,12 @@ export const ManageItemsScreen: React.FC = () => {
                 <Feather name="x" size={20} color={TOKENS.dark} />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={styles.scannerInstruction}>
               Align the retail product barcode within the viewfinder to automatically scan and catalog
             </Text>
-            
-             {/* Viewfinder area with blinking animation and moving laser line */}
+
+            {/* Viewfinder area with blinking animation and moving laser line */}
             <View style={styles.scannerViewfinder}>
               {isScanning ? (
                 <CameraView
@@ -731,13 +734,13 @@ export const ManageItemsScreen: React.FC = () => {
               <View style={[styles.viewfinderCorner, styles.cornerTR]} />
               <View style={[styles.viewfinderCorner, styles.cornerBL]} />
               <View style={[styles.viewfinderCorner, styles.cornerBR]} />
-              
+
               {/* Moving Laser line */}
               <View style={styles.scannerLaserLine} />
-              
+
               <Text style={styles.scanningText}>SCANNING...</Text>
             </View>
-            
+
             <TouchableOpacity
               style={styles.scannerForceScanBtn}
               activeOpacity={0.8}
@@ -890,13 +893,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    padding: 12,
+    paddingRight: 16,
+    paddingLeft: 3,
+    paddingTop: 3,
+    paddingBottom: 3,
     gap: 12,
     alignItems: "center",
   },
   productImage: {
-    width: 64,
-    height: 64,
+    width: 74,
+    height: 74,
     borderRadius: 10,
     backgroundColor: "#F3F4F6",
   },

@@ -160,7 +160,7 @@ export const ScanScreen: React.FC = () => {
           <View key={item.id} style={styles.itemCard}>
             <ProductImage
               icon={item.icon}
-              size={40}
+              size={47}
               style={styles.itemIconBox}
             />
             <View style={styles.itemMainInfo}>
@@ -206,7 +206,7 @@ export const ScanScreen: React.FC = () => {
       {/* Bottom Panel - Live Camera Viewfinder & Proceed to Checkout Button */}
       <View style={[styles.bottomPanel, { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 }]}>
         <Text style={styles.scannerLabel}>CAMERA VIEWFINDER ACTIVE</Text>
-        
+
         <View style={styles.mockViewfinder}>
           {hasCameraAccess ? (
             <CameraView
@@ -255,10 +255,10 @@ export const ScanScreen: React.FC = () => {
           onPress={() => router.push("/pos/cart")}
         >
           <View style={styles.summaryBarLeft}>
-            <Feather 
-              name="shopping-bag" 
-              size={16} 
-              color={invoiceItems.length === 0 ? TOKENS.muted : TOKENS.card} 
+            <Feather
+              name="shopping-bag"
+              size={16}
+              color={invoiceItems.length === 0 ? TOKENS.muted : TOKENS.card}
             />
             <Text style={[
               styles.summaryLabelActive,
@@ -396,18 +396,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    padding: 12,
+    paddingRight: 16,
+    paddingLeft: 3,
+    paddingTop: 3,
+    paddingBottom: 3,
   },
   itemIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F9FAFB",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 58,
+    height: 58,
+    borderRadius: 10,
     marginRight: 12,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
   },
   itemMainInfo: {
     flex: 1,

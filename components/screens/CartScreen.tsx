@@ -312,7 +312,7 @@ export const CartScreen: React.FC = () => {
             {/* Left Box Icon */}
             <ProductImage
               icon={item.icon || "🥛"}
-              size={40}
+              size={47}
               style={styles.iconBox}
             />
 
@@ -678,19 +678,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
+    paddingRight: 16,
+    paddingLeft: 3,
+    paddingTop: 3,
+    paddingBottom: 3,
   },
   iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F9FAFB",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 58,
+    height: 58,
+    borderRadius: 10,
     marginRight: 12,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
   },
   iconText: {
     fontSize: 22,

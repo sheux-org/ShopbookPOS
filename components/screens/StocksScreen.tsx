@@ -508,6 +508,7 @@ export const StocksScreen: React.FC = () => {
                       <ProductImage
                         icon={formImage}
                         category={formCategory}
+                        size={47}
                         style={{ width: 110, height: 110, borderRadius: 16 }}
                       />
                     ) : (
@@ -631,6 +632,7 @@ export const StocksScreen: React.FC = () => {
                     <ProductImage
                       icon={item.icon}
                       category={item.category}
+                      size={65}
                       style={{ width: "100%", height: 65, borderTopLeftRadius: 11, borderTopRightRadius: 11 }}
                     />
                     {isEditingFavorites && (
@@ -678,6 +680,7 @@ export const StocksScreen: React.FC = () => {
                     <ProductImage
                       icon={item.icon}
                       category={item.category}
+                      size={58}
                       style={{ width: 58, height: 58, borderRadius: 10 }}
                     />
                     <View style={styles.recentInfoWrapper}>
