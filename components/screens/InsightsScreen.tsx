@@ -1,25 +1,27 @@
-import React, { useState, useEffect } from "react";
+import { Feather } from "@expo/vector-icons";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
+  ActivityIndicator,
   Alert,
   Modal,
-  ActivityIndicator,
+  ScrollView,
   Share,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
-import { cartState } from "../data/cartState";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useBusinessInsights } from "../../hooks/useInsights";
+import { syncDatabase } from "../../services/sync";
 import { BottomSheet } from "../common/BottomSheet";
+import { ScreenWrapper } from "../common/ScreenWrapper";
+import { cartState } from "../data/cartState";
+import database from "../data/db";
 
 export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -28,7 +30,9 @@ export const InsightsScreen: React.FC = () => {
   const activeBusiness = cartState.getActiveBusiness();
 
   // Period filters
-  const [period, setPeriod] = useState<"daily" | "monthly" | "yearly" | "custom">("monthly");
+  const [period, setPeriod] = useState<
+    "daily" | "monthly" | "yearly" | "custom"
+  >("monthly");
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
 
   // Calendar interactive range selections (May 2026 default)
@@ -49,9 +53,13 @@ export const InsightsScreen: React.FC = () => {
 
   // Reports Drawer states
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
-  const [reportsActiveTab, setReportsActiveTab] = useState<"orders" | "inventory">("orders");
+  const [reportsActiveTab, setReportsActiveTab] = useState<
+    "orders" | "inventory"
+  >("orders");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(
+    null,
+  );
   const [refillValues, setRefillValues] = useState<Record<string, string>>({});
 
   // Active business details sync
@@ -65,11 +73,15 @@ export const InsightsScreen: React.FC = () => {
   }, []);
 
   // Real-time WatermelonDB statistics fetch using custom hook
-  const { data: stats, isLoading, refetch } = useBusinessInsights(
+  const {
+    data: stats,
+    isLoading,
+    refetch,
+  } = useBusinessInsights(
     activeBiz.id,
     period,
     resolvedStartDate,
-    resolvedEndDate
+    resolvedEndDate,
   );
 
   // Sync state
@@ -78,16 +90,24 @@ export const InsightsScreen: React.FC = () => {
   const handleSyncDatabase = async () => {
     setIsSyncing(true);
     try {
-      const { syncDatabase } = require("../../services/sync");
       const result = await syncDatabase();
       if (result) {
         queryClient.invalidateQueries({ queryKey: ["insights"] });
-        Alert.alert("Sync Success", "Database successfully synchronized with Cloud Storage!");
+        Alert.alert(
+          "Sync Success",
+          "Database successfully synchronized with Cloud Storage!",
+        );
       } else {
-        Alert.alert("Sync Skipped", "Backup/sync is disabled or environment is not configured. Please enable it in Settings.");
+        Alert.alert(
+          "Sync Skipped",
+          "Backup/sync is disabled or environment is not configured. Please enable it in Settings.",
+        );
       }
     } catch (err: any) {
-      Alert.alert("Sync Failed", err.message || "Failed to synchronize database.");
+      Alert.alert(
+        "Sync Failed",
+        err.message || "Failed to synchronize database.",
+      );
     } finally {
       setIsSyncing(false);
     }
@@ -95,10 +115,15 @@ export const InsightsScreen: React.FC = () => {
 
   // Refill Inventory Stocks Mutation
   const refillMutation = useMutation({
-    mutationFn: async ({ productId, refillAmount }: { productId: string; refillAmount: number }) => {
-      const db = require("../data/db").default;
-      const product = await db.get("products").find(productId);
-      await db.write(async () => {
+    mutationFn: async ({
+      productId,
+      refillAmount,
+    }: {
+      productId: string;
+      refillAmount: number;
+    }) => {
+      const product = await database.get("products").find(productId);
+      await database.write(async () => {
         await product.update((p: any) => {
           p.stockCount = (p.stockCount || 0) + refillAmount;
         });
@@ -154,7 +179,10 @@ export const InsightsScreen: React.FC = () => {
 
   const applyCalendarRange = () => {
     if (!selectedStartDay || !selectedEndDay) {
-      Alert.alert("Range Selection Needed", "Please select both a Start Date and an End Date on the calendar grid first.");
+      Alert.alert(
+        "Range Selection Needed",
+        "Please select both a Start Date and an End Date on the calendar grid first.",
+      );
       return;
     }
     const start = new Date(2026, 4, selectedStartDay); // May index is 4
@@ -188,9 +216,15 @@ export const InsightsScreen: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => setIsReportsModalOpen(true)}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
               <Feather name="bar-chart-2" size={15} color={TOKENS.primary} />
-              <Text style={[styles.headerTextBtnLabel, { color: TOKENS.primary }]}>Reports</Text>
+              <Text
+                style={[styles.headerTextBtnLabel, { color: TOKENS.primary }]}
+              >
+                Reports
+              </Text>
             </View>
           </TouchableOpacity>
 
@@ -200,7 +234,9 @@ export const InsightsScreen: React.FC = () => {
             onPress={handleSyncDatabase}
             disabled={isSyncing}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
               {isSyncing ? (
                 <ActivityIndicator size="small" color={TOKENS.primary} />
               ) : (
@@ -217,36 +253,79 @@ export const InsightsScreen: React.FC = () => {
       {/* Main Insights Panel Scroll */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 90 },
+        ]}
       >
         {/* Period Selector pills */}
         <View style={styles.periodPillsRow}>
           <TouchableOpacity
-            style={[styles.periodPill, period === "daily" && styles.periodPillActive]}
+            style={[
+              styles.periodPill,
+              period === "daily" && styles.periodPillActive,
+            ]}
             onPress={() => setPeriod("daily")}
           >
-            <Text style={[styles.periodPillText, period === "daily" && styles.periodPillTextActive]}>Today</Text>
+            <Text
+              style={[
+                styles.periodPillText,
+                period === "daily" && styles.periodPillTextActive,
+              ]}
+            >
+              Today
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.periodPill, period === "monthly" && styles.periodPillActive]}
+            style={[
+              styles.periodPill,
+              period === "monthly" && styles.periodPillActive,
+            ]}
             onPress={() => setPeriod("monthly")}
           >
-            <Text style={[styles.periodPillText, period === "monthly" && styles.periodPillTextActive]}>Monthly</Text>
+            <Text
+              style={[
+                styles.periodPillText,
+                period === "monthly" && styles.periodPillTextActive,
+              ]}
+            >
+              Monthly
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.periodPill, period === "yearly" && styles.periodPillActive]}
+            style={[
+              styles.periodPill,
+              period === "yearly" && styles.periodPillActive,
+            ]}
             onPress={() => setPeriod("yearly")}
           >
-            <Text style={[styles.periodPillText, period === "yearly" && styles.periodPillTextActive]}>Yearly</Text>
+            <Text
+              style={[
+                styles.periodPillText,
+                period === "yearly" && styles.periodPillTextActive,
+              ]}
+            >
+              Yearly
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.periodPill, period === "custom" && styles.periodPillActive]}
+            style={[
+              styles.periodPill,
+              period === "custom" && styles.periodPillActive,
+            ]}
             onPress={() => setIsCustomModalOpen(true)}
           >
-            <Text style={[styles.periodPillText, period === "custom" && styles.periodPillTextActive]}>Custom</Text>
+            <Text
+              style={[
+                styles.periodPillText,
+                period === "custom" && styles.periodPillTextActive,
+              ]}
+            >
+              Custom
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -261,15 +340,21 @@ export const InsightsScreen: React.FC = () => {
             {/* KPI Cards Grid */}
             <View style={styles.kpiGrid}>
               <View style={styles.kpiCard}>
-                <View style={[styles.kpiIconCircle, { backgroundColor: "#E8FDF0" }]}>
+                <View
+                  style={[styles.kpiIconCircle, { backgroundColor: "#E8FDF0" }]}
+                >
                   <Feather name="trending-up" size={16} color="#10B981" />
                 </View>
                 <Text style={styles.kpiLabel}>Gross Sales</Text>
-                <Text style={styles.kpiValue}>Rs. {stats?.grossRevenue.toLocaleString()}</Text>
+                <Text style={styles.kpiValue}>
+                  Rs. {stats?.grossRevenue.toLocaleString()}
+                </Text>
               </View>
 
               <View style={styles.kpiCard}>
-                <View style={[styles.kpiIconCircle, { backgroundColor: "#EFF6FF" }]}>
+                <View
+                  style={[styles.kpiIconCircle, { backgroundColor: "#EFF6FF" }]}
+                >
                   <Feather name="file-text" size={16} color={TOKENS.primary} />
                 </View>
                 <Text style={styles.kpiLabel}>Transactions</Text>
@@ -277,11 +362,15 @@ export const InsightsScreen: React.FC = () => {
               </View>
 
               <View style={styles.kpiCard}>
-                <View style={[styles.kpiIconCircle, { backgroundColor: "#FEF7E0" }]}>
+                <View
+                  style={[styles.kpiIconCircle, { backgroundColor: "#FEF7E0" }]}
+                >
                   <Feather name="shopping-bag" size={16} color="#B06000" />
                 </View>
                 <Text style={styles.kpiLabel}>Avg Basket</Text>
-                <Text style={styles.kpiValue}>Rs. {Math.round(stats?.avgTicket || 0).toLocaleString()}</Text>
+                <Text style={styles.kpiValue}>
+                  Rs. {Math.round(stats?.avgTicket || 0).toLocaleString()}
+                </Text>
               </View>
 
               <TouchableOpacity
@@ -291,15 +380,29 @@ export const InsightsScreen: React.FC = () => {
                   if (stats?.lowStockCount && stats.lowStockCount > 0) {
                     setIsLowStockModalOpen(true);
                   } else {
-                    Alert.alert("All Stock Normal", "All product stock counts are above the alert threshold! Great job!");
+                    Alert.alert(
+                      "All Stock Normal",
+                      "All product stock counts are above the alert threshold! Great job!",
+                    );
                   }
                 }}
               >
-                <View style={[styles.kpiIconCircle, { backgroundColor: "#FCE8E6" }]}>
-                  <Feather name="alert-triangle" size={16} color={TOKENS.error} />
+                <View
+                  style={[styles.kpiIconCircle, { backgroundColor: "#FCE8E6" }]}
+                >
+                  <Feather
+                    name="alert-triangle"
+                    size={16}
+                    color={TOKENS.error}
+                  />
                 </View>
                 <Text style={styles.kpiLabel}>Low Stock Items</Text>
-                <Text style={[styles.kpiValue, stats?.lowStockCount! > 0 && { color: TOKENS.error }]}>
+                <Text
+                  style={[
+                    styles.kpiValue,
+                    stats?.lowStockCount! > 0 && { color: TOKENS.error },
+                  ]}
+                >
                   {stats?.lowStockCount}
                 </Text>
               </TouchableOpacity>
@@ -310,7 +413,10 @@ export const InsightsScreen: React.FC = () => {
               <Text style={styles.sectionTitle}>Weekly Sales Distribution</Text>
               <View style={styles.barGraphRow}>
                 {stats?.chartData.map((item, index) => {
-                  const maxVal = Math.max(...stats.chartData.map((c) => c.value), 1000);
+                  const maxVal = Math.max(
+                    ...stats.chartData.map((c) => c.value),
+                    1000,
+                  );
                   const pct = Math.min((item.value / maxVal) * 100, 100);
                   return (
                     <View key={index} style={styles.barGraphCol}>
@@ -328,15 +434,25 @@ export const InsightsScreen: React.FC = () => {
             {stats?.ordersCount === 0 && (
               <View style={styles.seederContainer}>
                 <Feather name="refresh-cw" size={24} color={TOKENS.muted} />
-                <Text style={styles.seederText}>No sales invoices recorded for this active branch yet.</Text>
+                <Text style={styles.seederText}>
+                  No sales invoices recorded for this active branch yet.
+                </Text>
                 <TouchableOpacity
                   style={styles.seederBtn}
                   activeOpacity={0.8}
                   onPress={handleSyncDatabase}
                   disabled={isSyncing}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    {isSyncing && <ActivityIndicator size="small" color="#fff" />}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    {isSyncing && (
+                      <ActivityIndicator size="small" color="#fff" />
+                    )}
                     <Text style={styles.seederBtnText}>
                       {isSyncing ? "Syncing..." : "Sync Database Now"}
                     </Text>
@@ -348,16 +464,29 @@ export const InsightsScreen: React.FC = () => {
             {/* Best Sellers Section */}
             {stats?.bestSellers.length! > 0 && (
               <View style={styles.statsSection}>
-                <Text style={styles.sectionTitle}>🔥 Best Selling Products</Text>
+                <Text style={styles.sectionTitle}>
+                  🔥 Best Selling Products
+                </Text>
                 <View style={styles.statsCardList}>
                   {stats?.bestSellers.map((item, index) => (
                     <View key={index} style={styles.statListItem}>
-                      <View style={[styles.rankCircle, index === 0 && styles.rankGold, index === 1 && styles.rankSilver, index === 2 && styles.rankBronze]}>
+                      <View
+                        style={[
+                          styles.rankCircle,
+                          index === 0 && styles.rankGold,
+                          index === 1 && styles.rankSilver,
+                          index === 2 && styles.rankBronze,
+                        ]}
+                      >
                         <Text style={styles.rankText}>{index + 1}</Text>
                       </View>
                       <Text style={styles.statItemName}>{item.name}</Text>
-                      <Text style={styles.statItemQty}>{item.quantity} units</Text>
-                      <Text style={styles.statItemRevenue}>Rs. {item.revenue.toLocaleString()}</Text>
+                      <Text style={styles.statItemQty}>
+                        {item.quantity} units
+                      </Text>
+                      <Text style={styles.statItemRevenue}>
+                        Rs. {item.revenue.toLocaleString()}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -367,16 +496,31 @@ export const InsightsScreen: React.FC = () => {
             {/* Slow Movers Section */}
             {stats?.slowMovers.length! > 0 && (
               <View style={styles.statsSection}>
-                <Text style={styles.sectionTitle}>⏳ Slow Moving Inventory</Text>
+                <Text style={styles.sectionTitle}>
+                  ⏳ Slow Moving Inventory
+                </Text>
                 <View style={styles.statsCardList}>
                   {stats?.slowMovers.map((item, index) => (
                     <View key={index} style={styles.statListItem}>
-                      <View style={[styles.rankCircle, { backgroundColor: "#F3F4F6" }]}>
-                        <Text style={[styles.rankText, { color: TOKENS.muted }]}>{index + 1}</Text>
+                      <View
+                        style={[
+                          styles.rankCircle,
+                          { backgroundColor: "#F3F4F6" },
+                        ]}
+                      >
+                        <Text
+                          style={[styles.rankText, { color: TOKENS.muted }]}
+                        >
+                          {index + 1}
+                        </Text>
                       </View>
                       <Text style={styles.statItemName}>{item.name}</Text>
-                      <Text style={styles.statItemQty}>{item.quantity} units</Text>
-                      <Text style={styles.statItemRevenue}>Rs. {item.revenue.toLocaleString()}</Text>
+                      <Text style={styles.statItemQty}>
+                        {item.quantity} units
+                      </Text>
+                      <Text style={styles.statItemRevenue}>
+                        Rs. {item.revenue.toLocaleString()}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -386,7 +530,9 @@ export const InsightsScreen: React.FC = () => {
             {/* Export Actions Section */}
             {stats?.ordersCount! > 0 && (
               <View style={styles.exportSection}>
-                <Text style={styles.sectionTitle}>📄 Export Business Reports</Text>
+                <Text style={styles.sectionTitle}>
+                  📄 Export Business Reports
+                </Text>
                 <View style={styles.exportButtonsRow}>
                   <TouchableOpacity
                     style={[styles.exportCardBtn, styles.exportPdfCard]}
@@ -397,7 +543,9 @@ export const InsightsScreen: React.FC = () => {
                       <Feather name="file-text" size={18} color="#EF4444" />
                     </View>
                     <Text style={styles.exportPdfTextTitle}>PDF Statement</Text>
-                    <Text style={styles.exportCardSubtitle}>Formatted store summary</Text>
+                    <Text style={styles.exportCardSubtitle}>
+                      Formatted store summary
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -409,7 +557,9 @@ export const InsightsScreen: React.FC = () => {
                       <Feather name="grid" size={18} color="#10B981" />
                     </View>
                     <Text style={styles.exportCsvTextTitle}>CSV Ledger</Text>
-                    <Text style={styles.exportCardSubtitle}>Spreadsheet ledger data</Text>
+                    <Text style={styles.exportCardSubtitle}>
+                      Spreadsheet ledger data
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -424,16 +574,26 @@ export const InsightsScreen: React.FC = () => {
                 disabled={isSyncing}
               >
                 {isSyncing ? (
-                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                  <ActivityIndicator
+                    size="small"
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
                 ) : (
-                  <Feather name="refresh-cw" size={16} color="#fff" style={{ marginRight: 8 }} />
+                  <Feather
+                    name="refresh-cw"
+                    size={16}
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
                 )}
                 <Text style={styles.syncDatabaseBtnText}>
                   {isSyncing ? "Syncing Database..." : "Sync Database Now"}
                 </Text>
               </TouchableOpacity>
               <Text style={styles.syncDatabaseHelpText}>
-                Pull latest transaction reports and product inventory directly from your remote Cloud Storage.
+                Pull latest transaction reports and product inventory directly
+                from your remote Cloud Storage.
               </Text>
             </View>
           </>
@@ -449,12 +609,16 @@ export const InsightsScreen: React.FC = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.datePickerContent}>
-            <Text style={styles.modalTitle}>Select Custom Range (May 2026)</Text>
-            
+            <Text style={styles.modalTitle}>
+              Select Custom Range (May 2026)
+            </Text>
+
             {/* Weekdays Headers */}
             <View style={styles.weekdaysRow}>
               {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => (
-                <Text key={idx} style={styles.weekdayLabel}>{day}</Text>
+                <Text key={idx} style={styles.weekdayLabel}>
+                  {day}
+                </Text>
               ))}
             </View>
 
@@ -462,18 +626,31 @@ export const InsightsScreen: React.FC = () => {
             <View style={styles.daysGrid}>
               {(() => {
                 const daysInMonth = 31;
-                const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+                const daysArray = Array.from(
+                  { length: daysInMonth },
+                  (_, i) => i + 1,
+                );
                 const startOffset = 5; // May 2026 starts on Friday
-                const calendarCells = [...Array(startOffset).fill(null), ...daysArray];
+                const calendarCells = [
+                  ...Array(startOffset).fill(null),
+                  ...daysArray,
+                ];
 
                 return calendarCells.map((day, idx) => {
                   if (day === null) {
-                    return <View key={`empty-${idx}`} style={styles.emptyDayCell} />;
+                    return (
+                      <View key={`empty-${idx}`} style={styles.emptyDayCell} />
+                    );
                   }
 
                   const isSelectedStart = selectedStartDay === day;
                   const isSelectedEnd = selectedEndDay === day;
-                  const isWithinRange = !!(selectedStartDay && selectedEndDay && day > selectedStartDay && day < selectedEndDay);
+                  const isWithinRange = !!(
+                    selectedStartDay &&
+                    selectedEndDay &&
+                    day > selectedStartDay &&
+                    day < selectedEndDay
+                  );
 
                   return (
                     <TouchableOpacity
@@ -487,11 +664,14 @@ export const InsightsScreen: React.FC = () => {
                       ]}
                       onPress={() => handleCalendarDayPress(day)}
                     >
-                      <Text style={[
-                        styles.dayText,
-                        isWithinRange && styles.dayTextInRange,
-                        (isSelectedStart || isSelectedEnd) && styles.dayTextSelected,
-                      ]}>
+                      <Text
+                        style={[
+                          styles.dayText,
+                          isWithinRange && styles.dayTextInRange,
+                          (isSelectedStart || isSelectedEnd) &&
+                            styles.dayTextSelected,
+                        ]}
+                      >
                         {day}
                       </Text>
                     </TouchableOpacity>
@@ -504,7 +684,9 @@ export const InsightsScreen: React.FC = () => {
             <View style={styles.selectedDatesPreview}>
               <Text style={styles.previewLabel}>Selected Period:</Text>
               <Text style={styles.previewValue}>
-                {selectedStartDay ? `May ${selectedStartDay}, 2026` : "Start Date"}
+                {selectedStartDay
+                  ? `May ${selectedStartDay}, 2026`
+                  : "Start Date"}
                 {" ➔ "}
                 {selectedEndDay ? `May ${selectedEndDay}, 2026` : "End Date"}
               </Text>
@@ -518,7 +700,7 @@ export const InsightsScreen: React.FC = () => {
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.modalConfirmBtn}
                 onPress={applyCalendarRange}
@@ -537,10 +719,11 @@ export const InsightsScreen: React.FC = () => {
         title="Low Stock Products List"
       >
         <Text style={styles.lowStockModalSubtitle}>
-          The following inventory items are running critically low (5 units or less):
+          The following inventory items are running critically low (5 units or
+          less):
         </Text>
 
-        <ScrollView 
+        <ScrollView
           showsVerticalScrollIndicator={false}
           style={[styles.lowStockItemsScroll, { maxHeight: 350 }]}
           contentContainerStyle={{ gap: 10, paddingVertical: 10 }}
@@ -556,15 +739,21 @@ export const InsightsScreen: React.FC = () => {
                   <Text style={styles.lowStockItemSku}>SKU: {item.sku}</Text>
                 </View>
                 <View style={styles.lowStockCountBadge}>
-                  <Text style={styles.lowStockCountText}>{item.stockCount} left</Text>
-                  <Text style={styles.lowStockLimitText}>Alert Threshold: {item.lowStockAlert}</Text>
+                  <Text style={styles.lowStockCountText}>
+                    {item.stockCount} left
+                  </Text>
+                  <Text style={styles.lowStockLimitText}>
+                    Alert Threshold: {item.lowStockAlert}
+                  </Text>
                 </View>
               </View>
             ))
           ) : (
             <View style={styles.emptyLowStockState}>
               <Feather name="check-circle" size={32} color="#10B981" />
-              <Text style={styles.emptyLowStockText}>All products are sufficiently stocked!</Text>
+              <Text style={styles.emptyLowStockText}>
+                All products are sufficiently stocked!
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -580,21 +769,51 @@ export const InsightsScreen: React.FC = () => {
           {/* Premium Subheader Tabs */}
           <View style={styles.modalTabsRow}>
             <TouchableOpacity
-              style={[styles.modalTab, reportsActiveTab === "orders" && styles.modalTabActive]}
+              style={[
+                styles.modalTab,
+                reportsActiveTab === "orders" && styles.modalTabActive,
+              ]}
               onPress={() => setReportsActiveTab("orders")}
             >
-              <Feather name="list" size={14} color={reportsActiveTab === "orders" ? TOKENS.primary : TOKENS.muted} />
-              <Text style={[styles.modalTabText, reportsActiveTab === "orders" && styles.modalTabTextActive]}>
+              <Feather
+                name="list"
+                size={14}
+                color={
+                  reportsActiveTab === "orders" ? TOKENS.primary : TOKENS.muted
+                }
+              />
+              <Text
+                style={[
+                  styles.modalTabText,
+                  reportsActiveTab === "orders" && styles.modalTabTextActive,
+                ]}
+              >
                 Order History
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.modalTab, reportsActiveTab === "inventory" && styles.modalTabActive]}
+              style={[
+                styles.modalTab,
+                reportsActiveTab === "inventory" && styles.modalTabActive,
+              ]}
               onPress={() => setReportsActiveTab("inventory")}
             >
-              <Feather name="plus-circle" size={14} color={reportsActiveTab === "inventory" ? TOKENS.primary : TOKENS.muted} />
-              <Text style={[styles.modalTabText, reportsActiveTab === "inventory" && styles.modalTabTextActive]}>
+              <Feather
+                name="plus-circle"
+                size={14}
+                color={
+                  reportsActiveTab === "inventory"
+                    ? TOKENS.primary
+                    : TOKENS.muted
+                }
+              />
+              <Text
+                style={[
+                  styles.modalTabText,
+                  reportsActiveTab === "inventory" && styles.modalTabTextActive,
+                ]}
+              >
                 Stock-In Refills
               </Text>
             </TouchableOpacity>
@@ -602,7 +821,10 @@ export const InsightsScreen: React.FC = () => {
 
           {/* TAB CONTENT: ORDER HISTORY */}
           {reportsActiveTab === "orders" && (
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1, marginTop: 10 }}
+            >
               {stats?.resolvedOrders && stats.resolvedOrders.length > 0 ? (
                 stats.resolvedOrders.map((order: any) => {
                   const isExpanded = expandedOrderId === order.id;
@@ -612,19 +834,38 @@ export const InsightsScreen: React.FC = () => {
                       <TouchableOpacity
                         activeOpacity={0.7}
                         style={styles.historyCardHeader}
-                        onPress={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                        onPress={() =>
+                          setExpandedOrderId(isExpanded ? null : order.id)
+                        }
                       >
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.historyInvoiceNum}>Invoice #{order.invoiceNumber}</Text>
+                          <Text style={styles.historyInvoiceNum}>
+                            Invoice #{order.invoiceNumber}
+                          </Text>
                           <Text style={styles.historyDateText}>
-                            {orderDate.toLocaleDateString()} at {orderDate.toLocaleTimeString()}
+                            {orderDate.toLocaleDateString()} at{" "}
+                            {orderDate.toLocaleTimeString()}
                           </Text>
                         </View>
                         <View style={{ alignItems: "flex-end", gap: 4 }}>
-                          <Text style={styles.historyTotalAmount}>Rs. {order.totalAmount.toLocaleString()}</Text>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                            <Text style={styles.historyItemCount}>{order.items.length} items</Text>
-                            <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
+                          <Text style={styles.historyTotalAmount}>
+                            Rs. {order.totalAmount.toLocaleString()}
+                          </Text>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 2,
+                            }}
+                          >
+                            <Text style={styles.historyItemCount}>
+                              {order.items.length} items
+                            </Text>
+                            <Feather
+                              name={isExpanded ? "chevron-up" : "chevron-down"}
+                              size={14}
+                              color={TOKENS.muted}
+                            />
                           </View>
                         </View>
                       </TouchableOpacity>
@@ -634,12 +875,16 @@ export const InsightsScreen: React.FC = () => {
                           <View style={styles.expandedDivider} />
                           {order.items.map((item: any) => (
                             <View key={item.id} style={styles.expandedItemRow}>
-                              <Text style={styles.expandedItemName}>{item.name}</Text>
+                              <Text style={styles.expandedItemName}>
+                                {item.name}
+                              </Text>
                               <Text style={styles.expandedItemQty}>
-                                {item.quantity} x Rs. {item.price.toLocaleString()}
+                                {item.quantity} x Rs.{" "}
+                                {item.price.toLocaleString()}
                               </Text>
                               <Text style={styles.expandedItemSubtotal}>
-                                Rs. {(item.quantity * item.price).toLocaleString()}
+                                Rs.{" "}
+                                {(item.quantity * item.price).toLocaleString()}
                               </Text>
                             </View>
                           ))}
@@ -651,7 +896,9 @@ export const InsightsScreen: React.FC = () => {
               ) : (
                 <View style={styles.emptyLowStockState}>
                   <Feather name="file-text" size={32} color={TOKENS.muted} />
-                  <Text style={styles.emptyLowStockText}>No invoices found for this active period!</Text>
+                  <Text style={styles.emptyLowStockText}>
+                    No invoices found for this active period!
+                  </Text>
                 </View>
               )}
             </ScrollView>
@@ -659,8 +906,13 @@ export const InsightsScreen: React.FC = () => {
 
           {/* TAB CONTENT: STOCK-IN INVENTORY REFILL */}
           {reportsActiveTab === "inventory" && (
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
-              <Text style={styles.refillSectionLabel}>Select a product below to refill / Stock-In units:</Text>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1, marginTop: 10 }}
+            >
+              <Text style={styles.refillSectionLabel}>
+                Select a product below to refill / Stock-In units:
+              </Text>
               {stats?.productsList && stats.productsList.length > 0 ? (
                 stats.productsList.map((prod: any) => {
                   const isExpanded = expandedProductId === prod.id;
@@ -670,20 +922,37 @@ export const InsightsScreen: React.FC = () => {
                       <TouchableOpacity
                         activeOpacity={0.7}
                         style={styles.historyCardHeader}
-                        onPress={() => setExpandedProductId(isExpanded ? null : prod.id)}
+                        onPress={() =>
+                          setExpandedProductId(isExpanded ? null : prod.id)
+                        }
                       >
                         <View style={styles.lowStockIconWrapper}>
-                          <Text style={{ fontSize: 16 }}>{prod.icon || "📦"}</Text>
+                          <Text style={{ fontSize: 16 }}>
+                            {prod.icon || "📦"}
+                          </Text>
                         </View>
                         <View style={{ flex: 1, marginLeft: 8 }}>
-                          <Text style={styles.historyInvoiceNum}>{prod.name}</Text>
-                          <Text style={styles.historyDateText}>SKU: {prod.sku} | Price: Rs. {prod.price}</Text>
+                          <Text style={styles.historyInvoiceNum}>
+                            {prod.name}
+                          </Text>
+                          <Text style={styles.historyDateText}>
+                            SKU: {prod.sku} | Price: Rs. {prod.price}
+                          </Text>
                         </View>
                         <View style={{ alignItems: "flex-end", gap: 4 }}>
-                          <Text style={[styles.historyTotalAmount, prod.stockCount <= 5 && { color: TOKENS.error }]}>
+                          <Text
+                            style={[
+                              styles.historyTotalAmount,
+                              prod.stockCount <= 5 && { color: TOKENS.error },
+                            ]}
+                          >
                             {prod.stockCount} left
                           </Text>
-                          <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
+                          <Feather
+                            name={isExpanded ? "chevron-up" : "chevron-down"}
+                            size={14}
+                            color={TOKENS.muted}
+                          />
                         </View>
                       </TouchableOpacity>
 
@@ -697,7 +966,12 @@ export const InsightsScreen: React.FC = () => {
                               placeholderTextColor="#9CA3AF"
                               keyboardType="number-pad"
                               value={val}
-                              onChangeText={(text) => setRefillValues({ ...refillValues, [prod.id]: text })}
+                              onChangeText={(text) =>
+                                setRefillValues({
+                                  ...refillValues,
+                                  [prod.id]: text,
+                                })
+                              }
                             />
                             <TouchableOpacity
                               style={styles.refillSubmitBtn}
@@ -705,10 +979,16 @@ export const InsightsScreen: React.FC = () => {
                               onPress={() => {
                                 const refillAmt = parseInt(val, 10);
                                 if (isNaN(refillAmt) || refillAmt <= 0) {
-                                  Alert.alert("Invalid Quantity", "Please enter a valid stock refill quantity!");
+                                  Alert.alert(
+                                    "Invalid Quantity",
+                                    "Please enter a valid stock refill quantity!",
+                                  );
                                   return;
                                 }
-                                refillMutation.mutate({ productId: prod.id, refillAmount: refillAmt });
+                                refillMutation.mutate({
+                                  productId: prod.id,
+                                  refillAmount: refillAmt,
+                                });
                               }}
                             >
                               {refillMutation.isPending ? (
@@ -716,7 +996,9 @@ export const InsightsScreen: React.FC = () => {
                               ) : (
                                 <>
                                   <Feather name="plus" size={14} color="#fff" />
-                                  <Text style={styles.refillSubmitBtnText}>Stock-In</Text>
+                                  <Text style={styles.refillSubmitBtnText}>
+                                    Stock-In
+                                  </Text>
                                 </>
                               )}
                             </TouchableOpacity>
@@ -729,7 +1011,9 @@ export const InsightsScreen: React.FC = () => {
               ) : (
                 <View style={styles.emptyLowStockState}>
                   <Feather name="package" size={32} color={TOKENS.muted} />
-                  <Text style={styles.emptyLowStockText}>No products found for this business!</Text>
+                  <Text style={styles.emptyLowStockText}>
+                    No products found for this business!
+                  </Text>
                 </View>
               )}
             </ScrollView>
@@ -742,7 +1026,9 @@ export const InsightsScreen: React.FC = () => {
         <View style={styles.modalOverlayCenter}>
           <View style={styles.exportProgressCard}>
             <ActivityIndicator size="large" color={TOKENS.primary} />
-            <Text style={styles.exportProgressText}>Structuring {exportType} statement reports...</Text>
+            <Text style={styles.exportProgressText}>
+              Structuring {exportType} statement reports...
+            </Text>
           </View>
         </View>
       </Modal>
@@ -759,7 +1045,8 @@ export const InsightsScreen: React.FC = () => {
           </View>
 
           <Text style={styles.successSubtitle}>
-            Your business statement files for {activeBiz.name} are structured and ready to distribute.
+            Your business statement files for {activeBiz.name} are structured
+            and ready to distribute.
           </Text>
 
           <View style={styles.successActions}>
@@ -768,8 +1055,15 @@ export const InsightsScreen: React.FC = () => {
               activeOpacity={0.8}
               onPress={handleShare}
             >
-              <Feather name="share-2" size={16} color="#fff" style={{ marginRight: 6 }} />
-              <Text style={styles.shareReportBtnText}>Share & Save Statement</Text>
+              <Feather
+                name="share-2"
+                size={16}
+                color="#fff"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.shareReportBtnText}>
+                Share & Save Statement
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity

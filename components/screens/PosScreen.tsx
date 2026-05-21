@@ -1,23 +1,29 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { CameraView } from "expo-camera";
+import { useRouter } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
   Alert,
   Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { CameraView } from "expo-camera";
-import { usePermission } from "../../hooks/usePermissionHandler";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
-import { cartState } from "../data/cartState";
+import { usePermission } from "../../hooks/usePermissionHandler";
 import { useProducts } from "../../hooks/useProducts";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
+import { ScreenWrapper } from "../common/ScreenWrapper";
+import { cartState } from "../data/cartState";
 
 interface InvoiceItem {
   id: string;
@@ -36,7 +42,7 @@ export const PosScreen: React.FC = () => {
   const { role } = useUserPermissions();
 
   const [activeMode, setActiveMode] = useState<"scan" | "quick_code">("scan");
-  
+
   // Sync state with shared cartState store
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -60,7 +66,7 @@ export const PosScreen: React.FC = () => {
         requestCameraAccess();
       }
     }
-  }, [activeMode, hasCameraAccess]);
+  }, [activeMode, hasCameraAccess, requestCameraAccess]);
 
   // Quick code state
   const [quickCode, setQuickCode] = useState("");
@@ -98,7 +104,7 @@ export const PosScreen: React.FC = () => {
             duration: 1200,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       loop.start();
       return () => loop.stop();
@@ -116,19 +122,35 @@ export const PosScreen: React.FC = () => {
   };
 
   // Helper to add item to invoice using cartState
-  const addItemToInvoice = (name: string, price: number, icon?: string, sku?: string, stock?: number) => {
-    cartState.addCartItem(name, price, icon, sku, stock);
-    showToast(`Added ${name} to invoice`);
-  };
+  const addItemToInvoice = useCallback(
+    (
+      name: string,
+      price: number,
+      icon?: string,
+      sku?: string,
+      stock?: number,
+    ) => {
+      cartState.addCartItem(name, price, icon, sku, stock);
+      showToast(`Added ${name} to invoice`);
+    },
+    [],
+  );
 
   // Total invoice calculation
   const totalInvoiceAmount = useMemo(() => {
-    return invoiceItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    return invoiceItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
   }, [invoiceItems]);
 
   const matchedProduct = useMemo(() => {
     if (!quickCode) return null;
-    return searchProducts.find((p) => p.quickCode === quickCode || p.barcode === quickCode) || null;
+    return (
+      searchProducts.find(
+        (p) => p.quickCode === quickCode || p.barcode === quickCode,
+      ) || null
+    );
   }, [quickCode, searchProducts]);
 
   // Handle numpad key presses
@@ -149,44 +171,53 @@ export const PosScreen: React.FC = () => {
   // Auto-add product if fully typed valid quick code from dynamic catalog
   useEffect(() => {
     if (!quickCode) return;
-    const prod = searchProducts.find((p) => p.quickCode === quickCode || p.barcode === quickCode);
+    const prod = searchProducts.find(
+      (p) => p.quickCode === quickCode || p.barcode === quickCode,
+    );
     if (prod) {
       const timer = setTimeout(() => {
-        addItemToInvoice(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
+        addItemToInvoice(
+          prod.name,
+          prod.price,
+          prod.icon,
+          `SKU 23400${prod.id}`,
+          prod.stockCount,
+        );
         setQuickCode(""); // Reset after adding
       }, 700);
       return () => clearTimeout(timer);
     }
-  }, [quickCode, searchProducts]);
-
-
-
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "home") {
-      router.push("/");
-    } else if (tabId === "stocks") {
-      router.push("/stocks");
-    } else if (tabId === "profile") {
-      router.push("/profile");
-    } else if (tabId !== "pos") {
-      showToast(`${tabId.toUpperCase()} view tab selected`);
-    }
-  };
+  }, [quickCode, searchProducts, addItemToInvoice]);
 
   // Camera Barcode Scanning Handler
-  const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
+  const handleBarcodeScanned = ({
+    type,
+    data,
+  }: {
+    type: string;
+    data: string;
+  }) => {
     // Prevent double rapid scan triggers
-    if (lastScanTime.current && Date.now() - lastScanTime.current < 2000) return;
+    if (lastScanTime.current && Date.now() - lastScanTime.current < 2000)
+      return;
     lastScanTime.current = Date.now();
 
-    const prod = searchProducts.find((p) => p.barcode === data || p.quickCode === data);
+    const prod = searchProducts.find(
+      (p) => p.barcode === data || p.quickCode === data,
+    );
     if (prod) {
-      addItemToInvoice(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
+      addItemToInvoice(
+        prod.name,
+        prod.price,
+        prod.icon,
+        `SKU 23400${prod.id}`,
+        prod.stockCount,
+      );
     } else {
       Alert.alert(
         "Product Not Registered",
         `Scanned code "${data}" is not registered in catalog. Please register it in Stocks Screen first.`,
-        [{ text: "Okay" }]
+        [{ text: "Okay" }],
       );
     }
   };
@@ -224,7 +255,16 @@ export const PosScreen: React.FC = () => {
               onPress={() => router.push("/pos/history")}
             >
               <Feather name="list" size={16} color={TOKENS.primary} />
-              <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Orders</Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "bold",
+                  color: TOKENS.primary,
+                  marginLeft: 4,
+                }}
+              >
+                Orders
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -289,7 +329,9 @@ export const PosScreen: React.FC = () => {
           <View style={styles.emptyInvoiceState}>
             <Feather name="shopping-bag" size={40} color={TOKENS.muted} />
             <Text style={styles.emptyInvoiceTitle}>No items in invoice</Text>
-            <Text style={styles.emptyInvoiceSub}>Use quick codes or search below to add items.</Text>
+            <Text style={styles.emptyInvoiceSub}>
+              Use quick codes or search below to add items.
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -322,7 +364,10 @@ export const PosScreen: React.FC = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.segmentButton, activeMode === "scan" && styles.segmentButtonActive]}
+            style={[
+              styles.segmentButton,
+              activeMode === "scan" && styles.segmentButtonActive,
+            ]}
             onPress={() => setActiveMode("scan")}
             activeOpacity={0.8}
           >
@@ -332,7 +377,10 @@ export const PosScreen: React.FC = () => {
               color={activeMode === "scan" ? TOKENS.card : TOKENS.dark}
             />
             <Text
-              style={[styles.segmentText, activeMode === "scan" && styles.segmentTextActive]}
+              style={[
+                styles.segmentText,
+                activeMode === "scan" && styles.segmentTextActive,
+              ]}
             >
               Scan
             </Text>
@@ -343,16 +391,8 @@ export const PosScreen: React.FC = () => {
             onPress={() => router.push("/pos/search")}
             activeOpacity={0.8}
           >
-            <Feather
-              name="search"
-              size={15}
-              color={TOKENS.dark}
-            />
-            <Text
-              style={styles.segmentText}
-            >
-              Search
-            </Text>
+            <Feather name="search" size={15} color={TOKENS.dark} />
+            <Text style={styles.segmentText}>Search</Text>
           </TouchableOpacity>
         </View>
 
@@ -377,17 +417,25 @@ export const PosScreen: React.FC = () => {
                       style={styles.matchBadgeClickable}
                       activeOpacity={0.7}
                       onPress={() => {
-                        addItemToInvoice(matchedProduct.name, matchedProduct.price, matchedProduct.icon);
+                        addItemToInvoice(
+                          matchedProduct.name,
+                          matchedProduct.price,
+                          matchedProduct.icon,
+                        );
                         setQuickCode("");
                       }}
                     >
-                      <Text style={styles.matchedText}>{matchedProduct.name}</Text>
+                      <Text style={styles.matchedText}>
+                        {matchedProduct.name}
+                      </Text>
                       <View style={styles.addSmallBadge}>
                         <Feather name="plus" size={12} color={TOKENS.card} />
                       </View>
                     </TouchableOpacity>
                   ) : (
-                    quickCode.length >= 4 && <Text style={styles.noMatchText}>No match</Text>
+                    quickCode.length >= 4 && (
+                      <Text style={styles.noMatchText}>No match</Text>
+                    )
                   )}
                 </View>
               </View>
@@ -395,53 +443,90 @@ export const PosScreen: React.FC = () => {
               {/* Numpad Block */}
               <View style={styles.numpadContainer}>
                 <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("1")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("1")}
+                  >
                     <Text style={styles.numpadBtnText}>1</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("2")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("2")}
+                  >
                     <Text style={styles.numpadBtnText}>2</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("3")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("3")}
+                  >
                     <Text style={styles.numpadBtnText}>3</Text>
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("4")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("4")}
+                  >
                     <Text style={styles.numpadBtnText}>4</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("5")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("5")}
+                  >
                     <Text style={styles.numpadBtnText}>5</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("6")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("6")}
+                  >
                     <Text style={styles.numpadBtnText}>6</Text>
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("7")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("7")}
+                  >
                     <Text style={styles.numpadBtnText}>7</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("8")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("8")}
+                  >
                     <Text style={styles.numpadBtnText}>8</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("9")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("9")}
+                  >
                     <Text style={styles.numpadBtnText}>9</Text>
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress(".")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress(".")}
+                  >
                     <Text style={styles.numpadBtnText}>.</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("0")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("0")}
+                  >
                     <Text style={styles.numpadBtnText}>0</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.numpadBtn, styles.deleteBtn]}
                     onPress={() => handleNumPress("backspace")}
                   >
-                    <Ionicons name="backspace-outline" size={22} color={TOKENS.dark} />
+                    <Ionicons
+                      name="backspace-outline"
+                      size={22}
+                      color={TOKENS.dark}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -458,20 +543,55 @@ export const PosScreen: React.FC = () => {
                   <CameraView
                     style={StyleSheet.absoluteFillObject}
                     barcodeScannerSettings={{
-                      barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
+                      barcodeTypes: [
+                        "upc_a",
+                        "upc_e",
+                        "ean13",
+                        "ean8",
+                        "qr",
+                        "code128",
+                        "code39",
+                      ],
                     }}
                     onBarcodeScanned={handleBarcodeScanned}
                   />
                 ) : (
-                  <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16 }}>
-                    <Text style={{ color: "#fff", fontSize: 12, textAlign: "center", marginBottom: 10 }}>
+                  <View
+                    style={{
+                      flex: 1,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 16,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#fff",
+                        fontSize: 12,
+                        textAlign: "center",
+                        marginBottom: 10,
+                      }}
+                    >
                       Camera Access Required
                     </Text>
                     <TouchableOpacity
                       onPress={() => requestCameraAccess()}
-                      style={{ backgroundColor: TOKENS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+                      style={{
+                        backgroundColor: TOKENS.primary,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                      }}
                     >
-                      <Text style={{ color: "#fff", fontSize: 11, fontWeight: "bold" }}>Grant Permission</Text>
+                      <Text
+                        style={{
+                          color: "#fff",
+                          fontSize: 11,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        Grant Permission
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -485,30 +605,42 @@ export const PosScreen: React.FC = () => {
 
                   {/* Moving animated sweep laser */}
                   <Animated.View
-                    style={[styles.scanLaser, { transform: [{ translateY: laserTranslateY }] }]}
+                    style={[
+                      styles.scanLaser,
+                      { transform: [{ translateY: laserTranslateY }] },
+                    ]}
                   />
                 </View>
               </View>
-
-             </View>
+            </View>
           )}
-
-
         </View>
 
         {/* Proceed to Checkout button placed perfectly below inputs */}
         {invoiceItems.length > 0 && (
           <TouchableOpacity
-            style={[styles.summaryBarButton, { marginTop: 12, marginBottom: 8 }]}
+            style={[
+              styles.summaryBarButton,
+              { marginTop: 12, marginBottom: 8 },
+            ]}
             activeOpacity={0.85}
             onPress={() => router.push("/pos/cart")}
           >
             <View style={styles.summaryBarLeft}>
-              <Feather name="shopping-bag" size={16} color={TOKENS.card} style={styles.bagIcon} />
+              <Feather
+                name="shopping-bag"
+                size={16}
+                color={TOKENS.card}
+                style={styles.bagIcon}
+              />
               <Text style={styles.summaryLabelActive}>Proceed to Checkout</Text>
             </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()}</Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <Text style={styles.summaryValueActive}>
+                Rs. {totalInvoiceAmount.toLocaleString()}
+              </Text>
               <Feather name="arrow-right" size={16} color={TOKENS.card} />
             </View>
           </TouchableOpacity>

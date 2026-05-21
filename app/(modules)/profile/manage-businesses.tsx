@@ -3,9 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,11 +12,17 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BottomSheet } from "../../../components/common/BottomSheet";
 import { Business, cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
-import { BottomSheet } from "../../../components/common/BottomSheet";
+import {
+  useBusinesses,
+  useDeleteBusiness,
+  useRegisterBusiness,
+  useUpdateBusiness,
+} from "../../../hooks/useBusinesses";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
-import { useBusinesses, useRegisterBusiness, useUpdateBusiness, useDeleteBusiness } from "../../../hooks/useBusinesses";
+import { useAuthStore } from "../../../stores/useAuthStore";
 import { useBusinessStore } from "../../../stores/useBusinessStore";
 
 export default function ManageBusinessesRoute() {
@@ -67,36 +71,44 @@ export default function ManageBusinessesRoute() {
 
   const handleSaveEditBusiness = () => {
     if (!editingBusiness) return;
-    if (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) {
+    if (
+      !editName.trim() ||
+      !editCategory.trim() ||
+      !editAddress.trim() ||
+      !editPhone.trim()
+    ) {
       triggerToast("All fields are required!");
       return;
     }
-    
-    updateMutation.mutate({
-      id: editingBusiness.id,
-      details: {
-        name: editName.trim(),
-        category: editCategory.trim(),
-        address: editAddress.trim(),
-        phone: editPhone.trim(),
-      }
-    }, {
-      onSuccess: () => {
-        setIsEditModalOpen(false);
-        setEditingBusiness(null);
-        triggerToast("Business details updated successfully! 🚀");
+
+    updateMutation.mutate(
+      {
+        id: editingBusiness.id,
+        details: {
+          name: editName.trim(),
+          category: editCategory.trim(),
+          address: editAddress.trim(),
+          phone: editPhone.trim(),
+        },
       },
-      onError: () => {
-        triggerToast("Failed to update business details.");
-      }
-    });
+      {
+        onSuccess: () => {
+          setIsEditModalOpen(false);
+          setEditingBusiness(null);
+          triggerToast("Business details updated successfully! 🚀");
+        },
+        onError: () => {
+          triggerToast("Failed to update business details.");
+        },
+      },
+    );
   };
 
   const handleConfirmDelete = (biz: Business) => {
     if (businesses.length <= 1) {
       Alert.alert(
         "Action Restricted",
-        "You cannot delete the only business in the catalog. You must have at least one active store branch."
+        "You cannot delete the only business in the catalog. You must have at least one active store branch.",
       );
       return;
     }
@@ -116,17 +128,19 @@ export default function ManageBusinessesRoute() {
               },
               onError: () => {
                 triggerToast("Failed to delete business branch.");
-              }
+              },
             });
           },
         },
-      ]
+      ],
     );
   };
 
   const handleCreateBusiness = () => {
     if (!canPerform("create", "settings")) {
-      triggerToast("Access Denied: Cashiers are not authorized to create branches.");
+      triggerToast(
+        "Access Denied: Cashiers are not authorized to create branches.",
+      );
       return;
     }
 
@@ -147,65 +161,80 @@ export default function ManageBusinessesRoute() {
       return;
     }
 
-    registerMutation.mutate({
-      name: newName.trim(),
-      address: newAddress.trim(),
-      phone: newPhone.trim(),
-      category: newCategory.trim(),
-    }, {
-      onSuccess: (newBiz) => {
-        setIsModalOpen(false);
-        setNewName("");
-        setNewCategory("");
-        setNewAddress("");
-        setNewPhone("");
-        triggerToast("Business store created successfully! 🎉");
-
-        Alert.alert(
-          "Activate New Branch",
-          `Would you like to set "${newBiz.name}" as your active business branch immediately?`,
-          [
-            {
-              text: "No",
-              style: "cancel"
-            },
-            {
-              text: "Yes, Activate",
-              onPress: () => {
-                useBusinessStore.setState({
-                  activeBusiness: {
-                    id: newBiz.id,
-                    name: newBiz.name,
-                    category: newBiz.category,
-                    address: newBiz.address,
-                    phone: newBiz.phone,
-                  }
-                });
-                
-                const { useAuthStore } = require("../../../stores/useAuthStore");
-                useAuthStore.getState().setActiveBusinessId(newBiz.id);
-                triggerToast(`Switched active business to "${newBiz.name}"! 🚀`);
-              }
-            }
-          ]
-        );
+    registerMutation.mutate(
+      {
+        name: newName.trim(),
+        address: newAddress.trim(),
+        phone: newPhone.trim(),
+        category: newCategory.trim(),
       },
-      onError: () => {
-        triggerToast("Failed to register business.");
-      }
-    });
+      {
+        onSuccess: (newBiz) => {
+          setIsModalOpen(false);
+          setNewName("");
+          setNewCategory("");
+          setNewAddress("");
+          setNewPhone("");
+          triggerToast("Business store created successfully! 🎉");
+
+          Alert.alert(
+            "Activate New Branch",
+            `Would you like to set "${newBiz.name}" as your active business branch immediately?`,
+            [
+              {
+                text: "No",
+                style: "cancel",
+              },
+              {
+                text: "Yes, Activate",
+                onPress: () => {
+                  useBusinessStore.setState({
+                    activeBusiness: {
+                      id: newBiz.id,
+                      name: newBiz.name,
+                      category: newBiz.category,
+                      address: newBiz.address,
+                      phone: newBiz.phone,
+                    },
+                  });
+
+                  useAuthStore.getState().setActiveBusinessId(newBiz.id);
+                  triggerToast(
+                    `Switched active business to "${newBiz.name}"! 🚀`,
+                  );
+                },
+              },
+            ],
+          );
+        },
+        onError: () => {
+          triggerToast("Failed to register business.");
+        },
+      },
+    );
   };
 
   const getCategoryColor = (cat: string) => {
     const lower = cat.toLowerCase();
     if (lower.includes("elect")) return { bg: "#FEF7E0", text: "#B06000" };
-    if (lower.includes("cloth") || lower.includes("apparel") || lower.includes("fashion")) return { bg: "#E6F4EA", text: "#137333" };
-    if (lower.includes("groc") || lower.includes("super")) return { bg: "#FCE8E6", text: "#C5221F" };
+    if (
+      lower.includes("cloth") ||
+      lower.includes("apparel") ||
+      lower.includes("fashion")
+    )
+      return { bg: "#E6F4EA", text: "#137333" };
+    if (lower.includes("groc") || lower.includes("super"))
+      return { bg: "#FCE8E6", text: "#C5221F" };
     return { bg: "#E8F0FE", text: TOKENS.primary };
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: Platform.OS === "ios" ? insets.top : 10 },
+      ]}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -242,7 +271,10 @@ export default function ManageBusinessesRoute() {
       )}
 
       {/* Scrollable list */}
-      <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollWrapper}
+        contentContainerStyle={styles.scrollContent}
+      >
         <Text style={styles.groupLabel}>Registered Business Categories</Text>
 
         {businesses.map((biz) => {
@@ -259,14 +291,30 @@ export default function ManageBusinessesRoute() {
               }}
             >
               <View style={styles.bizCardLeft}>
-                <View style={[styles.iconBox, isActive && styles.iconBoxActive]}>
-                  <Feather name="briefcase" size={20} color={isActive ? TOKENS.card : TOKENS.primary} />
+                <View
+                  style={[styles.iconBox, isActive && styles.iconBoxActive]}
+                >
+                  <Feather
+                    name="briefcase"
+                    size={20}
+                    color={isActive ? TOKENS.card : TOKENS.primary}
+                  />
                 </View>
                 <View style={styles.bizDetails}>
                   <View style={styles.bizNameRow}>
                     <Text style={styles.bizName}>{biz.name}</Text>
-                    <View style={[styles.categoryBadge, { backgroundColor: badge.bg }]}>
-                      <Text style={[styles.categoryBadgeText, { color: badge.text }]}>
+                    <View
+                      style={[
+                        styles.categoryBadge,
+                        { backgroundColor: badge.bg },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryBadgeText,
+                          { color: badge.text },
+                        ]}
+                      >
                         {biz.category}
                       </Text>
                     </View>
@@ -275,14 +323,36 @@ export default function ManageBusinessesRoute() {
                   <Text style={styles.bizSub}>📞 {biz.phone}</Text>
                 </View>
               </View>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                {isActive && <Feather name="check-circle" size={20} color={TOKENS.primary} style={{ marginRight: 4 }} />}
-                
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
+              >
+                {isActive && (
+                  <Feather
+                    name="check-circle"
+                    size={20}
+                    color={TOKENS.primary}
+                    style={{ marginRight: 4 }}
+                  />
+                )}
+
                 {canPerform("delete", "settings") && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#E8F0FE", alignItems: "center", justifyContent: "center" }}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: "#E8F0FE",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
                       onPress={(e) => {
                         e.stopPropagation();
                         handleOpenEditModal(biz);
@@ -293,7 +363,14 @@ export default function ManageBusinessesRoute() {
 
                     <TouchableOpacity
                       activeOpacity={0.7}
-                      style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#FCE8E6", alignItems: "center", justifyContent: "center" }}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: "#FCE8E6",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
                       onPress={(e) => {
                         e.stopPropagation();
                         handleConfirmDelete(biz);
@@ -305,7 +382,11 @@ export default function ManageBusinessesRoute() {
                 )}
 
                 {!canPerform("delete", "settings") && !isActive && (
-                  <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+                  <Feather
+                    name="chevron-right"
+                    size={16}
+                    color={TOKENS.muted}
+                  />
                 )}
               </View>
             </TouchableOpacity>
@@ -319,7 +400,11 @@ export default function ManageBusinessesRoute() {
         onClose={() => setIsModalOpen(false)}
         title="Create New Business"
       >
-        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.modalScroll}
+          style={{ maxHeight: 280 }}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Business / Brand Name</Text>
             <TextInput
@@ -367,12 +452,26 @@ export default function ManageBusinessesRoute() {
         </ScrollView>
 
         <TouchableOpacity
-          style={[styles.submitButton, (!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            (!newName.trim() ||
+              !newCategory.trim() ||
+              !newAddress.trim() ||
+              !newPhone.trim()) &&
+              styles.submitButtonDisabled,
+          ]}
           activeOpacity={0.8}
           onPress={handleCreateBusiness}
-          disabled={!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()}
+          disabled={
+            !newName.trim() ||
+            !newCategory.trim() ||
+            !newAddress.trim() ||
+            !newPhone.trim()
+          }
         >
-          <Text style={styles.submitButtonText}>Create & Activate Business</Text>
+          <Text style={styles.submitButtonText}>
+            Create & Activate Business
+          </Text>
           <Feather name="plus-circle" size={16} color={TOKENS.card} />
         </TouchableOpacity>
       </BottomSheet>
@@ -386,7 +485,11 @@ export default function ManageBusinessesRoute() {
         }}
         title="Edit Business Details"
       >
-        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.modalScroll}
+          style={{ maxHeight: 280 }}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Business / Brand Name</Text>
             <TextInput
@@ -434,10 +537,22 @@ export default function ManageBusinessesRoute() {
         </ScrollView>
 
         <TouchableOpacity
-          style={[styles.submitButton, (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            (!editName.trim() ||
+              !editCategory.trim() ||
+              !editAddress.trim() ||
+              !editPhone.trim()) &&
+              styles.submitButtonDisabled,
+          ]}
           activeOpacity={0.8}
           onPress={handleSaveEditBusiness}
-          disabled={!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()}
+          disabled={
+            !editName.trim() ||
+            !editCategory.trim() ||
+            !editAddress.trim() ||
+            !editPhone.trim()
+          }
         >
           <Text style={styles.submitButtonText}>Update Business Details</Text>
           <Feather name="check" size={16} color={TOKENS.card} />

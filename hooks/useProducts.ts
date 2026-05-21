@@ -1,9 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { cartState } from "../components/data/cartState";
-import * as ImagePicker from "expo-image-picker";
+import { Q } from "@nozbe/watermelondb";
 import * as NetInfo from "@react-native-community/netinfo";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
 import { Alert } from "react-native";
-import { queueImageUpload, removeProductImage } from "../services/uploadQueue";
+import { cartState } from "../components/data/cartState";
+import database from "../components/data/db";
+import {
+  deleteUploadThingFile,
+  processUploadQueue,
+  queueImageUpload,
+  removeProductImage,
+} from "../services/uploadQueue";
 
 export interface DBProduct {
   id: string;
@@ -23,15 +30,16 @@ export interface DBProduct {
   createdAt?: number;
 }
 
-export function useProducts(category?: string, search?: string, activeChip?: string) {
+export function useProducts(
+  category?: string,
+  search?: string,
+  activeChip?: string,
+) {
   const activeBiz = cartState.getActiveBusiness();
   return useQuery<DBProduct[]>({
     queryKey: ["products", activeBiz.id, category, search, activeChip],
     queryFn: async () => {
-      const db = require("../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-      
-      let query = db.get("products").query();
+      let query = database.get("products").query();
 
       // Isolate products strictly by active business ID
       query = query.extend(Q.where("business_id", activeBiz.id));
@@ -64,17 +72,23 @@ export function useProducts(category?: string, search?: string, activeChip?: str
             Q.where("name", Q.like(`%${sanitized}%`)),
             Q.where("category", Q.like(`%${sanitized}%`)),
             Q.where("barcode", Q.like(`%${sanitized}%`)),
-            Q.where("quick_code", Q.like(`%${sanitized}%`))
-          )
+            Q.where("quick_code", Q.like(`%${sanitized}%`)),
+          ),
         );
       }
 
       const dbProducts = await query.fetch();
-      
+
       return dbProducts.map((p: any) => {
         const stockCount = p.stockCount ?? 0;
-        const stockType = stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
-        const stockText = stockType === "out" ? "Out of Stock" : stockType === "low" ? `Low · ${stockCount} remaining` : `${stockCount} in stock`;
+        const stockType =
+          stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
+        const stockText =
+          stockType === "out"
+            ? "Out of Stock"
+            : stockType === "low"
+              ? `Low · ${stockCount} remaining`
+              : `${stockCount} in stock`;
 
         return {
           id: p.id,
@@ -108,10 +122,7 @@ export function useUploadedProductImages() {
   return useQuery<{ id: string; name: string; icon: string }[]>({
     queryKey: ["uploaded-images", activeBiz.id],
     queryFn: async () => {
-      const db = require("../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-
-      const products = await db
+      const products = await database
         .get("products")
         .query(Q.where("business_id", activeBiz.id))
         .fetch();
@@ -119,7 +130,11 @@ export function useUploadedProductImages() {
       return products
         .filter((p: any) => {
           const icon: string = p.icon ?? "";
-          return icon.startsWith("http") || icon.startsWith("file://") || icon.startsWith("/");
+          return (
+            icon.startsWith("http") ||
+            icon.startsWith("file://") ||
+            icon.startsWith("/")
+          );
         })
         .map((p: any) => ({ id: p.id, name: p.name, icon: p.icon ?? "" }));
     },
@@ -148,7 +163,6 @@ export function useAddProduct() {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       // Trigger background upload queue check immediately as fallback
       try {
-        const { processUploadQueue } = require("../services/uploadQueue");
         processUploadQueue();
       } catch (err) {
         console.error("Failed to run upload queue from hook:", err);
@@ -162,9 +176,8 @@ export function useToggleFavoriteProduct() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const db = require("../components/data/db").default;
-      const product = await db.get("products").find(id);
-      await db.write(async () => {
+      const product = await database.get("products").find(id);
+      await database.write(async () => {
         await product.update((p: any) => {
           p.isFavorite = !p.isFavorite;
         });
@@ -190,52 +203,17 @@ export function useUpdateProductImage() {
   const queryClient = useQueryClient();
 
   const pickAndUpload = async (productId: string) => {
-    Alert.alert(
-      "Product Image",
-      "Choose how to add a product image",
-      [
-        {
-          text: "📷 Camera",
-          onPress: async () => {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== "granted") {
-              Alert.alert("Permission needed", "Camera permission is required.");
-              return;
-            }
-            try {
-              const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ["images"],
-                allowsEditing: true,
-                aspect: [1, 1] as [number, number],
-                quality: 0.8,
-              });
-              if (!result.canceled && result.assets[0]?.uri) {
-                const state = await NetInfo.fetch();
-                const isOnline =
-                  (state.isConnected ?? false) &&
-                  state.isInternetReachable !== false;
-                await queueImageUpload(productId, result.assets[0].uri, isOnline);
-                queryClient.invalidateQueries({ queryKey: ["products"] });
-              }
-            } catch {
-              // Camera not available (e.g. simulator) — fall back to gallery
-              Alert.alert(
-                "Camera Unavailable",
-                "Camera is not available on this device. Please use the Gallery option."
-              );
-            }
-          },
-        },
-        {
-          text: "🖼️ Gallery",
-          onPress: async () => {
-            const { status } =
-              await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== "granted") {
-              Alert.alert("Permission needed", "Photo library permission is required.");
-              return;
-            }
-            const result = await ImagePicker.launchImageLibraryAsync({
+    Alert.alert("Product Image", "Choose how to add a product image", [
+      {
+        text: "📷 Camera",
+        onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== "granted") {
+            Alert.alert("Permission needed", "Camera permission is required.");
+            return;
+          }
+          try {
+            const result = await ImagePicker.launchCameraAsync({
               mediaTypes: ["images"],
               allowsEditing: true,
               aspect: [1, 1] as [number, number],
@@ -249,11 +227,45 @@ export function useUpdateProductImage() {
               await queueImageUpload(productId, result.assets[0].uri, isOnline);
               queryClient.invalidateQueries({ queryKey: ["products"] });
             }
-          },
+          } catch {
+            // Camera not available (e.g. simulator) — fall back to gallery
+            Alert.alert(
+              "Camera Unavailable",
+              "Camera is not available on this device. Please use the Gallery option.",
+            );
+          }
         },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
+      },
+      {
+        text: "🖼️ Gallery",
+        onPress: async () => {
+          const { status } =
+            await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== "granted") {
+            Alert.alert(
+              "Permission needed",
+              "Photo library permission is required.",
+            );
+            return;
+          }
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ["images"],
+            allowsEditing: true,
+            aspect: [1, 1] as [number, number],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets[0]?.uri) {
+            const state = await NetInfo.fetch();
+            const isOnline =
+              (state.isConnected ?? false) &&
+              state.isInternetReachable !== false;
+            await queueImageUpload(productId, result.assets[0].uri, isOnline);
+            queryClient.invalidateQueries({ queryKey: ["products"] });
+          }
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   return { pickAndUpload };
@@ -274,7 +286,7 @@ export function useRemoveProductImage() {
   const confirmAndRemove = (
     productId: string,
     currentIcon: string,
-    productName: string
+    productName: string,
   ) => {
     // Only show if there's actually a custom image (not just an emoji)
     const hasCustomImage =
@@ -283,7 +295,10 @@ export function useRemoveProductImage() {
       currentIcon.startsWith("/");
 
     if (!hasCustomImage) {
-      Alert.alert("No Custom Image", `"${productName}" is using the default emoji icon.`);
+      Alert.alert(
+        "No Custom Image",
+        `"${productName}" is using the default emoji icon.`,
+      );
       return;
     }
 
@@ -300,7 +315,7 @@ export function useRemoveProductImage() {
           },
         },
         { text: "Cancel", style: "cancel" },
-      ]
+      ],
     );
   };
 
@@ -323,11 +338,21 @@ export function useUpdateProduct() {
       quickCode?: string;
       barcode?: string;
     }) => {
-      const { id, name, price, category, icon, stockCount, unitType, costPrice, quickCode, barcode } = params;
-      const db = require("../components/data/db").default;
-      const product = await db.get("products").find(id);
-      
-      await db.write(async () => {
+      const {
+        id,
+        name,
+        price,
+        category,
+        icon,
+        stockCount,
+        unitType,
+        costPrice,
+        quickCode,
+        barcode,
+      } = params;
+      const product = await database.get("products").find(id);
+
+      await database.write(async () => {
         await product.update((p: any) => {
           p.name = name;
           p.price = price;
@@ -341,7 +366,8 @@ export function useUpdateProduct() {
 
           // Set pending upload flag if it's a local uri
           const iconUri = icon ?? "";
-          const isLocal = iconUri.startsWith("file://") || iconUri.startsWith("/");
+          const isLocal =
+            iconUri.startsWith("file://") || iconUri.startsWith("/");
           p.iconPendingUpload = isLocal;
         });
       });
@@ -351,7 +377,6 @@ export function useUpdateProduct() {
       queryClient.invalidateQueries({ queryKey: ["uploaded-images"] });
       // Trigger background upload queue check immediately
       try {
-        const { processUploadQueue } = require("../services/uploadQueue");
         processUploadQueue();
       } catch (err) {
         console.error("Failed to run upload queue from hook:", err);
@@ -365,22 +390,20 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const db = require("../components/data/db").default;
-      const product = await db.get("products").find(id);
-      
+      const product = await database.get("products").find(id);
+
       // Clean up uploaded image if it was a remote URL
-      const currentIcon: string = product.icon ?? "";
+      const currentIcon: string = (product as any).icon ?? "";
       const isRemoteUrl = currentIcon.startsWith("http");
       if (isRemoteUrl) {
         try {
-          const { deleteUploadThingFile } = require("../services/uploadQueue");
           await deleteUploadThingFile(currentIcon);
         } catch (e) {
           console.error("Failed to delete product file from UploadThing:", e);
         }
       }
 
-      await db.write(async () => {
+      await database.write(async () => {
         await product.destroyPermanently();
       });
     },
@@ -390,4 +413,3 @@ export function useDeleteProduct() {
     },
   });
 }
-

@@ -1,27 +1,25 @@
-import React, { useState, useEffect, useRef } from "react";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  FlatList,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  FlatList,
   TextInput,
-  Modal,
-  Pressable,
-  Animated,
+  TouchableOpacity,
   useWindowDimensions,
+  View
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { ScreenWrapper } from "../common/ScreenWrapper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { cartState, Business } from "../data/cartState";
+import { useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
 import { useTabBarVisible } from "../../hooks/useTabBarVisible";
 import { BottomSheet } from "../common/BottomSheet";
-import { useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
 import { ProductImage } from "../common/ProductImage";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
+import { Business, cartState } from "../data/cartState";
 
 interface HomeProduct {
   id: string;
@@ -54,13 +52,17 @@ export const HomeScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Dynamic products list fetched via React Query custom hook
-  const { data: productsList = [] } = useProducts(selectedCategory, searchQuery);
+  const { data: productsList = [] } = useProducts(
+    selectedCategory,
+    searchQuery,
+  );
   const toggleFavoriteMutation = useToggleFavoriteProduct();
   const [cartItemsCount, setCartItemsCount] = useState(0);
 
-  // console.log("productsList", productsList);
   // Active Business dropdown states
-  const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
+  const [activeBusiness, setActiveBusiness] = useState<Business>(
+    cartState.getActiveBusiness(),
+  );
   const [isBusinessSheetOpen, setIsBusinessSheetOpen] = useState(false);
 
   const { tabBarVisible, setTabBarVisible } = useTabBarVisible();
@@ -105,20 +107,20 @@ export const HomeScreen: React.FC = () => {
   // Scroll handler for hiding/showing tab bar dynamically
   const handleScroll = (event: any) => {
     const currentY = event.nativeEvent.contentOffset.y;
-    
+
     // Scrolling down (with threshold)
     if (currentY > 50 && currentY > lastScrollY.current) {
       if (tabBarVisible) {
         setTabBarVisible(false);
       }
-    } 
+    }
     // Scrolling up or at the absolute top
     else if (currentY < lastScrollY.current || currentY <= 10) {
       if (!tabBarVisible) {
         setTabBarVisible(true);
       }
     }
-    
+
     lastScrollY.current = currentY;
   };
 
@@ -143,10 +145,15 @@ export const HomeScreen: React.FC = () => {
       triggerToast("Product is out of stock!");
       return;
     }
-    cartState.addCartItem(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
+    cartState.addCartItem(
+      prod.name,
+      prod.price,
+      prod.icon,
+      `SKU 23400${prod.id}`,
+      prod.stockCount,
+    );
     triggerToast(`Added ${prod.name} to active invoice`);
   };
-
 
   // WatermelonDB performs search & filter queries directly
   const filteredProducts = productsList;
@@ -170,10 +177,26 @@ export const HomeScreen: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => setIsBusinessSheetOpen(true)}
           >
-            <Text style={styles.headerSubtitle} numberOfLines={1}>
-              🏢 {activeBusiness.name}
-            </Text>
-            <Feather name="chevron-down" size={13} color={TOKENS.muted} style={{ marginLeft: 3 }} />
+            <View style={styles.businessRow}>
+              <Ionicons
+                name="storefront-outline"
+                size={18}
+                color={TOKENS.muted}
+                style={{ marginRight: 8 }}
+              />
+              <Text
+                style={[styles.headerSubtitle, styles.headerSubtitleDark]}
+                numberOfLines={1}
+              >
+                {activeBusiness.name}
+              </Text>
+            </View>
+            <Feather
+              name="chevron-down"
+              size={13}
+              color={TOKENS.muted}
+              style={{ marginLeft: 6 }}
+            />
           </TouchableOpacity>
         </View>
 
@@ -225,8 +248,12 @@ export const HomeScreen: React.FC = () => {
             <Feather name="grid" size={16} color={TOKENS.primary} />
           </View>
           <View>
-            <Text style={styles.catalogBannerTitle}>Browse Catalog (Sidebar Layout)</Text>
-            <Text style={styles.catalogBannerSubtitle}>Switch to vertical splits with category counts</Text>
+            <Text style={styles.catalogBannerTitle}>
+              Browse Catalog (Sidebar Layout)
+            </Text>
+            <Text style={styles.catalogBannerSubtitle}>
+              Switch to vertical splits with category counts
+            </Text>
           </View>
         </View>
         <Feather name="arrow-right" size={18} color={TOKENS.primary} />
@@ -246,7 +273,9 @@ export const HomeScreen: React.FC = () => {
                 key={cat.id}
                 style={[
                   styles.categoryChip,
-                  isActive ? styles.categoryChipActive : styles.categoryChipInactive,
+                  isActive
+                    ? styles.categoryChipActive
+                    : styles.categoryChipInactive,
                 ]}
                 activeOpacity={0.8}
                 onPress={() => setSelectedCategory(cat.id)}
@@ -254,7 +283,9 @@ export const HomeScreen: React.FC = () => {
                 <Text
                   style={[
                     styles.categoryText,
-                    isActive ? styles.categoryTextActive : styles.categoryTextInactive,
+                    isActive
+                      ? styles.categoryTextActive
+                      : styles.categoryTextInactive,
                   ]}
                 >
                   {cat.label}
@@ -274,7 +305,7 @@ export const HomeScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.gridContainer,
-          { paddingBottom: insets.bottom + 100 }
+          { paddingBottom: insets.bottom + 100 },
         ]}
         columnWrapperStyle={styles.gridColumns}
         onScroll={handleScroll}
@@ -294,7 +325,7 @@ export const HomeScreen: React.FC = () => {
                   style={{ width: "100%", height: 110, borderRadius: 0 }}
                 />
               </TouchableOpacity>
-              
+
               {/* Overlay heart button */}
               <TouchableOpacity
                 activeOpacity={0.7}
@@ -318,7 +349,7 @@ export const HomeScreen: React.FC = () => {
               <Text style={styles.productName} numberOfLines={1}>
                 {item.name}
               </Text>
-              
+
               <View style={styles.priceStockRow}>
                 <Text style={styles.productPrice}>Rs. {item.price}</Text>
                 <View style={styles.stockPlusRow}>
@@ -331,7 +362,7 @@ export const HomeScreen: React.FC = () => {
                   >
                     {item.stockText}
                   </Text>
-                  
+
                   <View
                     style={[
                       styles.plusIconBadge,
@@ -341,7 +372,9 @@ export const HomeScreen: React.FC = () => {
                     <Feather
                       name="plus"
                       size={15}
-                      color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                      color={
+                        item.stockType === "out" ? TOKENS.muted : TOKENS.card
+                      }
                     />
                   </View>
                 </View>
@@ -367,7 +400,7 @@ export const HomeScreen: React.FC = () => {
           {
             bottom: insets.bottom + 75,
             width: fabWidthAnim,
-          }
+          },
         ]}
       >
         <TouchableOpacity
@@ -384,7 +417,7 @@ export const HomeScreen: React.FC = () => {
               {
                 opacity: fabTextOpacityAnim,
                 transform: [{ scale: fabTextScaleAnim }],
-              }
+              },
             ]}
           >
             <Text style={styles.fabText}>Scan</Text>
@@ -398,16 +431,17 @@ export const HomeScreen: React.FC = () => {
         onClose={() => setIsBusinessSheetOpen(false)}
         title="Select Active Business"
       >
-        <ScrollView contentContainerStyle={styles.sheetScrollContent} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.sheetScrollContent}
+          style={{ maxHeight: 400 }}
+          showsVerticalScrollIndicator={false}
+        >
           {cartState.getBusinesses().map((biz) => {
             const isSelected = activeBusiness.id === biz.id;
             return (
               <TouchableOpacity
                 key={biz.id}
-                style={[
-                  styles.bizCard,
-                  isSelected && styles.bizCardSelected
-                ]}
+                style={[styles.bizCard, isSelected && styles.bizCardSelected]}
                 activeOpacity={0.8}
                 onPress={() => {
                   cartState.setActiveBusiness(biz.id);
@@ -416,8 +450,17 @@ export const HomeScreen: React.FC = () => {
                 }}
               >
                 <View style={styles.bizCardLeft}>
-                  <View style={[styles.bizIconBox, isSelected && styles.bizIconBoxActive]}>
-                    <Feather name="home" size={18} color={isSelected ? TOKENS.card : TOKENS.primary} />
+                  <View
+                    style={[
+                      styles.bizIconBox,
+                      isSelected && styles.bizIconBoxActive,
+                    ]}
+                  >
+                    <Feather
+                      name="home"
+                      size={18}
+                      color={isSelected ? TOKENS.card : TOKENS.primary}
+                    />
                   </View>
                   <View style={styles.bizDetails}>
                     <Text style={styles.bizName}>{biz.name}</Text>
@@ -426,7 +469,11 @@ export const HomeScreen: React.FC = () => {
                   </View>
                 </View>
                 {isSelected && (
-                  <Feather name="check-circle" size={20} color={TOKENS.success} />
+                  <Feather
+                    name="check-circle"
+                    size={20}
+                    color={TOKENS.success}
+                  />
                 )}
               </TouchableOpacity>
             );
@@ -484,7 +531,8 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 16,
+    fontWeight: "600",
     color: TOKENS.muted,
     marginTop: 1,
   },
@@ -786,6 +834,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 2,
     alignSelf: "flex-start",
+  },
+  businessRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  bizBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: TOKENS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bizBadgeText: {
+    color: TOKENS.card,
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  headerSubtitleDark: {
+    color: TOKENS.dark,
   },
   sheetOverlay: {
     flex: 1,

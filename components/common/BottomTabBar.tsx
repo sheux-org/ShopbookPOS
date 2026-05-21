@@ -1,8 +1,9 @@
-import React from "react";
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
+import { useUserPermissions } from "../../hooks/useUserPermissions";
 
 interface BottomTabBarProps {
   activeTab?: "home" | "pos" | "stocks" | "insights" | "orders" | "profile";
@@ -15,7 +16,6 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
-  const { useUserPermissions } = require("../../hooks/useUserPermissions");
   const { canPerform, role } = useUserPermissions();
 
   const allTabs = [
@@ -39,10 +39,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
 
   return (
     <View
-      style={[
-        styles.container,
-        { paddingBottom: Math.max(insets.bottom, 10) },
-      ]}
+      style={[styles.container, { paddingBottom: Math.max(insets.bottom, 10) }]}
     >
       {tabs.map((tab) => {
         const isActive =
@@ -57,7 +54,9 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
             onPress={() => onTabPress?.(tab.id)}
           >
             {/* Sleek active indicator bar */}
-            <View style={[styles.indicator, isActive && styles.indicatorActive]} />
+            <View
+              style={[styles.indicator, isActive && styles.indicatorActive]}
+            />
 
             <Feather
               // @ts-ignore dynamic mapping is safe here for known feather icons

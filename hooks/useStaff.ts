@@ -1,4 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Q } from "@nozbe/watermelondb";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import database from "../components/data/db";
 
 export interface StaffMember {
   id: string;
@@ -14,10 +16,7 @@ export function useStaff(businessId: string) {
     queryFn: async () => {
       if (!businessId || businessId === "0") return [];
 
-      const db = require("../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-
-      const dbEmployees = await db
+      const dbEmployees = await database
         .get("employees")
         .query(Q.where("business_id", businessId))
         .fetch();
@@ -25,7 +24,12 @@ export function useStaff(businessId: string) {
       return dbEmployees.map((emp: any) => ({
         id: emp.id,
         name: emp.name,
-        role: emp.role === "admin" ? "Admin" : emp.role === "manager" ? "Manager" : "Cashier",
+        role:
+          emp.role === "admin"
+            ? "Admin"
+            : emp.role === "manager"
+              ? "Manager"
+              : "Cashier",
         email: emp.email || "no-email@shopbook.lk",
         phone: emp.phone,
       }));
@@ -45,17 +49,18 @@ export function useCreateStaff(businessId: string) {
       phone: string;
     }) => {
       const { name, role, email, phone } = params;
-      const db = require("../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-
-      const businesses = await db.get("businesses").query(Q.where("id", businessId)).fetch();
+      const businesses = await database
+        .get("businesses")
+        .query(Q.where("id", businessId))
+        .fetch();
       const dbBiz = businesses[0];
 
       if (!dbBiz) {
         throw new Error("No business registered in SQLite database!");
       }
 
-      const dbRole = role === "Admin" ? "admin" : role === "Manager" ? "manager" : "cashier";
+      const dbRole =
+        role === "Admin" ? "admin" : role === "Manager" ? "manager" : "cashier";
 
       const normalizePhone = (phoneStr: string): string => {
         let cleaned = phoneStr.replace(/\D/g, "");
@@ -66,8 +71,8 @@ export function useCreateStaff(businessId: string) {
 
       const cleanPhone = normalizePhone(phone);
 
-      await db.write(async () => {
-        await db.get("employees").create((emp: any) => {
+      await database.write(async () => {
+        await database.get("employees").create((emp: any) => {
           emp.business.set(dbBiz);
           emp.name = name;
           emp.role = dbRole;
@@ -94,10 +99,10 @@ export function useUpdateStaff(businessId: string) {
       phone: string;
     }) => {
       const { id, name, role, email, phone } = params;
-      const db = require("../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-
-      const employees = await db.get("employees").query(Q.where("id", id)).fetch();
+      const employees = await database
+        .get("employees")
+        .query(Q.where("id", id))
+        .fetch();
       if (employees.length === 0) {
         throw new Error("Staff member not found in database!");
       }
@@ -112,9 +117,10 @@ export function useUpdateStaff(businessId: string) {
       };
 
       const cleanPhone = normalizePhone(phone);
-      const dbRole = role === "Admin" ? "admin" : role === "Manager" ? "manager" : "cashier";
+      const dbRole =
+        role === "Admin" ? "admin" : role === "Manager" ? "manager" : "cashier";
 
-      await db.write(async () => {
+      await database.write(async () => {
         await targetEmp.update((emp: any) => {
           emp.name = name.trim();
           emp.role = dbRole;
@@ -134,16 +140,16 @@ export function useDeleteStaff(businessId: string) {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const db = require("../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-
-      const employees = await db.get("employees").query(Q.where("id", id)).fetch();
+      const employees = await database
+        .get("employees")
+        .query(Q.where("id", id))
+        .fetch();
       if (employees.length === 0) {
         throw new Error("Staff member not found in database!");
       }
 
       const targetEmp = employees[0];
-      await db.write(async () => {
+      await database.write(async () => {
         await targetEmp.destroyPermanently();
       });
     },

@@ -1,5 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Q } from "@nozbe/watermelondb";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cartState } from "../components/data/cartState";
+import database from "../components/data/db";
+import { syncDatabase } from "../services/sync";
 
 export interface DBOrder {
   id: string;
@@ -22,14 +25,13 @@ export function useGetOrders() {
   return useQuery<DBOrder[]>({
     queryKey: ["orders", activeBiz.id],
     queryFn: async () => {
-      const db = require("../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-      
-      const query = db.get("orders").query(
-        Q.where("business_id", activeBiz.id),
-        Q.sortBy("created_at", Q.desc)
-      );
-      
+      const query = database
+        .get("orders")
+        .query(
+          Q.where("business_id", activeBiz.id),
+          Q.sortBy("created_at", Q.desc),
+        );
+
       const dbOrders = await query.fetch();
       return dbOrders.map((o: any) => ({
         id: o.id,
@@ -48,13 +50,10 @@ export function useGetOrderItems(orderId?: string) {
     enabled: !!orderId,
     queryFn: async () => {
       if (!orderId) return [];
-      const db = require("../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-      
-      const query = db.get("order_items").query(
-        Q.where("order_id", orderId)
-      );
-      
+      const query = database
+        .get("order_items")
+        .query(Q.where("order_id", orderId));
+
       const dbOrderItems = await query.fetch();
       return dbOrderItems.map((oi: any) => ({
         id: oi.id,
@@ -75,23 +74,23 @@ export function useCreateOrder() {
       totalAmount: number;
       cashierName: string;
       businessId: string;
-      cart: Array<{
+      cart: {
         name: string;
         price: number;
         quantity: number;
-      }>;
+      }[];
     }) => {
       const { totalAmount, cashierName, businessId, cart } = params;
-      const db = require("../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-
       let dbBiz: any;
-      await db.write(async () => {
+      await database.write(async () => {
         // Find database business record
-        const businesses = await db.get("businesses").query(Q.where("id", businessId)).fetch();
+        const businesses = await database
+          .get("businesses")
+          .query(Q.where("id", businessId))
+          .fetch();
         dbBiz = businesses[0];
         if (!dbBiz) {
-          const allBizs = await db.get("businesses").query().fetch();
+          const allBizs = await database.get("businesses").query().fetch();
           dbBiz = allBizs[0];
         }
 
@@ -103,7 +102,7 @@ export function useCreateOrder() {
         const customerText = customer ? ` | Cust: ${customer.name}` : "";
         const invoiceNum = `INV-${Math.floor(100000 + Math.random() * 900000)} (Staff: ${cashierName}${customerText})`;
 
-        const newOrder = await db.get("orders").create((ord: any) => {
+        const newOrder = await database.get("orders").create((ord: any) => {
           ord.business.set(dbBiz);
           ord.invoiceNumber = invoiceNum;
           ord.totalAmount = totalAmount;
@@ -112,7 +111,7 @@ export function useCreateOrder() {
 
         // Save order items & decrement products inventory stocks
         for (const item of cart) {
-          await db.get("order_items").create((ordItem: any) => {
+          await database.get("order_items").create((ordItem: any) => {
             ordItem.order.set(newOrder);
             ordItem.name = item.name;
             ordItem.quantity = item.quantity;
@@ -120,7 +119,10 @@ export function useCreateOrder() {
           });
 
           // Decrement SQLite stock count
-          const products = await db.get("products").query(Q.where("name", item.name)).fetch();
+          const products = await database
+            .get("products")
+            .query(Q.where("name", item.name))
+            .fetch();
           if (products.length > 0) {
             const prod = products[0];
             await prod.update((p: any) => {
@@ -137,14 +139,17 @@ export function useCreateOrder() {
       queryClient.invalidateQueries({ queryKey: ["insights"] });
 
       // Trigger automatic background sync to Supabase without blocking the UX
-      const { syncDatabase } = require("../services/sync");
-      syncDatabase().then((synced: boolean) => {
-        if (synced) {
-          console.log("Background sync successfully pushed new order and stock changes to Supabase.");
-        }
-      }).catch((err: any) => {
-        console.error("Background auto-sync failed:", err);
-      });
+      syncDatabase()
+        .then((synced: boolean) => {
+          if (synced) {
+            console.log(
+              "Background sync successfully pushed new order and stock changes to Supabase.",
+            );
+          }
+        })
+        .catch((err: any) => {
+          console.error("Background auto-sync failed:", err);
+        });
     },
   });
 }

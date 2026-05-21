@@ -1,14 +1,13 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { Q } from "@nozbe/watermelondb";
+import { CameraView } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { CameraView } from "expo-camera";
-import { usePermission } from "../../hooks/usePermissionHandler";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
   Modal,
   ScrollView,
   StyleSheet,
@@ -18,11 +17,21 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
-import { useDeleteProduct, useProducts, useUpdateProduct } from "../../hooks/useProducts";
-import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
+import { usePermission } from "../../hooks/usePermissionHandler";
+import {
+  useDeleteProduct,
+  useProducts,
+  useUpdateProduct,
+} from "../../hooks/useProducts";
+import {
+  deleteUploadThingFile,
+  uploadToUploadThing,
+} from "../../services/uploadQueue";
 import { ProductImage } from "../common/ProductImage";
+import { ScreenWrapper } from "../common/ScreenWrapper";
+import { cartState } from "../data/cartState";
+import database from "../data/db";
 
 const CATEGORIES_LIST = ["grocery", "dairy", "drinks", "snacks", "household"];
 const UNIT_TYPES = ["Pieces", "kg", "Liters", "Packets"];
@@ -47,7 +56,10 @@ export const ManageItemsScreen: React.FC = () => {
   };
 
   // Fetch products with search string (delegates query dynamically to WatermelonDB)
-  const { data: productsList = [], isLoading } = useProducts(undefined, searchQuery);
+  const { data: productsList = [], isLoading } = useProducts(
+    undefined,
+    searchQuery,
+  );
 
   // Mutators
   const updateProductMutation = useUpdateProduct();
@@ -71,7 +83,7 @@ export const ManageItemsScreen: React.FC = () => {
   const [editImageUploading, setEditImageUploading] = useState(false);
 
   // Bottom Sheet for Camera / Gallery
-  const [imgSheetVisible, setImgSheetVisible] = useState(false);
+  const [, setImgSheetVisible] = useState(false);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -95,21 +107,27 @@ export const ManageItemsScreen: React.FC = () => {
 
   const handleSelectProductByBarcode = async (barcode: string) => {
     try {
-      const db = require("../../components/data/db").default;
-      const { Q } = require("@nozbe/watermelondb");
-      const { cartState } = require("../../components/data/cartState");
       const activeBiz = cartState.getActiveBusiness();
 
-      const dbProducts = await db.get("products").query(
-        Q.where("business_id", activeBiz.id),
-        Q.where("barcode", barcode)
-      ).fetch();
+      const dbProducts = await database
+        .get("products")
+        .query(
+          Q.where("business_id", activeBiz.id),
+          Q.where("barcode", barcode),
+        )
+        .fetch();
 
       if (dbProducts && dbProducts.length > 0) {
-        const p = dbProducts[0];
+        const p: any = dbProducts[0];
         const stockCount = p.stockCount ?? 0;
-        const stockType = stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
-        const stockText = stockType === "out" ? "Out of Stock" : stockType === "low" ? `Low · ${stockCount} remaining` : `${stockCount} in stock`;
+        const stockType =
+          stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
+        const stockText =
+          stockType === "out"
+            ? "Out of Stock"
+            : stockType === "low"
+              ? `Low · ${stockCount} remaining`
+              : `${stockCount} in stock`;
 
         const mappedItem = {
           id: p.id,
@@ -161,24 +179,24 @@ export const ManageItemsScreen: React.FC = () => {
             });
           },
         },
-      ]
+      ],
     );
   };
 
   // Image handling inside editing modal
-  const handlePickImage = async (source: 'camera' | 'gallery') => {
+  const handlePickImage = async (source: "camera" | "gallery") => {
     setImgSheetVisible(false);
     let localUri: string | null = null;
 
-    if (source === 'camera') {
+    if (source === "camera") {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Camera permission is required.');
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Camera permission is required.");
         return;
       }
       try {
         const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
+          mediaTypes: ["images"],
           allowsEditing: true,
           aspect: [1, 1] as [number, number],
           quality: 0.85,
@@ -187,17 +205,24 @@ export const ManageItemsScreen: React.FC = () => {
           localUri = result.assets[0].uri;
         }
       } catch {
-        Alert.alert('Camera Unavailable', 'Camera is not available. Please use Gallery.');
+        Alert.alert(
+          "Camera Unavailable",
+          "Camera is not available. Please use Gallery.",
+        );
         return;
       }
     } else {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Photo library permission is required.');
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Photo library permission is required.",
+        );
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1] as [number, number],
         quality: 0.85,
@@ -211,25 +236,25 @@ export const ManageItemsScreen: React.FC = () => {
 
     setEditImage(localUri);
     setEditImageUploading(true);
-    triggerToast('Uploading image... ⏳');
+    triggerToast("Uploading image... ⏳");
 
     try {
       const remoteUrl = await uploadToUploadThing(localUri);
       if (remoteUrl) {
         setEditImage(remoteUrl);
-        triggerToast('Image uploaded! ✅');
+        triggerToast("Image uploaded! ✅");
       } else {
-        triggerToast('Upload failed — saved local preview');
+        triggerToast("Upload failed — saved local preview");
       }
     } catch {
-      triggerToast('Upload error — saved local preview');
+      triggerToast("Upload error — saved local preview");
     } finally {
       setEditImageUploading(false);
     }
   };
 
   const handleRemoveEditImage = async () => {
-    if (editImage.startsWith('http')) {
+    if (editImage.startsWith("http")) {
       await deleteUploadThingFile(editImage);
     }
     setEditImage("");
@@ -237,46 +262,56 @@ export const ManageItemsScreen: React.FC = () => {
 
   const handleUpdateProduct = () => {
     if (!editName || !editSalesPrice || !editStockCount) {
-      Alert.alert("Required Fields Missing", "Please enter product name, selling price, and stock quantity.");
+      Alert.alert(
+        "Required Fields Missing",
+        "Please enter product name, selling price, and stock quantity.",
+      );
       return;
     }
 
     if (!editQuickCode && !editBarcode) {
-      Alert.alert("Identification Required", "Please enter at least either a Quick Code or a Barcode.");
+      Alert.alert(
+        "Identification Required",
+        "Please enter at least either a Quick Code or a Barcode.",
+      );
       return;
     }
 
     const priceNum = parseFloat(editSalesPrice);
     const costNum = parseFloat(editCostPrice) || priceNum * 0.8;
     const stockCountNum = parseInt(editStockCount, 10);
-    const lowStockNum = parseInt(editLowStock, 10) || 5;
-
     if (isNaN(priceNum) || isNaN(stockCountNum)) {
-      Alert.alert("Invalid input type", "Please check that price and stock fields contain valid numbers.");
+      Alert.alert(
+        "Invalid input type",
+        "Please check that price and stock fields contain valid numbers.",
+      );
       return;
     }
 
-    updateProductMutation.mutate({
-      id: editingProduct.id,
-      name: editName,
-      price: priceNum,
-      category: editCategory,
-      icon: editImage,
-      stockCount: stockCountNum,
-      unitType: editUnitType,
-      costPrice: costNum,
-      quickCode: editQuickCode || undefined,
-      barcode: editBarcode || undefined,
-    }, {
-      onSuccess: () => {
-        triggerToast("Product updated! ✅");
-        setEditModalVisible(false);
-        setEditingProduct(null);
+    updateProductMutation.mutate(
+      {
+        id: editingProduct.id,
+        name: editName,
+        price: priceNum,
+        category: editCategory,
+        icon: editImage,
+        stockCount: stockCountNum,
+        unitType: editUnitType,
+        costPrice: costNum,
+        quickCode: editQuickCode || undefined,
+        barcode: editBarcode || undefined,
       },
-      onError: () => {
-        Alert.alert("Error", "Failed to update product details.");
-      }
-    });
+      {
+        onSuccess: () => {
+          triggerToast("Product updated! ✅");
+          setEditModalVisible(false);
+          setEditingProduct(null);
+        },
+        onError: () => {
+          Alert.alert("Error", "Failed to update product details.");
+        },
+      },
+    );
   };
 
   return (
@@ -301,7 +336,9 @@ export const ManageItemsScreen: React.FC = () => {
 
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitle}>Manage Items</Text>
-          <Text style={styles.headerSubtitle}>{productsList.length} items registered</Text>
+          <Text style={styles.headerSubtitle}>
+            {productsList.length} items registered
+          </Text>
         </View>
       </View>
 
@@ -321,15 +358,21 @@ export const ManageItemsScreen: React.FC = () => {
             returnKeyType="search"
           />
           {searchQuery.length > 0 ? (
-            <TouchableOpacity onPress={() => {
-              setSearchQuery("");
-              setScannedBarcode(null);
-            }}>
+            <TouchableOpacity
+              onPress={() => {
+                setSearchQuery("");
+                setScannedBarcode(null);
+              }}
+            >
               <Feather name="x-circle" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={triggerBarcodeScanner}>
-              <Ionicons name="qr-code-outline" size={16} color={TOKENS.primary} />
+              <Ionicons
+                name="qr-code-outline"
+                size={16}
+                color={TOKENS.primary}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -345,11 +388,20 @@ export const ManageItemsScreen: React.FC = () => {
         <FlatList
           data={productsList}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 20 },
+          ]}
           renderItem={({ item }) => {
-            const isScannedMatch = scannedBarcode && item.barcode === scannedBarcode;
+            const isScannedMatch =
+              scannedBarcode && item.barcode === scannedBarcode;
             return (
-              <View style={[styles.productItemCard, isScannedMatch && styles.productItemCardActive]}>
+              <View
+                style={[
+                  styles.productItemCard,
+                  isScannedMatch && styles.productItemCardActive,
+                ]}
+              >
                 <ProductImage
                   icon={item.icon}
                   category={item.category}
@@ -358,8 +410,17 @@ export const ManageItemsScreen: React.FC = () => {
                 />
 
                 <View style={styles.productMetaCol}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={[styles.productName, { flexShrink: 1 }]} numberOfLines={1}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Text
+                      style={[styles.productName, { flexShrink: 1 }]}
+                      numberOfLines={1}
+                    >
                       {item.name}
                     </Text>
                     {isScannedMatch && (
@@ -371,7 +432,9 @@ export const ManageItemsScreen: React.FC = () => {
                   </View>
 
                   <View style={styles.badgesRow}>
-                    <Text style={styles.productPriceText}>Rs. {item.price.toLocaleString()}</Text>
+                    <Text style={styles.productPriceText}>
+                      Rs. {item.price.toLocaleString()}
+                    </Text>
                     <View style={styles.dotDivider} />
                     <Text
                       style={[
@@ -387,16 +450,29 @@ export const ManageItemsScreen: React.FC = () => {
                   <View style={styles.codesRow}>
                     {item.quickCode ? (
                       <View style={styles.codePill}>
-                        <Text style={styles.codeText}>Code: {item.quickCode}</Text>
+                        <Text style={styles.codeText}>
+                          Code: {item.quickCode}
+                        </Text>
                       </View>
                     ) : null}
                     {item.barcode ? (
-                      <View style={[styles.codePill, { backgroundColor: "#F1F5F9" }]}>
-                        <Text style={styles.codeText}>Barcode: {item.barcode}</Text>
+                      <View
+                        style={[
+                          styles.codePill,
+                          { backgroundColor: "#F1F5F9" },
+                        ]}
+                      >
+                        <Text style={styles.codeText}>
+                          Barcode: {item.barcode}
+                        </Text>
                       </View>
                     ) : null}
-                    <View style={[styles.codePill, { backgroundColor: "#EFF6FF" }]}>
-                      <Text style={[styles.codeText, { color: TOKENS.primary }]}>
+                    <View
+                      style={[styles.codePill, { backgroundColor: "#EFF6FF" }]}
+                    >
+                      <Text
+                        style={[styles.codeText, { color: TOKENS.primary }]}
+                      >
                         {item.category.toUpperCase()}
                       </Text>
                     </View>
@@ -422,14 +498,15 @@ export const ManageItemsScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-            )
+            );
           }}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Feather name="box" size={48} color={TOKENS.muted} />
               <Text style={styles.emptyTitle}>No items found</Text>
               <Text style={styles.emptySub}>
-                There are no products in stock matching your search query. Add items to catalog in the Stocks tab.
+                There are no products in stock matching your search query. Add
+                items to catalog in the Stocks tab.
               </Text>
             </View>
           }
@@ -456,7 +533,9 @@ export const ManageItemsScreen: React.FC = () => {
 
             <View style={styles.headerTitleWrapper}>
               <Text style={styles.headerTitle}>Edit Product</Text>
-              <Text style={styles.headerSubtitle}>Modify details and save changes</Text>
+              <Text style={styles.headerSubtitle}>
+                Modify details and save changes
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -471,7 +550,10 @@ export const ManageItemsScreen: React.FC = () => {
           {/* Modal Form ScrollView */}
           <ScrollView
             style={styles.modalFormScroll}
-            contentContainerStyle={[styles.modalFormContent, { paddingBottom: 60 }]}
+            contentContainerStyle={[
+              styles.modalFormContent,
+              { paddingBottom: 60 },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -496,10 +578,18 @@ export const ManageItemsScreen: React.FC = () => {
                   return (
                     <TouchableOpacity
                       key={cat}
-                      style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
+                      style={[
+                        styles.selectorChip,
+                        isSelected && styles.selectorChipActive,
+                      ]}
                       onPress={() => setEditCategory(cat)}
                     >
-                      <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
+                      <Text
+                        style={[
+                          styles.selectorChipText,
+                          isSelected && styles.selectorChipTextActive,
+                        ]}
+                      >
                         {cat.charAt(0).toUpperCase() + cat.slice(1)}
                       </Text>
                     </TouchableOpacity>
@@ -557,10 +647,18 @@ export const ManageItemsScreen: React.FC = () => {
                     return (
                       <TouchableOpacity
                         key={unit}
-                        style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
+                        style={[
+                          styles.selectorChip,
+                          isSelected && styles.selectorChipActive,
+                        ]}
                         onPress={() => setEditUnitType(unit)}
                       >
-                        <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
+                        <Text
+                          style={[
+                            styles.selectorChipText,
+                            isSelected && styles.selectorChipTextActive,
+                          ]}
+                        >
                           {unit}
                         </Text>
                       </TouchableOpacity>
@@ -601,7 +699,9 @@ export const ManageItemsScreen: React.FC = () => {
             {/* 📸 Brand-identical dashed centered product photo picker 📸 */}
             <View style={styles.fieldRow}>
               <Text style={styles.fieldLabel}>Product Image</Text>
-              <Text style={styles.fieldHelpText}>Tap preview to capture from camera or browse files</Text>
+              <Text style={styles.fieldHelpText}>
+                Tap preview to capture from camera or browse files
+              </Text>
 
               <View style={styles.imgPickerPanel}>
                 <TouchableOpacity
@@ -613,10 +713,16 @@ export const ManageItemsScreen: React.FC = () => {
                       "Capture or Choose",
                       "How would you like to pick a product photo?",
                       [
-                        { text: "📷 Camera", onPress: () => handlePickImage("camera") },
-                        { text: "🖼️ Gallery", onPress: () => handlePickImage("gallery") },
-                        { text: "Cancel", style: "cancel" }
-                      ]
+                        {
+                          text: "📷 Camera",
+                          onPress: () => handlePickImage("camera"),
+                        },
+                        {
+                          text: "🖼️ Gallery",
+                          onPress: () => handlePickImage("gallery"),
+                        },
+                        { text: "Cancel", style: "cancel" },
+                      ],
                     );
                   }}
                   disabled={editImageUploading}
@@ -644,9 +750,13 @@ export const ManageItemsScreen: React.FC = () => {
                 {editImageUploading ? (
                   <View style={styles.imgUploadingInfo}>
                     <ActivityIndicator size="small" color={TOKENS.primary} />
-                    <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                    <Text style={styles.imgUploadingText}>
+                      Uploading image…
+                    </Text>
                   </View>
-                ) : (editImage.startsWith('http') || editImage.startsWith('file://') || editImage.startsWith('/')) ? (
+                ) : editImage.startsWith("http") ||
+                  editImage.startsWith("file://") ||
+                  editImage.startsWith("/") ? (
                   <View style={styles.imgRealPhotoInfo}>
                     <View style={styles.imgSuccessBadge}>
                       <Feather name="check-circle" size={16} color="#16A34A" />
@@ -664,8 +774,12 @@ export const ManageItemsScreen: React.FC = () => {
                 ) : (
                   <View style={styles.imgHintCol}>
                     <Feather name="upload-cloud" size={20} color="#94A3B8" />
-                    <Text style={styles.imgHintTitle}>Tap to add a product photo</Text>
-                    <Text style={styles.imgHintSub}>Take a photo or pick from gallery</Text>
+                    <Text style={styles.imgHintTitle}>
+                      Tap to add a product photo
+                    </Text>
+                    <Text style={styles.imgHintSub}>
+                      Take a photo or pick from gallery
+                    </Text>
                   </View>
                 )}
               </View>
@@ -703,7 +817,8 @@ export const ManageItemsScreen: React.FC = () => {
             </View>
 
             <Text style={styles.scannerInstruction}>
-              Align the retail product barcode within the viewfinder to automatically scan and catalog
+              Align the retail product barcode within the viewfinder to
+              automatically scan and catalog
             </Text>
 
             {/* Viewfinder area with blinking animation and moving laser line */}
@@ -712,7 +827,15 @@ export const ManageItemsScreen: React.FC = () => {
                 <CameraView
                   style={StyleSheet.absoluteFillObject}
                   barcodeScannerSettings={{
-                    barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
+                    barcodeTypes: [
+                      "upc_a",
+                      "upc_e",
+                      "ean13",
+                      "ean8",
+                      "qr",
+                      "code128",
+                      "code39",
+                    ],
                   }}
                   onBarcodeScanned={async ({ type, data }) => {
                     setSearchQuery(data);
@@ -740,21 +863,22 @@ export const ManageItemsScreen: React.FC = () => {
               activeOpacity={0.8}
               onPress={async () => {
                 try {
-                  const db = require("../../components/data/db").default;
-                  const { Q } = require("@nozbe/watermelondb");
-                  const { cartState } = require("../../components/data/cartState");
                   const activeBiz = cartState.getActiveBusiness();
 
                   // Query actual products in this business that have a barcode
-                  const dbProducts = await db.get("products").query(
-                    Q.where("business_id", activeBiz.id),
-                    Q.where("barcode", Q.notEq(null)),
-                    Q.where("barcode", Q.notEq(""))
-                  ).fetch();
+                  const dbProducts = await database
+                    .get("products")
+                    .query(
+                      Q.where("business_id", activeBiz.id),
+                      Q.where("barcode", Q.notEq(null)),
+                      Q.where("barcode", Q.notEq("")),
+                    )
+                    .fetch();
 
                   let targetBarcode = "";
                   if (dbProducts && dbProducts.length > 0) {
-                    const randomProduct = dbProducts[Math.floor(Math.random() * dbProducts.length)];
+                    const randomProduct: any =
+                      dbProducts[Math.floor(Math.random() * dbProducts.length)];
                     targetBarcode = randomProduct.barcode;
                   } else {
                     // Fallback mock barcode
@@ -764,7 +888,10 @@ export const ManageItemsScreen: React.FC = () => {
                       "4902430582766",
                       "7622300744961",
                     ];
-                    targetBarcode = mockBarcodes[Math.floor(Math.random() * mockBarcodes.length)];
+                    targetBarcode =
+                      mockBarcodes[
+                        Math.floor(Math.random() * mockBarcodes.length)
+                      ];
                   }
 
                   setSearchQuery(targetBarcode);
@@ -1106,103 +1233,103 @@ const styles = StyleSheet.create({
 
   // Centered Image Picker design styles matching StocksScreen exactly
   imgPickerPanel: {
-    alignItems: 'center' as const,
-    backgroundColor: '#FAFAFA',
+    alignItems: "center" as const,
+    backgroundColor: "#FAFAFA",
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed' as const,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed" as const,
     paddingVertical: 20,
     paddingHorizontal: 16,
     gap: 12,
   },
   imgPreviewWrap: {
-    position: 'relative' as const,
+    position: "relative" as const,
     width: 110,
     height: 110,
     borderRadius: 16,
-    overflow: 'hidden' as const,
+    overflow: "hidden" as const,
     borderWidth: 2,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#F1F5F9',
-    shadowColor: '#000',
+    borderColor: "#CBD5E1",
+    backgroundColor: "#F1F5F9",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
   },
   imgCameraBadge: {
-    position: 'absolute' as const,
+    position: "absolute" as const,
     bottom: 8,
     right: 8,
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
   imgUploadingOverlay: {
-    position: 'absolute' as const,
+    position: "absolute" as const,
     inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
     borderRadius: 16,
   },
   imgUploadingInfo: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   imgUploadingText: {
     fontSize: 13,
     color: TOKENS.primary,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
   },
   imgRealPhotoInfo: {
-    alignItems: 'center' as const,
+    alignItems: "center" as const,
     gap: 8,
   },
   imgSuccessBadge: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 6,
   },
   imgSuccessText: {
     fontSize: 13,
-    fontWeight: '700' as const,
-    color: '#16A34A',
+    fontWeight: "700" as const,
+    color: "#16A34A",
   },
   imgRemovePillBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
     gap: 5,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: "#FECACA",
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20,
   },
   imgRemovePillText: {
     fontSize: 12,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
     color: TOKENS.error,
   },
   imgHintCol: {
-    alignItems: 'center' as const,
+    alignItems: "center" as const,
     gap: 4,
   },
   imgHintTitle: {
     fontSize: 13,
-    fontWeight: '700' as const,
+    fontWeight: "700" as const,
     color: TOKENS.dark,
   },
   imgHintSub: {
     fontSize: 11,
     color: TOKENS.muted,
-    textAlign: 'center' as const,
+    textAlign: "center" as const,
   },
 
   searchScanBtn: {

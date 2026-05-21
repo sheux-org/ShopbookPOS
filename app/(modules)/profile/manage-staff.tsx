@@ -2,9 +2,8 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Modal,
+  Alert,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,10 +12,16 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TOKENS } from "../../../constants/tokens";
 import { BottomSheet } from "../../../components/common/BottomSheet";
+import { TOKENS } from "../../../constants/tokens";
+import {
+  StaffMember,
+  useCreateStaff,
+  useDeleteStaff,
+  useStaff,
+  useUpdateStaff,
+} from "../../../hooks/useStaff";
 import { useUserPermissions } from "../../../hooks/useUserPermissions";
-import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff, StaffMember } from "../../../hooks/useStaff";
 import { useBusinessStore } from "../../../stores/useBusinessStore";
 
 export default function ManageStaffRoute() {
@@ -35,14 +40,18 @@ export default function ManageStaffRoute() {
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newRole, setNewRole] = useState<"Admin" | "Manager" | "Cashier">("Cashier");
+  const [newRole, setNewRole] = useState<"Admin" | "Manager" | "Cashier">(
+    "Cashier",
+  );
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
 
   // Edit Modal states
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [editName, setEditName] = useState("");
-  const [editRole, setEditRole] = useState<"Admin" | "Manager" | "Cashier">("Cashier");
+  const [editRole, setEditRole] = useState<"Admin" | "Manager" | "Cashier">(
+    "Cashier",
+  );
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -70,26 +79,28 @@ export default function ManageStaffRoute() {
       return;
     }
 
-    updateMutation.mutate({
-      id: editingStaff.id,
-      name: editName.trim(),
-      role: editRole,
-      email: editEmail.trim(),
-      phone: editPhone.trim(),
-    }, {
-      onSuccess: () => {
-        triggerToast("Staff details updated successfully! 🚀");
-        setIsEditModalOpen(false);
-        setEditingStaff(null);
+    updateMutation.mutate(
+      {
+        id: editingStaff.id,
+        name: editName.trim(),
+        role: editRole,
+        email: editEmail.trim(),
+        phone: editPhone.trim(),
       },
-      onError: () => {
-        triggerToast("Failed to update staff details.");
-      }
-    });
+      {
+        onSuccess: () => {
+          triggerToast("Staff details updated successfully! 🚀");
+          setIsEditModalOpen(false);
+          setEditingStaff(null);
+        },
+        onError: () => {
+          triggerToast("Failed to update staff details.");
+        },
+      },
+    );
   };
 
   const handleConfirmDeleteStaff = (staff: StaffMember) => {
-    const { Alert } = require('react-native');
     Alert.alert(
       "Remove Staff Member",
       `Are you sure you want to permanently remove "${staff.name}"? This action cannot be undone.`,
@@ -105,11 +116,11 @@ export default function ManageStaffRoute() {
               },
               onError: () => {
                 triggerToast("Failed to delete staff member.");
-              }
+              },
             });
           },
         },
-      ]
+      ],
     );
   };
 
@@ -124,26 +135,29 @@ export default function ManageStaffRoute() {
       return;
     }
 
-    createMutation.mutate({
-      name: newName.trim(),
-      role: newRole,
-      email: newEmail.trim(),
-      phone: newPhone.trim(),
-    }, {
-      onSuccess: () => {
-        triggerToast(`${newName} added as ${newRole} successfully! 🎉`);
-        setIsModalOpen(false);
-
-        // Clear inputs
-        setNewName("");
-        setNewRole("Cashier");
-        setNewEmail("");
-        setNewPhone("");
+    createMutation.mutate(
+      {
+        name: newName.trim(),
+        role: newRole,
+        email: newEmail.trim(),
+        phone: newPhone.trim(),
       },
-      onError: () => {
-        triggerToast("Failed to add staff member.");
-      }
-    });
+      {
+        onSuccess: () => {
+          triggerToast(`${newName} added as ${newRole} successfully! 🎉`);
+          setIsModalOpen(false);
+
+          // Clear inputs
+          setNewName("");
+          setNewRole("Cashier");
+          setNewEmail("");
+          setNewPhone("");
+        },
+        onError: () => {
+          triggerToast("Failed to add staff member.");
+        },
+      },
+    );
   };
 
   const getRoleBadgeStyle = (role: string) => {
@@ -158,7 +172,12 @@ export default function ManageStaffRoute() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: Platform.OS === "ios" ? insets.top : 10 },
+      ]}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -191,7 +210,10 @@ export default function ManageStaffRoute() {
       )}
 
       {/* Scrollable list */}
-      <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollWrapper}
+        contentContainerStyle={styles.scrollContent}
+      >
         <Text style={styles.groupLabel}>Authorized Staff Members</Text>
 
         {staffList.map((member) => {
@@ -201,14 +223,28 @@ export default function ManageStaffRoute() {
               <View style={styles.staffCardLeft}>
                 <View style={styles.avatarBox}>
                   <Text style={styles.avatarInitials}>
-                    {member.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                    {member.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2)}
                   </Text>
                 </View>
                 <View style={styles.staffDetails}>
                   <View style={styles.staffHeaderRow}>
                     <Text style={styles.staffName}>{member.name}</Text>
-                    <View style={[styles.roleBadge, { backgroundColor: badge.backgroundColor }]}>
-                      <Text style={[styles.roleBadgeText, { color: badge.color }]}>{member.role}</Text>
+                    <View
+                      style={[
+                        styles.roleBadge,
+                        { backgroundColor: badge.backgroundColor },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.roleBadgeText, { color: badge.color }]}
+                      >
+                        {member.role}
+                      </Text>
                     </View>
                   </View>
                   <Text style={styles.staffSub}>📧 {member.email}</Text>
@@ -217,10 +253,23 @@ export default function ManageStaffRoute() {
               </View>
               {/* Only admins can edit/delete staff */}
               {canPerform("create", "staff") && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#E8F0FE", alignItems: "center", justifyContent: "center" }}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: "#E8F0FE",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
                     onPress={() => handleOpenEditStaffModal(member)}
                   >
                     <Feather name="edit-2" size={14} color={TOKENS.primary} />
@@ -228,7 +277,14 @@ export default function ManageStaffRoute() {
 
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: "#FCE8E6", alignItems: "center", justifyContent: "center" }}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: "#FCE8E6",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
                     onPress={() => handleConfirmDeleteStaff(member)}
                   >
                     <Feather name="trash-2" size={14} color={TOKENS.error} />
@@ -246,7 +302,11 @@ export default function ManageStaffRoute() {
         onClose={() => setIsModalOpen(false)}
         title="Add Staff Member"
       >
-        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.modalScroll}
+          style={{ maxHeight: 280 }}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Staff Full Name</Text>
             <TextInput
@@ -266,11 +326,19 @@ export default function ManageStaffRoute() {
                 return (
                   <TouchableOpacity
                     key={role}
-                    style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
+                    style={[
+                      styles.roleSelectTab,
+                      isSelected && styles.roleSelectTabActive,
+                    ]}
                     activeOpacity={0.8}
                     onPress={() => setNewRole(role)}
                   >
-                    <Text style={[styles.roleSelectTabText, isSelected && styles.roleSelectTabTextActive]}>
+                    <Text
+                      style={[
+                        styles.roleSelectTabText,
+                        isSelected && styles.roleSelectTabTextActive,
+                      ]}
+                    >
                       {role}
                     </Text>
                   </TouchableOpacity>
@@ -292,7 +360,12 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Email Address <Text style={{ fontWeight: "normal", color: TOKENS.muted }}>(Optional)</Text></Text>
+            <Text style={styles.formLabel}>
+              Email Address{" "}
+              <Text style={{ fontWeight: "normal", color: TOKENS.muted }}>
+                (Optional)
+              </Text>
+            </Text>
             <TextInput
               style={styles.formInput}
               placeholder="e.g. pahasara@shopbook.lk"
@@ -306,7 +379,11 @@ export default function ManageStaffRoute() {
         </ScrollView>
 
         <TouchableOpacity
-          style={[styles.submitButton, (!newName.trim() || !newPhone.trim()) && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            (!newName.trim() || !newPhone.trim()) &&
+              styles.submitButtonDisabled,
+          ]}
           activeOpacity={0.8}
           onPress={handleAddStaff}
           disabled={!newName.trim() || !newPhone.trim()}
@@ -325,7 +402,11 @@ export default function ManageStaffRoute() {
         }}
         title="Edit Staff Details"
       >
-        <ScrollView contentContainerStyle={styles.modalScroll} style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.modalScroll}
+          style={{ maxHeight: 280 }}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Staff Full Name</Text>
             <TextInput
@@ -345,11 +426,19 @@ export default function ManageStaffRoute() {
                 return (
                   <TouchableOpacity
                     key={role}
-                    style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
+                    style={[
+                      styles.roleSelectTab,
+                      isSelected && styles.roleSelectTabActive,
+                    ]}
                     activeOpacity={0.8}
                     onPress={() => setEditRole(role)}
                   >
-                    <Text style={[styles.roleSelectTabText, isSelected && styles.roleSelectTabTextActive]}>
+                    <Text
+                      style={[
+                        styles.roleSelectTabText,
+                        isSelected && styles.roleSelectTabTextActive,
+                      ]}
+                    >
                       {role}
                     </Text>
                   </TouchableOpacity>
@@ -359,7 +448,12 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Email Address <Text style={{ fontWeight: "normal", color: TOKENS.muted }}>(Optional)</Text></Text>
+            <Text style={styles.formLabel}>
+              Email Address{" "}
+              <Text style={{ fontWeight: "normal", color: TOKENS.muted }}>
+                (Optional)
+              </Text>
+            </Text>
             <TextInput
               style={styles.formInput}
               placeholder="e.g. aruni@shopbook.lk"
@@ -385,7 +479,11 @@ export default function ManageStaffRoute() {
         </ScrollView>
 
         <TouchableOpacity
-          style={[styles.submitButton, (!editName.trim() || !editPhone.trim()) && styles.submitButtonDisabled]}
+          style={[
+            styles.submitButton,
+            (!editName.trim() || !editPhone.trim()) &&
+              styles.submitButtonDisabled,
+          ]}
           activeOpacity={0.8}
           onPress={handleSaveEditStaff}
           disabled={!editName.trim() || !editPhone.trim()}
