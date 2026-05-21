@@ -25,6 +25,7 @@ import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { HeaderCartButton } from "../common/HeaderCartButton";
 import { cartState } from "../data/cartState";
+import { InvoiceItemCard } from "../common/InvoiceItemCard";
 
 interface InvoiceItem {
   id: string;
@@ -280,37 +281,7 @@ export const PosScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {invoiceItems.map((item) => (
-          <View key={item.id} style={styles.itemCard}>
-            <View style={styles.itemMainInfo}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemQuantities}>
-                {item.quantity} × Rs. {item.price.toLocaleString()}
-              </Text>
-            </View>
-
-            <View style={styles.itemRightRow}>
-              <Text style={styles.itemTotal}>
-                Rs. {(item.price * item.quantity).toLocaleString()}
-              </Text>
-
-              {/* Quick quantity modifiers for high fidelity interactiveness */}
-              <View style={styles.cardActions}>
-                <TouchableOpacity
-                  style={styles.smallActionBtn}
-                  onPress={() => cartState.updateQuantity(item.id, -1)}
-                >
-                  <Feather name="minus" size={12} color={TOKENS.muted} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.smallActionBtn}
-                  onPress={() => cartState.updateQuantity(item.id, 1)}
-                >
-                  <Feather name="plus" size={12} color={TOKENS.muted} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          <InvoiceItemCard key={item.id} item={item} />
         ))}
 
         {invoiceItems.length === 0 && (
@@ -609,7 +580,7 @@ export const PosScreen: React.FC = () => {
           <TouchableOpacity
             style={[
               styles.summaryBarButton,
-              { marginTop: 12, marginBottom: 8 },
+              { marginTop: 12},
             ]}
             activeOpacity={0.85}
             onPress={() => router.push("/pos/cart")}
@@ -717,57 +688,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  itemCard: {
-    backgroundColor: TOKENS.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  itemMainInfo: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  itemQuantities: {
-    fontSize: 13,
-    color: TOKENS.muted,
-    marginTop: 4,
-  },
-  itemRightRow: {
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  itemTotal: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  cardActions: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 2,
-  },
-  smallActionBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+
   emptyInvoiceState: {
     alignItems: "center",
     justifyContent: "center",
@@ -802,7 +723,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     height: 48,
     marginHorizontal: 16,
-    marginVertical: 3,
+    marginTop: 3,
     borderRadius: 24,
     shadowColor: TOKENS.primary,
     shadowOffset: { width: 0, height: 4 },

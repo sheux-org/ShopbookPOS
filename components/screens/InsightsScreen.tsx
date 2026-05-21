@@ -207,7 +207,12 @@ export const InsightsScreen: React.FC = () => {
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrapper}>
-          <Text style={styles.headerTitle}>Business Insights</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+            Business Insights
+          </Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
+            {isSyncing ? "Syncing..." : "Real-time reports"}
+          </Text>
         </View>
 
         <View style={styles.headerActionsWrapper}>
@@ -216,36 +221,21 @@ export const InsightsScreen: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => setIsReportsModalOpen(true)}
           >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              <Feather name="bar-chart-2" size={15} color={TOKENS.primary} />
-              <Text
-                style={[styles.headerTextBtnLabel, { color: TOKENS.primary }]}
-              >
-                Reports
-              </Text>
-            </View>
+            <Feather name="bar-chart-2" size={13} color={TOKENS.primary} />
+            <Text style={[styles.headerTextBtnLabel, { color: TOKENS.primary }]}>Reports</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.headerTextBtn}
+            style={[styles.headerIconBtn, isSyncing && styles.headerTextBtnDisabled]}
             activeOpacity={0.7}
             onPress={handleSyncDatabase}
             disabled={isSyncing}
           >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
-            >
-              {isSyncing ? (
-                <ActivityIndicator size="small" color={TOKENS.primary} />
-              ) : (
-                <Feather name="refresh-cw" size={12} color={TOKENS.muted} />
-              )}
-              <Text style={styles.headerTextBtnLabel}>
-                {isSyncing ? "Syncing..." : "Sync"}
-              </Text>
-            </View>
+            {isSyncing ? (
+              <ActivityIndicator size="small" color={TOKENS.primary} />
+            ) : (
+              <Feather name="refresh-cw" size={14} color={TOKENS.dark} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -1109,25 +1099,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: TOKENS.dark,
+    lineHeight: 20,
   },
   headerSubtitle: {
     fontSize: 11,
     color: TOKENS.muted,
     marginTop: 2,
+    lineHeight: 14,
   },
   headerActionsWrapper: {
     flexDirection: "row",
-    gap: 14,
+    gap: 10,
     alignItems: "center",
   },
   headerTextBtn: {
-    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 5,
     paddingHorizontal: 8,
+    borderRadius: 16,
+    gap: 4,
+    height: 32,
+  },
+  headerIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTextBtnDisabled: {
+    opacity: 0.8,
   },
   headerTextBtnLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: TOKENS.muted,
+    fontSize: 12,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    lineHeight: 14,
   },
   scrollContent: {
     padding: 16,
