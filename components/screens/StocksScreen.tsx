@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
+import { HeaderCartButton } from "../common/HeaderCartButton";
 import { useAddProduct, useProducts, useUpdateProductImage, useRemoveProductImage, useToggleFavoriteProduct } from "../../hooks/useProducts";
 import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
 import { ProductImage } from "../common/ProductImage";
@@ -59,7 +60,6 @@ export const StocksScreen: React.FC = () => {
   const [isEditingFavorites, setIsEditingFavorites] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [cartCount, setCartCount] = useState(0);
 
   // Image picker bottom sheet state
   const [imgSheetVisible, setImgSheetVisible] = useState(false);
@@ -98,14 +98,7 @@ export const StocksScreen: React.FC = () => {
   const [formImage, setFormImage] = useState("");
   const [isScanning, setIsScanning] = useState(false);
 
-  useEffect(() => {
-    const updateCount = () => {
-      const cart = cartState.getCart();
-      setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-    };
-    updateCount();
-    return cartState.subscribe(updateCount);
-  }, []);
+
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -287,18 +280,7 @@ export const StocksScreen: React.FC = () => {
             <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Items</Text>
           </TouchableOpacity>
 
-          {cartCount > 0 && (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{cartCount}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <HeaderCartButton />
         </View>
       </View>
 
@@ -1161,33 +1143,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
     paddingHorizontal: 12,
-  },
-  headerCartBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
   },
   placeholderWidth: {
     width: 38,

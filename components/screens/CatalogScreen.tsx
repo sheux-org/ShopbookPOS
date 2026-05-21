@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../common/ScreenWrapper";
+import { HeaderCartButton } from "../common/HeaderCartButton";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
@@ -50,17 +51,6 @@ export const CatalogScreen: React.FC = () => {
   
   // Dynamic catalog products synced via React Query hook
   const { data: productsList = [] } = useProducts(selectedCategory);
-  const [cartItemsCount, setCartItemsCount] = useState(0);
-
-  useEffect(() => {
-    const syncCart = () => {
-      const cart = cartState.getCart();
-      setCartItemsCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-    };
-
-    syncCart();
-    return cartState.subscribe(syncCart);
-  }, []);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -107,18 +97,7 @@ export const CatalogScreen: React.FC = () => {
         <Text style={styles.headerTitle}>Catalog</Text>
 
         <View style={styles.headerRightActions}>
-          {cartItemsCount > 0 && (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{cartItemsCount}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <HeaderCartButton />
 
           <TouchableOpacity
             style={styles.searchHeaderButton}
@@ -449,33 +428,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-  },
-  headerCartBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
   },
   emptyGridState: {
     alignItems: "center",

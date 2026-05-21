@@ -59,7 +59,6 @@ export const ProfileScreen: React.FC = () => {
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [cartCount, setCartCount] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<"1_month" | "3_month" | "1_year">("3_month");
   
   // Real business details from local SQLite database
@@ -70,13 +69,11 @@ export const ProfileScreen: React.FC = () => {
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    const updateCount = () => {
-      const cart = cartState.getCart();
-      setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
+    const updateBusiness = () => {
       setActiveBusiness(cartState.getActiveBusiness());
     };
-    updateCount();
-    return cartState.subscribe(updateCount);
+    updateBusiness();
+    return cartState.subscribe(updateBusiness);
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -713,33 +710,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-  },
-  headerCartBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
   },
   plansScrollContent: {
     paddingHorizontal: 4,

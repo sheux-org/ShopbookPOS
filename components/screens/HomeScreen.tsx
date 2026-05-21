@@ -19,6 +19,7 @@ import { useTabBarVisible } from "../../hooks/useTabBarVisible";
 import { BottomSheet } from "../common/BottomSheet";
 import { ProductImage } from "../common/ProductImage";
 import { ScreenWrapper } from "../common/ScreenWrapper";
+import { HeaderCartButton } from "../common/HeaderCartButton";
 import { Business, cartState } from "../data/cartState";
 
 interface HomeProduct {
@@ -57,7 +58,6 @@ export const HomeScreen: React.FC = () => {
     searchQuery,
   );
   const toggleFavoriteMutation = useToggleFavoriteProduct();
-  const [cartItemsCount, setCartItemsCount] = useState(0);
 
   // Active Business dropdown states
   const [activeBusiness, setActiveBusiness] = useState<Business>(
@@ -126,8 +126,6 @@ export const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     const syncCart = () => {
-      const cart = cartState.getCart();
-      setCartItemsCount(cart.reduce((sum, item) => sum + item.quantity, 0));
       setActiveBusiness(cartState.getActiveBusiness());
     };
 
@@ -201,18 +199,7 @@ export const HomeScreen: React.FC = () => {
         </View>
 
         <View style={styles.headerActions}>
-          {cartItemsCount > 0 && (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/(modules)/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{cartItemsCount}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <HeaderCartButton />
 
           <TouchableOpacity
             style={styles.searchIconBtn}
@@ -371,7 +358,7 @@ export const HomeScreen: React.FC = () => {
                   >
                     <Feather
                       name="plus"
-                      size={15}
+                      size={20}
                       color={
                         item.stockType === "out" ? TOKENS.muted : TOKENS.card
                       }
@@ -716,7 +703,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   plusIconBadge: {
-    width: 30,
+    width: 40,
     height: 30,
     borderRadius: 15,
     backgroundColor: TOKENS.primary,
@@ -801,33 +788,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-  },
-  headerCartBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
   },
   businessSwitcherBtn: {
     flexDirection: "row",

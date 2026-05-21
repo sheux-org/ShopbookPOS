@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   TextInput,
   Modal,
-  Alert,
   FlatList,
 } from "react-native";
 import { CameraView } from "expo-camera";
@@ -17,6 +16,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CatalogProduct } from "../data/cartState";
+import { HeaderCartButton } from "../common/HeaderCartButton";
 import { useProducts } from "../../hooks/useProducts";
 import { ProductImage } from "../common/ProductImage";
 
@@ -31,16 +31,7 @@ export const SearchScreen: React.FC = () => {
 
   // Live products catalog list synced via React Query hook
   const { data: productsList = [] } = useProducts(undefined, searchQuery, activeChip);
-  const [cartCount, setCartCount] = useState(0);
 
-  useEffect(() => {
-    const syncCart = () => {
-      const cart = cartState.getCart();
-      setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-    };
-    syncCart();
-    return cartState.subscribe(syncCart);
-  }, []);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -107,18 +98,7 @@ export const SearchScreen: React.FC = () => {
         </View>
 
         <View style={styles.headerRightActions}>
-          {cartCount > 0 && (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={16} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{cartCount}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <HeaderCartButton />
         </View>
       </View>
 
@@ -545,33 +525,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-  },
-  headerCartBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
   },
   emptySearchState: {
     alignItems: "center",
