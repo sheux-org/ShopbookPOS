@@ -294,17 +294,7 @@ export const StocksScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Search row touching search results */}
-        <TouchableOpacity
-          style={styles.searchBarTouch}
-          activeOpacity={0.9}
-          onPress={() => router.push("/pos/search")}
-        >
-          <Feather name="search" size={18} color={TOKENS.muted} />
-          <Text style={styles.searchPlaceholder}>Search products in stock...</Text>
-        </TouchableOpacity>
 
-        {/* ➕ ADD NEW PRODUCT FORM CARD (Sleek and beautiful border card) ➕ */}
         {/* ➕ ADD NEW PRODUCT FORM CARD (Sleek and beautiful border card) ➕ */}
         {canPerform("create", "products") ? (
           <View style={styles.formCard}>
@@ -897,19 +887,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     gap: 16,
-  },
-  searchBarTouch: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-  },
-  searchPlaceholder: {
-    fontSize: 15,
-    color: TOKENS.muted,
   },
   formCard: {
     backgroundColor: TOKENS.card,

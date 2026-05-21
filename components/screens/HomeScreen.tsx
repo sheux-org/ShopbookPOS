@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View
@@ -19,6 +18,7 @@ import { useTabBarVisible } from "../../hooks/useTabBarVisible";
 import { BottomSheet } from "../common/BottomSheet";
 import { ProductImage } from "../common/ProductImage";
 import { ScreenWrapper } from "../common/ScreenWrapper";
+import { SearchInput } from "../common/SearchInput";
 import { HeaderCartButton } from "../common/HeaderCartButton";
 import { Business, cartState } from "../data/cartState";
 
@@ -212,17 +212,12 @@ export const HomeScreen: React.FC = () => {
       </View>
 
       {/* Search Input Box */}
-      <View style={styles.searchRow}>
-        <Feather name="search" size={16} color={TOKENS.muted} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Quick search products..."
-          placeholderTextColor="#9CA3AF"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          clearButtonMode="while-editing"
-        />
-      </View>
+      <SearchInput
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Quick search products..."
+        containerStyle={{ marginHorizontal: 16, marginTop: 12 }}
+      />
 
       {/* 🌟 GORGEOUS HIGH-FIDELITY REDIRECT BANNER TO SIDEBAR CATALOG SCREEN as requested 🌟 */}
       <TouchableOpacity
@@ -530,22 +525,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-  },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-    marginHorizontal: 16,
-    marginTop: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: TOKENS.dark,
   },
   catalogBanner: {
     flexDirection: "row",

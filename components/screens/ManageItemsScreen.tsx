@@ -1,4 +1,5 @@
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
+import { SearchInput } from "../common/SearchInput";
 import { Q } from "@nozbe/watermelondb";
 import { CameraView } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
@@ -344,38 +345,18 @@ export const ManageItemsScreen: React.FC = () => {
 
       {/* Search Input Box */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Feather name="search" size={18} color={TOKENS.muted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search items by name, code or category..."
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              if (scannedBarcode) setScannedBarcode(null);
-            }}
-            placeholderTextColor="#9CA3AF"
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 ? (
-            <TouchableOpacity
-              onPress={() => {
-                setSearchQuery("");
-                setScannedBarcode(null);
-              }}
-            >
-              <Feather name="x-circle" size={16} color={TOKENS.muted} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={triggerBarcodeScanner}>
-              <Ionicons
-                name="qr-code-outline"
-                size={16}
-                color={TOKENS.primary}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchInput
+          value={searchQuery}
+          onChangeText={(text) => {
+            setSearchQuery(text);
+            if (scannedBarcode) setScannedBarcode(null);
+          }}
+          placeholder="Search items by name, code or category..."
+          onScanPress={triggerBarcodeScanner}
+          onClear={() => {
+            setScannedBarcode(null);
+          }}
+        />
       </View>
 
       {/* Products list container */}
@@ -978,20 +959,6 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
     borderBottomWidth: 1,
     borderBottomColor: TOKENS.border,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    height: 40,
-    gap: 6,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: TOKENS.dark,
   },
   loaderContainer: {
     flex: 1,

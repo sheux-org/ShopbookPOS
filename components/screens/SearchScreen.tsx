@@ -5,14 +5,14 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   Modal,
   FlatList,
 } from "react-native";
 import { CameraView } from "expo-camera";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
+import { SearchInput } from "../common/SearchInput";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CatalogProduct } from "../data/cartState";
@@ -76,26 +76,13 @@ export const SearchScreen: React.FC = () => {
         </TouchableOpacity>
 
         {/* Input Bar */}
-        <View style={styles.searchInputWrapper}>
-          <Feather name="search" size={18} color={TOKENS.muted} />
-          <TextInput
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search products..."
-            placeholderTextColor="#9CA3AF"
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 ? (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Feather name="x-circle" size={16} color={TOKENS.muted} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={triggerBarcodeScanner}>
-              <Ionicons name="qr-code-outline" size={16} color={TOKENS.primary} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search products..."
+          onScanPress={triggerBarcodeScanner}
+          containerStyle={{ flex: 1 }}
+        />
 
         <View style={styles.headerRightActions}>
           <HeaderCartButton />
@@ -344,21 +331,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-  },
-  searchInputWrapper: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    height: 40,
-    gap: 6,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: TOKENS.dark,
   },
   scanHeaderButton: {
     width: 38,
