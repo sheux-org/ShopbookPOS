@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -41,9 +42,30 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [showModal, setShowModal] = useState(visible);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const sheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -100,6 +122,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   if (!showModal) return null;
 
+  const calculatedMaxHeight = maxHeight ?? (SCREEN_HEIGHT - insets.top - 40);
+  const dynamicMaxHeight = Math.max(120, calculatedMaxHeight - keyboardHeight);
+
   return (
     <Modal
       visible={showModal}
@@ -135,7 +160,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                 paddingBottom: Math.max(insets.bottom, 16),
                 paddingHorizontal: contentPaddingHorizontal,
                 paddingTop: contentPaddingTop,
-                ...(maxHeight != null ? { maxHeight } : null),
+                maxHeight: dynamicMaxHeight,
               },
             ]}
           >

@@ -20,10 +20,12 @@ export interface Customer {
 interface CartState {
   cart: CartItem[];
   customer: Customer | null;
+  customCustomers: Customer[];
   addCartItem: (name: string, price: number, icon?: string, sku?: string, stock?: number) => void;
   updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
   setCustomer: (customer: Customer | null) => void;
+  addCustomCustomer: (customer: Customer) => void;
 }
 
 export const useCart = create<CartState>()(
@@ -31,6 +33,7 @@ export const useCart = create<CartState>()(
     (set, get) => ({
       cart: [],
       customer: null,
+      customCustomers: [],
       addCartItem: (name, price, icon = '📦', sku, stock = 15) => {
         const currentCart = get().cart;
         const existing = currentCart.find((item) => item.name === name);
@@ -67,6 +70,15 @@ export const useCart = create<CartState>()(
       },
       clearCart: () => set({ cart: [], customer: null }),
       setCustomer: (customer) => set({ customer }),
+      addCustomCustomer: (customer) => {
+        const current = get().customCustomers || [];
+        const exists = current.some(
+          (c) => c.name.toLowerCase() === customer.name.toLowerCase() && c.phone === customer.phone
+        );
+        if (!exists) {
+          set({ customCustomers: [...current, customer] });
+        }
+      },
     }),
     {
       name: 'cart-storage',

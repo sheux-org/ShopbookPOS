@@ -11,6 +11,7 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -21,20 +22,9 @@ import { TOKENS } from "../../constants/tokens";
 import { cartState, CartItem } from "../data/cartState";
 import { BottomSheet } from "../common/BottomSheet";
 import { ProductImage } from "../common/ProductImage";
+import { useCart } from "../../stores/useCart";
 
-// Static mock contacts for offline fallback and simulator testing
-const MOCK_CONTACTS = [
-  { id: "mock-1", name: "Pasan Pahasara", phone: "0771234567" },
-  { id: "mock-2", name: "Shenal Jayasinghe", phone: "0718765432" },
-  { id: "mock-3", name: "John Doe", phone: "0751112223" },
-  { id: "mock-4", name: "Jane Smith", phone: "0723334445" },
-  { id: "mock-5", name: "Amara Perera", phone: "0777778888" },
-  { id: "mock-6", name: "Kasun Silva", phone: "0766543210" },
-  { id: "mock-7", name: "Nimal Fernando", phone: "0701234789" },
-  { id: "mock-8", name: "Ruwan Bandara", phone: "0719876543" },
-  { id: "mock-9", name: "Dilini Weerasinghe", phone: "0771122334" },
-  { id: "mock-10", name: "Suresh Kumar", phone: "0788899001" },
-];
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // Helper colors for premium initials avatars
 const getAvatarColor = (name: string) => {
@@ -71,11 +61,21 @@ export const CartScreen: React.FC = () => {
   const [isCustomerModalVisible, setIsCustomerModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<"contacts" | "new">("contacts");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [deviceContacts, setDeviceContacts] = useState<{ id: string; name: string; phone: string }[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [attachedCustomer, setAttachedCustomer] = useState<{ name: string; phone: string } | null>(null);
+
+  const customCustomers = useCart((state) => state.customCustomers) || [];
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 180);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   useEffect(() => {
     const syncCart = () => {
@@ -116,14 +116,14 @@ export const CartScreen: React.FC = () => {
           formatted.sort((a, b) => a.name.localeCompare(b.name));
           setDeviceContacts(formatted);
         } else {
-          setDeviceContacts(MOCK_CONTACTS);
+          setDeviceContacts([]);
         }
       } else {
-        setDeviceContacts(MOCK_CONTACTS);
+        setDeviceContacts([]);
       }
     } catch (error) {
       console.log("Failed to fetch native contacts:", error);
-      setDeviceContacts(MOCK_CONTACTS);
+      setDeviceContacts([]);
     } finally {
       setIsLoadingContacts(false);
     }
@@ -135,16 +135,45 @@ export const CartScreen: React.FC = () => {
     }
   }, [isCustomerModalVisible]);
 
+  const allContacts = useMemo(() => {
+    const customWithIds = customCustomers.map((c, index) => ({
+      id: `custom-${index}-${c.name}-${c.phone}`,
+      name: c.name,
+      phone: c.phone,
+      isCustom: true,
+    }));
+    
+    const combined = [...customWithIds];
+    
+    for (const dc of deviceContacts) {
+      const isDuplicate = customCustomers.some(
+        (cc) =>
+          cc.name.toLowerCase() === dc.name.toLowerCase() &&
+          cc.phone.replace(/[^0-9]/g, "") === dc.phone.replace(/[^0-9]/g, "")
+      );
+      if (!isDuplicate) {
+        combined.push({
+          id: dc.id,
+          name: dc.name,
+          phone: dc.phone,
+          isCustom: false,
+        });
+      }
+    }
+    
+    combined.sort((a, b) => a.name.localeCompare(b.name));
+    return combined;
+  }, [deviceContacts, customCustomers]);
+
   const filteredContacts = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    const source = deviceContacts.length > 0 ? deviceContacts : MOCK_CONTACTS;
-    if (!q) return source;
-    return source.filter(
+    const q = debouncedQuery.toLowerCase().trim();
+    if (!q) return allContacts;
+    return allContacts.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.phone.replace(/[^0-9]/g, "").includes(q)
     );
-  }, [searchQuery, deviceContacts]);
+  }, [debouncedQuery, allContacts]);
 
   const handleAddManualCustomer = () => {
     if (!newCustomerName.trim()) {
@@ -155,6 +184,9 @@ export const CartScreen: React.FC = () => {
       name: newCustomerName.trim(),
       phone: newCustomerPhone.trim() || "Walking Customer",
     };
+    // Save to custom customers persistent list
+    useCart.getState().addCustomCustomer(customer);
+
     cartState.setCustomer(customer);
     setAttachedCustomer(customer);
     setIsCustomerModalVisible(false);
@@ -179,6 +211,9 @@ export const CartScreen: React.FC = () => {
   const renderContactItem = ({ item }: { item: { id: string; name: string; phone: string } }) => {
     const avatarColor = getAvatarColor(item.name);
     const initials = getInitials(item.name);
+    const isSelected = attachedCustomer !== null &&
+      attachedCustomer.name.toLowerCase() === item.name.toLowerCase() &&
+      attachedCustomer.phone === item.phone;
     
     return (
       <TouchableOpacity
@@ -199,6 +234,9 @@ export const CartScreen: React.FC = () => {
           <Text style={styles.contactName}>{item.name}</Text>
           <Text style={styles.contactPhone}>{item.phone || "No phone number"}</Text>
         </View>
+        {isSelected && (
+          <Feather name="check" size={16} color={TOKENS.primary} style={{ marginRight: 8 }} />
+        )}
         <Feather name="chevron-right" size={16} color={TOKENS.muted} />
       </TouchableOpacity>
     );
@@ -480,8 +518,9 @@ export const CartScreen: React.FC = () => {
         visible={isCustomerModalVisible}
         onClose={() => setIsCustomerModalVisible(false)}
         title="Select Customer"
+        contentPaddingHorizontal={0}
       >
-        <View style={{ height: 500 }}>
+        <View style={{ height: Math.min(680, SCREEN_HEIGHT * 0.85) }}>
           {/* Segmented Control / Tabs */}
           <View style={styles.tabBar}>
             <TouchableOpacity
@@ -504,17 +543,19 @@ export const CartScreen: React.FC = () => {
 
           {/* Content based on tab */}
           {activeTab === "contacts" ? (
-            <View style={styles.tabContent}>
+            <View style={{ flex: 1 }}>
               {/* Search Bar */}
-              <View style={styles.searchBarWrapper}>
-                <Feather name="search" size={16} color={TOKENS.muted} style={styles.searchIcon} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search name or phone..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  clearButtonMode="while-editing"
-                />
+              <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+                <View style={styles.searchBarWrapper}>
+                  <Feather name="search" size={16} color={TOKENS.muted} style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search name or phone..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    clearButtonMode="while-editing"
+                  />
+                </View>
               </View>
 
               {/* Walking Customer Option */}
@@ -530,7 +571,9 @@ export const CartScreen: React.FC = () => {
                   <Text style={styles.walkingText}>Walking Customer</Text>
                   <Text style={styles.contactPhone}>Default non-attached checkout</Text>
                 </View>
-                <Feather name="check" size={16} color={TOKENS.primary} />
+                {attachedCustomer === null && (
+                  <Feather name="check" size={16} color={TOKENS.primary} />
+                )}
               </TouchableOpacity>
 
               <View style={styles.listHeader}>
@@ -550,6 +593,11 @@ export const CartScreen: React.FC = () => {
                   renderItem={renderContactItem}
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.listContent}
+                  initialNumToRender={15}
+                  maxToRenderPerBatch={15}
+                  windowSize={7}
+                  removeClippedSubviews={true}
+                  getItemLayout={(data, index) => ({ length: 58, offset: 58 * index, index })}
                   ListEmptyComponent={
                     <View style={styles.emptyList}>
                       <Feather name="users" size={36} color={TOKENS.muted} />
@@ -560,7 +608,7 @@ export const CartScreen: React.FC = () => {
               )}
             </View>
           ) : (
-            <View style={[styles.tabContent, styles.newFormContainer]}>
+            <View style={[styles.newFormContainer, { paddingHorizontal: 20 }]}>
               <Text style={styles.formLabel}>Customer Name *</Text>
               <TextInput
                 style={styles.formInput}
@@ -961,6 +1009,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: TOKENS.border,
   },
@@ -971,6 +1020,7 @@ const styles = StyleSheet.create({
   },
   listHeader: {
     paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   listHeaderText: {
     fontSize: 11,
@@ -982,9 +1032,10 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   contactItem: {
+    height: 58,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
