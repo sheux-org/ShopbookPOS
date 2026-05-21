@@ -114,7 +114,7 @@ export const PosScreen: React.FC = () => {
 
   const laserTranslateY = laserAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [4, 96],
+    outputRange: [2, 68],
   });
 
   const showToast = (message: string) => {
@@ -1061,6 +1061,7 @@ const styles = StyleSheet.create({
   },
   scanLaser: {
     position: "absolute",
+    top: 0,
     left: 2,
     right: 2,
     height: 2,

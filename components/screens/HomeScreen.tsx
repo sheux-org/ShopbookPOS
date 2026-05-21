@@ -19,6 +19,7 @@ import { BottomSheet } from "../common/BottomSheet";
 import { ProductImage } from "../common/ProductImage";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { SearchInput } from "../common/SearchInput";
+import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
 import { HeaderCartButton } from "../common/HeaderCartButton";
 import { Business, cartState } from "../data/cartState";
 
@@ -50,6 +51,7 @@ export const HomeScreen: React.FC = () => {
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Dynamic products list fetched via React Query custom hook
@@ -216,6 +218,7 @@ export const HomeScreen: React.FC = () => {
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Quick search products..."
+        onScanPress={() => setIsScanning(true)}
         containerStyle={{ marginHorizontal: 16, marginTop: 12 }}
       />
 
@@ -462,6 +465,16 @@ export const HomeScreen: React.FC = () => {
           })}
         </ScrollView>
       </BottomSheet>
+
+      <BarcodeScannerModal
+        visible={isScanning}
+        onClose={() => setIsScanning(false)}
+        onBarcodeScanned={(data) => {
+          setSearchQuery(data);
+          setIsScanning(false);
+          triggerToast(`Scanned Barcode: ${data} 🔍`);
+        }}
+      />
     </ScreenWrapper>
   );
 };

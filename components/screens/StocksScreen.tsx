@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   Pressable,
 } from "react-native";
-import { CameraView } from "expo-camera";
+import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
 import * as ImagePicker from "expo-image-picker";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
@@ -733,77 +733,15 @@ export const StocksScreen: React.FC = () => {
       </Modal>
 
       {/* SIMULATED HIGH-FIDELITY BARCODE SCANNER OVERLAY MODAL */}
-      <Modal
+      <BarcodeScannerModal
         visible={isScanning}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsScanning(false)}
-      >
-        <View style={styles.scannerBg}>
-          <View style={styles.scannerCard}>
-            <View style={styles.scannerHeaderRow}>
-              <Text style={styles.scannerTitle}>📷 Barcode Scanner Active</Text>
-              <TouchableOpacity
-                style={styles.closeScannerBtn}
-                onPress={() => setIsScanning(false)}
-              >
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.scannerInstruction}>
-              Align the retail product barcode within the viewfinder to automatically scan and catalog
-            </Text>
-
-            {/* Viewfinder area with blinking animation and moving laser line */}
-            <View style={styles.scannerViewfinder}>
-              {isScanning ? (
-                <CameraView
-                  style={StyleSheet.absoluteFillObject}
-                  barcodeScannerSettings={{
-                    barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
-                  }}
-                  onBarcodeScanned={({ type, data }) => {
-                    setFormBarcode(data);
-                    setIsScanning(false);
-                    triggerToast(`Barcode Scanned: ${data} ✅`);
-                  }}
-                />
-              ) : null}
-
-              {/* Four corners */}
-              <View style={[styles.viewfinderCorner, styles.cornerTL]} />
-              <View style={[styles.viewfinderCorner, styles.cornerTR]} />
-              <View style={[styles.viewfinderCorner, styles.cornerBL]} />
-              <View style={[styles.viewfinderCorner, styles.cornerBR]} />
-
-              {/* Moving Laser line */}
-              <View style={styles.scannerLaserLine} />
-
-              <Text style={styles.scanningText}>SCANNING...</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.scannerForceScanBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                const mockBarcodes = [
-                  "8901030777551",
-                  "501234567890",
-                  "4902430582766",
-                  "7622300744961",
-                ];
-                const randomBarcode = mockBarcodes[Math.floor(Math.random() * mockBarcodes.length)];
-                setFormBarcode(randomBarcode);
-                setIsScanning(false);
-                triggerToast(`Barcode Scanned: ${randomBarcode} ✅`);
-              }}
-            >
-              <Text style={styles.forceScanText}>⚡ Instant Capture</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setIsScanning(false)}
+        onBarcodeScanned={(data) => {
+          setFormBarcode(data);
+          setIsScanning(false);
+          triggerToast(`Barcode Scanned: ${data} ✅`);
+        }}
+      />
 
 
     </ScreenWrapper>
@@ -1356,125 +1294,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
     color: TOKENS.primary,
-  },
-  scannerBg: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  scannerCard: {
-    backgroundColor: TOKENS.card,
-    borderRadius: 24,
-    padding: 24,
-    width: "100%",
-    alignItems: "center",
-    gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  scannerHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-  },
-  scannerTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  closeScannerBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scannerInstruction: {
-    fontSize: 12,
-    color: TOKENS.muted,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-  scannerViewfinder: {
-    width: 220,
-    height: 140,
-    borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.3)",
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
-  },
-  viewfinderCorner: {
-    position: "absolute",
-    width: 16,
-    height: 16,
-    borderColor: TOKENS.primary,
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-  },
-  scannerLaserLine: {
-    position: "absolute",
-    width: "90%",
-    height: 2,
-    backgroundColor: "#EF4444",
-    top: "50%",
-  },
-  scanningText: {
-    position: "absolute",
-    bottom: 10,
-    fontSize: 10,
-    fontWeight: "bold",
-    color: TOKENS.primary,
-    letterSpacing: 1.5,
-  },
-  scannerForceScanBtn: {
-    backgroundColor: TOKENS.primary,
-    height: 40,
-    borderRadius: 20,
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-  forceScanText: {
-    color: TOKENS.card,
-    fontSize: 14,
-    fontWeight: "bold",
   },
   emptyStateCard: {
     width: "100%",

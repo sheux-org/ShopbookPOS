@@ -72,7 +72,7 @@ export const ScanScreen: React.FC = () => {
 
   const laserTranslateY = scanAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [6, 174],
+    outputRange: [2, 116],
   });
 
   const triggerToast = (msg: string) => {
@@ -485,6 +485,7 @@ const styles = StyleSheet.create({
   },
   scanLaser: {
     position: "absolute",
+    top: 0,
     left: 4,
     right: 4,
     height: 2,
