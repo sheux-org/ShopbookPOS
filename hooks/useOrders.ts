@@ -10,6 +10,9 @@ export interface DBOrder {
   totalAmount: number;
   status: string;
   createdAt: number;
+  paymentMethod?: string;
+  bankName?: string;
+  cardLastFour?: string;
 }
 
 export interface DBOrderItem {
@@ -39,6 +42,9 @@ export function useGetOrders() {
         totalAmount: o.totalAmount,
         status: o.status,
         createdAt: o.createdAt ? new Date(o.createdAt).getTime() : Date.now(),
+        paymentMethod: o.paymentMethod,
+        bankName: o.bankName,
+        cardLastFour: o.cardLastFour,
       }));
     },
   });
@@ -74,13 +80,16 @@ export function useCreateOrder() {
       totalAmount: number;
       cashierName: string;
       businessId: string;
+      paymentMethod?: string;
+      bankName?: string;
+      cardLastFour?: string;
       cart: {
         name: string;
         price: number;
         quantity: number;
       }[];
     }) => {
-      const { totalAmount, cashierName, businessId, cart } = params;
+      const { totalAmount, cashierName, businessId, paymentMethod, bankName, cardLastFour, cart } = params;
       let dbBiz: any;
       await database.write(async () => {
         // Find database business record
@@ -107,6 +116,9 @@ export function useCreateOrder() {
           ord.invoiceNumber = invoiceNum;
           ord.totalAmount = totalAmount;
           ord.status = "paid";
+          ord.paymentMethod = paymentMethod;
+          ord.bankName = bankName;
+          ord.cardLastFour = cardLastFour;
         });
 
         // Save order items & decrement products inventory stocks

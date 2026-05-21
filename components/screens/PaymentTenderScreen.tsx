@@ -7,6 +7,9 @@ import {
   Platform,
   Alert,
   Modal,
+  TextInput,
+  ScrollView,
+  Keyboard,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -19,8 +22,27 @@ import { useAuthStore } from "../../stores/useAuthStore";
 import { useBusinessStore } from "../../stores/useBusinessStore";
 import { useSettingsStore } from "../../stores/useSettingsStore";
 import * as Print from "expo-print";
+import { BottomSheet } from "../common/BottomSheet";
 
 type TenderMethod = "cash" | "card";
+
+const SRI_LANKAN_BANKS = [
+  "Bank of Ceylon (BOC)",
+  "People's Bank",
+  "Commercial Bank",
+  "Hatton National Bank (HNB)",
+  "Sampath Bank",
+  "Seylan Bank",
+  "Nations Trust Bank (NTB)",
+  "DFCC Bank",
+  "National Savings Bank (NSB)",
+  "Pan Asia Bank",
+  "Union Bank",
+  "Amana Bank",
+  "Cargills Bank",
+  "Sanasa Development Bank (SDB)",
+  "Regional Development Bank (RDB)",
+];
 
 export const PaymentTenderScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -33,6 +55,9 @@ export const PaymentTenderScreen: React.FC = () => {
   const [activeMethod, setActiveMethod] = useState<TenderMethod>(initialMethod);
   const [tenderedVal, setTenderedVal] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [selectedBank, setSelectedBank] = useState("");
+  const [lastFourDigits, setLastFourDigits] = useState("");
+  const [showBankSheet, setShowBankSheet] = useState(false);
 
   // Dynamic values
   const parsedTendered = useMemo(() => {
@@ -76,6 +101,17 @@ export const PaymentTenderScreen: React.FC = () => {
       Alert.alert("Insufficient Tender", `Amount tendered must be at least Rs. ${totalAmount.toLocaleString()}`);
       return;
     }
+
+    if (activeMethod === "card") {
+      if (!selectedBank) {
+        Alert.alert("Bank Required", "Please select a Sri Lankan bank to complete the card transaction.");
+        return;
+      }
+      if (lastFourDigits.length !== 4) {
+        Alert.alert("Card Number Required", "Please enter the last 4 digits of the card.");
+        return;
+      }
+    }
     
     const cart = cartState.getCart().map(item => ({
       name: item.name,
@@ -87,6 +123,9 @@ export const PaymentTenderScreen: React.FC = () => {
       totalAmount,
       cashierName,
       businessId: activeBiz.id,
+      paymentMethod: activeMethod,
+      bankName: activeMethod === "card" ? selectedBank : undefined,
+      cardLastFour: activeMethod === "card" ? lastFourDigits : undefined,
       cart,
     }, {
       onSuccess: () => {
@@ -194,7 +233,7 @@ export const PaymentTenderScreen: React.FC = () => {
   };
 
   return (
-    <ScreenWrapper noPaddingBottom style={styles.container}>
+    <ScreenWrapper noPaddingBottom withKeyboard={activeMethod === "card"} style={styles.container}>
       
       {/* Header exactly matching Image 5 */}
       <View style={styles.header}>
@@ -236,8 +275,6 @@ export const PaymentTenderScreen: React.FC = () => {
             Card
           </Text>
         </TouchableOpacity>
-
-
       </View>
 
       {/* Input Tender area & Change block exactly like Image 5 */}
@@ -265,15 +302,18 @@ export const PaymentTenderScreen: React.FC = () => {
             <View style={styles.simCard}>
               <View style={styles.simCardHeader}>
                 <Feather name="wifi" size={18} color={TOKENS.card} />
-                <Ionicons name="logo-bitcoin" size={20} color={TOKENS.card} style={{opacity: 0.8}} />
               </View>
               
-              <Text style={styles.simCardNumber}>••••  ••••  ••••  4021</Text>
+              <Text style={styles.simCardNumber}>
+                ••••  ••••  ••••  {lastFourDigits || "••••"}
+              </Text>
               
               <View style={styles.simCardFooter}>
-                <View>
-                  <Text style={styles.simCardHolderLabel}>CARDHOLDER</Text>
-                  <Text style={styles.simCardHolderName}>Shopbook Customer</Text>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={styles.simCardHolderLabel}>BANK / CARDHOLDER</Text>
+                  <Text numberOfLines={1} style={styles.simCardHolderName}>
+                    {selectedBank || "Shopbook Customer"}
+                  </Text>
                 </View>
                 <View style={styles.simCardBrandBadge}>
                   <View style={[styles.simCardBrandCircle, {backgroundColor: TOKENS.warning, marginRight: -8}]} />
@@ -282,8 +322,46 @@ export const PaymentTenderScreen: React.FC = () => {
               </View>
             </View>
 
+            {/* Bank Selection and Last 4 Digits input */}
+            <View style={styles.cardForm}>
+              {/* Bank Selection Dropdown */}
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                activeOpacity={0.7}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setShowBankSheet(true);
+                }}
+              >
+                <View style={styles.dropdownContent}>
+                  <Text style={styles.inputLabel}>Bank Name</Text>
+                  <Text style={[styles.dropdownValue, !selectedBank && styles.dropdownPlaceholder]}>
+                    {selectedBank || "Select Sri Lankan Bank"}
+                  </Text>
+                </View>
+                <Feather name="chevron-down" size={20} color={TOKENS.muted} />
+              </TouchableOpacity>
+
+              {/* Card Last 4 Digits Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Last 4 Digits</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={lastFourDigits}
+                  onChangeText={(val) => {
+                    const numericVal = val.replace(/[^0-9]/g, "");
+                    setLastFourDigits(numericVal.slice(0, 4));
+                  }}
+                  placeholder="e.g. 1234"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  maxLength={4}
+                />
+              </View>
+            </View>
+
             <View style={styles.cardStatusBox}>
-              <Feather name="loader" size={22} color={TOKENS.primary} />
+              <Feather name="loader" size={18} color={TOKENS.primary} />
               <Text style={styles.cardAreaTitle}>Swipe, Tap, or Insert Card</Text>
               <Text style={styles.cardAreaSubtitle}>
                 Connected POS terminal is ready for payment of Rs. {totalAmount.toLocaleString()}
@@ -452,6 +530,39 @@ export const PaymentTenderScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Sri Lankan Banks BottomSheet Selection */}
+      <BottomSheet
+        visible={showBankSheet}
+        onClose={() => setShowBankSheet(false)}
+        title="Select Sri Lankan Bank"
+      >
+        <ScrollView style={styles.bankListScrollView} keyboardShouldPersistTaps="handled">
+          {SRI_LANKAN_BANKS.map((bank) => (
+            <TouchableOpacity
+              key={bank}
+              style={[
+                styles.bankItem,
+                selectedBank === bank && styles.bankItemActive,
+              ]}
+              onPress={() => {
+                setSelectedBank(bank);
+                setShowBankSheet(false);
+              }}
+            >
+              <Text style={[
+                styles.bankItemText,
+                selectedBank === bank && styles.bankItemTextActive,
+              ]}>
+                {bank}
+              </Text>
+              {selectedBank === bank && (
+                <Feather name="check" size={16} color={TOKENS.primary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </BottomSheet>
     </ScreenWrapper>
   );
 };
@@ -831,5 +942,78 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
     fontWeight: "bold",
     fontSize: 15,
+  },
+  cardForm: {
+    width: "90%",
+    gap: 12,
+    marginTop: 8,
+  },
+  dropdownButton: {
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 10,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F8FAFC",
+  },
+  dropdownContent: {
+    gap: 2,
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: TOKENS.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  dropdownValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: TOKENS.dark,
+  },
+  dropdownPlaceholder: {
+    color: "#94A3B8",
+  },
+  inputContainer: {
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#F8FAFC",
+  },
+  textInput: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: TOKENS.dark,
+    padding: 0,
+    marginTop: 2,
+  },
+  bankListScrollView: {
+    maxHeight: 350,
+  },
+  bankItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+    paddingHorizontal: 8,
+  },
+  bankItemActive: {
+    backgroundColor: "#F0F4FF",
+    borderRadius: 8,
+  },
+  bankItemText: {
+    fontSize: 14,
+    color: TOKENS.dark,
+  },
+  bankItemTextActive: {
+    color: TOKENS.primary,
+    fontWeight: "bold",
   },
 });

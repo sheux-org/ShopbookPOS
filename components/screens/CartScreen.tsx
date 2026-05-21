@@ -8,7 +8,6 @@ import {
   Platform,
   Alert,
   TextInput,
-  Modal,
   FlatList,
   ActivityIndicator,
   Dimensions,
@@ -200,12 +199,6 @@ export const CartScreen: React.FC = () => {
     setAttachedCustomer(null);
     setIsCustomerModalVisible(false);
     triggerToast("Set as Walking Customer");
-  };
-
-  const handleRemoveCustomer = () => {
-    cartState.setCustomer(null);
-    setAttachedCustomer(null);
-    triggerToast("Customer removed (Walking checkout)");
   };
 
   const renderContactItem = ({ item }: { item: { id: string; name: string; phone: string } }) => {
@@ -526,7 +519,13 @@ export const CartScreen: React.FC = () => {
             <TouchableOpacity
               style={[styles.tabItem, activeTab === "contacts" && styles.activeTabItem]}
               onPress={() => setActiveTab("contacts")}
+              activeOpacity={0.7}
             >
+              <Feather
+                name="search"
+                size={14}
+                color={activeTab === "contacts" ? TOKENS.primary : TOKENS.muted}
+              />
               <Text style={[styles.tabText, activeTab === "contacts" && styles.activeTabText]}>
                 Search Contacts
               </Text>
@@ -534,7 +533,13 @@ export const CartScreen: React.FC = () => {
             <TouchableOpacity
               style={[styles.tabItem, activeTab === "new" && styles.activeTabItem]}
               onPress={() => setActiveTab("new")}
+              activeOpacity={0.7}
             >
+              <Feather
+                name="user-plus"
+                size={14}
+                color={activeTab === "new" ? TOKENS.primary : TOKENS.muted}
+              />
               <Text style={[styles.tabText, activeTab === "new" && styles.activeTabText]}>
                 Create Customer
               </Text>
@@ -545,7 +550,7 @@ export const CartScreen: React.FC = () => {
           {activeTab === "contacts" ? (
             <View style={{ flex: 1 }}>
               {/* Search Bar */}
-              <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+              <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
                 <View style={styles.searchBarWrapper}>
                   <Feather name="search" size={16} color={TOKENS.muted} style={styles.searchIcon} />
                   <TextInput
@@ -591,13 +596,13 @@ export const CartScreen: React.FC = () => {
                   data={filteredContacts}
                   keyExtractor={(item) => item.id}
                   renderItem={renderContactItem}
-                  showsVerticalScrollIndicator={false}
+                  showsVerticalScrollIndicator={true}
                   contentContainerStyle={styles.listContent}
                   initialNumToRender={15}
                   maxToRenderPerBatch={15}
                   windowSize={7}
                   removeClippedSubviews={true}
-                  getItemLayout={(data, index) => ({ length: 58, offset: 58 * index, index })}
+                  getItemLayout={(data, index) => ({ length: 54, offset: 54 * index, index })}
                   ListEmptyComponent={
                     <View style={styles.emptyList}>
                       <Feather name="users" size={36} color={TOKENS.muted} />
@@ -609,22 +614,28 @@ export const CartScreen: React.FC = () => {
             </View>
           ) : (
             <View style={[styles.newFormContainer, { paddingHorizontal: 20 }]}>
-              <Text style={styles.formLabel}>Customer Name *</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. Pasan Pahasara"
-                value={newCustomerName}
-                onChangeText={setNewCustomerName}
-              />
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Customer Name *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. Pasan Pahasara"
+                  placeholderTextColor={TOKENS.muted}
+                  value={newCustomerName}
+                  onChangeText={setNewCustomerName}
+                />
+              </View>
 
-              <Text style={styles.formLabel}>Phone Number</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. 077 123 4567"
-                keyboardType="phone-pad"
-                value={newCustomerPhone}
-                onChangeText={setNewCustomerPhone}
-              />
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Phone Number</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. 077 123 4567"
+                  placeholderTextColor={TOKENS.muted}
+                  keyboardType="phone-pad"
+                  value={newCustomerPhone}
+                  onChangeText={setNewCustomerPhone}
+                />
+              </View>
 
               <TouchableOpacity
                 style={styles.submitBtn}
@@ -637,6 +648,7 @@ export const CartScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={handleSelectWalkingCustomer}
+                activeOpacity={0.7}
               >
                 <Text style={styles.cancelBtnText}>Or set as Walking Customer</Text>
               </TouchableOpacity>
@@ -960,27 +972,38 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    gap: 12,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    marginTop: 4,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 10,
+    flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
   },
   activeTabItem: {
-    borderBottomColor: TOKENS.primary,
+    backgroundColor: TOKENS.card,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: TOKENS.muted,
   },
   activeTabText: {
     color: TOKENS.primary,
+    fontWeight: "bold",
   },
   tabContent: {
     flex: 1,
@@ -994,7 +1017,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 40,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   searchIcon: {
     marginRight: 8,
@@ -1008,7 +1031,7 @@ const styles = StyleSheet.create({
   walkingCustomerRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: TOKENS.border,
@@ -1019,20 +1042,23 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   listHeader: {
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 16,
+    backgroundColor: "#F9FAFB",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
   listHeaderText: {
     fontSize: 11,
     fontWeight: "bold",
     color: TOKENS.muted,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   listContent: {
     paddingBottom: 24,
   },
   contactItem: {
-    height: 58,
+    height: 54,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -1040,9 +1066,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F3F4F6",
   },
   contactAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -1087,39 +1113,42 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
   },
   newFormContainer: {
-    gap: 16,
-    paddingTop: 24,
+    paddingTop: 16,
+  },
+  formField: {
+    marginBottom: 12,
   },
   formLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: TOKENS.dark,
+    marginBottom: 6,
   },
   formInput: {
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 8,
     paddingHorizontal: 12,
-    height: 44,
+    height: 40,
     fontSize: 14,
     color: TOKENS.dark,
     backgroundColor: "#F9FAFB",
   },
   submitBtn: {
     backgroundColor: TOKENS.primary,
-    height: 46,
-    borderRadius: 23,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
+    marginTop: 10,
   },
   submitBtnText: {
     color: TOKENS.card,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "bold",
   },
   cancelBtn: {
-    height: 46,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },

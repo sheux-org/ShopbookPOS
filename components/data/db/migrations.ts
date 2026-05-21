@@ -3,6 +3,19 @@ import { schemaMigrations, addColumns } from '@nozbe/watermelondb/Schema/migrati
 export default schemaMigrations({
   migrations: [
     {
+      toVersion: 5,
+      steps: [
+        addColumns({
+          table: 'orders',
+          columns: [
+            { name: 'payment_method', type: 'string', isOptional: true },
+            { name: 'bank_name', type: 'string', isOptional: true },
+            { name: 'card_last_four', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
+    {
       toVersion: 4,
       steps: [
         addColumns({

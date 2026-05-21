@@ -91,6 +91,9 @@ export class Order extends Model {
   @text('invoice_number') invoiceNumber!: string;
   @field('total_amount') totalAmount!: number;
   @text('status') status!: 'pending' | 'paid' | 'void';
+  @text('payment_method') paymentMethod?: string;
+  @text('bank_name') bankName?: string;
+  @text('card_last_four') cardLastFour?: string;
 
   @relation('businesses', 'business_id') business!: Relation<any>;
   @children('order_items') orderItems!: any;

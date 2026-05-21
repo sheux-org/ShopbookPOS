@@ -221,8 +221,8 @@ export const InsightsScreen: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => setIsReportsModalOpen(true)}
           >
-            <Feather name="bar-chart-2" size={13} color={TOKENS.primary} />
-            <Text style={[styles.headerTextBtnLabel, { color: TOKENS.primary }]}>Reports</Text>
+            <Feather name="bar-chart-2" size={15} color={TOKENS.primary} />
+            <Text style={styles.headerTextBtnLabel}>Reports</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -234,7 +234,7 @@ export const InsightsScreen: React.FC = () => {
             {isSyncing ? (
               <ActivityIndicator size="small" color={TOKENS.primary} />
             ) : (
-              <Feather name="refresh-cw" size={14} color={TOKENS.dark} />
+              <Feather name="refresh-cw" size={15} color={TOKENS.primary} />
             )}
           </TouchableOpacity>
         </View>
@@ -1116,18 +1116,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 16,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    paddingHorizontal: 12,
+    borderRadius: 19,
     gap: 4,
-    height: 32,
+    height: 38,
   },
   headerIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F3F4F6",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1137,7 +1140,7 @@ const styles = StyleSheet.create({
   headerTextBtnLabel: {
     fontSize: 12,
     fontWeight: "bold",
-    color: TOKENS.dark,
+    color: TOKENS.primary,
     lineHeight: 14,
   },
   scrollContent: {

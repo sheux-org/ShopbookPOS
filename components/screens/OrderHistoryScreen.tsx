@@ -128,6 +128,15 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
 
         <View style={styles.dividerLine} />
 
+        {order.paymentMethod === "card" && (
+          <View style={styles.paymentInfoRow}>
+            <Feather name="credit-card" size={12} color={TOKENS.muted} />
+            <Text style={styles.paymentInfoText}>
+              Card · {order.bankName} (•••• {order.cardLastFour})
+            </Text>
+          </View>
+        )}
+
         <View style={styles.orderFooter}>
           <Text style={styles.orderDate}>
             {new Date(order.createdAt).toLocaleDateString()} ·{" "}
@@ -769,5 +778,23 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
     fontSize: 14,
     fontWeight: "bold",
+  },
+  paymentInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    alignSelf: "flex-start",
+  },
+  paymentInfoText: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    fontWeight: "500",
   },
 });
