@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import { SearchInput } from "../common/SearchInput";
-import { Q } from "@nozbe/watermelondb";
 import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
@@ -24,6 +23,7 @@ import {
   useDeleteProduct,
   useProducts,
   useUpdateProduct,
+  useFindProductByBarcode,
 } from "../../hooks/useProducts";
 import {
   deleteUploadThingFile,
@@ -31,8 +31,6 @@ import {
 } from "../../services/uploadQueue";
 import { ProductImage } from "../common/ProductImage";
 import { ScreenWrapper } from "../common/ScreenWrapper";
-import { cartState } from "../data/cartState";
-import database from "../data/db";
 
 const CATEGORIES_LIST = ["grocery", "dairy", "drinks", "snacks", "household"];
 const UNIT_TYPES = ["Pieces", "kg", "Liters", "Packets"];
@@ -65,6 +63,7 @@ export const ManageItemsScreen: React.FC = () => {
   // Mutators
   const updateProductMutation = useUpdateProduct();
   const deleteProductMutation = useDeleteProduct();
+  const findProductByBarcode = useFindProductByBarcode();
 
   // Selected product for editing
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -82,6 +81,13 @@ export const ManageItemsScreen: React.FC = () => {
   const [editBarcode, setEditBarcode] = useState("");
   const [editImage, setEditImage] = useState("");
   const [editImageUploading, setEditImageUploading] = useState(false);
+
+  const handleProductCardPress = (prod: any) => {
+    router.push({
+      pathname: "/stocks/item-details",
+      params: { id: prod.id },
+    });
+  };
 
   // Bottom Sheet for Camera / Gallery
   const [, setImgSheetVisible] = useState(false);
@@ -108,49 +114,12 @@ export const ManageItemsScreen: React.FC = () => {
 
   const handleSelectProductByBarcode = async (barcode: string) => {
     try {
-      const activeBiz = cartState.getActiveBusiness();
+      const product = await findProductByBarcode(barcode);
 
-      const dbProducts = await database
-        .get("products")
-        .query(
-          Q.where("business_id", activeBiz.id),
-          Q.where("barcode", barcode),
-        )
-        .fetch();
-
-      if (dbProducts && dbProducts.length > 0) {
-        const p: any = dbProducts[0];
-        const stockCount = p.stockCount ?? 0;
-        const stockType =
-          stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
-        const stockText =
-          stockType === "out"
-            ? "Out of Stock"
-            : stockType === "low"
-              ? `Low · ${stockCount} remaining`
-              : `${stockCount} in stock`;
-
-        const mappedItem = {
-          id: p.id,
-          name: p.name,
-          price: p.price,
-          category: p.category ?? "grocery",
-          icon: p.icon ?? "",
-          stockCount,
-          stockType,
-          stockText,
-          barcode: p.barcode,
-          quickCode: p.quickCode,
-          isFavorite: p.isFavorite ?? false,
-          unitType: p.unitType ?? "Pieces",
-          costPrice: p.costPrice,
-          lowStockAlert: p.lowStockAlert ?? 5,
-          createdAt: p.createdAt ? new Date(p.createdAt).getTime() : Date.now(),
-        };
-
+      if (product) {
         // Open edit modal directly
-        handleEditPress(mappedItem);
-        triggerToast(`Selected: ${mappedItem.name} 🎯`);
+        handleEditPress(product);
+        triggerToast(`Selected: ${product.name} 🎯`);
       } else {
         triggerToast(`No item found for barcode: ${barcode} 🔍`);
       }
@@ -383,100 +352,108 @@ export const ManageItemsScreen: React.FC = () => {
                   isScannedMatch && styles.productItemCardActive,
                 ]}
               >
-                <ProductImage
-                  icon={item.icon}
-                  category={item.category}
-                  size={47}
-                  style={styles.productImage}
-                />
+                <TouchableOpacity
+                  style={styles.productCardBody}
+                  activeOpacity={0.7}
+                  onPress={() => handleProductCardPress(item)}
+                >
+                  <ProductImage
+                    icon={item.icon}
+                    category={item.category}
+                    size={47}
+                    style={styles.productImage}
+                  />
 
-                <View style={styles.productMetaCol}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    <Text
-                      style={[styles.productName, { flexShrink: 1 }]}
-                      numberOfLines={1}
-                    >
-                      {item.name}
-                    </Text>
-                    {isScannedMatch && (
-                      <View style={styles.scannedBadge}>
-                        <Feather name="check" size={10} color="#FFFFFF" />
-                        <Text style={styles.scannedBadgeText}>MATCH</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.badgesRow}>
-                    <Text style={styles.productPriceText}>
-                      Rs. {item.price.toLocaleString()}
-                    </Text>
-                    <View style={styles.dotDivider} />
-                    <Text
-                      style={[
-                        styles.productStockText,
-                        item.stockType === "low" && styles.stockLowText,
-                        item.stockType === "out" && styles.stockOutText,
-                      ]}
-                    >
-                      {item.stockCount} {item.unitType || "pcs"}
-                    </Text>
-                  </View>
-
-                  <View style={styles.codesRow}>
-                    {item.quickCode ? (
-                      <View style={styles.codePill}>
-                        <Text style={styles.codeText}>
-                          Code: {item.quickCode}
-                        </Text>
-                      </View>
-                    ) : null}
-                    {item.barcode ? (
-                      <View
-                        style={[
-                          styles.codePill,
-                          { backgroundColor: "#F1F5F9" },
-                        ]}
-                      >
-                        <Text style={styles.codeText}>
-                          Barcode: {item.barcode}
-                        </Text>
-                      </View>
-                    ) : null}
+                  <View style={styles.productMetaCol}>
                     <View
-                      style={[styles.codePill, { backgroundColor: "#EFF6FF" }]}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
                     >
                       <Text
-                        style={[styles.codeText, { color: TOKENS.primary }]}
+                        style={[styles.productName, { flexShrink: 1 }]}
+                        numberOfLines={1}
                       >
-                        {item.category.toUpperCase()}
+                        {item.name}
+                      </Text>
+                      {isScannedMatch && (
+                        <View style={styles.scannedBadge}>
+                          <Feather name="check" size={10} color="#FFFFFF" />
+                          <Text style={styles.scannedBadgeText}>MATCH</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.badgesRow}>
+                      <Text style={styles.productPriceText}>
+                        Rs. {item.price.toLocaleString()}
+                      </Text>
+                      <View style={styles.dotDivider} />
+                      <Text
+                        style={[
+                          styles.productStockText,
+                          item.stockType === "low" && styles.stockLowText,
+                          item.stockType === "out" && styles.stockOutText,
+                        ]}
+                      >
+                        {item.stockCount} {item.unitType || "pcs"}
                       </Text>
                     </View>
+
+                    <View style={styles.codesRow}>
+                      {item.quickCode ? (
+                        <View style={styles.codePill}>
+                          <Text style={styles.codeText}>
+                            Code: {item.quickCode}
+                          </Text>
+                        </View>
+                      ) : null}
+                      {item.barcode ? (
+                        <View
+                          style={[
+                            styles.codePill,
+                            { backgroundColor: "#F1F5F9" },
+                          ]}
+                        >
+                          <Text style={styles.codeText}>
+                            Barcode: {item.barcode}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <View
+                        style={[styles.codePill, { backgroundColor: "#EFF6FF" }]}
+                      >
+                        <Text
+                          style={[styles.codeText, { color: TOKENS.primary }]}
+                        >
+                          {item.category.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
+                </TouchableOpacity>
 
-                {/* Actions row */}
+                {/* Actions column */}
                 <View style={styles.itemActionCol}>
-                  <TouchableOpacity
-                    style={styles.editIconBtn}
-                    activeOpacity={0.7}
-                    onPress={() => handleEditPress(item)}
-                  >
-                    <Feather name="edit-2" size={15} color={TOKENS.primary} />
-                  </TouchableOpacity>
+                  <View style={styles.editDeleteRow}>
+                    <TouchableOpacity
+                      style={styles.editIconBtn}
+                      activeOpacity={0.7}
+                      onPress={() => handleEditPress(item)}
+                    >
+                      <Feather name="edit-2" size={15} color={TOKENS.primary} />
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.deleteIconBtn}
-                    activeOpacity={0.7}
-                    onPress={() => handleDeletePress(item)}
-                  >
-                    <Feather name="trash-2" size={15} color={TOKENS.error} />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteIconBtn}
+                      activeOpacity={0.7}
+                      onPress={() => handleDeletePress(item)}
+                    >
+                      <Feather name="trash-2" size={15} color={TOKENS.error} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             );
@@ -789,6 +766,8 @@ export const ManageItemsScreen: React.FC = () => {
           await handleSelectProductByBarcode(data);
         }}
       />
+
+
     </ScreenWrapper>
   );
 };
@@ -947,9 +926,30 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
   },
   itemActionCol: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignSelf: "center",
     gap: 6,
+  },
+  editDeleteRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  stockInLabelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    gap: 4,
+    width: 70,
+  },
+  stockInLabelText: {
+    color: "#059669",
+    fontSize: 9,
+    fontWeight: "bold",
   },
   editIconBtn: {
     width: 32,
@@ -1220,5 +1220,349 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 8,
     fontWeight: "bold",
+  },
+  productCardBody: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  sheetHeaderWrapper: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  sheetProductCard: {
+    flexDirection: "row",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingRight: 16,
+    paddingLeft: 3,
+    paddingTop: 3,
+    paddingBottom: 3,
+    gap: 12,
+    alignItems: "center",
+  },
+  sheetProductImage: {
+    width: 74,
+    height: 74,
+    borderRadius: 10,
+    backgroundColor: "#F1F5F9",
+  },
+  sheetProductMeta: {
+    flex: 1,
+    gap: 4,
+  },
+  sheetProductName: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  sheetProductBadges: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 2,
+  },
+  sheetPricesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 6,
+  },
+  sheetPriceLabel: {
+    fontSize: 10,
+    color: TOKENS.muted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  sheetPriceVal: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: TOKENS.primary,
+  },
+  sheetPriceValSec: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: TOKENS.dark,
+  },
+  sheetPriceDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: "#E2E8F0",
+  },
+  marginBadge: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#DCFCE7",
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: "flex-end",
+  },
+  marginBadgeText: {
+    color: "#16A34A",
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  sheetStatusPanel: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    marginTop: 8,
+  },
+  statusPanelCol: {
+    gap: 2,
+  },
+  statusPanelLabel: {
+    fontSize: 11,
+    color: TOKENS.muted,
+  },
+  statusPanelCount: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: TOKENS.dark,
+  },
+  statusPanelUnit: {
+    fontSize: 12,
+    fontWeight: "normal",
+    color: TOKENS.muted,
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusPillWarning: {
+    backgroundColor: "#FFFBEB",
+  },
+  statusPillError: {
+    backgroundColor: "#FEF2F2",
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: TOKENS.success,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: TOKENS.success,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 16,
+  },
+  stockAdjustmentForm: {
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  sectionSubtitle: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    marginBottom: 6,
+  },
+  stockInRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  inputWithSuffix: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: TOKENS.card,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 8,
+    height: 38,
+    overflow: "hidden",
+  },
+  suffixInput: {
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: TOKENS.dark,
+  },
+  suffixContainer: {
+    backgroundColor: "#F1F5F9",
+    height: "100%",
+    paddingHorizontal: 12,
+    justifyContent: "center",
+    borderLeftWidth: 1,
+    borderLeftColor: TOKENS.border,
+  },
+  suffixText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: TOKENS.muted,
+  },
+  suggestionChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginVertical: 6,
+  },
+  suggestionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: 6,
+  },
+  suggestionChipActive: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#10B981",
+  },
+  suggestionChipText: {
+    fontSize: 11,
+    color: "#64748B",
+    fontWeight: "600",
+  },
+  suggestionChipTextActive: {
+    color: "#059669",
+    fontWeight: "700",
+  },
+  stockInSubmitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: TOKENS.success,
+    height: 40,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  stockInSubmitBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  // Removed unused stockInIconBtn style
+  logCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: TOKENS.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    marginBottom: 8,
+    gap: 12,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  logLeftCol: {
+    justifyContent: "center",
+  },
+  logBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  logBadgeIn: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
+  },
+  logBadgeOut: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FCA5A5",
+  },
+  logBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  logBadgeTextIn: {
+    color: "#059669",
+  },
+  logBadgeTextOut: {
+    color: "#DC2626",
+  },
+  logMeta: {
+    flex: 1,
+    gap: 3,
+  },
+  logReasonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
+  logDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  logDateText: {
+    fontSize: 11,
+    color: "#64748B",
+  },
+  logQtyBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logQtyBadgeIn: {
+    backgroundColor: "#D1FAE5",
+  },
+  logQtyBadgeOut: {
+    backgroundColor: "#FEE2E2",
+  },
+  logQtyText: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  logQtyTextIn: {
+    color: "#047857",
+  },
+  logQtyTextOut: {
+    color: "#B91C1C",
+  },
+  emptyLogsWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 32,
+    gap: 8,
+  },
+  emptyLogsTitle: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  emptyLogsSubtitle: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    textAlign: "center",
+    paddingHorizontal: 24,
+    lineHeight: 16,
   },
 });

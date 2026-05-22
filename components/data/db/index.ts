@@ -1,6 +1,6 @@
 import { Database } from '@nozbe/watermelondb'
 import migrations from './migrations'
-import { Order, OrderItem, Business, Employee, Product } from './models'
+import { Order, OrderItem, Business, Employee, Product, InventoryLog } from './models'
 import { schema } from './schema'
 
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite'
@@ -22,7 +22,8 @@ const database = new Database({
     Employee, 
     Product, 
     Order, 
-    OrderItem
+    OrderItem,
+    InventoryLog
   ],
 })
 

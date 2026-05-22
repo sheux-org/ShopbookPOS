@@ -140,6 +140,14 @@ export function useCreateOrder() {
             await prod.update((p: any) => {
               p.stockCount = Math.max(0, p.stockCount - item.quantity);
             });
+
+            // Log the stock outflow
+            await database.get("inventory_logs").create((log: any) => {
+              log.product.set(prod);
+              log.type = "out";
+              log.quantity = item.quantity;
+              log.reason = `Sale (${invoiceNum.split(" (")[0]})`;
+            });
           }
         }
       });

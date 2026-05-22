@@ -55,6 +55,7 @@ export class Product extends Model {
   static associations = {
     businesses: { type: 'belongs_to' as const, key: 'business_id' },
     order_items: { type: 'has_many' as const, foreignKey: 'product_id' },
+    inventory_logs: { type: 'has_many' as const, foreignKey: 'product_id' },
   };
 
   @text('name') name!: string;
@@ -73,6 +74,7 @@ export class Product extends Model {
 
   @relation('businesses', 'business_id') business!: Relation<any>;
   @children('order_items') orderItems!: any;
+  @children('inventory_logs') inventoryLogs!: any;
 
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
@@ -118,6 +120,25 @@ export class OrderItem extends Model {
 
   @relation('orders', 'order_id') order!: Relation<any>;
   @relation('products', 'product_id') product!: Relation<any>;
+
+  @readonly @date('created_at') createdAt!: Date;
+  @readonly @date('updated_at') updatedAt!: Date;
+}
+
+// ==========================================
+// 6. INVENTORY LOG MODEL
+// ==========================================
+export class InventoryLog extends Model {
+  static table = 'inventory_logs';
+  static associations = {
+    products: { type: 'belongs_to' as const, key: 'product_id' },
+  };
+
+  @text('type') type!: 'in' | 'out';
+  @field('quantity') quantity!: number;
+  @text('reason') reason?: string;
+
+  @relation('products', 'product_id') product!: Relation<Product>;
 
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;

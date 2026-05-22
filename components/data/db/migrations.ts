@@ -1,7 +1,23 @@
-import { schemaMigrations, addColumns } from '@nozbe/watermelondb/Schema/migrations';
+import { schemaMigrations, addColumns, createTable } from '@nozbe/watermelondb/Schema/migrations';
 
 export default schemaMigrations({
   migrations: [
+    {
+      toVersion: 6,
+      steps: [
+        createTable({
+          name: 'inventory_logs',
+          columns: [
+            { name: 'product_id', type: 'string', isIndexed: true },
+            { name: 'type', type: 'string' },
+            { name: 'quantity', type: 'number' },
+            { name: 'reason', type: 'string', isOptional: true },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
     {
       toVersion: 5,
       steps: [

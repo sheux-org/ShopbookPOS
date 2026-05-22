@@ -4,7 +4,7 @@ import { Platform } from 'react-native'
 import Constants, { ExecutionEnvironment } from 'expo-constants'
 
 import migrations from './migrations'
-import { Order, OrderItem, Business, Employee, Product } from './models'
+import { Order, OrderItem, Business, Employee, Product, InventoryLog } from './models'
 import { schema } from './schema'
 
 // Check if running in Expo Go or remote debugger where WatermelonDB's native JSI SQLite is unavailable
@@ -28,6 +28,7 @@ const database = new Database({
     Product, 
     Order, 
     OrderItem,
+    InventoryLog,
   ],
 })
 

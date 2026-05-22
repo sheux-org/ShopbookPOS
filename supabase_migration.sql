@@ -87,6 +87,24 @@ CREATE TABLE IF NOT EXISTS order_items (
   server_updated_at bigint NOT NULL
 );
 
+-- F. Inventory Logs Table
+CREATE TABLE IF NOT EXISTS inventory_logs (
+  id text PRIMARY KEY,
+  product_id text NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  type text NOT NULL,
+  quantity numeric NOT NULL,
+  reason text,
+  created_at bigint NOT NULL,
+  updated_at bigint NOT NULL,
+  server_updated_at bigint NOT NULL
+);
+
+-- Index for search performance
+CREATE INDEX IF NOT EXISTS idx_inventory_logs_product_id ON inventory_logs(product_id);
+
+-- Enable RLS
+ALTER TABLE public.inventory_logs ENABLE ROW LEVEL SECURITY;
+
 -- -------------------------------------------------------------------------
 -- 2. CREATE DELETED RECORDS TRACKER (Tombstones for Client Synchronization)
 -- -------------------------------------------------------------------------
@@ -138,6 +156,11 @@ CREATE TRIGGER tr_timestamp_order_items
   BEFORE INSERT OR UPDATE ON order_items
   FOR EACH ROW EXECUTE FUNCTION set_server_updated_at();
 
+DROP TRIGGER IF EXISTS tr_timestamp_inventory_logs ON inventory_logs;
+CREATE TRIGGER tr_timestamp_inventory_logs
+  BEFORE INSERT OR UPDATE ON inventory_logs
+  FOR EACH ROW EXECUTE FUNCTION set_server_updated_at();
+
 -- -------------------------------------------------------------------------
 -- 4. TRIGGERS: AUTOMATICALLY LOG DELETIONS TO `deleted_records`
 -- -------------------------------------------------------------------------
@@ -177,6 +200,11 @@ CREATE TRIGGER tr_delete_orders
 DROP TRIGGER IF EXISTS tr_delete_order_items ON order_items;
 CREATE TRIGGER tr_delete_order_items
   AFTER DELETE ON order_items
+  FOR EACH ROW EXECUTE FUNCTION record_deletion();
+
+DROP TRIGGER IF EXISTS tr_delete_inventory_logs ON inventory_logs;
+CREATE TRIGGER tr_delete_inventory_logs
+  AFTER DELETE ON inventory_logs
   FOR EACH ROW EXECUTE FUNCTION record_deletion();
 
 -- -------------------------------------------------------------------------
@@ -220,6 +248,11 @@ BEGIN
         'created', coalesce((SELECT json_agg(t) FROM (SELECT id, order_id, product_id, name, quantity, price, created_at, updated_at FROM order_items WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
         'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, order_id, product_id, name, quantity, price, created_at, updated_at FROM order_items WHERE server_updated_at > last_pulled_at AND created_at <= last_pulled_at) t), '[]'::json),
         'deleted', coalesce((SELECT json_agg(record_id) FROM deleted_records WHERE table_name = 'order_items' AND deleted_at > last_pulled_at), '[]'::json)
+      ),
+      'inventory_logs', json_build_object(
+        'created', coalesce((SELECT json_agg(t) FROM (SELECT id, product_id, type, quantity, reason, created_at, updated_at FROM inventory_logs WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
+        'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, product_id, type, quantity, reason, created_at, updated_at FROM inventory_logs WHERE server_updated_at > last_pulled_at AND created_at <= last_pulled_at) t), '[]'::json),
+        'deleted', coalesce((SELECT json_agg(record_id) FROM deleted_records WHERE table_name = 'inventory_logs' AND deleted_at > last_pulled_at), '[]'::json)
       )
     ),
     'timestamp', current_time_ms
@@ -581,6 +614,59 @@ BEGIN
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
       DELETE FROM order_items WHERE id IN (SELECT json_array_elements_text(deleted_ids));
+    END IF;
+
+  -- -------------------------------------------------------------
+  -- INVENTORY LOGS TABLE UPSERT / DELETE
+  -- -------------------------------------------------------------
+  ELSIF table_name = 'inventory_logs' THEN
+    -- Upsert created
+    IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
+      FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
+        INSERT INTO inventory_logs (id, product_id, type, quantity, reason, created_at, updated_at)
+        VALUES (
+          (r->>'id'),
+          (r->>'product_id'),
+          (r->>'type'),
+          (r->>'quantity')::numeric,
+          (r->>'reason'),
+          (r->>'created_at')::bigint,
+          (r->>'updated_at')::bigint
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          product_id = EXCLUDED.product_id,
+          type = EXCLUDED.type,
+          quantity = EXCLUDED.quantity,
+          reason = EXCLUDED.reason,
+          updated_at = EXCLUDED.updated_at;
+      END LOOP;
+    END IF;
+    
+    -- Upsert updated
+    IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
+      FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
+        INSERT INTO inventory_logs (id, product_id, type, quantity, reason, created_at, updated_at)
+        VALUES (
+          (r->>'id'),
+          (r->>'product_id'),
+          (r->>'type'),
+          (r->>'quantity')::numeric,
+          (r->>'reason'),
+          (r->>'created_at')::bigint,
+          (r->>'updated_at')::bigint
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          product_id = EXCLUDED.product_id,
+          type = EXCLUDED.type,
+          quantity = EXCLUDED.quantity,
+          reason = EXCLUDED.reason,
+          updated_at = EXCLUDED.updated_at;
+      END LOOP;
+    END IF;
+    
+    -- Delete records
+    IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
+      DELETE FROM inventory_logs WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   END IF;

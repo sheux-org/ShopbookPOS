@@ -413,3 +413,154 @@ export function useDeleteProduct() {
     },
   });
 }
+
+export interface DBInventoryLog {
+  id: string;
+  productId: string;
+  type: "in" | "out";
+  quantity: number;
+  reason?: string;
+  createdAt: number;
+}
+
+export function useGetStockHistory(productId: string) {
+  return useQuery<DBInventoryLog[]>({
+    queryKey: ["stock-history", productId],
+    queryFn: async () => {
+      const logs = await database
+        .get("inventory_logs")
+        .query(Q.where("product_id", productId), Q.sortBy("created_at", Q.desc))
+        .fetch();
+
+      return logs.map((l: any) => ({
+        id: l.id,
+        productId: l.product.id,
+        type: l.type,
+        quantity: l.quantity,
+        reason: l.reason,
+        createdAt: l.createdAt ? new Date(l.createdAt).getTime() : Date.now(),
+      }));
+    },
+    enabled: !!productId,
+  });
+}
+
+export function useStockInProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      productId: string;
+      quantity: number;
+      reason?: string;
+    }) => {
+      const { productId, quantity, reason } = params;
+      const product = await database.get("products").find(productId);
+
+      await database.write(async () => {
+        // Create inventory log
+        await database.get("inventory_logs").create((log: any) => {
+          log.product.set(product);
+          log.type = "in";
+          log.quantity = quantity;
+          log.reason = reason || "Restock";
+        });
+
+        // Update product stock count
+        await product.update((p: any) => {
+          p.stockCount = (p.stockCount ?? 0) + quantity;
+        });
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({
+        queryKey: ["stock-history", variables.productId],
+      });
+    },
+  });
+}
+
+export function useProduct(id?: string) {
+  return useQuery<DBProduct>({
+    queryKey: ["product", id],
+    queryFn: async () => {
+      if (!id) throw new Error("Product ID is required");
+      const p = await database.get("products").find(id);
+      const stockCount = (p as any).stockCount ?? 0;
+      const stockType =
+        stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
+      const stockText =
+        stockType === "out"
+          ? "Out of Stock"
+          : stockType === "low"
+            ? `Low · ${stockCount} remaining`
+            : `${stockCount} in stock`;
+
+      return {
+        id: p.id,
+        name: (p as any).name,
+        price: (p as any).price,
+        category: (p as any).category ?? "grocery",
+        icon: (p as any).icon ?? "",
+        stockCount,
+        stockType,
+        stockText,
+        barcode: (p as any).barcode,
+        quickCode: (p as any).quickCode,
+        isFavorite: (p as any).isFavorite ?? false,
+        unitType: (p as any).unitType ?? "Pieces",
+        costPrice: (p as any).costPrice,
+        lowStockAlert: (p as any).lowStockAlert ?? 5,
+        createdAt: (p as any).createdAt ? new Date((p as any).createdAt).getTime() : Date.now(),
+      };
+    },
+    enabled: !!id,
+  });
+}
+
+export function useFindProductByBarcode() {
+  const activeBiz = cartState.getActiveBusiness();
+  return async (barcode: string): Promise<DBProduct | null> => {
+    const dbProducts = await database
+      .get("products")
+      .query(
+        Q.where("business_id", activeBiz.id),
+        Q.where("barcode", barcode),
+      )
+      .fetch();
+
+    if (dbProducts && dbProducts.length > 0) {
+      const p: any = dbProducts[0];
+      const stockCount = p.stockCount ?? 0;
+      const stockType =
+        stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
+      const stockText =
+        stockType === "out"
+          ? "Out of Stock"
+          : stockType === "low"
+            ? `Low · ${stockCount} remaining`
+            : `${stockCount} in stock`;
+
+      return {
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        category: p.category ?? "grocery",
+        icon: p.icon ?? "",
+        stockCount,
+        stockType,
+        stockText,
+        barcode: p.barcode,
+        quickCode: p.quickCode,
+        isFavorite: p.isFavorite ?? false,
+        unitType: p.unitType ?? "Pieces",
+        costPrice: p.costPrice,
+        lowStockAlert: p.lowStockAlert ?? 5,
+        createdAt: p.createdAt ? new Date(p.createdAt).getTime() : Date.now(),
+      };
+    }
+    return null;
+  };
+}
+

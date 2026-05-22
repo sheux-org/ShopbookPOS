@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -17,11 +17,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { useBusinessInsights } from "../../hooks/useInsights";
+import { useStockInProduct } from "../../hooks/useProducts";
 import { syncDatabase } from "../../services/sync";
 import { BottomSheet } from "../common/BottomSheet";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { cartState } from "../data/cartState";
-import database from "../data/db";
 
 export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -76,7 +76,6 @@ export const InsightsScreen: React.FC = () => {
   const {
     data: stats,
     isLoading,
-    refetch,
   } = useBusinessInsights(
     activeBiz.id,
     period,
@@ -113,34 +112,7 @@ export const InsightsScreen: React.FC = () => {
     }
   };
 
-  // Refill Inventory Stocks Mutation
-  const refillMutation = useMutation({
-    mutationFn: async ({
-      productId,
-      refillAmount,
-    }: {
-      productId: string;
-      refillAmount: number;
-    }) => {
-      const product = await database.get("products").find(productId);
-      await database.write(async () => {
-        await product.update((p: any) => {
-          p.stockCount = (p.stockCount || 0) + refillAmount;
-        });
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["insights"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      Alert.alert("Stock In success", "Product stock refilled successfully!");
-      // Reset expanded refill values
-      setRefillValues({});
-      setExpandedProductId(null);
-    },
-    onError: (err: any) => {
-      Alert.alert("Refill Failed", err.message);
-    },
-  });
+  const stockInMutation = useStockInProduct();
 
   const handleExport = (type: "PDF" | "CSV") => {
     setExportType(type);
@@ -975,13 +947,28 @@ export const InsightsScreen: React.FC = () => {
                                   );
                                   return;
                                 }
-                                refillMutation.mutate({
-                                  productId: prod.id,
-                                  refillAmount: refillAmt,
-                                });
+                                stockInMutation.mutate(
+                                  {
+                                    productId: prod.id,
+                                    quantity: refillAmt,
+                                    reason: "Restock",
+                                  },
+                                  {
+                                    onSuccess: () => {
+                                      queryClient.invalidateQueries({ queryKey: ["insights"] });
+                                      Alert.alert("Stock In success", "Product stock refilled successfully!");
+                                      // Reset expanded refill values
+                                      setRefillValues({});
+                                      setExpandedProductId(null);
+                                    },
+                                    onError: (err: any) => {
+                                      Alert.alert("Refill Failed", err.message);
+                                    },
+                                  }
+                                );
                               }}
                             >
-                              {refillMutation.isPending ? (
+                              {stockInMutation.isPending ? (
                                 <ActivityIndicator size="small" color="#fff" />
                               ) : (
                                 <>
