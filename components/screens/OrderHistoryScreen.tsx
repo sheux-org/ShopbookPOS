@@ -70,10 +70,22 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
     return Math.round(subtotal * 0.08);
   }, [subtotal]);
 
-  const discount = useMemo(() => {
-    if (!selectedOrder) return 0;
-    // Calculate discount implicitly: subtotal + tax - total
-    return Math.max(0, subtotal + tax - selectedOrder.totalAmount);
+  const { discount, discountLabel } = useMemo(() => {
+    if (!selectedOrder) return { discount: 0, discountLabel: "Discount" };
+    let calcDiscount = 0;
+    let label = "Discount";
+    if (selectedOrder.discountType === "percentage" && typeof selectedOrder.discountValue === "number") {
+      calcDiscount = subtotal * (selectedOrder.discountValue / 100);
+      label = `Discount (${selectedOrder.discountValue}%)`;
+    } else if (selectedOrder.discountType === "flat" && typeof selectedOrder.discountValue === "number") {
+      calcDiscount = selectedOrder.discountValue;
+      label = "Discount";
+    } else {
+      // Fallback for older orders or when fields are missing
+      calcDiscount = Math.max(0, subtotal + tax - selectedOrder.totalAmount);
+      label = "Discount";
+    }
+    return { discount: calcDiscount, discountLabel: label };
   }, [selectedOrder, subtotal, tax]);
 
   /** Receipt scroll area: grow with content until ~92% screen; then scrolls inside. */
@@ -181,7 +193,7 @@ ${itemsListText}
 ---------------------------------
 Subtotal: Rs. ${subtotal.toLocaleString()}
 Tax (8%): Rs. ${tax.toLocaleString()}
-Discount: Rs. ${discount.toLocaleString()}
+${discountLabel}: Rs. ${discount.toLocaleString()}
 ---------------------------------
 Total Amount: Rs. ${selectedOrder.totalAmount.toLocaleString()}
 =================================
@@ -220,6 +232,7 @@ Thank you for shopping with us!
       subtotal,
       tax,
       discount,
+      discountLabel,
       grandTotal: selectedOrder.totalAmount,
       barcodeLine: getInvoiceBarcodeValue(selectedOrder.invoiceNumber, selectedOrder.id),
     });
@@ -230,6 +243,7 @@ Thank you for shopping with us!
     activeBiz.name,
     activeBiz.phone,
     discount,
+    discountLabel,
     orderItems,
     selectedOrder,
     staffLabelFromInvoice,
@@ -402,7 +416,7 @@ Thank you for shopping with us!
                 </View>
                 {discount > 0 ? (
                   <View style={styles.thermalRow}>
-                    <Text style={styles.thermalRowLeft}>Discount</Text>
+                    <Text style={styles.thermalRowLeft}>{discountLabel}</Text>
                     <Text style={styles.thermalRowRight}>- Rs. {discount.toFixed(2)}</Text>
                   </View>
                 ) : null}

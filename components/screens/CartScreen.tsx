@@ -53,9 +53,11 @@ export const CartScreen: React.FC = () => {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<CartItem[]>([]);
-  const [discountAmount, setDiscountAmount] = useState(100); // Default Rs. 100
+  const [discountType, setDiscountType] = useState<"flat" | "percentage">("flat");
+  const [discountValue, setDiscountValue] = useState(100); // Default Rs. 100
   const [isEditingDiscount, setIsEditingDiscount] = useState(false);
   const [tempDiscount, setTempDiscount] = useState("100");
+  const [tempDiscountType, setTempDiscountType] = useState<"flat" | "percentage">("flat");
 
   // Customer state hooks
   const [isCustomerModalVisible, setIsCustomerModalVisible] = useState(false);
@@ -263,6 +265,13 @@ export const CartScreen: React.FC = () => {
     return invoiceItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [invoiceItems]);
 
+  const computedDiscountAmount = useMemo(() => {
+    if (discountType === "percentage") {
+      return Math.round(subtotal * (discountValue / 100));
+    }
+    return discountValue;
+  }, [subtotal, discountType, discountValue]);
+
   const tax = useMemo(() => {
     // Exact tax matching or 8% dynamic tax
     if (subtotal === 2790) return 215; // match Image 7 screenshot exactly for fidelity!
@@ -270,8 +279,8 @@ export const CartScreen: React.FC = () => {
   }, [subtotal]);
 
   const total = useMemo(() => {
-    return Math.max(0, subtotal - discountAmount + tax);
-  }, [subtotal, discountAmount, tax]);
+    return Math.max(0, subtotal - computedDiscountAmount + tax);
+  }, [subtotal, computedDiscountAmount, tax]);
 
   const handleUpdateQuantity = (id: string, delta: number) => {
     hapticFeedback.impactLight();
@@ -291,7 +300,9 @@ export const CartScreen: React.FC = () => {
       params: {
         totalAmount: total.toString(),
         subtotal: subtotal.toString(),
-        discount: discountAmount.toString(),
+        discount: computedDiscountAmount.toString(),
+        discountType: discountType,
+        discountValue: discountValue.toString(),
         tax: tax.toString(),
         paymentMethod: "cash",
       },
@@ -301,10 +312,17 @@ export const CartScreen: React.FC = () => {
   const handleSaveDiscount = () => {
     const val = parseFloat(tempDiscount);
     if (!isNaN(val) && val >= 0) {
+      if (tempDiscountType === "percentage" && val > 100) {
+        hapticFeedback.notificationWarning();
+        Alert.alert("Invalid input", "Percentage discount cannot exceed 100%.");
+        return;
+      }
       hapticFeedback.notificationSuccess();
-      setDiscountAmount(val);
+      setDiscountType(tempDiscountType);
+      setDiscountValue(val);
       setIsEditingDiscount(false);
-      triggerToast(`Discount set to Rs. ${val}`);
+      const label = tempDiscountType === "percentage" ? `${val}%` : `Rs. ${val}`;
+      triggerToast(`Discount set to ${label}`);
     } else {
       hapticFeedback.notificationError();
       Alert.alert("Invalid input", "Please enter a valid positive discount amount.");
@@ -427,6 +445,40 @@ export const CartScreen: React.FC = () => {
               <Text style={styles.summaryLabelActive}>Discount</Text>
               {isEditingDiscount ? (
                 <View style={styles.editDiscountRow}>
+                  <View style={styles.discountTypeToggleGroup}>
+                    <TouchableOpacity
+                      style={[
+                        styles.discountTypeToggleBtn,
+                        tempDiscountType === "flat" && styles.discountTypeToggleBtnActive,
+                      ]}
+                      onPress={() => setTempDiscountType("flat")}
+                    >
+                      <Text
+                        style={[
+                          styles.discountTypeToggleText,
+                          tempDiscountType === "flat" && styles.discountTypeToggleTextActive,
+                        ]}
+                      >
+                        Rs.
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.discountTypeToggleBtn,
+                        tempDiscountType === "percentage" && styles.discountTypeToggleBtnActive,
+                      ]}
+                      onPress={() => setTempDiscountType("percentage")}
+                    >
+                      <Text
+                        style={[
+                          styles.discountTypeToggleText,
+                          tempDiscountType === "percentage" && styles.discountTypeToggleTextActive,
+                        ]}
+                      >
+                        %
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   <TextInput
                     style={styles.discountInput}
                     keyboardType="numeric"
@@ -440,8 +492,14 @@ export const CartScreen: React.FC = () => {
                 </View>
               ) : (
                 <View style={styles.summaryDiscountWrapper}>
-                  <Text style={styles.summaryDiscountValue}>- Rs. {discountAmount.toLocaleString()}.00</Text>
-                  <TouchableOpacity onPress={() => { setTempDiscount(discountAmount.toString()); setIsEditingDiscount(true); }}>
+                  <Text style={styles.summaryDiscountValue}>
+                    - Rs. {computedDiscountAmount.toLocaleString()}.00{discountType === "percentage" ? ` (${discountValue}%)` : ""}
+                  </Text>
+                  <TouchableOpacity onPress={() => {
+                    setTempDiscount(discountValue.toString());
+                    setTempDiscountType(discountType);
+                    setIsEditingDiscount(true);
+                  }}>
                     <Feather name="edit-3" size={14} color={TOKENS.primary} style={styles.editIcon} />
                   </TouchableOpacity>
                 </View>
@@ -876,6 +934,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     fontSize: 12,
     textAlign: "right",
+  },
+  discountTypeToggleGroup: {
+    flexDirection: "row",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 6,
+    padding: 2,
+    marginRight: 4,
+  },
+  discountTypeToggleBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  discountTypeToggleBtnActive: {
+    backgroundColor: TOKENS.card,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  discountTypeToggleText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: TOKENS.muted,
+  },
+  discountTypeToggleTextActive: {
+    color: TOKENS.primary,
+    fontWeight: "bold",
   },
   taxLabelWrapper: {
     flexDirection: "row",

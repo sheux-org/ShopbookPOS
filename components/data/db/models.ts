@@ -96,6 +96,8 @@ export class Order extends Model {
   @text('payment_method') paymentMethod?: string;
   @text('bank_name') bankName?: string;
   @text('card_last_four') cardLastFour?: string;
+  @text('discount_type') discountType?: string;
+  @field('discount_value') discountValue?: number;
 
   @relation('businesses', 'business_id') business!: Relation<any>;
   @children('order_items') orderItems!: any;

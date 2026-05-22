@@ -51,6 +51,11 @@ export const PaymentTenderScreen: React.FC = () => {
   const params = useLocalSearchParams();
 
   const totalAmount = parseFloat(params.totalAmount as string) || 2905;
+  const subtotal = parseFloat(params.subtotal as string) || totalAmount;
+  const discountAmount = parseFloat(params.discount as string) || 0;
+  const discountType = (params.discountType as string) || undefined;
+  const discountValue = params.discountValue ? parseFloat(params.discountValue as string) : undefined;
+  const taxAmount = parseFloat(params.tax as string) || 0;
   const initialMethod = (params.paymentMethod as TenderMethod) || "cash";
 
   const [activeMethod, setActiveMethod] = useState<TenderMethod>(initialMethod);
@@ -133,6 +138,8 @@ export const PaymentTenderScreen: React.FC = () => {
       paymentMethod: activeMethod,
       bankName: activeMethod === "card" ? selectedBank : undefined,
       cardLastFour: activeMethod === "card" ? lastFourDigits : undefined,
+      discountType,
+      discountValue,
       cart,
     }, {
       onSuccess: () => {
@@ -208,15 +215,21 @@ export const PaymentTenderScreen: React.FC = () => {
           
           <div class="flex-row bold">
             <span>Subtotal</span>
-            <span>Rs. ${totalAmount.toFixed(2)}</span>
+            <span>Rs. ${subtotal.toFixed(2)}</span>
           </div>
+          ${discountAmount > 0 ? `
+          <div class="flex-row">
+            <span>Discount${discountType === "percentage" ? ` (${discountValue}%)` : ""}</span>
+            <span>- Rs. ${discountAmount.toFixed(2)}</span>
+          </div>
+          ` : ""}
           <div class="flex-row">
             <span>Standard Tax (8%)</span>
-            <span>Rs. ${(totalAmount * 0.08).toFixed(2)}</span>
+            <span>Rs. ${taxAmount.toFixed(2)}</span>
           </div>
           <div class="flex-row bold" style="font-size: 16px;">
             <span>TOTAL</span>
-            <span>Rs. ${(totalAmount * 1.08).toFixed(2)}</span>
+            <span>Rs. ${totalAmount.toFixed(2)}</span>
           </div>
           
           <div class="separator"></div>

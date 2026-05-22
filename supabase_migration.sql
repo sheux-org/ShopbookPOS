@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_method text,
   bank_name text,
   card_last_four text,
+  discount_type text,
+  discount_value numeric,
   created_at bigint NOT NULL,
   updated_at bigint NOT NULL,
   server_updated_at bigint NOT NULL
@@ -240,8 +242,8 @@ BEGIN
         'deleted', coalesce((SELECT json_agg(record_id) FROM deleted_records WHERE table_name = 'products' AND deleted_at > last_pulled_at), '[]'::json)
       ),
       'orders', json_build_object(
-        'created', coalesce((SELECT json_agg(t) FROM (SELECT id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, created_at, updated_at FROM orders WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
-        'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, created_at, updated_at FROM orders WHERE server_updated_at > last_pulled_at AND created_at <= last_pulled_at) t), '[]'::json),
+        'created', coalesce((SELECT json_agg(t) FROM (SELECT id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, created_at, updated_at FROM orders WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
+        'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, created_at <= last_pulled_at) t), '[]'::json),
         'deleted', coalesce((SELECT json_agg(record_id) FROM deleted_records WHERE table_name = 'orders' AND deleted_at > last_pulled_at), '[]'::json)
       ),
       'order_items', json_build_object(
@@ -501,7 +503,7 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, created_at, updated_at)
+        INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, created_at, updated_at)
         VALUES (
           (r->>'id'),
           (r->>'business_id'),
@@ -511,6 +513,8 @@ BEGIN
           (r->>'payment_method'),
           (r->>'bank_name'),
           (r->>'card_last_four'),
+          (r->>'discount_type'),
+          (r->>'discount_value')::numeric,
           (r->>'created_at')::bigint,
           (r->>'updated_at')::bigint
         )
@@ -522,6 +526,8 @@ BEGIN
           payment_method = EXCLUDED.payment_method,
           bank_name = EXCLUDED.bank_name,
           card_last_four = EXCLUDED.card_last_four,
+          discount_type = EXCLUDED.discount_type,
+          discount_value = EXCLUDED.discount_value,
           updated_at = EXCLUDED.updated_at;
       END LOOP;
     END IF;
@@ -529,7 +535,7 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, created_at, updated_at)
+        INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, created_at, updated_at)
         VALUES (
           (r->>'id'),
           (r->>'business_id'),
@@ -539,6 +545,8 @@ BEGIN
           (r->>'payment_method'),
           (r->>'bank_name'),
           (r->>'card_last_four'),
+          (r->>'discount_type'),
+          (r->>'discount_value')::numeric,
           (r->>'created_at')::bigint,
           (r->>'updated_at')::bigint
         )
@@ -550,6 +558,8 @@ BEGIN
           payment_method = EXCLUDED.payment_method,
           bank_name = EXCLUDED.bank_name,
           card_last_four = EXCLUDED.card_last_four,
+          discount_type = EXCLUDED.discount_type,
+          discount_value = EXCLUDED.discount_value,
           updated_at = EXCLUDED.updated_at;
       END LOOP;
     END IF;

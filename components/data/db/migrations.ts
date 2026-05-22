@@ -3,6 +3,18 @@ import { schemaMigrations, addColumns, createTable } from '@nozbe/watermelondb/S
 export default schemaMigrations({
   migrations: [
     {
+      toVersion: 7,
+      steps: [
+        addColumns({
+          table: 'orders',
+          columns: [
+            { name: 'discount_type', type: 'string', isOptional: true },
+            { name: 'discount_value', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
+    {
       toVersion: 6,
       steps: [
         createTable({
