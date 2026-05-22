@@ -995,7 +995,7 @@ export const InsightsScreen: React.FC = () => {
                               <ActivityIndicator size="small" color="#fff" style={{ marginRight: 4 }} />
                             ) : (
                               <>
-                                <Feather name="plus" size={12} color="#fff" />
+                                <Feather name="plus-circle" size={14} color="#fff" />
                                 <Text style={styles.refillSubmitBtnInlineText}>
                                   Stock-In
                                 </Text>
@@ -1909,7 +1909,7 @@ const styles = StyleSheet.create({
   },
   refillSubmitBtnInline: {
     height: 34,
-    backgroundColor: TOKENS.primary,
+    backgroundColor: TOKENS.success,
     borderRadius: 8,
     paddingHorizontal: 12,
     flexDirection: "row",

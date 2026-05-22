@@ -138,7 +138,7 @@ export const cartState = {
           });
         }
 
-        await database.get("products").create((p: any) => {
+        const newProduct = await database.get("products").create((p: any) => {
           p.business.set(dbBiz);
           p.name = product.name;
           p.price = product.price;
@@ -155,6 +155,15 @@ export const cartState = {
             iconUri.startsWith("file://") || iconUri.startsWith("/");
           p.iconPendingUpload = isLocal;
         });
+
+        if (product.stockCount > 0) {
+          await database.get("inventory_logs").create((log: any) => {
+            log.product.set(newProduct);
+            log.type = "in";
+            log.quantity = product.stockCount;
+            log.reason = "Initial Stock";
+          });
+        }
       });
       console.log(
         "Successfully saved new catalog product to WatermelonDB database",

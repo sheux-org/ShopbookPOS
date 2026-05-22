@@ -143,7 +143,6 @@ export function useUploadedProductImages() {
 
 export function useAddProduct() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (product: {
       name: string;
@@ -156,7 +155,7 @@ export function useAddProduct() {
       quickCode?: string;
       barcode?: string;
     }) => {
-      cartState.addNewCatalogProduct(product);
+      await cartState.addNewCatalogProduct(product);
     },
     onSuccess: () => {
       // Invalidate the query key so all screens automatically refetch from WatermelonDB!

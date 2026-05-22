@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -117,11 +117,51 @@ export const ItemDetailsScreen: React.FC = () => {
     );
   }
 
+  const processedStockHistory = useMemo(() => {
+    if (!product || !stockHistory) return [];
+
+    let runningBalance = product.stockCount;
+    // Map logs to include calculated running balances (walking backward since history is newest to oldest)
+    const logsWithBalances = stockHistory.map((log) => {
+      const newBalance = runningBalance;
+      let prevBalance = runningBalance;
+      if (log.type === "in") {
+        prevBalance = runningBalance - log.quantity;
+      } else if (log.type === "out") {
+        prevBalance = runningBalance + log.quantity;
+      }
+      runningBalance = prevBalance;
+      return {
+        ...log,
+        prevBalance,
+        newBalance,
+      };
+    });
+
+    // If there's remaining running balance > 0 (or no logs at all but positive stockCount),
+    // append a virtual Initial Stock log
+    if (runningBalance > 0) {
+      logsWithBalances.push({
+        id: `virtual-initial-stock-${product.id}`,
+        productId: product.id,
+        type: "in",
+        quantity: runningBalance,
+        reason: "Initial Stock",
+        createdAt: product.createdAt ? new Date(product.createdAt).getTime() : (stockHistory.length > 0 ? stockHistory[stockHistory.length - 1].createdAt - 1000 : Date.now()),
+        prevBalance: 0,
+        newBalance: runningBalance,
+        isVirtual: true,
+      } as any);
+    }
+
+    return logsWithBalances;
+  }, [product, stockHistory]);
+
   const sections = [
     {
       title: "Inventory Transaction History",
       subtitle: "History of stock inflows and sales transactions.",
-      data: stockHistory || [],
+      data: processedStockHistory,
     },
   ];
 
@@ -355,37 +395,43 @@ export const ItemDetailsScreen: React.FC = () => {
 
           return (
             <View style={styles.logCard}>
-              {/* Left Column: Icon Circle */}
+              {/* Left Column: Icon Squircle */}
               <View style={[
                 styles.logIconContainer,
                 isAddition ? styles.logIconContainerIn : styles.logIconContainerOut
               ]}>
                 <Feather
-                  name={isAddition ? "plus" : "shopping-cart"}
-                  size={16}
-                  color={isAddition ? "#059669" : "#DC2626"}
+                  name={isAddition ? "arrow-down-left" : "arrow-up-right"}
+                  size={20}
+                  color={isAddition ? "#059669" : "#EF4444"}
                 />
               </View>
 
-              {/* Middle Column: Reason + Date */}
+              {/* Middle Column: Reason + Metadata Inline Row */}
               <View style={styles.logMeta}>
-                <View style={[
-                  styles.logTypePill,
-                  isAddition ? styles.logTypePillIn : styles.logTypePillOut
-                ]}>
-                  <Text style={[
-                    styles.logTypePillText,
-                    isAddition ? styles.logTypePillTextIn : styles.logTypePillTextOut
-                  ]}>
-                    {isAddition ? "STOCK IN" : "SALE TRANSACTION"}
-                  </Text>
-                </View>
                 <Text style={styles.logReasonText} numberOfLines={1}>
                   {log.reason || (isAddition ? "Manual stock-in" : "Checkout sale")}
                 </Text>
-                <View style={styles.logDateRow}>
-                  <Feather name="clock" size={11} color={TOKENS.muted} />
-                  <Text style={styles.logDateText}>{formattedDate}</Text>
+                <View style={styles.logDetailsRow}>
+                  <Text style={[
+                    styles.logTypeTag,
+                    isAddition ? styles.logTypeTagIn : styles.logTypeTagOut
+                  ]}>
+                    {isAddition ? "Stock In" : "Sale"}
+                  </Text>
+                  <Text style={styles.logSeparatorDot}>•</Text>
+                  <View style={styles.logDateRow}>
+                    <Feather name="clock" size={11} color={TOKENS.muted} />
+                    <Text style={styles.logDateText}>{formattedDate}</Text>
+                  </View>
+                </View>
+                <View style={styles.logBalanceRow}>
+                  <Text style={styles.logBalanceLabel}>Balance: </Text>
+                  <Text style={styles.logBalanceValue}>
+                    {log.reason === "Initial Stock"
+                      ? `${log.newBalance} ${product.unitType || "pcs"}`
+                      : `${log.prevBalance} → ${log.newBalance} ${product.unitType || "pcs"}`}
+                  </Text>
                 </View>
               </View>
 
@@ -766,73 +812,71 @@ const styles = StyleSheet.create({
   logCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 3,
+    paddingLeft: 3,
+    paddingRight: 16,
     backgroundColor: TOKENS.card,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: TOKENS.border,
+    borderColor: "#F1F5F9",
     marginHorizontal: 16,
     marginVertical: 4,
-    gap: 14,
+    gap: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.02,
+    shadowRadius: 6,
+    elevation: 1,
   },
   logIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 50,
+    height: 50,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
   },
   logIconContainerIn: {
     backgroundColor: "#ECFDF5",
+    borderColor: "#D1FAE5",
   },
   logIconContainerOut: {
     backgroundColor: "#FEF2F2",
+    borderColor: "#FEE2E2",
   },
   logMeta: {
     flex: 1,
-    gap: 4,
-  },
-  logTypePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderRadius: 6,
-    alignSelf: "flex-start",
-  },
-  logTypePillIn: {
-    backgroundColor: "#ECFDF5",
-  },
-  logTypePillOut: {
-    backgroundColor: "#FEF2F2",
-  },
-  logTypePillText: {
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  logTypePillTextIn: {
-    color: "#059669",
-  },
-  logTypePillTextOut: {
-    color: "#DC2626",
+    gap: 3,
   },
   logReasonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
     color: TOKENS.dark,
     lineHeight: 18,
-    marginTop: 1,
+  },
+  logDetailsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  logTypeTag: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  logTypeTagIn: {
+    color: "#059669",
+  },
+  logTypeTagOut: {
+    color: "#EF4444",
+  },
+  logSeparatorDot: {
+    fontSize: 10,
+    color: TOKENS.muted,
   },
   logDateRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginTop: 2,
+    gap: 3,
   },
   logDateText: {
     fontSize: 11,
@@ -841,22 +885,37 @@ const styles = StyleSheet.create({
   logQtyCol: {
     alignItems: "flex-end",
     justifyContent: "center",
-    minWidth: 50,
+    minWidth: 60,
   },
   logQtyText: {
-    fontSize: 16,
-    fontWeight: "800",
+    fontSize: 15,
+    fontWeight: "700",
   },
   logQtyTextIn: {
     color: "#059669",
   },
   logQtyTextOut: {
-    color: "#DC2626",
+    color: "#EF4444",
   },
   logUnitText: {
     fontSize: 10,
     color: TOKENS.muted,
     marginTop: 1,
+  },
+  logBalanceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  logBalanceLabel: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    fontWeight: "500",
+  },
+  logBalanceValue: {
+    fontSize: 11,
+    color: TOKENS.dark,
+    fontWeight: "600",
   },
   emptyLogsWrap: {
     alignItems: "center",
