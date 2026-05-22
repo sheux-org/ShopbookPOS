@@ -195,12 +195,12 @@ export const ItemDetailsScreen: React.FC = () => {
                   ) : null}
                 </View>
                 <View style={styles.sheetPricesRow}>
-                  <View>
+                  <View style={styles.sheetPriceColumn}>
                     <Text style={styles.sheetPriceLabel}>Selling Price</Text>
                     <Text style={styles.sheetPriceVal}>Rs. {product.price.toLocaleString()}</Text>
                   </View>
                   {product.costPrice ? (
-                    <View style={styles.sheetCostPriceContainer}>
+                    <View style={styles.sheetPriceColumn}>
                       <Text style={styles.sheetPriceLabel}>Cost Price</Text>
                       <Text style={styles.sheetPriceValSec}>Rs. {product.costPrice.toLocaleString()}</Text>
                     </View>
@@ -369,10 +369,13 @@ export const ItemDetailsScreen: React.FC = () => {
 
               {/* Middle Column: Reason + Date */}
               <View style={styles.logMeta}>
-                <View style={styles.logTypeRow}>
+                <View style={[
+                  styles.logTypePill,
+                  isAddition ? styles.logTypePillIn : styles.logTypePillOut
+                ]}>
                   <Text style={[
-                    styles.logTypeText,
-                    isAddition ? styles.logTypeTextIn : styles.logTypeTextOut
+                    styles.logTypePillText,
+                    isAddition ? styles.logTypePillTextIn : styles.logTypePillTextOut
                   ]}>
                     {isAddition ? "STOCK IN" : "SALE TRANSACTION"}
                   </Text>
@@ -381,7 +384,7 @@ export const ItemDetailsScreen: React.FC = () => {
                   {log.reason || (isAddition ? "Manual stock-in" : "Checkout sale")}
                 </Text>
                 <View style={styles.logDateRow}>
-                  <Feather name="clock" size={11} color="#94A3B8" />
+                  <Feather name="clock" size={11} color={TOKENS.muted} />
                   <Text style={styles.logDateText}>{formattedDate}</Text>
                 </View>
               </View>
@@ -511,7 +514,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   sheetHeaderWrapper: {
-    gap: 12,
+    gap: 8,
     padding: 16,
     paddingBottom: 0,
   },
@@ -536,7 +539,7 @@ const styles = StyleSheet.create({
   },
   sheetProductMeta: {
     flex: 1,
-    gap: 4,
+    gap: 2,
   },
   sheetProductName: {
     fontSize: 15,
@@ -547,7 +550,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
-    marginTop: 2,
+    marginTop: 0,
   },
   codePill: {
     backgroundColor: "#F1F5F9",
@@ -563,11 +566,10 @@ const styles = StyleSheet.create({
   sheetPricesRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 6,
+    marginTop: 2,
   },
-  sheetCostPriceContainer: {
-    alignItems: "flex-end",
+  sheetPriceColumn: {
+    flex: 1,
   },
   sheetPriceLabel: {
     fontSize: 10,
@@ -595,7 +597,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: "#F1F5F9",
-    marginTop: 12,
   },
   statusPanelCol: {
     gap: 2,
@@ -643,7 +644,7 @@ const styles = StyleSheet.create({
   sectionDivider: {
     height: 1,
     backgroundColor: "#E2E8F0",
-    marginVertical: 16,
+    marginVertical: 6,
   },
   stockAdjustmentForm: {
     gap: 8,
@@ -765,20 +766,20 @@ const styles = StyleSheet.create({
   logCard: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     backgroundColor: TOKENS.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: TOKENS.border,
     marginHorizontal: 16,
-    marginVertical: 6,
+    marginVertical: 4,
     gap: 14,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   logIconContainer: {
     width: 36,
@@ -795,28 +796,37 @@ const styles = StyleSheet.create({
   },
   logMeta: {
     flex: 1,
-    gap: 3,
+    gap: 4,
   },
-  logTypeRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  logTypePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    alignSelf: "flex-start",
   },
-  logTypeText: {
+  logTypePillIn: {
+    backgroundColor: "#ECFDF5",
+  },
+  logTypePillOut: {
+    backgroundColor: "#FEF2F2",
+  },
+  logTypePillText: {
     fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.8,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
-  logTypeTextIn: {
+  logTypePillTextIn: {
     color: "#059669",
   },
-  logTypeTextOut: {
+  logTypePillTextOut: {
     color: "#DC2626",
   },
   logReasonText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#334155",
+    color: TOKENS.dark,
     lineHeight: 18,
+    marginTop: 1,
   },
   logDateRow: {
     flexDirection: "row",
@@ -826,7 +836,7 @@ const styles = StyleSheet.create({
   },
   logDateText: {
     fontSize: 11,
-    color: "#64748B",
+    color: TOKENS.muted,
   },
   logQtyCol: {
     alignItems: "flex-end",
@@ -834,8 +844,8 @@ const styles = StyleSheet.create({
     minWidth: 50,
   },
   logQtyText: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
   },
   logQtyTextIn: {
     color: "#059669",

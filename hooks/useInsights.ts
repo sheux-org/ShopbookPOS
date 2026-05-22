@@ -171,6 +171,7 @@ export function useBusinessInsights(
         id: p.id,
         name: p.name,
         sku: p.sku || "N/A",
+        quickCode: p.quickCode || null,
         category: p.category || "General",
         stockCount: p.stockCount,
         price: p.price,
