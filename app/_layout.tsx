@@ -39,7 +39,6 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="(modules)/pos/cart" />
             <Stack.Screen name="(modules)/pos/catalog" />
-            <Stack.Screen name="(modules)/pos/payment" />
             <Stack.Screen name="(modules)/pos/payment-tender" />
             <Stack.Screen name="(modules)/pos/search" />
             <Stack.Screen name="(modules)/stocks/scan" />

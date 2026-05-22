@@ -71,7 +71,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
   const laserTranslateY = scanAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 136],
+    outputRange: [0, 96],
   });
 
   if (!visible) return null;
@@ -203,8 +203,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   scannerViewfinder: {
-    width: 220,
-    height: 140,
+    width: "100%",
+    height: 100,
     borderWidth: 1,
     borderColor: "rgba(250, 204, 21, 0.3)",
     backgroundColor: "#111827",

@@ -5,7 +5,6 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Modal,
   FlatList,
 } from "react-native";
 import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
@@ -19,10 +18,12 @@ import { cartState, CatalogProduct } from "../data/cartState";
 import { HeaderCartButton } from "../common/HeaderCartButton";
 import { useProducts } from "../../hooks/useProducts";
 import { ProductImage } from "../common/ProductImage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const SearchScreen: React.FC = () => {
   const router = useRouter();
   const { requestCameraAccess } = usePermission();
+  const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeChip, setActiveChip] = useState("All");
@@ -56,7 +57,7 @@ export const SearchScreen: React.FC = () => {
   const filteredProducts = productsList;
 
   return (
-    <ScreenWrapper withKeyboard style={styles.container}>
+    <ScreenWrapper withKeyboard noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -135,6 +136,10 @@ export const SearchScreen: React.FC = () => {
         keyExtractor={(item) => item.id.toString()}
         style={styles.resultsList}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 20,
+          flexGrow: 1,
+        }}
         renderItem={({ item }) => (
           <View style={styles.resultItemRow}>
             {/* Left Box Icon */}
@@ -220,7 +225,6 @@ export const SearchScreen: React.FC = () => {
           triggerToast(`Found Barcode: ${data} 🔍`);
         }}
       />
-
     </ScreenWrapper>
   );
 };

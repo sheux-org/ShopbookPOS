@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -45,6 +46,8 @@ const CATEGORIES: CategoryItem[] = [
 
 export const CatalogScreen: React.FC = () => {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -179,30 +182,57 @@ export const CatalogScreen: React.FC = () => {
                   
                   <View style={styles.priceStockRow}>
                     <Text style={styles.productPrice}>Rs. {item.price}</Text>
-                    <View style={styles.stockPlusRow}>
-                      <Text
-                        style={[
-                          styles.stockText,
-                          item.stockType === "low" && styles.stockTextLow,
-                          item.stockType === "out" && styles.stockTextOut,
-                        ]}
-                      >
-                        {item.stockText}
-                      </Text>
-                      
-                      <View
-                        style={[
-                          styles.plusIconBadge,
-                          item.stockType === "out" && styles.plusIconBadgeOut,
-                        ]}
-                      >
-                        <Feather
-                          name="plus"
-                          size={15}
-                          color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
-                        />
+                    {isTablet ? (
+                      <View style={styles.stockPlusRow}>
+                        <Text
+                          style={[
+                            styles.stockText,
+                            item.stockType === "low" && styles.stockTextLow,
+                            item.stockType === "out" && styles.stockTextOut,
+                          ]}
+                        >
+                          {item.stockText}
+                        </Text>
+                        
+                        <View
+                          style={[
+                            styles.plusIconBadge,
+                            item.stockType === "out" && styles.plusIconBadgeOut,
+                          ]}
+                        >
+                          <Feather
+                            name="plus"
+                            size={15}
+                            color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                          />
+                        </View>
                       </View>
-                    </View>
+                    ) : (
+                      <View style={styles.mobileStockPlusColumn}>
+                        <Text
+                          style={[
+                            styles.stockText,
+                            item.stockType === "low" && styles.stockTextLow,
+                            item.stockType === "out" && styles.stockTextOut,
+                          ]}
+                        >
+                          {item.stockText}
+                        </Text>
+                        
+                        <View
+                          style={[
+                            styles.mobilePlusIconBadge,
+                            item.stockType === "out" && styles.mobilePlusIconBadgeOut,
+                          ]}
+                        >
+                          <Feather
+                            name="plus"
+                            size={14}
+                            color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                          />
+                        </View>
+                      </View>
+                    )}
                   </View>
                 </TouchableOpacity>
               </View>
@@ -420,6 +450,29 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   plusIconBadgeOut: {
+    backgroundColor: "#E5E7EB",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  mobileStockPlusColumn: {
+    marginTop: 4,
+    gap: 4,
+  },
+  mobilePlusIconBadge: {
+    width: "100%",
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: TOKENS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  mobilePlusIconBadgeOut: {
     backgroundColor: "#E5E7EB",
     shadowOpacity: 0,
     elevation: 0,

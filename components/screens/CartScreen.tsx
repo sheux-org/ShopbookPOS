@@ -278,14 +278,15 @@ export const CartScreen: React.FC = () => {
       Alert.alert("Empty Cart", "Please add products before checking out.");
       return;
     }
-    // Navigate to Choose Payment Method, passing parameters
+    // Navigate directly to Payment Tender screen, passing parameters
     router.push({
-      pathname: "/pos/payment",
+      pathname: "/pos/payment-tender",
       params: {
         totalAmount: total.toString(),
         subtotal: subtotal.toString(),
         discount: discountAmount.toString(),
         tax: tax.toString(),
+        paymentMethod: "cash",
       },
     });
   };
