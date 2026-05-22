@@ -103,7 +103,7 @@ export function useCreateOrder() {
     }) => {
       const { totalAmount, cashierName, businessId, paymentMethod, bankName, cardLastFour, discountType, discountValue, taxRate, taxValue, cart } = params;
       let dbBiz: any;
-      await database.write(async () => {
+      const result = await database.write(async () => {
         // Find database business record
         const businesses = await database
           .get("businesses")
@@ -166,9 +166,14 @@ export function useCreateOrder() {
             });
           }
         }
+        return { orderId: newOrder.id, invoiceNumber: invoiceNum };
       });
+      
+      // Since database.write resolves to whatever the callback returns,
+      // let's capture and return the written value.
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate products and orders query cache so changes are instantly visible!
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });

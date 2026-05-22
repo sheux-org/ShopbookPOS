@@ -30,6 +30,7 @@ import {
   getInvoiceLabel,
 } from "../../utils/orderInvoice";
 import { buildThermalReceiptHtml } from "../../utils/thermalReceiptHtml";
+import { printReceipt } from "../../utils/printThermalReceipt";
 import { BottomSheet } from "../common/BottomSheet";
 import { cartState } from "../data/cartState";
 
@@ -263,13 +264,37 @@ Thank you for shopping with us!
       Alert.alert("Please wait", "Receipt lines are still loading.");
       return;
     }
-    try {
-      const html = buildHistoryReceiptHtml();
-      await Print.printAsync({ html });
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Print Error", "Could not complete printing.");
-    }
+    
+    const invoiceLabel = getInvoiceLabel(selectedOrder.invoiceNumber);
+    const cashierLabel = staffLabelFromInvoice(selectedOrder.invoiceNumber);
+    const items = orderItems.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      lineTotal: item.price * item.quantity,
+    }));
+
+    const printOptions = {
+      logoUri: activeBiz.logoUri,
+      businessName: activeBiz.name,
+      category: activeBiz.category,
+      address: activeBiz.address || "Sri Lanka",
+      phone: activeBiz.phone,
+      cashierLabel,
+      invoiceLabel,
+      dateStr: new Date(selectedOrder.createdAt).toLocaleString(),
+      status: selectedOrder.status.toUpperCase(),
+      items,
+      subtotal,
+      tax,
+      taxLabel,
+      discount,
+      discountLabel,
+      grandTotal: selectedOrder.totalAmount,
+      barcodeLine: getInvoiceBarcodeValue(selectedOrder.invoiceNumber, selectedOrder.id),
+      paymentMethod: selectedOrder.paymentMethod,
+    };
+
+    await printReceipt(printOptions);
   };
 
   return (

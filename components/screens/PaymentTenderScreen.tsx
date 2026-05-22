@@ -24,6 +24,8 @@ import { useSettingsStore } from "../../stores/useSettingsStore";
 import * as Print from "expo-print";
 import { BottomSheet } from "../common/BottomSheet";
 import { hapticFeedback } from "../../utils/haptics";
+import { printReceipt } from "../../utils/printThermalReceipt";
+import { getInvoiceLabel } from "../../utils/orderInvoice";
 
 type TenderMethod = "cash" | "card";
 
@@ -65,6 +67,7 @@ export const PaymentTenderScreen: React.FC = () => {
   const [selectedBank, setSelectedBank] = useState("");
   const [lastFourDigits, setLastFourDigits] = useState("");
   const [showBankSheet, setShowBankSheet] = useState(false);
+  const [createdInvoiceNumber, setCreatedInvoiceNumber] = useState("");
 
   // Dynamic values
   const parsedTendered = useMemo(() => {
@@ -145,8 +148,11 @@ export const PaymentTenderScreen: React.FC = () => {
       taxValue: taxAmount,
       cart,
     }, {
-      onSuccess: () => {
+      onSuccess: (data: any) => {
         hapticFeedback.notificationSuccess();
+        if (data?.invoiceNumber) {
+          setCreatedInvoiceNumber(data.invoiceNumber);
+        }
         setShowSuccessModal(true);
       },
       onError: (err) => {
@@ -159,96 +165,41 @@ export const PaymentTenderScreen: React.FC = () => {
 
   const handlePrintReceipt = async () => {
     const cart = cartState.getCart();
-    
-    const logoHtml = activeBiz.logoUri 
-      ? activeBiz.logoUri.length <= 2 
-        ? `<div style="font-size: 38px; text-align: center; margin-bottom: 5px;">${activeBiz.logoUri}</div>`
-        : `<div style="text-align: center; margin-bottom: 5px;"><img src="${activeBiz.logoUri}" style="width: 60px; height: 60px; border-radius: 30px; object-fit: cover;" /></div>`
-      : `<div style="text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 8px; font-family: monospace; color: #000; letter-spacing: 2px;">★ MINI POS ★</div>`;
+    const items = cart.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      lineTotal: item.price * item.quantity,
+    }));
 
-    const itemsHtml = cart.map(item => `
-      <div class="flex-row">
-        <span>${item.quantity}x ${item.name}</span>
-        <span>Rs. ${(item.price * item.quantity).toFixed(2)}</span>
-      </div>
-    `).join("");
+    const cashierLabel = cashierName;
+    const dateStr = new Date().toLocaleString();
+    const invoiceLabel = createdInvoiceNumber ? getInvoiceLabel(createdInvoiceNumber) : undefined;
+    const cleanInvoiceNumber = createdInvoiceNumber || "INV-000000";
 
-    const htmlContent = `
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <style>
-            body {
-              font-family: 'Courier New', Courier, monospace;
-              padding: 10px;
-              color: #000;
-              font-size: 14px;
-            }
-            .center { text-align: center; }
-            .header-title { font-size: 18px; font-weight: bold; margin: 4px 0; }
-            .separator { border-top: 1px dashed #000; margin: 10px 0; }
-            .flex-row { display: flex; justify-content: space-between; margin: 4px 0; }
-            .bold { font-weight: bold; }
-            .barcode { font-size: 11px; text-align: center; margin-top: 15px; color: #555; }
-          </style>
-        </head>
-        <body>
-          ${logoHtml}
-          <div class="center header-title">${activeBiz.name}</div>
-          <div class="center">${activeBiz.category}</div>
-          <div class="center">${activeBiz.address}</div>
-          <div class="center">Tel: ${activeBiz.phone}</div>
-          
-          <div class="separator"></div>
-          
-          <div class="flex-row">
-            <span>Cashier</span>
-            <span>${cashierName}</span>
-          </div>
-          <div class="flex-row">
-            <span>Payment Method</span>
-            <span>${activeMethod.toUpperCase()}</span>
-          </div>
-          
-          <div class="separator"></div>
-          
-          ${itemsHtml}
-          
-          <div class="separator"></div>
-          
-          <div class="flex-row bold">
-            <span>Subtotal</span>
-            <span>Rs. ${subtotal.toFixed(2)}</span>
-          </div>
-          ${discountAmount > 0 ? `
-          <div class="flex-row">
-            <span>Discount${discountType === "percentage" ? ` (${discountValue}%)` : ""}</span>
-            <span>- Rs. ${discountAmount.toFixed(2)}</span>
-          </div>
-          ` : ""}
-          <div class="flex-row">
-            <span>${taxRate > 0 ? `Tax (${taxRate}%)` : "Tax"}</span>
-            <span>Rs. ${taxAmount.toFixed(2)}</span>
-          </div>
-          <div class="flex-row bold" style="font-size: 16px;">
-            <span>TOTAL</span>
-            <span>Rs. ${totalAmount.toFixed(2)}</span>
-          </div>
-          
-          <div class="separator"></div>
-          <div class="center">Thank you for visiting!</div>
-          <div class="center">Powered by Mini POS</div>
-          <div class="barcode">|||| | ||||| | ||| ||||||| 0192381</div>
-        </body>
-      </html>
-    `;
+    const printOptions = {
+      logoUri: activeBiz.logoUri,
+      businessName: activeBiz.name,
+      category: activeBiz.category,
+      address: activeBiz.address || "Sri Lanka",
+      phone: activeBiz.phone,
+      cashierLabel,
+      paymentMethod: activeMethod,
+      invoiceLabel,
+      dateStr,
+      status: "paid",
+      items,
+      subtotal,
+      tax: taxAmount,
+      discount: discountAmount,
+      discountLabel: discountAmount > 0 
+        ? (discountType === "percentage" ? `Discount (${discountValue}%)` : "Discount")
+        : undefined,
+      taxLabel: taxRate > 0 ? `Tax (${taxRate}%)` : "Tax",
+      grandTotal: totalAmount,
+      barcodeLine: cleanInvoiceNumber.split(" (")[0]?.trim() || "0192381"
+    };
 
-    try {
-      await Print.printAsync({ html: htmlContent });
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Print Error", "Could not complete printing operation.");
-    }
+    await printReceipt(printOptions);
   };
 
   const handleFinishSuccess = () => {
@@ -507,7 +458,9 @@ export const PaymentTenderScreen: React.FC = () => {
             </View>
 
             <Text style={styles.modalTitle}>Payment Successful!</Text>
-            <Text style={styles.modalInvoice}>Invoice ##2041 Approved</Text>
+            <Text style={styles.modalInvoice}>
+              Invoice {createdInvoiceNumber ? getInvoiceLabel(createdInvoiceNumber) : "##2041"} Approved
+            </Text>
 
             <View style={styles.modalDetailsRow}>
               <View style={styles.modalDetailCol}>
@@ -530,7 +483,7 @@ export const PaymentTenderScreen: React.FC = () => {
 
             <Text style={styles.printMessage}>
               {pairedPrinter 
-                ? `Connected printer: ${pairedPrinter} 🖨️` 
+                ? `Connected printer: ${pairedPrinter.name} 🖨️` 
                 : "No printer connected. Enable in Settings."}
             </Text>
 
