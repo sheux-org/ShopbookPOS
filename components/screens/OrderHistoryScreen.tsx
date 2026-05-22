@@ -65,10 +65,14 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
     return orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [orderItems]);
 
-  const tax = useMemo(() => {
-    // 8% dynamic tax
-    return Math.round(subtotal * 0.08);
-  }, [subtotal]);
+  const { tax, taxLabel } = useMemo(() => {
+    if (!selectedOrder) return { tax: 0, taxLabel: "Tax" };
+    if (typeof selectedOrder.taxValue === "number" && typeof selectedOrder.taxRate === "number") {
+      const taxRate = selectedOrder.taxRate;
+      return { tax: selectedOrder.taxValue, taxLabel: taxRate > 0 ? `Tax (${taxRate}%)` : "Tax" };
+    }
+    return { tax: Math.round(subtotal * 0.08), taxLabel: "Standard Tax (8%)" };
+  }, [selectedOrder, subtotal]);
 
   const { discount, discountLabel } = useMemo(() => {
     if (!selectedOrder) return { discount: 0, discountLabel: "Discount" };
@@ -192,7 +196,7 @@ Items:
 ${itemsListText}
 ---------------------------------
 Subtotal: Rs. ${subtotal.toLocaleString()}
-Tax (8%): Rs. ${tax.toLocaleString()}
+${taxLabel}: Rs. ${tax.toLocaleString()}
 ${discountLabel}: Rs. ${discount.toLocaleString()}
 ---------------------------------
 Total Amount: Rs. ${selectedOrder.totalAmount.toLocaleString()}
@@ -231,6 +235,7 @@ Thank you for shopping with us!
       items,
       subtotal,
       tax,
+      taxLabel,
       discount,
       discountLabel,
       grandTotal: selectedOrder.totalAmount,
@@ -249,6 +254,7 @@ Thank you for shopping with us!
     staffLabelFromInvoice,
     subtotal,
     tax,
+    taxLabel,
   ]);
 
   const handlePrintReceipt = async () => {
@@ -411,7 +417,7 @@ Thank you for shopping with us!
                   <Text style={styles.thermalSummaryBold}>Rs. {subtotal.toFixed(2)}</Text>
                 </View>
                 <View style={styles.thermalRow}>
-                  <Text style={styles.thermalRowLeft}>Standard Tax (8%)</Text>
+                  <Text style={styles.thermalRowLeft}>{taxLabel}</Text>
                   <Text style={styles.thermalRowRight}>Rs. {tax.toFixed(2)}</Text>
                 </View>
                 {discount > 0 ? (

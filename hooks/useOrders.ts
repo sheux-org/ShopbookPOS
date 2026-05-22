@@ -15,6 +15,8 @@ export interface DBOrder {
   cardLastFour?: string;
   discountType?: string;
   discountValue?: number;
+  taxRate?: number;
+  taxValue?: number;
 }
 
 export interface DBOrderItem {
@@ -49,6 +51,8 @@ export function useGetOrders() {
         cardLastFour: o.cardLastFour,
         discountType: o.discountType,
         discountValue: o.discountValue,
+        taxRate: o.taxRate,
+        taxValue: o.taxValue,
       }));
     },
   });
@@ -89,13 +93,15 @@ export function useCreateOrder() {
       cardLastFour?: string;
       discountType?: string;
       discountValue?: number;
+      taxRate?: number;
+      taxValue?: number;
       cart: {
         name: string;
         price: number;
         quantity: number;
       }[];
     }) => {
-      const { totalAmount, cashierName, businessId, paymentMethod, bankName, cardLastFour, discountType, discountValue, cart } = params;
+      const { totalAmount, cashierName, businessId, paymentMethod, bankName, cardLastFour, discountType, discountValue, taxRate, taxValue, cart } = params;
       let dbBiz: any;
       await database.write(async () => {
         // Find database business record
@@ -127,6 +133,8 @@ export function useCreateOrder() {
           ord.cardLastFour = cardLastFour;
           ord.discountType = discountType;
           ord.discountValue = discountValue;
+          ord.taxRate = taxRate;
+          ord.taxValue = taxValue;
         });
 
         // Save order items & decrement products inventory stocks

@@ -3,6 +3,18 @@ import { schemaMigrations, addColumns, createTable } from '@nozbe/watermelondb/S
 export default schemaMigrations({
   migrations: [
     {
+      toVersion: 8,
+      steps: [
+        addColumns({
+          table: 'orders',
+          columns: [
+            { name: 'tax_rate', type: 'number', isOptional: true },
+            { name: 'tax_value', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
+    {
       toVersion: 7,
       steps: [
         addColumns({

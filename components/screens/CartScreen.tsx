@@ -54,10 +54,15 @@ export const CartScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<CartItem[]>([]);
   const [discountType, setDiscountType] = useState<"flat" | "percentage">("flat");
-  const [discountValue, setDiscountValue] = useState(100); // Default Rs. 100
+  const [discountValue, setDiscountValue] = useState(0); // Default Rs. 0
   const [isEditingDiscount, setIsEditingDiscount] = useState(false);
-  const [tempDiscount, setTempDiscount] = useState("100");
+  const [tempDiscount, setTempDiscount] = useState("0");
   const [tempDiscountType, setTempDiscountType] = useState<"flat" | "percentage">("flat");
+
+  // Tax rate state variables
+  const [taxRate, setTaxRate] = useState(0); // Default 0%
+  const [isEditingTax, setIsEditingTax] = useState(false);
+  const [tempTaxRate, setTempTaxRate] = useState("0");
 
   // Customer state hooks
   const [isCustomerModalVisible, setIsCustomerModalVisible] = useState(false);
@@ -273,10 +278,8 @@ export const CartScreen: React.FC = () => {
   }, [subtotal, discountType, discountValue]);
 
   const tax = useMemo(() => {
-    // Exact tax matching or 8% dynamic tax
-    if (subtotal === 2790) return 215; // match Image 7 screenshot exactly for fidelity!
-    return Math.round(subtotal * 0.08);
-  }, [subtotal]);
+    return Math.round(subtotal * (taxRate / 100));
+  }, [subtotal, taxRate]);
 
   const total = useMemo(() => {
     return Math.max(0, subtotal - computedDiscountAmount + tax);
@@ -304,6 +307,7 @@ export const CartScreen: React.FC = () => {
         discountType: discountType,
         discountValue: discountValue.toString(),
         tax: tax.toString(),
+        taxRate: taxRate.toString(),
         paymentMethod: "cash",
       },
     });
@@ -326,6 +330,24 @@ export const CartScreen: React.FC = () => {
     } else {
       hapticFeedback.notificationError();
       Alert.alert("Invalid input", "Please enter a valid positive discount amount.");
+    }
+  };
+
+  const handleSaveTax = () => {
+    const val = parseFloat(tempTaxRate);
+    if (!isNaN(val) && val >= 0) {
+      if (val > 100) {
+        hapticFeedback.notificationWarning();
+        Alert.alert("Invalid input", "Tax rate cannot exceed 100%.");
+        return;
+      }
+      hapticFeedback.notificationSuccess();
+      setTaxRate(val);
+      setIsEditingTax(false);
+      triggerToast(`Tax rate set to ${val}%`);
+    } else {
+      hapticFeedback.notificationError();
+      Alert.alert("Invalid input", "Please enter a valid positive tax rate.");
     }
   };
 
@@ -509,12 +531,38 @@ export const CartScreen: React.FC = () => {
             {/* Tax */}
             <View style={styles.summaryRow}>
               <View style={styles.taxLabelWrapper}>
-                <Text style={styles.summaryLabel}>Tax (8%)</Text>
-                <TouchableOpacity onPress={() => Alert.alert("Tax details", "A standard sales tax of 8% is automatically applied to dairy/grocery items.")}>
-                  <Text style={styles.taxChangeLink}>change</Text>
-                </TouchableOpacity>
+                <Text style={[styles.summaryLabelActive, { color: TOKENS.dark }]}>
+                  Tax
+                  {taxRate > 0 && (
+                    <Text style={{ color: TOKENS.primary }}> ({taxRate}%)</Text>
+                  )}
+                </Text>
               </View>
-              <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
+              {isEditingTax ? (
+                <View style={styles.editDiscountRow}>
+                  <Text style={styles.discountTypeToggleText}>%</Text>
+                  <TextInput
+                    style={styles.discountInput}
+                    keyboardType="numeric"
+                    value={tempTaxRate}
+                    onChangeText={setTempTaxRate}
+                    autoFocus
+                  />
+                  <TouchableOpacity onPress={handleSaveTax}>
+                    <Feather name="check" size={16} color={TOKENS.success} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.summaryDiscountWrapper}>
+                  <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
+                  <TouchableOpacity onPress={() => {
+                    setTempTaxRate(taxRate.toString());
+                    setIsEditingTax(true);
+                  }}>
+                    <Feather name="edit-3" size={14} color={TOKENS.primary} style={styles.editIcon} />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             <View style={styles.dividerLine} />

@@ -56,6 +56,7 @@ export const PaymentTenderScreen: React.FC = () => {
   const discountType = (params.discountType as string) || undefined;
   const discountValue = params.discountValue ? parseFloat(params.discountValue as string) : undefined;
   const taxAmount = parseFloat(params.tax as string) || 0;
+  const taxRate = params.taxRate ? parseFloat(params.taxRate as string) : 0;
   const initialMethod = (params.paymentMethod as TenderMethod) || "cash";
 
   const [activeMethod, setActiveMethod] = useState<TenderMethod>(initialMethod);
@@ -140,6 +141,8 @@ export const PaymentTenderScreen: React.FC = () => {
       cardLastFour: activeMethod === "card" ? lastFourDigits : undefined,
       discountType,
       discountValue,
+      taxRate,
+      taxValue: taxAmount,
       cart,
     }, {
       onSuccess: () => {
@@ -224,7 +227,7 @@ export const PaymentTenderScreen: React.FC = () => {
           </div>
           ` : ""}
           <div class="flex-row">
-            <span>Standard Tax (8%)</span>
+            <span>${taxRate > 0 ? `Tax (${taxRate}%)` : "Tax"}</span>
             <span>Rs. ${taxAmount.toFixed(2)}</span>
           </div>
           <div class="flex-row bold" style="font-size: 16px;">

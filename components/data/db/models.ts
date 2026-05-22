@@ -98,6 +98,8 @@ export class Order extends Model {
   @text('card_last_four') cardLastFour?: string;
   @text('discount_type') discountType?: string;
   @field('discount_value') discountValue?: number;
+  @field('tax_rate') taxRate?: number;
+  @field('tax_value') taxValue?: number;
 
   @relation('businesses', 'business_id') business!: Relation<any>;
   @children('order_items') orderItems!: any;
