@@ -23,6 +23,7 @@ import { useBusinessStore } from "../../stores/useBusinessStore";
 import { useSettingsStore } from "../../stores/useSettingsStore";
 import * as Print from "expo-print";
 import { BottomSheet } from "../common/BottomSheet";
+import { hapticFeedback } from "../../utils/haptics";
 
 type TenderMethod = "cash" | "card";
 
@@ -70,6 +71,7 @@ export const PaymentTenderScreen: React.FC = () => {
   }, [parsedTendered, totalAmount]);
 
   const handleNumPress = (val: string) => {
+    hapticFeedback.impactLight();
     if (val === "backspace") {
       setTenderedVal((prev) => prev.slice(0, -1));
     } else {
@@ -80,6 +82,7 @@ export const PaymentTenderScreen: React.FC = () => {
   };
 
   const handleAddQuickCash = (amount: number) => {
+    hapticFeedback.impactLight();
     setTenderedVal((prev) => {
       const current = parseFloat(prev) || 0;
       return (current + amount).toString();
@@ -87,6 +90,7 @@ export const PaymentTenderScreen: React.FC = () => {
   };
 
   const handleExactMatch = () => {
+    hapticFeedback.impactMedium();
     setTenderedVal(totalAmount.toString());
   };
 
@@ -98,16 +102,19 @@ export const PaymentTenderScreen: React.FC = () => {
 
   const handleCompleteSale = () => {
     if (activeMethod === "cash" && parsedTendered < totalAmount) {
+      hapticFeedback.notificationWarning();
       Alert.alert("Insufficient Tender", `Amount tendered must be at least Rs. ${totalAmount.toLocaleString()}`);
       return;
     }
 
     if (activeMethod === "card") {
       if (!selectedBank) {
+        hapticFeedback.notificationWarning();
         Alert.alert("Bank Required", "Please select a Sri Lankan bank to complete the card transaction.");
         return;
       }
       if (lastFourDigits.length !== 4) {
+        hapticFeedback.notificationWarning();
         Alert.alert("Card Number Required", "Please enter the last 4 digits of the card.");
         return;
       }
@@ -129,10 +136,12 @@ export const PaymentTenderScreen: React.FC = () => {
       cart,
     }, {
       onSuccess: () => {
+        hapticFeedback.notificationSuccess();
         setShowSuccessModal(true);
       },
       onError: (err) => {
         console.error("Failed to execute SQLite order transaction via React Query:", err);
+        hapticFeedback.notificationSuccess();
         setShowSuccessModal(true);
       }
     });
@@ -258,7 +267,7 @@ export const PaymentTenderScreen: React.FC = () => {
       <View style={styles.selectorTabsRow}>
         <TouchableOpacity
           style={[styles.selectorTab, activeMethod === "cash" && styles.selectorTabActive]}
-          onPress={() => { setActiveMethod("cash"); setTenderedVal(""); }}
+          onPress={() => { hapticFeedback.selection(); setActiveMethod("cash"); setTenderedVal(""); }}
         >
           <Feather name="pocket" size={14} color={activeMethod === "cash" ? TOKENS.primary : TOKENS.muted} />
           <Text style={[styles.selectorTabText, activeMethod === "cash" && styles.selectorTabTextActive]}>
@@ -268,7 +277,7 @@ export const PaymentTenderScreen: React.FC = () => {
 
         <TouchableOpacity
           style={[styles.selectorTab, activeMethod === "card" && styles.selectorTabActive]}
-          onPress={() => { setActiveMethod("card"); setTenderedVal(totalAmount.toString()); }}
+          onPress={() => { hapticFeedback.selection(); setActiveMethod("card"); setTenderedVal(totalAmount.toString()); }}
         >
           <Feather name="credit-card" size={14} color={activeMethod === "card" ? TOKENS.primary : TOKENS.muted} />
           <Text style={[styles.selectorTabText, activeMethod === "card" && styles.selectorTabTextActive]}>

@@ -26,6 +26,7 @@ import { HeaderCartButton } from "../common/HeaderCartButton";
 import { useAddProduct, useProducts, useUpdateProductImage, useRemoveProductImage, useToggleFavoriteProduct } from "../../hooks/useProducts";
 import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
 import { ProductImage } from "../common/ProductImage";
+import { hapticFeedback } from "../../utils/haptics";
 
 
 function getRelativeTimeAgo(timestamp?: number): string {
@@ -106,6 +107,7 @@ export const StocksScreen: React.FC = () => {
   };
 
   const handleAddProductToCart = (name: string, price: number, icon: string) => {
+    hapticFeedback.impactLight();
     cartState.addCartItem(name, price, icon);
     triggerToast(`Added ${name} to checkout invoice`);
   };
@@ -194,16 +196,19 @@ export const StocksScreen: React.FC = () => {
 
   const handleSaveProduct = () => {
     if (!canPerform("create", "products")) {
+      hapticFeedback.notificationError();
       Alert.alert("Access Denied", "Your profile role is not authorized to add new catalog items.");
       return;
     }
 
     if (!formName || !formSalesPrice || !formStockIn) {
+      hapticFeedback.notificationWarning();
       Alert.alert("Required Fields Missing", "Please enter product name, selling price, and initial stock quantity.");
       return;
     }
 
     if (!formQuickCode && !formBarcode) {
+      hapticFeedback.notificationWarning();
       Alert.alert("Identification Required", "Please enter at least either a Quick Code or a Barcode to identify this product.");
       return;
     }
@@ -214,6 +219,7 @@ export const StocksScreen: React.FC = () => {
     const lowStockThreshold = parseInt(formLowStock, 10) || 5;
 
     if (isNaN(priceNum) || isNaN(stockCount)) {
+      hapticFeedback.notificationWarning();
       Alert.alert("Invalid input type", "Please verify numeric fields.");
       return;
     }
@@ -232,6 +238,7 @@ export const StocksScreen: React.FC = () => {
       barcode: formBarcode || undefined,
     });
 
+    hapticFeedback.notificationSuccess();
     triggerToast(`Product "${formName}" saved to catalog!`);
 
     // Reset form fields
@@ -260,7 +267,10 @@ export const StocksScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/")}
+          onPress={() => {
+            hapticFeedback.selection();
+            router.push("/");
+          }}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
@@ -274,7 +284,10 @@ export const StocksScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.headerHistoryBtn}
             activeOpacity={0.7}
-            onPress={() => router.push("/stocks/items")}
+            onPress={() => {
+              hapticFeedback.selection();
+              router.push("/stocks/items");
+            }}
           >
             <Feather name="archive" size={15} color={TOKENS.primary} />
             <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Items</Text>
@@ -341,7 +354,10 @@ export const StocksScreen: React.FC = () => {
                     <TouchableOpacity
                       style={styles.barcodeScanBtn}
                       activeOpacity={0.8}
-                      onPress={triggerBarcodeScanner}
+                      onPress={() => {
+                        hapticFeedback.impactLight();
+                        triggerBarcodeScanner();
+                      }}
                     >
                       <Ionicons name="scan-outline" size={15} color={TOKENS.primary} />
                     </TouchableOpacity>
@@ -359,7 +375,10 @@ export const StocksScreen: React.FC = () => {
                       <TouchableOpacity
                         key={cat}
                         style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                        onPress={() => setFormCategory(cat)}
+                        onPress={() => {
+                          hapticFeedback.selection();
+                          setFormCategory(cat);
+                        }}
                       >
                         <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
                           {cat.toUpperCase()}
@@ -380,7 +399,10 @@ export const StocksScreen: React.FC = () => {
                       <TouchableOpacity
                         key={u}
                         style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                        onPress={() => setFormUnitType(u)}
+                        onPress={() => {
+                          hapticFeedback.selection();
+                          setFormUnitType(u);
+                        }}
                       >
                         <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
                           {u}
@@ -456,7 +478,10 @@ export const StocksScreen: React.FC = () => {
                   <TouchableOpacity
                     style={styles.imgPreviewWrap}
                     activeOpacity={0.85}
-                    onPress={openImgSheet}
+                    onPress={() => {
+                      hapticFeedback.impactMedium();
+                      openImgSheet();
+                    }}
                     disabled={formImageUploading}
                   >
                     {formImage ? (
@@ -503,7 +528,10 @@ export const StocksScreen: React.FC = () => {
                       <TouchableOpacity
                         style={styles.imgRemovePillBtn}
                         activeOpacity={0.8}
-                        onPress={handleRemoveFormImage}
+                        onPress={() => {
+                          hapticFeedback.impactMedium();
+                          handleRemoveFormImage();
+                        }}
                       >
                         <Feather name="x" size={13} color={TOKENS.error} />
                         <Text style={styles.imgRemovePillText}>Remove photo</Text>
@@ -548,7 +576,10 @@ export const StocksScreen: React.FC = () => {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={() => setIsEditingFavorites(!isEditingFavorites)}
+                onPress={() => {
+                  hapticFeedback.impactMedium();
+                  setIsEditingFavorites(!isEditingFavorites);
+                }}
               >
                 <Text style={[styles.editLink, isEditingFavorites && { color: TOKENS.primary, fontWeight: "700" }]}>
                   {isEditingFavorites ? "Done" : "Edit"}
@@ -576,6 +607,7 @@ export const StocksScreen: React.FC = () => {
                   activeOpacity={0.75}
                   onPress={() => {
                     if (isEditingFavorites) {
+                      hapticFeedback.impactMedium();
                       toggleFavoriteMutation.mutate(item.id);
                     } else {
                       handleAddProductToCart(item.name, item.price, item.icon);
@@ -594,7 +626,10 @@ export const StocksScreen: React.FC = () => {
                       <TouchableOpacity
                         style={styles.favRemoveBtn}
                         activeOpacity={0.8}
-                        onPress={() => toggleFavoriteMutation.mutate(item.id)}
+                        onPress={() => {
+                          hapticFeedback.impactMedium();
+                          toggleFavoriteMutation.mutate(item.id);
+                        }}
                       >
                         <Ionicons name="close-circle" size={22} color="#EF4444" />
                       </TouchableOpacity>
@@ -691,7 +726,10 @@ export const StocksScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.sheetOption}
                 activeOpacity={0.75}
-                onPress={() => handlePickImage('camera')}
+                onPress={() => {
+                  hapticFeedback.impactMedium();
+                  handlePickImage('camera');
+                }}
               >
                 <View style={[styles.sheetOptionIcon, { backgroundColor: TOKENS.lightBlue }]}>
                   <Feather name="camera" size={22} color={TOKENS.primary} />
@@ -707,7 +745,10 @@ export const StocksScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.sheetOption}
                 activeOpacity={0.75}
-                onPress={() => handlePickImage('gallery')}
+                onPress={() => {
+                  hapticFeedback.impactMedium();
+                  handlePickImage('gallery');
+                }}
               >
                 <View style={[styles.sheetOptionIcon, { backgroundColor: '#F0FDF4' }]}>
                   <Feather name="image" size={22} color="#16A34A" />
@@ -723,7 +764,10 @@ export const StocksScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.sheetCancelBtn}
                 activeOpacity={0.8}
-                onPress={closeImgSheet}
+                onPress={() => {
+                  hapticFeedback.selection();
+                  closeImgSheet();
+                }}
               >
                 <Text style={styles.sheetCancelText}>Cancel</Text>
               </TouchableOpacity>

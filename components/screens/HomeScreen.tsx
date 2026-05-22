@@ -22,6 +22,7 @@ import { SearchInput } from "../common/SearchInput";
 import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
 import { HeaderCartButton } from "../common/HeaderCartButton";
 import { Business, cartState } from "../data/cartState";
+import { hapticFeedback } from "../../utils/haptics";
 
 interface HomeProduct {
   id: string;
@@ -142,9 +143,11 @@ export const HomeScreen: React.FC = () => {
 
   const handleAddProduct = (prod: HomeProduct) => {
     if (prod.stockType === "out") {
+      hapticFeedback.notificationWarning();
       triggerToast("Product is out of stock!");
       return;
     }
+    hapticFeedback.impactLight();
     cartState.addCartItem(
       prod.name,
       prod.price,
@@ -175,7 +178,10 @@ export const HomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.businessSwitcherBtn}
             activeOpacity={0.7}
-            onPress={() => setIsBusinessSheetOpen(true)}
+            onPress={() => {
+              hapticFeedback.impactMedium();
+              setIsBusinessSheetOpen(true);
+            }}
           >
             <View style={styles.businessRow}>
               <Ionicons
@@ -206,7 +212,10 @@ export const HomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.searchIconBtn}
             activeOpacity={0.7}
-            onPress={() => router.push("/(modules)/pos/search")}
+            onPress={() => {
+              hapticFeedback.selection();
+              router.push("/(modules)/pos/search");
+            }}
           >
             <Feather name="search" size={20} color={TOKENS.dark} />
           </TouchableOpacity>
@@ -226,7 +235,10 @@ export const HomeScreen: React.FC = () => {
       <TouchableOpacity
         style={styles.catalogBanner}
         activeOpacity={0.85}
-        onPress={() => router.push("/(modules)/pos/catalog")}
+        onPress={() => {
+          hapticFeedback.impactLight();
+          router.push("/(modules)/pos/catalog");
+        }}
       >
         <View style={styles.catalogBannerLeft}>
           <View style={styles.bannerIconWrapper}>
@@ -263,7 +275,10 @@ export const HomeScreen: React.FC = () => {
                     : styles.categoryChipInactive,
                 ]}
                 activeOpacity={0.8}
-                onPress={() => setSelectedCategory(cat.id)}
+                onPress={() => {
+                  hapticFeedback.selection();
+                  setSelectedCategory(cat.id);
+                }}
               >
                 <Text
                   style={[
@@ -314,7 +329,10 @@ export const HomeScreen: React.FC = () => {
               {/* Overlay heart button */}
               <TouchableOpacity
                 activeOpacity={0.7}
-                onPress={() => toggleFavoriteMutation.mutate(item.id)}
+                onPress={() => {
+                  hapticFeedback.impactLight();
+                  toggleFavoriteMutation.mutate(item.id);
+                }}
                 style={styles.heartBtnWrapper}
               >
                 <Ionicons
@@ -391,7 +409,10 @@ export const HomeScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.fabTouchable}
           activeOpacity={0.85}
-          onPress={() => router.push("/(modules)/stocks/scan")}
+          onPress={() => {
+            hapticFeedback.impactMedium();
+            router.push("/(modules)/stocks/scan");
+          }}
         >
           <View style={styles.fabIconWrapper}>
             <Ionicons name="qr-code-outline" size={18} color="#FFFFFF" />
@@ -429,6 +450,7 @@ export const HomeScreen: React.FC = () => {
                 style={[styles.bizCard, isSelected && styles.bizCardSelected]}
                 activeOpacity={0.8}
                 onPress={() => {
+                  hapticFeedback.impactMedium();
                   cartState.setActiveBusiness(biz.id);
                   setIsBusinessSheetOpen(false);
                   triggerToast(`Switched to ${biz.name}`);

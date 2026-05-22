@@ -16,6 +16,7 @@ import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
 import { ProductImage } from "../common/ProductImage";
+import { hapticFeedback } from "../../utils/haptics";
 
 interface CatalogProduct {
   id: string;
@@ -64,9 +65,11 @@ export const CatalogScreen: React.FC = () => {
 
   const handleAddProduct = (prod: CatalogProduct) => {
     if (prod.stockType === "out") {
+      hapticFeedback.notificationWarning();
       triggerToast("Product is out of stock!");
       return;
     }
+    hapticFeedback.impactLight();
     cartState.addCartItem(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
     triggerToast(`Added ${prod.name} to active invoice`);
   };
@@ -87,6 +90,7 @@ export const CatalogScreen: React.FC = () => {
           style={styles.backButton}
           activeOpacity={0.7}
           onPress={() => {
+            hapticFeedback.selection();
             if (router.canGoBack()) {
               router.back();
             } else {
@@ -105,7 +109,10 @@ export const CatalogScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.searchHeaderButton}
             activeOpacity={0.7}
-            onPress={() => router.push("/pos/search")}
+            onPress={() => {
+              hapticFeedback.selection();
+              router.push("/pos/search");
+            }}
           >
             <Feather name="search" size={22} color={TOKENS.dark} />
           </TouchableOpacity>
@@ -124,7 +131,10 @@ export const CatalogScreen: React.FC = () => {
                   key={cat.id}
                   style={[styles.sidebarTab, isActive && styles.sidebarTabActive]}
                   activeOpacity={0.8}
-                  onPress={() => setSelectedCategory(cat.id)}
+                  onPress={() => {
+                    hapticFeedback.selection();
+                    setSelectedCategory(cat.id);
+                  }}
                 >
                   {isActive && <View style={styles.activeStrip} />}
                   <Ionicons

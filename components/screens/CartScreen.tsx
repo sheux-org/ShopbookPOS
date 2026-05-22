@@ -22,6 +22,7 @@ import { cartState, CartItem } from "../data/cartState";
 import { BottomSheet } from "../common/BottomSheet";
 import { ProductImage } from "../common/ProductImage";
 import { useCart } from "../../stores/useCart";
+import { hapticFeedback } from "../../utils/haptics";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -213,6 +214,7 @@ export const CartScreen: React.FC = () => {
         style={styles.contactItem}
         activeOpacity={0.7}
         onPress={() => {
+          hapticFeedback.selection();
           const customer = { name: item.name, phone: item.phone || "Walking Customer" };
           cartState.setCustomer(customer);
           setAttachedCustomer(customer);
@@ -236,6 +238,7 @@ export const CartScreen: React.FC = () => {
   };
 
   const handleClearCart = () => {
+    hapticFeedback.notificationWarning();
     Alert.alert(
       "Clear Invoice",
       "Are you sure you want to remove all items from this active checkout invoice?",
@@ -245,6 +248,7 @@ export const CartScreen: React.FC = () => {
           text: "Clear All",
           style: "destructive",
           onPress: () => {
+            hapticFeedback.impactMedium();
             cartState.clearCart();
             triggerToast("Invoice cleared");
             router.push("/pos");
@@ -270,14 +274,17 @@ export const CartScreen: React.FC = () => {
   }, [subtotal, discountAmount, tax]);
 
   const handleUpdateQuantity = (id: string, delta: number) => {
+    hapticFeedback.impactLight();
     cartState.updateQuantity(id, delta);
   };
 
   const handleProceedToPayment = () => {
     if (invoiceItems.length === 0) {
+      hapticFeedback.notificationWarning();
       Alert.alert("Empty Cart", "Please add products before checking out.");
       return;
     }
+    hapticFeedback.selection();
     // Navigate directly to Payment Tender screen, passing parameters
     router.push({
       pathname: "/pos/payment-tender",
@@ -294,10 +301,12 @@ export const CartScreen: React.FC = () => {
   const handleSaveDiscount = () => {
     const val = parseFloat(tempDiscount);
     if (!isNaN(val) && val >= 0) {
+      hapticFeedback.notificationSuccess();
       setDiscountAmount(val);
       setIsEditingDiscount(false);
       triggerToast(`Discount set to Rs. ${val}`);
     } else {
+      hapticFeedback.notificationError();
       Alert.alert("Invalid input", "Please enter a valid positive discount amount.");
     }
   };
