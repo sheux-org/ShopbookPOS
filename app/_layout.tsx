@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PermissionProvider } from "../hooks/usePermissionHandler";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   startUploadQueueMonitor,
   setQueryInvalidator,
@@ -10,7 +10,14 @@ import {
 import { setupNotificationListeners } from "../services/notificationService";
 import { useForceUpdate } from "../hooks/useForceUpdate";
 import { ForceUpdateScreen } from "../components/screens/ForceUpdateScreen";
-import { FullScreenLoader } from "../components/screens/FullScreenLoader";
+import { CustomSplashScreen } from "../components/screens/CustomSplashScreen";
+import { useAuthStore } from "../stores/useAuthStore";
+import * as SplashScreen from "expo-splash-screen";
+
+// Prevent native splash screen from hiding automatically on app startup
+SplashScreen.preventAutoHideAsync().catch((err) => {
+  console.warn("Failed to prevent native splash auto hide:", err);
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,11 +36,31 @@ setQueryInvalidator(() => {
 
 function MainAppContent() {
   const { isLoading, isUpdateRequired, config, currentVersion, refetch } = useForceUpdate();
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [isSplashActive, setIsSplashActive] = useState(true);
 
-  if (isLoading) {
-    return <FullScreenLoader />;
+  // Monitor Zustand storage hydration status
+  useEffect(() => {
+    if (useAuthStore.persist.hasHydrated()) {
+      setIsHydrated(true);
+    }
+    const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
+      setIsHydrated(true);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Display custom premium splash screen during initial store loading
+  if (isSplashActive) {
+    return (
+      <CustomSplashScreen
+        isReady={!isLoading && isHydrated}
+        onAnimationComplete={() => setIsSplashActive(false)}
+      />
+    );
   }
 
+  // Once splash completes, show force update blocking screen if required
   if (isUpdateRequired) {
     return (
       <ForceUpdateScreen

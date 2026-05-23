@@ -85,5 +85,5 @@ The core logic is modularized across the following workspace files:
 2. **Supabase Service Client**: [appConfig.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/services/appConfig.ts)
 3. **Comparison & Evaluation Hook**: [useForceUpdate.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/hooks/useForceUpdate.ts)
 4. **Frosted Glassmorphic Lock UI**: [ForceUpdateScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/ForceUpdateScreen.tsx)
-5. **Animated Fullscreen Loader**: [FullScreenLoader.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/FullScreenLoader.tsx)
+5. **Animated Custom Splash Screen**: [CustomSplashScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/CustomSplashScreen.tsx)
 6. **Root Layout Interceptor**: [_layout.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/app/_layout.tsx)
