@@ -49,6 +49,8 @@ export function useActiveDeviceTracker() {
   const trackerIntervalRef = useRef<any>(null);
   const deviceIdRef = useRef<string | null>(null);
   const pushTokenRef = useRef<string | null>(null);
+  const lastCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const lastLocationNameRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn || !activeBusinessId) {
@@ -118,17 +120,27 @@ export function useActiveDeviceTracker() {
             latitude = loc.coords.latitude;
             longitude = loc.coords.longitude;
 
-            const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
-            if (geo && geo.length > 0) {
-              const place = geo[0];
-              locationName = [
-                place.city || place.subregion || place.district,
-                place.country,
-              ]
-                .filter(Boolean)
-                .join(", ");
+            const hasMoved = !lastCoordsRef.current || 
+              Math.abs(lastCoordsRef.current.latitude - latitude) > 0.001 ||
+              Math.abs(lastCoordsRef.current.longitude - longitude) > 0.001;
+
+            if (!hasMoved && lastLocationNameRef.current) {
+              locationName = lastLocationNameRef.current;
             } else {
-              locationName = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+              const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
+              if (geo && geo.length > 0) {
+                const place = geo[0];
+                locationName = [
+                  place.city || place.subregion || place.district,
+                  place.country,
+                ]
+                  .filter(Boolean)
+                  .join(", ");
+              } else {
+                locationName = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+              }
+              lastCoordsRef.current = { latitude, longitude };
+              lastLocationNameRef.current = locationName;
             }
           } else {
             locationName = "Location Denied";
