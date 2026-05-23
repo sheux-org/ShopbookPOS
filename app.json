@@ -42,7 +42,9 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Mini POS shares approximate device location with your store admin on the Activation Devices panel."
+          "locationWhenInUsePermission": "Mini POS shares approximate device location with your store admin on the Active Devices panel.",
+          "locationAlwaysAndWhenInUsePermission": "Mini POS shares approximate device location with your store admin on the Active Devices panel.",
+          "locationAlwaysPermission": "Mini POS shares approximate device location with your store admin on the Active Devices panel."
         }
       ],
       [

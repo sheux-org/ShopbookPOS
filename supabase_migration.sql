@@ -698,3 +698,39 @@ $$ LANGUAGE plpgsql;
 -- -------------------------------------------------------------------------
 GRANT EXECUTE ON FUNCTION pull_watermelondb_changes(bigint) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION push_watermelondb_changes(json) TO anon, authenticated;
+
+-- =========================================================================
+-- 8. ACTIVE DEVICES SESSION TRACKING
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.active_devices (
+  id text PRIMARY KEY,
+  business_id text NOT NULL,
+  employee_id text,
+  employee_name text NOT NULL,
+  role text NOT NULL,
+  device_id text NOT NULL,
+  device_model text NOT NULL,
+  battery_level integer,
+  is_online boolean NOT NULL DEFAULT true,
+  latitude numeric,
+  longitude numeric,
+  location_name text,
+  last_active_at timestamp with time zone NOT NULL DEFAULT clock_timestamp()
+);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.active_devices ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS Policies
+DROP POLICY IF EXISTS "Allow public select" ON public.active_devices;
+CREATE POLICY "Allow public select" ON public.active_devices FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow public insert" ON public.active_devices;
+CREATE POLICY "Allow public insert" ON public.active_devices FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public update" ON public.active_devices;
+CREATE POLICY "Allow public update" ON public.active_devices FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public delete" ON public.active_devices;
+CREATE POLICY "Allow public delete" ON public.active_devices FOR DELETE USING (true);
+

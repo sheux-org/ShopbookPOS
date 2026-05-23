@@ -3,8 +3,10 @@ import React, { useEffect, useRef } from "react";
 import { Animated } from "react-native";
 import { BottomTabBar } from "../../components/common/BottomTabBar";
 import { useTabBarVisible } from "../../hooks/useTabBarVisible";
+import { useActiveDeviceTracker } from "../../hooks/useActiveDeviceTracker";
 
 export default function TabLayout() {
+  useActiveDeviceTracker();
   const { tabBarVisible } = useTabBarVisible();
   const translateYAnim = useRef(new Animated.Value(0)).current;
 

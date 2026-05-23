@@ -46,6 +46,7 @@ export default function RootLayout() {
             <Stack.Screen name="(modules)/profile/bluetooth-printer" />
             <Stack.Screen name="(modules)/profile/manage-businesses" />
             <Stack.Screen name="(modules)/profile/manage-staff" />
+            <Stack.Screen name="(modules)/profile/active-devices" />
           </Stack>
         </PermissionProvider>
       </SafeAreaProvider>

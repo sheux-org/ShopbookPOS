@@ -19,6 +19,7 @@ import { syncDatabase } from "../../services/sync";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { BottomSheet } from "../common/BottomSheet";
 import { BusinessAvatar } from "../common/BusinessAvatar";
+import { deleteCurrentDeviceSession } from "../../hooks/useActiveDeviceTracker";
 
 const FAQS = [
   {
@@ -186,6 +187,22 @@ export const ProfileScreen: React.FC = () => {
               <Text style={styles.optionSubtitle}>
                 {pairedPrinter ? `Connected: ${pairedPrinter} ✅` : "Scan and connect to receipt printers"}
               </Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+          </TouchableOpacity>
+
+          {/* Option: Active Devices */}
+          <TouchableOpacity
+            style={styles.optionRow}
+            activeOpacity={0.7}
+            onPress={() => router.push("/profile/active-devices")}
+          >
+            <View style={[styles.optionIconBox, { backgroundColor: "#E8F0FE" }]}>
+              <Feather name="smartphone" size={18} color={TOKENS.primary} />
+            </View>
+            <View style={styles.optionTextWrapper}>
+              <Text style={styles.optionTitle}>Active Devices</Text>
+              <Text style={styles.optionSubtitle}>Monitor and manage active devices logged into your account</Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
@@ -402,7 +419,8 @@ export const ProfileScreen: React.FC = () => {
                 {
                   text: "Sign Out",
                   style: "destructive",
-                  onPress: () => {
+                  onPress: async () => {
+                    await deleteCurrentDeviceSession();
                     cartState.logout();
                     triggerToast("Profile logged out");
                     router.replace("/auth/number-input");
