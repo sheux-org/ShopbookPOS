@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  react-native-bluetooth-classic@1.73.0-rc.17:
+    hash: c44003f2c0dd38140ac99f470e68c9921c30c54ed7d539b1e65df80d98ed0121
+    path: patches/react-native-bluetooth-classic@1.73.0-rc.17.patch
+
 importers:
 
   .:
@@ -130,7 +135,7 @@ importers:
         version: 0.0.15(react-native-svg@15.12.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       react-native-bluetooth-classic:
         specifier: 1.73.0-rc.17
-        version: 1.73.0-rc.17(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))
+        version: 1.73.0-rc.17(patch_hash=c44003f2c0dd38140ac99f470e68c9921c30c54ed7d539b1e65df80d98ed0121)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))
       react-native-gesture-handler:
         specifier: ~2.28.0
         version: 2.28.0(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -9330,7 +9335,7 @@ snapshots:
       react-native: 0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)
       react-native-svg: 15.12.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
 
-  react-native-bluetooth-classic@1.73.0-rc.17(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)):
+  react-native-bluetooth-classic@1.73.0-rc.17(patch_hash=c44003f2c0dd38140ac99f470e68c9921c30c54ed7d539b1e65df80d98ed0121)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)):
     dependencies:
       buffer: 6.0.3
       react-native: 0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)

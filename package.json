@@ -81,5 +81,10 @@
       }
     }
   },
-  "private": true
+  "private": true,
+  "pnpm": {
+    "patchedDependencies": {
+      "react-native-bluetooth-classic@1.73.0-rc.17": "patches/react-native-bluetooth-classic@1.73.0-rc.17.patch"
+    }
+  }
 }

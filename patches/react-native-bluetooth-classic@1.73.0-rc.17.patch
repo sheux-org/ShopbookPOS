@@ -1,0 +1,13 @@
+diff --git a/ios/RNBluetoothClassic.m b/ios/RNBluetoothClassic.m
+index e2793dd79ff6b36ec2103e9360ef274fdc0faa55..6a44d24b73ff4581c374beef5019f0ef719fb534 100644
+--- a/ios/RNBluetoothClassic.m
++++ b/ios/RNBluetoothClassic.m
+@@ -131,7 +131,7 @@ @interface RCT_EXTERN_MODULE(RNBluetoothClassic, NSObject)
+  * @param resolver
+  * @param rejecter
+  */
+-RCT_EXTERN_METHOD(available: (NSString *)deviceId
++RCT_EXTERN_METHOD(availableFromDevice: (NSString *)deviceId
+                   resolver: (RCTPromiseResolveBlock)resolve
+                   rejecter: (RCTPromiseRejectBlock)reject)
+ 
