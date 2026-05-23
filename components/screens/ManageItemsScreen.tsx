@@ -1,9 +1,9 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { SearchInput } from "../common/SearchInput";
 import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,8 +15,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
+  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { hapticFeedback } from "../../utils/haptics";
 import { TOKENS } from "../../constants/tokens";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import {
@@ -94,8 +97,26 @@ export const ManageItemsScreen: React.FC = () => {
     });
   };
 
-  // Bottom Sheet for Camera / Gallery
-  const [, setImgSheetVisible] = useState(false);
+  // Image picker bottom sheet state
+  const [imgSheetVisible, setImgSheetVisible] = useState(false);
+  const imgSheetAnim = useRef(new Animated.Value(300)).current;
+
+  const openImgSheet = () => {
+    setImgSheetVisible(true);
+    Animated.spring(imgSheetAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 4,
+    }).start();
+  };
+
+  const closeImgSheet = () => {
+    Animated.timing(imgSheetAnim, {
+      toValue: 300,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => setImgSheetVisible(false));
+  };
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -160,7 +181,11 @@ export const ManageItemsScreen: React.FC = () => {
 
   // Image handling inside editing modal
   const handlePickImage = async (source: "camera" | "gallery") => {
-    setImgSheetVisible(false);
+    closeImgSheet();
+
+    // Small delay to let the sheet close before opening picker
+    await new Promise((r) => setTimeout(r, 280));
+
     let localUri: string | null = null;
 
     if (source === "camera") {
@@ -275,6 +300,7 @@ export const ManageItemsScreen: React.FC = () => {
         costPrice: costNum,
         quickCode: editQuickCode || undefined,
         barcode: editBarcode || undefined,
+        lowStockAlert: parseInt(editLowStock, 10) || 5,
       },
       {
         onSuccess: () => {
@@ -599,7 +625,7 @@ export const ManageItemsScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* Double Row: Stock & Unit Type */}
+            {/* Double Row: Stock & Low Alert Level */}
             <View style={styles.inputGridRow}>
               <View style={[styles.fieldRow, { flex: 1 }]}>
                 <Text style={styles.fieldLabel}>Stock Quantity *</Text>
@@ -614,31 +640,44 @@ export const ManageItemsScreen: React.FC = () => {
               </View>
 
               <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Unit Type</Text>
-                <View style={styles.chipsSelector}>
-                  {UNIT_TYPES.map((unit) => {
-                    const isSelected = editUnitType === unit;
-                    return (
-                      <TouchableOpacity
-                        key={unit}
+                <Text style={styles.fieldLabel}>Low Alert Level</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. 5"
+                  value={editLowStock}
+                  onChangeText={setEditLowStock}
+                  keyboardType="numeric"
+                  placeholderTextColor="#A0AEC0"
+                />
+              </View>
+            </View>
+
+            {/* Field: Unit Type */}
+            <View style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>Unit Type</Text>
+              <View style={styles.chipsSelector}>
+                {UNIT_TYPES.map((unit) => {
+                  const isSelected = editUnitType === unit;
+                  return (
+                    <TouchableOpacity
+                      key={unit}
+                      style={[
+                        styles.selectorChip,
+                        isSelected && styles.selectorChipActive,
+                      ]}
+                      onPress={() => setEditUnitType(unit)}
+                    >
+                      <Text
                         style={[
-                          styles.selectorChip,
-                          isSelected && styles.selectorChipActive,
+                          styles.selectorChipText,
+                          isSelected && styles.selectorChipTextActive,
                         ]}
-                        onPress={() => setEditUnitType(unit)}
                       >
-                        <Text
-                          style={[
-                            styles.selectorChipText,
-                            isSelected && styles.selectorChipTextActive,
-                          ]}
-                        >
-                          {unit}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                        {unit}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
@@ -678,88 +717,84 @@ export const ManageItemsScreen: React.FC = () => {
               </Text>
 
               <View style={styles.imgPickerPanel}>
-                <TouchableOpacity
-                  style={styles.imgPreviewWrap}
-                  activeOpacity={0.85}
-                  onPress={() => {
-                    // Open prompt
-                    Alert.alert(
-                      "Capture or Choose",
-                      "How would you like to pick a product photo?",
-                      [
-                        {
-                          text: "📷 Camera",
-                          onPress: () => handlePickImage("camera"),
-                        },
-                        {
-                          text: "🖼️ Gallery",
-                          onPress: () => handlePickImage("gallery"),
-                        },
-                        { text: "Cancel", style: "cancel" },
-                      ],
-                    );
-                  }}
-                  disabled={editImageUploading}
-                >
-                  <ProductImage
-                    icon={editImage}
-                    category={editCategory}
-                    size={47}
-                    style={{ width: 110, height: 110, borderRadius: 16 }}
-                  />
+                {editImage ? (
+                  <View style={styles.imgContainerWrap}>
+                    <ProductImage
+                      icon={editImage}
+                      category={editCategory}
+                      size={160}
+                      style={styles.premiumImagePreview}
+                    />
+                    
+                    {/* Change Button Overlay */}
+                    {!editImageUploading && (
+                      <TouchableOpacity
+                        style={styles.changeImageOverlay}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          hapticFeedback.impactMedium();
+                          openImgSheet();
+                        }}
+                      >
+                        <View style={styles.changeImageBadge}>
+                          <Feather name="camera" size={14} color="#FFFFFF" />
+                          <Text style={styles.changeImageText}>Change Image</Text>
+                        </View>
+                      </TouchableOpacity>
+                    )}
 
-                  {!editImageUploading && (
-                    <View style={styles.imgCameraBadge}>
-                      <Feather name="camera" size={14} color="#FFFFFF" />
-                    </View>
-                  )}
+                    {/* Delete Floating Pill */}
+                    {!editImageUploading && (
+                      <TouchableOpacity
+                        style={styles.floatingRemoveBtn}
+                        activeOpacity={0.8}
+                        onPress={handleRemoveEditImage}
+                      >
+                        <Feather name="trash-2" size={14} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    )}
 
-                  {editImageUploading && (
-                    <View style={styles.imgUploadingOverlay}>
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-
-                {editImageUploading ? (
-                  <View style={styles.imgUploadingInfo}>
-                    <ActivityIndicator size="small" color={TOKENS.primary} />
-                    <Text style={styles.imgUploadingText}>
-                      Uploading image…
-                    </Text>
-                  </View>
-                ) : editImage.startsWith("http") ||
-                  editImage.startsWith("file://") ||
-                  editImage.startsWith("/") ? (
-                  <View style={styles.imgRealPhotoInfo}>
-                    <View style={styles.imgSuccessBadge}>
-                      <Feather name="check-circle" size={16} color="#16A34A" />
-                      <Text style={styles.imgSuccessText}>Photo ready</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.imgRemovePillBtn}
-                      activeOpacity={0.8}
-                      onPress={handleRemoveEditImage}
-                    >
-                      <Feather name="x" size={13} color={TOKENS.error} />
-                      <Text style={styles.imgRemovePillText}>Remove photo</Text>
-                    </TouchableOpacity>
+                    {/* Loading overlay */}
+                    {editImageUploading && (
+                      <View style={styles.imgUploadingOverlay}>
+                        <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                        <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                      </View>
+                    )}
                   </View>
                 ) : (
-                  <View style={styles.imgHintCol}>
-                    <Feather name="upload-cloud" size={20} color="#94A3B8" />
-                    <Text style={styles.imgHintTitle}>
-                      Tap to add a product photo
-                    </Text>
-                    <Text style={styles.imgHintSub}>
-                      Take a photo or pick from gallery
-                    </Text>
+                  <View style={{ position: 'relative' }}>
+                    <TouchableOpacity
+                      style={styles.premiumUploadArea}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        hapticFeedback.impactMedium();
+                        openImgSheet();
+                      }}
+                      disabled={editImageUploading}
+                    >
+                      <View style={styles.uploadIconCircle}>
+                        <Ionicons name="cloud-upload-outline" size={24} color={TOKENS.primary} />
+                      </View>
+                      <Text style={styles.uploadAreaTitle}>Upload Product Image</Text>
+                      <Text style={styles.uploadAreaSubtitle}>Tap to take a photo or select from gallery</Text>
+                    </TouchableOpacity>
+
+                    {/* Loading overlay for empty image state */}
+                    {editImageUploading && (
+                      <View style={[styles.imgUploadingOverlay, { borderRadius: 12 }]}>
+                        <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                        <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
             </View>
+          </ScrollView>
 
-            {/* Large Update Button */}
+          {/* Fixed Bottom Footer for Update Button */}
+          <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <TouchableOpacity
               style={styles.saveSubmitBtn}
               activeOpacity={0.85}
@@ -767,7 +802,7 @@ export const ManageItemsScreen: React.FC = () => {
             >
               <Text style={styles.saveSubmitBtnText}>Save Changes</Text>
             </TouchableOpacity>
-          </ScrollView>
+          </View>
         </ScreenWrapper>
       </Modal>
 
@@ -782,6 +817,81 @@ export const ManageItemsScreen: React.FC = () => {
           await handleSelectProductByBarcode(data);
         }}
       />
+
+      {/* ── Image Picker Bottom Sheet ── */}
+      <Modal
+        visible={imgSheetVisible}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={closeImgSheet}
+      >
+        {/* Scrim — tap to dismiss */}
+        <Pressable style={styles.sheetScrim} onPress={closeImgSheet}>
+          <Animated.View
+            style={[styles.sheetContainer, { transform: [{ translateY: imgSheetAnim }] }]}
+          >
+            {/* Stop tap-through on the sheet itself */}
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              {/* Drag handle */}
+              <View style={styles.sheetHandle} />
+
+              <Text style={styles.sheetTitle}>Product Photo</Text>
+              <Text style={styles.sheetSubtitle}>Choose how to add an image for this product</Text>
+
+              {/* Camera option */}
+              <TouchableOpacity
+                style={styles.sheetOption}
+                activeOpacity={0.75}
+                onPress={() => {
+                  hapticFeedback.impactMedium();
+                  handlePickImage('camera');
+                }}
+              >
+                <View style={[styles.sheetOptionIcon, { backgroundColor: TOKENS.lightBlue }]}>
+                  <Feather name="camera" size={22} color={TOKENS.primary} />
+                </View>
+                <View style={styles.sheetOptionText}>
+                  <Text style={styles.sheetOptionTitle}>Camera</Text>
+                  <Text style={styles.sheetOptionSub}>Take a new photo right now</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+              </TouchableOpacity>
+
+              {/* Gallery option */}
+              <TouchableOpacity
+                style={styles.sheetOption}
+                activeOpacity={0.75}
+                onPress={() => {
+                  hapticFeedback.impactMedium();
+                  handlePickImage('gallery');
+                }}
+              >
+                <View style={[styles.sheetOptionIcon, { backgroundColor: '#F0FDF4' }]}>
+                  <Feather name="image" size={22} color="#16A34A" />
+                </View>
+                <View style={styles.sheetOptionText}>
+                  <Text style={styles.sheetOptionTitle}>Photo Library</Text>
+                  <Text style={styles.sheetOptionSub}>Pick from your gallery</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+              </TouchableOpacity>
+
+              {/* Cancel */}
+              <TouchableOpacity
+                style={styles.sheetCancelBtn}
+                activeOpacity={0.8}
+                onPress={() => {
+                  hapticFeedback.selection();
+                  closeImgSheet();
+                }}
+              >
+                <Text style={styles.sheetCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
 
 
     </ScreenWrapper>
@@ -1114,103 +1224,112 @@ const styles = StyleSheet.create({
 
   // Centered Image Picker design styles matching StocksScreen exactly
   imgPickerPanel: {
-    alignItems: "center" as const,
-    backgroundColor: "#FAFAFA",
-    borderRadius: 16,
+    marginTop: 6,
+  },
+  premiumUploadArea: {
+    width: "100%",
+    height: 120,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: TOKENS.accentBlue,
     borderStyle: "dashed" as const,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    gap: 12,
+    backgroundColor: TOKENS.lightBlue,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    gap: 8,
   },
-  imgPreviewWrap: {
-    position: "relative" as const,
-    width: 110,
-    height: 110,
-    borderRadius: 16,
-    overflow: "hidden" as const,
-    borderWidth: 2,
-    borderColor: "#CBD5E1",
-    backgroundColor: "#F1F5F9",
+  uploadIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  imgCameraBadge: {
-    position: "absolute" as const,
-    bottom: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  imgUploadingOverlay: {
-    position: "absolute" as const,
-    inset: 0,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    borderRadius: 16,
-  },
-  imgUploadingInfo: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 8,
-  },
-  imgUploadingText: {
-    fontSize: 13,
+  uploadAreaTitle: {
+    fontSize: 14,
+    fontWeight: "700",
     color: TOKENS.primary,
-    fontWeight: "600" as const,
   },
-  imgRealPhotoInfo: {
-    alignItems: "center" as const,
-    gap: 8,
+  uploadAreaSubtitle: {
+    fontSize: 11,
+    color: TOKENS.muted,
   },
-  imgSuccessBadge: {
+  imgContainerWrap: {
+    position: "relative" as const,
+    width: "100%",
+    height: 160,
+    borderRadius: 12,
+    overflow: "hidden" as const,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    backgroundColor: "#F8FAFC",
+  },
+  premiumImagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+  changeImageOverlay: {
+    position: "absolute" as const,
+    bottom: 12,
+    left: 12,
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  changeImageBadge: {
     flexDirection: "row" as const,
     alignItems: "center" as const,
     gap: 6,
   },
-  imgSuccessText: {
-    fontSize: 13,
-    fontWeight: "700" as const,
-    color: "#16A34A",
-  },
-  imgRemovePillBtn: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 5,
-    backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  imgRemovePillText: {
+  changeImageText: {
     fontSize: 12,
     fontWeight: "600" as const,
-    color: TOKENS.error,
+    color: "#FFFFFF",
   },
-  imgHintCol: {
+  floatingRemoveBtn: {
+    position: "absolute" as const,
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(239, 68, 68, 0.9)",
     alignItems: "center" as const,
-    gap: 4,
+    justifyContent: "center" as const,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  imgHintTitle: {
+  imgUploadingOverlay: {
+    position: "absolute" as const,
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    borderRadius: 12,
+  },
+  imgUploadingText: {
     fontSize: 13,
-    fontWeight: "700" as const,
-    color: TOKENS.dark,
+    color: "#FFFFFF",
+    fontWeight: "600" as const,
   },
-  imgHintSub: {
-    fontSize: 11,
-    color: TOKENS.muted,
-    textAlign: "center" as const,
+  modalFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: TOKENS.border,
+    backgroundColor: TOKENS.card,
   },
 
   searchScanBtn: {
@@ -1580,5 +1699,99 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 24,
     lineHeight: 16,
+  },
+  // ── Image picker bottom sheet ──
+  sheetScrim: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheetContainer: {
+    backgroundColor: TOKENS.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    paddingTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: TOKENS.dark,
+    marginBottom: 4,
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: TOKENS.muted,
+    marginBottom: 20,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+  },
+  sheetOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetOptionText: {
+    flex: 1,
+    gap: 2,
+  },
+  sheetOptionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: TOKENS.dark,
+  },
+  sheetOptionSub: {
+    fontSize: 12,
+    color: TOKENS.muted,
+  },
+  sheetCancelBtn: {
+    marginTop: 16,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+  },
+  sheetCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: TOKENS.dark,
+  },
+  standardPhotoPlaceholder: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+  },
+  standardPhotoPlaceholderText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748B",
+    marginTop: 4,
   },
 });

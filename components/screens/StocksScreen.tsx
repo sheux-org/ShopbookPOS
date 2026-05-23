@@ -23,7 +23,7 @@ import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { HeaderCartButton } from "../common/HeaderCartButton";
-import { useAddProduct, useProducts, useUpdateProductImage, useRemoveProductImage, useToggleFavoriteProduct } from "../../hooks/useProducts";
+import { useAddProduct, useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
 import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
 import { ProductImage } from "../common/ProductImage";
 import { hapticFeedback } from "../../utils/haptics";
@@ -52,8 +52,6 @@ export const StocksScreen: React.FC = () => {
   const router = useRouter();
 
   const addProductMutation = useAddProduct();
-  const { pickAndUpload } = useUpdateProductImage();
-  const { confirmAndRemove } = useRemoveProductImage();
   const { data: favoriteProducts = [] } = useProducts(undefined, undefined, "Favorites");
   const { data: recentProducts = [] } = useProducts(undefined, undefined, "Recents");
 
@@ -236,6 +234,7 @@ export const StocksScreen: React.FC = () => {
       costPrice: costNum,
       quickCode: formQuickCode || undefined,
       barcode: formBarcode || undefined,
+      lowStockAlert: lowStockThreshold,
     });
 
     hapticFeedback.notificationSuccess();
@@ -359,7 +358,7 @@ export const StocksScreen: React.FC = () => {
                         triggerBarcodeScanner();
                       }}
                     >
-                      <Ionicons name="scan-outline" size={15} color={TOKENS.primary} />
+                      <Ionicons name="qr-code-outline" size={16} color={TOKENS.primary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -473,75 +472,76 @@ export const StocksScreen: React.FC = () => {
                 <Text style={styles.fieldHelpText}>Tap the image to take a photo or pick from gallery</Text>
 
                 <View style={styles.imgPickerPanel}>
-
-                  {/* Tappable image preview — opens bottom sheet */}
-                  <TouchableOpacity
-                    style={styles.imgPreviewWrap}
-                    activeOpacity={0.85}
-                    onPress={() => {
-                      hapticFeedback.impactMedium();
-                      openImgSheet();
-                    }}
-                    disabled={formImageUploading}
-                  >
-                    {formImage ? (
+                  {formImage ? (
+                    <View style={styles.imgContainerWrap}>
                       <ProductImage
                         icon={formImage}
                         category={formCategory}
-                        size={47}
-                        style={{ width: 110, height: 110, borderRadius: 16 }}
+                        size={160}
+                        style={styles.premiumImagePreview}
                       />
-                    ) : (
-                      <View style={styles.standardPhotoPlaceholder}>
-                        <Ionicons name="images-outline" size={32} color="#94A3B8" />
-                        <Text style={styles.standardPhotoPlaceholderText}>Add Photo</Text>
-                      </View>
-                    )}
+                      
+                      {/* Change Button Overlay */}
+                      {!formImageUploading && (
+                        <TouchableOpacity
+                          style={styles.changeImageOverlay}
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            hapticFeedback.impactMedium();
+                            openImgSheet();
+                          }}
+                        >
+                          <View style={styles.changeImageBadge}>
+                            <Feather name="camera" size={14} color="#FFFFFF" />
+                            <Text style={styles.changeImageText}>Change Image</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
 
-                    {/* Camera badge overlay */}
-                    {!formImageUploading && formImage ? (
-                      <View style={styles.imgCameraBadge}>
-                        <Feather name="camera" size={14} color="#FFFFFF" />
-                      </View>
-                    ) : null}
+                      {/* Delete Floating Pill */}
+                      {!formImageUploading && (
+                        <TouchableOpacity
+                          style={styles.floatingRemoveBtn}
+                          activeOpacity={0.8}
+                          onPress={handleRemoveFormImage}
+                        >
+                          <Feather name="trash-2" size={14} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      )}
 
-                    {/* Loading spinner while uploading */}
-                    {formImageUploading && (
-                      <View style={styles.imgUploadingOverlay}>
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
-                  {/* Info below the preview */}
-                  {formImageUploading ? (
-                    <View style={styles.imgUploadingInfo}>
-                      <ActivityIndicator size="small" color={TOKENS.primary} />
-                      <Text style={styles.imgUploadingText}>Uploading image…</Text>
-                    </View>
-                  ) : (formImage.startsWith('http') || formImage.startsWith('file://') || formImage.startsWith('/')) ? (
-                    <View style={styles.imgRealPhotoInfo}>
-                      <View style={styles.imgSuccessBadge}>
-                        <Feather name="check-circle" size={16} color="#16A34A" />
-                        <Text style={styles.imgSuccessText}>Photo ready</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.imgRemovePillBtn}
-                        activeOpacity={0.8}
-                        onPress={() => {
-                          hapticFeedback.impactMedium();
-                          handleRemoveFormImage();
-                        }}
-                      >
-                        <Feather name="x" size={13} color={TOKENS.error} />
-                        <Text style={styles.imgRemovePillText}>Remove photo</Text>
-                      </TouchableOpacity>
+                      {/* Loading overlay */}
+                      {formImageUploading && (
+                        <View style={styles.imgUploadingOverlay}>
+                          <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                          <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                        </View>
+                      )}
                     </View>
                   ) : (
-                    <View style={styles.imgHintCol}>
-                      <Feather name="upload-cloud" size={20} color="#94A3B8" />
-                      <Text style={styles.imgHintTitle}>Tap to add a product photo</Text>
-                      <Text style={styles.imgHintSub}>Take a photo or pick from gallery</Text>
+                    <View style={{ position: 'relative' }}>
+                      <TouchableOpacity
+                        style={styles.premiumUploadArea}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          hapticFeedback.impactMedium();
+                          openImgSheet();
+                        }}
+                        disabled={formImageUploading}
+                      >
+                        <View style={styles.uploadIconCircle}>
+                          <Ionicons name="cloud-upload-outline" size={24} color={TOKENS.primary} />
+                        </View>
+                        <Text style={styles.uploadAreaTitle}>Upload Product Image</Text>
+                        <Text style={styles.uploadAreaSubtitle}>Tap to take a photo or select from gallery</Text>
+                      </TouchableOpacity>
+
+                      {/* Loading overlay for empty image state */}
+                      {formImageUploading && (
+                        <View style={[styles.imgUploadingOverlay, { borderRadius: 12 }]}>
+                          <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                          <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>
@@ -1137,105 +1137,106 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
     marginBottom: 6,
   },
-  // ── Redesigned image picker panel — centered vertical layout ──
+  // ── Redesigned premium product photo picker — wide card layout ──
   imgPickerPanel: {
-    alignItems: 'center' as const,
-    backgroundColor: '#FAFAFA',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed' as const,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    gap: 12,
+    marginTop: 6,
   },
-  imgPreviewWrap: {
-    position: 'relative' as const,
-    width: 110,
-    height: 110,
-    borderRadius: 16,
-    overflow: 'hidden' as const,
+  premiumUploadArea: {
+    width: "100%",
+    height: 120,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#CBD5E1',
-    backgroundColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    borderColor: TOKENS.accentBlue,
+    borderStyle: "dashed" as const,
+    backgroundColor: TOKENS.lightBlue,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    gap: 8,
+  },
+  uploadIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  uploadAreaTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: TOKENS.primary,
+  },
+  uploadAreaSubtitle: {
+    fontSize: 11,
+    color: TOKENS.muted,
+  },
+  imgContainerWrap: {
+    position: "relative" as const,
+    width: "100%",
+    height: 160,
+    borderRadius: 12,
+    overflow: "hidden" as const,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    backgroundColor: "#F8FAFC",
+  },
+  premiumImagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+  changeImageOverlay: {
+    position: "absolute" as const,
+    bottom: 12,
+    left: 12,
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  changeImageBadge: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  changeImageText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: "#FFFFFF",
+  },
+  floatingRemoveBtn: {
+    position: "absolute" as const,
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(239, 68, 68, 0.9)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
-  },
-  imgCameraBadge: {
-    position: 'absolute' as const,
-    bottom: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
   },
   imgUploadingOverlay: {
     position: 'absolute' as const,
     inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    borderRadius: 16,
-  },
-  imgUploadingInfo: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 8,
+    borderRadius: 12,
   },
   imgUploadingText: {
     fontSize: 13,
-    color: TOKENS.primary,
+    color: "#FFFFFF",
     fontWeight: '600' as const,
-  },
-  imgRealPhotoInfo: {
-    alignItems: 'center' as const,
-    gap: 8,
-  },
-  imgSuccessBadge: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 6,
-  },
-  imgSuccessText: {
-    fontSize: 13,
-    fontWeight: '700' as const,
-    color: '#16A34A',
-  },
-  imgRemovePillBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 5,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  imgRemovePillText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: TOKENS.error,
-  },
-  imgHintCol: {
-    alignItems: 'center' as const,
-    gap: 4,
-  },
-  imgHintTitle: {
-    fontSize: 13,
-    fontWeight: '700' as const,
-    color: TOKENS.dark,
-  },
-  imgHintSub: {
-    fontSize: 11,
-    color: TOKENS.muted,
-    textAlign: 'center' as const,
   },
   // ── Standard upload placeholder & Fav edit styles ──
   standardPhotoPlaceholder: {

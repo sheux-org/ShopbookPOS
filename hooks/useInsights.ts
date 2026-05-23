@@ -88,14 +88,17 @@ export function useBusinessInsights(
         return true;
       });
 
-      // 4. Fetch low stock alert products
-      const lowStockProducts = await database
+      // 4. Fetch all active business products and filter low stock items in JS to support custom thresholds
+      const allBizProducts = await database
         .get("products")
-        .query(
-          Q.where("business_id", dbBiz.id),
-          Q.where("stock_count", Q.lte(5)),
-        )
+        .query(Q.where("business_id", dbBiz.id))
         .fetch();
+
+      const lowStockProducts = allBizProducts.filter((p: any) => {
+        const stockCount = p.stockCount ?? 0;
+        const threshold = p.lowStockAlert ?? 5;
+        return stockCount <= threshold;
+      });
 
       const lowStockItems = lowStockProducts.map((p: any) => ({
         id: p.id,
@@ -103,7 +106,7 @@ export function useBusinessInsights(
         sku: p.sku || "N/A",
         category: p.category || "General",
         stockCount: p.stockCount,
-        lowStockAlert: p.lowStockAlert || 5,
+        lowStockAlert: p.lowStockAlert ?? 5,
         icon: p.icon || "package",
       }));
 

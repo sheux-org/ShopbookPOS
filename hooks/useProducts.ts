@@ -58,7 +58,8 @@ export function useProducts(
         } else if (activeChip === "Under Rs. 1000") {
           query = query.extend(Q.where("price", Q.lt(1000)));
         } else if (activeChip === "Low Stock") {
-          query = query.extend(Q.where("stock_count", Q.between(1, 5)));
+          // Do not apply hardcoded stock filter. We will filter in memory to support custom thresholds.
+          query = query.extend(Q.where("stock_count", Q.gt(0)));
         } else if (activeChip === "Out of Stock") {
           query = query.extend(Q.where("stock_count", 0));
         } else if (activeChip === "Favorites" || activeChip === "favorites") {
@@ -80,18 +81,26 @@ export function useProducts(
         );
       }
 
-      // If activeChip is NOT "Recents", we paginate using limit and offset
-      if (activeChip !== "Recents" && activeChip !== "recents") {
+      // If activeChip is NOT "Recents" or "Low Stock", we paginate using limit and offset
+      if (activeChip !== "Recents" && activeChip !== "recents" && activeChip !== "Low Stock") {
         const offset = (pageParam as number) * PAGE_SIZE;
         query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
       }
 
-      const dbProducts = await query.fetch();
+      let dbProducts = await query.fetch();
+
+      if (activeChip === "Low Stock") {
+        dbProducts = dbProducts.filter((p: any) => {
+          const stockCount = p.stockCount ?? 0;
+          const threshold = p.lowStockAlert ?? 5;
+          return stockCount > 0 && stockCount <= threshold;
+        });
+      }
 
       return dbProducts.map((p: any) => {
         const stockCount = p.stockCount ?? 0;
         const stockType =
-          stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
+          stockCount === 0 ? "out" : stockCount <= (p.lowStockAlert ?? 5) ? "low" : "normal";
         const stockText =
           stockType === "out"
             ? "Out of Stock"
@@ -178,6 +187,7 @@ export function useAddProduct() {
       costPrice?: number;
       quickCode?: string;
       barcode?: string;
+      lowStockAlert?: number;
     }) => {
       await cartState.addNewCatalogProduct(product);
     },
@@ -360,6 +370,7 @@ export function useUpdateProduct() {
       costPrice?: number;
       quickCode?: string;
       barcode?: string;
+      lowStockAlert?: number;
     }) => {
       const {
         id,
@@ -372,6 +383,7 @@ export function useUpdateProduct() {
         costPrice,
         quickCode,
         barcode,
+        lowStockAlert,
       } = params;
       const product = await database.get("products").find(id);
 
@@ -386,6 +398,7 @@ export function useUpdateProduct() {
           p.costPrice = costPrice;
           p.quickCode = quickCode;
           p.barcode = barcode;
+          p.lowStockAlert = lowStockAlert;
 
           // Set pending upload flag if it's a local uri
           const iconUri = icon ?? "";
@@ -530,7 +543,7 @@ export function useProduct(id?: string) {
       const p = await database.get("products").find(id);
       const stockCount = (p as any).stockCount ?? 0;
       const stockType =
-        stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
+        stockCount === 0 ? "out" : stockCount <= ((p as any).lowStockAlert ?? 5) ? "low" : "normal";
       const stockText =
         stockType === "out"
           ? "Out of Stock"
@@ -576,7 +589,7 @@ export function useFindProductByBarcode() {
       const p: any = dbProducts[0];
       const stockCount = p.stockCount ?? 0;
       const stockType =
-        stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
+        stockCount === 0 ? "out" : stockCount <= (p.lowStockAlert ?? 5) ? "low" : "normal";
       const stockText =
         stockType === "out"
           ? "Out of Stock"
@@ -625,7 +638,7 @@ export function useFindProductByCode() {
       const p: any = dbProducts[0];
       const stockCount = p.stockCount ?? 0;
       const stockType =
-        stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
+        stockCount === 0 ? "out" : stockCount <= (p.lowStockAlert ?? 5) ? "low" : "normal";
       const stockText =
         stockType === "out"
           ? "Out of Stock"

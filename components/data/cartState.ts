@@ -28,6 +28,7 @@ export interface CatalogProduct {
   costPrice?: number;
   quickCode?: string;
   barcode?: string;
+  lowStockAlert?: number;
 }
 
 export type { Business, Customer };
@@ -149,6 +150,7 @@ export const cartState = {
           p.costPrice = product.costPrice;
           p.quickCode = product.quickCode;
           p.barcode = product.barcode;
+          p.lowStockAlert = product.lowStockAlert;
 
           const iconUri = product.icon ?? "";
           const isLocal =

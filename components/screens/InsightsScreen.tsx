@@ -752,8 +752,7 @@ export const InsightsScreen: React.FC = () => {
         title="Low Stock Products List"
       >
         <Text style={styles.lowStockModalSubtitle}>
-          The following inventory items are running critically low (5 units or
-          less):
+          The following inventory items are running critically low (at or below alert threshold):
         </Text>
 
         <ScrollView
