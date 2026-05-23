@@ -13,6 +13,7 @@ import { ForceUpdateScreen } from "../components/screens/ForceUpdateScreen";
 import { CustomSplashScreen } from "../components/screens/CustomSplashScreen";
 import { useAuthStore } from "../stores/useAuthStore";
 import * as SplashScreen from "expo-splash-screen";
+import { getSessionToken, isTokenExpired } from "../utils/secureStorage";
 
 // Prevent native splash screen from hiding automatically on app startup
 SplashScreen.preventAutoHideAsync().catch((err) => {
@@ -49,6 +50,20 @@ function MainAppContent() {
     });
     return unsubscribe;
   }, []);
+
+  // Monitor token expiration status and auto-logout if expired
+  useEffect(() => {
+    if (isHydrated) {
+      const checkToken = async () => {
+        const token = await getSessionToken();
+        if (token && isTokenExpired(token)) {
+          console.log("Session token expired! Triggering auto logout...");
+          useAuthStore.getState().logout();
+        }
+      };
+      checkToken().catch((err) => console.error("Error checking token expiry:", err));
+    }
+  }, [isHydrated]);
 
   // Display custom premium splash screen during initial store loading
   if (isSplashActive) {

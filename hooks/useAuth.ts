@@ -5,13 +5,14 @@ import { useAuthStore } from "../stores/useAuthStore";
 import { useBusinessStore } from "../stores/useBusinessStore";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { SEEDING_PRODUCTS } from "../utils/seedProducts";
+import { saveSessionToken } from "../utils/secureStorage";
 
 export function useVerifyOtp() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { phone: string; otp: string }) => {
-      const { phone, otp } = params;
+    mutationFn: async (params: { phone: string; otp: string; token: string; hasAccount: boolean }) => {
+      const { phone, otp, token, hasAccount } = params;
 
       const normalizePhone = (phoneStr: string): string => {
         let cleaned = phoneStr.replace(/\D/g, "");
@@ -22,8 +23,27 @@ export function useVerifyOtp() {
 
       const cleanPhone = normalizePhone(phone);
 
-      if (otp !== "1111") {
-        throw new Error("Invalid OTP. Hint: Use 1111");
+      const verifyRes = await fetch("https://mini-pos-sync-server.vercel.app/api/v1/auth/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ code: otp, phone_number: cleanPhone }),
+      });
+
+      if (!verifyRes.ok) {
+        throw new Error("Invalid OTP code. Please try again.");
+      }
+
+      // Save token securely in SecureStore
+      await saveSessionToken(token);
+
+      if (!hasAccount) {
+        return {
+          status: "register" as const,
+          phone: cleanPhone,
+        };
       }
 
       const allEmployees: any[] = await database

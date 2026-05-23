@@ -35,6 +35,8 @@ export default function NumberInputRoute() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState(false);
+  const [hasAccount, setHasAccount] = useState(false);
+  const [tempToken, setTempToken] = useState("");
 
   // Onboarding registration state fields
   const [businessName, setBusinessName] = useState("");
@@ -65,19 +67,51 @@ export default function NumberInputRoute() {
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  const handleSendOtp = () => {
-    const cleanPhone = phone.replace(/\s+/g, "");
+  const normalizePhone = (phoneStr: string): string => {
+    let cleaned = phoneStr.replace(/\D/g, "");
+    if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
+    if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+    return cleaned;
+  };
+
+  const handleSendOtp = async () => {
+    const cleanPhone = normalizePhone(phone);
     if (cleanPhone.length < 9) {
       triggerToast("Please enter a valid mobile number!");
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const response = await fetch("https://mini-pos-sync-server.vercel.app/api/v1/auth/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ phone_number: cleanPhone }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to check phone number. Please try again.");
+      }
+
+      const resData = await response.json();
+      const { token, hasAccount: remoteHasAccount } = resData;
+
+      if (!token) {
+        throw new Error("Server error: Authorization token is missing.");
+      }
+
+      setTempToken(token);
+      setHasAccount(remoteHasAccount);
       setStep("otp");
       setOtp("");
       triggerToast("Verification code sent to +94 " + phone);
-    }, 800);
+    } catch (err: any) {
+      triggerToast(err.message || "Network error. Please check your connection.");
+      console.error("Auth check API failed:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleVerifyOtp = (currentOtp?: string) => {
@@ -92,6 +126,8 @@ export default function NumberInputRoute() {
     verifyOtpMutation.mutate({
       phone,
       otp: codeToVerify,
+      token: tempToken,
+      hasAccount,
     }, {
       onSuccess: (data) => {
         setIsLoading(false);
@@ -107,7 +143,7 @@ export default function NumberInputRoute() {
       onError: (err: any) => {
         setIsLoading(false);
         setOtpError(true);
-        triggerToast(err.message || "Invalid OTP. Hint: Use 1111");
+        triggerToast(err.message || "Invalid OTP code. Please try again.");
         setOtp("");
       }
     });

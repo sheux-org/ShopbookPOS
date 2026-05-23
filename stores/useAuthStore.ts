@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 import { useCart } from './useCart';
+import { deleteSessionToken } from '../utils/secureStorage';
 
 export type UserRole = 'admin' | 'manager' | 'cashier';
 
@@ -65,6 +66,7 @@ export const useAuthStore = create<AuthState>()(
         return false;
       },
       logout: () => {
+        deleteSessionToken().catch((err) => console.error("Failed to delete token on logout:", err));
         set({ 
           isLoggedIn: false, 
           session: null, 
@@ -78,6 +80,7 @@ export const useAuthStore = create<AuthState>()(
         useCart.getState().clearCart();
       },
       signOut: () => {
+        deleteSessionToken().catch((err) => console.error("Failed to delete token on signOut:", err));
         set({ 
           session: null, 
           user: null, 
