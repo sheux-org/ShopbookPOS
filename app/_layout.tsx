@@ -8,6 +8,9 @@ import {
   setQueryInvalidator,
 } from "../services/uploadQueue";
 import { setupNotificationListeners } from "../services/notificationService";
+import { useForceUpdate } from "../hooks/useForceUpdate";
+import { ForceUpdateScreen } from "../components/screens/ForceUpdateScreen";
+import { FullScreenLoader } from "../components/screens/FullScreenLoader";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,6 +26,42 @@ const queryClient = new QueryClient({
 setQueryInvalidator(() => {
   queryClient.invalidateQueries({ queryKey: ["products"] });
 });
+
+function MainAppContent() {
+  const { isLoading, isUpdateRequired, config, currentVersion, refetch } = useForceUpdate();
+
+  if (isLoading) {
+    return <FullScreenLoader />;
+  }
+
+  if (isUpdateRequired) {
+    return (
+      <ForceUpdateScreen
+        config={config}
+        currentVersion={currentVersion}
+        onRetry={refetch}
+      />
+    );
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(modules)/auth/number-input" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(modules)/pos/cart" />
+      <Stack.Screen name="(modules)/pos/catalog" />
+      <Stack.Screen name="(modules)/pos/payment-tender" />
+      <Stack.Screen name="(modules)/pos/search" />
+      <Stack.Screen name="(modules)/stocks/scan" />
+      <Stack.Screen name="(modules)/profile/business-details" />
+      <Stack.Screen name="(modules)/profile/bluetooth-printer" />
+      <Stack.Screen name="(modules)/profile/manage-businesses" />
+      <Stack.Screen name="(modules)/profile/manage-staff" />
+      <Stack.Screen name="(modules)/profile/active-devices" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   useEffect(() => {
@@ -48,23 +87,10 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <PermissionProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(modules)/auth/number-input" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="(modules)/pos/cart" />
-            <Stack.Screen name="(modules)/pos/catalog" />
-            <Stack.Screen name="(modules)/pos/payment-tender" />
-            <Stack.Screen name="(modules)/pos/search" />
-            <Stack.Screen name="(modules)/stocks/scan" />
-            <Stack.Screen name="(modules)/profile/business-details" />
-            <Stack.Screen name="(modules)/profile/bluetooth-printer" />
-            <Stack.Screen name="(modules)/profile/manage-businesses" />
-            <Stack.Screen name="(modules)/profile/manage-staff" />
-            <Stack.Screen name="(modules)/profile/active-devices" />
-          </Stack>
+          <MainAppContent />
         </PermissionProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
   );
 }
+
