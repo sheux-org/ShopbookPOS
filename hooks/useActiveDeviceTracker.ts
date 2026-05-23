@@ -7,6 +7,7 @@ import NetInfo from "@react-native-community/netinfo";
 import Constants from "expo-constants";
 import { supabase } from "../services/sync";
 import { useAuthStore } from "../stores/useAuthStore";
+import { registerForPushNotificationsAsync } from "../services/notificationService";
 
 export const DEVICE_ID_KEY = "@shopbook_pos_device_id";
 
@@ -47,6 +48,7 @@ export function useActiveDeviceTracker() {
 
   const trackerIntervalRef = useRef<any>(null);
   const deviceIdRef = useRef<string | null>(null);
+  const pushTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn || !activeBusinessId) {
@@ -61,6 +63,21 @@ export function useActiveDeviceTracker() {
 
     const runTracker = async () => {
       try {
+        // 0. Fetch notification push token
+        let currentPushToken = pushTokenRef.current;
+        if (!currentPushToken) {
+          try {
+            const tokens = await registerForPushNotificationsAsync();
+            if (tokens.devicePushToken) {
+              currentPushToken = tokens.devicePushToken;
+              pushTokenRef.current = currentPushToken;
+              await AsyncStorage.setItem("@shopbook_pos_push_token", currentPushToken);
+            }
+          } catch (e) {
+            console.warn("Failed to retrieve push token in active device tracker:", e);
+          }
+        }
+
         // 1. Get or create device ID
         let deviceId = await AsyncStorage.getItem(DEVICE_ID_KEY);
         if (!deviceId) {
@@ -145,6 +162,7 @@ export function useActiveDeviceTracker() {
           latitude: latitude,
           longitude: longitude,
           location_name: locationName,
+          push_token: currentPushToken || null,
           last_active_at: new Date().toISOString(),
         };
 

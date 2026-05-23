@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState, useCallback } from "react";
+import * as Clipboard from "expo-clipboard";
 import {
   Alert,
   Platform,
@@ -31,6 +32,7 @@ interface ActiveDevice {
   latitude: number | null;
   longitude: number | null;
   location_name: string | null;
+  push_token: string | null;
   last_active_at: string;
 }
 
@@ -283,6 +285,32 @@ export default function ActiveDevicesRoute() {
                           </Text>
                         </View>
                       )}
+
+                      {device.push_token ? (
+                        <View style={styles.tokenRow}>
+                          <Feather name="bell" size={12} color={TOKENS.primary} />
+                          <Text style={styles.tokenText} numberOfLines={1} ellipsizeMode="middle">
+                            {device.push_token}
+                          </Text>
+                          <TouchableOpacity
+                            style={styles.copyTokenBtn}
+                            activeOpacity={0.7}
+                            onPress={async () => {
+                              await Clipboard.setStringAsync(device.push_token || "");
+                              triggerToast("Push token copied! 📋");
+                            }}
+                          >
+                            <Feather name="copy" size={11} color={TOKENS.primary} />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <View style={styles.tokenRow}>
+                          <Feather name="bell-off" size={12} color={TOKENS.muted} />
+                          <Text style={[styles.tokenText, { color: TOKENS.muted }]} numberOfLines={1}>
+                            No push token registered
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -489,6 +517,22 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
     fontWeight: "500",
     flex: 1,
+  },
+  tokenRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+    paddingRight: 24,
+  },
+  tokenText: {
+    fontSize: 10,
+    color: TOKENS.primary,
+    fontWeight: "500",
+    maxWidth: "80%",
+  },
+  copyTokenBtn: {
+    padding: 4,
   },
   terminateButton: {
     width: 34,

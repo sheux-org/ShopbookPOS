@@ -7,6 +7,7 @@ import {
   startUploadQueueMonitor,
   setQueryInvalidator,
 } from "../services/uploadQueue";
+import { setupNotificationListeners } from "../services/notificationService";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +28,20 @@ export default function RootLayout() {
   useEffect(() => {
     // Start the NetInfo connectivity monitor for the offline upload queue
     startUploadQueueMonitor();
+
+    // Configure push notification event handlers
+    const cleanupNotifications = setupNotificationListeners(
+      (notification) => {
+        console.log("Foreground notification received:", notification.request.content);
+      },
+      (response) => {
+        console.log("Notification clicked:", response.notification.request.content);
+      }
+    );
+
+    return () => {
+      cleanupNotifications();
+    };
   }, []);
 
   return (

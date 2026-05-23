@@ -715,6 +715,7 @@ CREATE TABLE IF NOT EXISTS public.active_devices (
   latitude numeric,
   longitude numeric,
   location_name text,
+  push_token text,
   last_active_at timestamp with time zone NOT NULL DEFAULT clock_timestamp()
 );
 
