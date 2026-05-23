@@ -54,8 +54,13 @@ export const ManageItemsScreen: React.FC = () => {
     });
   };
 
-  // Fetch products with search string (delegates query dynamically to WatermelonDB)
-  const { data: productsList = [], isLoading } = useProducts(
+  const {
+    data: productsList = [],
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(
     undefined,
     searchQuery,
   );
@@ -338,6 +343,17 @@ export const ManageItemsScreen: React.FC = () => {
         <FlatList
           data={productsList}
           keyExtractor={(item) => item.id}
+          onEndReached={() => {
+            if (hasNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+            ) : null
+          }
           contentContainerStyle={[
             styles.listContent,
             { paddingBottom: insets.bottom + 20 },

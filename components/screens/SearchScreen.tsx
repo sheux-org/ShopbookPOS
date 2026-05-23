@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
 import { usePermission } from "../../hooks/usePermissionHandler";
@@ -30,8 +31,12 @@ export const SearchScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
-  // Live products catalog list synced via React Query hook
-  const { data: productsList = [] } = useProducts(undefined, searchQuery, activeChip);
+  const {
+    data: productsList = [],
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(undefined, searchQuery, activeChip);
 
 
   const triggerToast = (msg: string) => {
@@ -136,6 +141,17 @@ export const SearchScreen: React.FC = () => {
         keyExtractor={(item) => item.id.toString()}
         style={styles.resultsList}
         showsVerticalScrollIndicator={false}
+        onEndReached={() => {
+          if (hasNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+          ) : null
+        }
         contentContainerStyle={{
           paddingBottom: insets.bottom + 20,
           flexGrow: 1,

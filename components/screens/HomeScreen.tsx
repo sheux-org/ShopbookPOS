@@ -2,6 +2,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   FlatList,
   ScrollView,
@@ -55,14 +56,17 @@ export const HomeScreen: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Dynamic products list fetched via React Query custom hook
-  const { data: productsList = [] } = useProducts(
+  const {
+    data: productsList = [],
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(
     selectedCategory,
     searchQuery,
   );
   const toggleFavoriteMutation = useToggleFavoriteProduct();
 
-  // Active Business dropdown states
   const [activeBusiness, setActiveBusiness] = useState<Business>(
     cartState.getActiveBusiness(),
   );
@@ -303,6 +307,17 @@ export const HomeScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         numColumns={numColumns}
         showsVerticalScrollIndicator={false}
+        onEndReached={() => {
+          if (hasNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+          ) : null
+        }
         contentContainerStyle={[
           styles.gridContainer,
           { paddingBottom: insets.bottom + 100 },

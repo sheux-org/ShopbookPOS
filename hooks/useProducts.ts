@@ -1,6 +1,6 @@
 import { Q } from "@nozbe/watermelondb";
 import * as NetInfo from "@react-native-community/netinfo";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { Alert } from "react-native";
 import { cartState } from "../components/data/cartState";
@@ -23,6 +23,7 @@ export interface DBProduct {
   stockText: string;
   barcode?: string;
   quickCode?: string;
+  sku?: string;
   isFavorite?: boolean;
   unitType?: string;
   costPrice?: number;
@@ -36,9 +37,11 @@ export function useProducts(
   activeChip?: string,
 ) {
   const activeBiz = cartState.getActiveBusiness();
-  return useQuery<DBProduct[]>({
+  const PAGE_SIZE = 30;
+
+  const result = useInfiniteQuery<DBProduct[]>({
     queryKey: ["products", activeBiz.id, category, search, activeChip],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
       let query = database.get("products").query();
 
       // Isolate products strictly by active business ID
@@ -77,6 +80,12 @@ export function useProducts(
         );
       }
 
+      // If activeChip is NOT "Recents", we paginate using limit and offset
+      if (activeChip !== "Recents" && activeChip !== "recents") {
+        const offset = (pageParam as number) * PAGE_SIZE;
+        query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
+      }
+
       const dbProducts = await query.fetch();
 
       return dbProducts.map((p: any) => {
@@ -102,6 +111,7 @@ export function useProducts(
           stockText,
           barcode: p.barcode,
           quickCode: p.quickCode,
+          sku: p.sku,
           isFavorite: p.isFavorite ?? false,
           unitType: p.unitType ?? "Pieces",
           costPrice: p.costPrice,
@@ -110,7 +120,21 @@ export function useProducts(
         };
       });
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (activeChip === "Recents" || activeChip === "recents") {
+        return undefined;
+      }
+      return lastPage.length < PAGE_SIZE ? undefined : allPages.length;
+    },
   });
+
+  const flattenedData = result.data ? result.data.pages.flat() : [];
+
+  return {
+    ...result,
+    data: flattenedData,
+  };
 }
 
 /**
@@ -423,12 +447,19 @@ export interface DBInventoryLog {
 }
 
 export function useGetStockHistory(productId: string) {
-  return useQuery<DBInventoryLog[]>({
+  const PAGE_SIZE = 20;
+  const result = useInfiniteQuery<DBInventoryLog[]>({
     queryKey: ["stock-history", productId],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
+      const offset = (pageParam as number) * PAGE_SIZE;
       const logs = await database
         .get("inventory_logs")
-        .query(Q.where("product_id", productId), Q.sortBy("created_at", Q.desc))
+        .query(
+          Q.where("product_id", productId),
+          Q.sortBy("created_at", Q.desc),
+          Q.skip(offset),
+          Q.take(PAGE_SIZE),
+        )
         .fetch();
 
       return logs.map((l: any) => ({
@@ -440,8 +471,19 @@ export function useGetStockHistory(productId: string) {
         createdAt: l.createdAt ? new Date(l.createdAt).getTime() : Date.now(),
       }));
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length < PAGE_SIZE ? undefined : allPages.length;
+    },
     enabled: !!productId,
   });
+
+  const flattenedData = result.data ? result.data.pages.flat() : [];
+
+  return {
+    ...result,
+    data: flattenedData,
+  };
 }
 
 export function useStockInProduct() {
@@ -507,6 +549,7 @@ export function useProduct(id?: string) {
         stockText,
         barcode: (p as any).barcode,
         quickCode: (p as any).quickCode,
+        sku: (p as any).sku,
         isFavorite: (p as any).isFavorite ?? false,
         unitType: (p as any).unitType ?? "Pieces",
         costPrice: (p as any).costPrice,
@@ -552,6 +595,56 @@ export function useFindProductByBarcode() {
         stockText,
         barcode: p.barcode,
         quickCode: p.quickCode,
+        sku: p.sku,
+        isFavorite: p.isFavorite ?? false,
+        unitType: p.unitType ?? "Pieces",
+        costPrice: p.costPrice,
+        lowStockAlert: p.lowStockAlert ?? 5,
+        createdAt: p.createdAt ? new Date(p.createdAt).getTime() : Date.now(),
+      };
+    }
+    return null;
+  };
+}
+
+export function useFindProductByCode() {
+  const activeBiz = cartState.getActiveBusiness();
+  return async (code: string): Promise<DBProduct | null> => {
+    const dbProducts = await database
+      .get("products")
+      .query(
+        Q.where("business_id", activeBiz.id),
+        Q.or(
+          Q.where("barcode", code),
+          Q.where("quick_code", code)
+        )
+      )
+      .fetch();
+
+    if (dbProducts && dbProducts.length > 0) {
+      const p: any = dbProducts[0];
+      const stockCount = p.stockCount ?? 0;
+      const stockType =
+        stockCount === 0 ? "out" : stockCount <= 5 ? "low" : "normal";
+      const stockText =
+        stockType === "out"
+          ? "Out of Stock"
+          : stockType === "low"
+            ? `Low · ${stockCount} remaining`
+            : `${stockCount} in stock`;
+
+      return {
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        category: p.category ?? "grocery",
+        icon: p.icon ?? "",
+        stockCount,
+        stockType,
+        stockText,
+        barcode: p.barcode,
+        quickCode: p.quickCode,
+        sku: p.sku,
         isFavorite: p.isFavorite ?? false,
         unitType: p.unitType ?? "Pieces",
         costPrice: p.costPrice,

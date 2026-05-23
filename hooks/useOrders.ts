@@ -1,5 +1,5 @@
 import { Q } from "@nozbe/watermelondb";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { cartState } from "../components/data/cartState";
 import database from "../components/data/db";
 import { syncDatabase } from "../services/sync";
@@ -29,14 +29,19 @@ export interface DBOrderItem {
 
 export function useGetOrders() {
   const activeBiz = cartState.getActiveBusiness();
-  return useQuery<DBOrder[]>({
+  const PAGE_SIZE = 30;
+
+  const result = useInfiniteQuery<DBOrder[]>({
     queryKey: ["orders", activeBiz.id],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
+      const offset = (pageParam as number) * PAGE_SIZE;
       const query = database
         .get("orders")
         .query(
           Q.where("business_id", activeBiz.id),
           Q.sortBy("created_at", Q.desc),
+          Q.skip(offset),
+          Q.take(PAGE_SIZE),
         );
 
       const dbOrders = await query.fetch();
@@ -55,7 +60,18 @@ export function useGetOrders() {
         taxValue: o.taxValue,
       }));
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length < PAGE_SIZE ? undefined : allPages.length;
+    },
   });
+
+  const flattenedData = result.data ? result.data.pages.flat() : [];
+
+  return {
+    ...result,
+    data: flattenedData,
+  };
 }
 
 export function useGetOrderItems(orderId?: string) {
@@ -171,6 +187,8 @@ export function useCreateOrder() {
       
       // Since database.write resolves to whatever the callback returns,
       // let's capture and return the written value.
+      // Since database.write resolves to whatever the callback returns,
+      // let's capture and return the written value.
       return result;
     },
     onSuccess: (data) => {
@@ -193,4 +211,76 @@ export function useCreateOrder() {
         });
     },
   });
+}
+
+export function useGetPeriodOrders(
+  period: "daily" | "monthly" | "yearly" | "custom",
+  startDate: Date | null,
+  endDate: Date | null,
+) {
+  const activeBiz = cartState.getActiveBusiness();
+  const PAGE_SIZE = 20;
+
+  const result = useInfiniteQuery<DBOrder[]>({
+    queryKey: ["period-orders", activeBiz.id, period, startDate, endDate],
+    queryFn: async ({ pageParam = 0 }) => {
+      const offset = (pageParam as number) * PAGE_SIZE;
+      let query = database.get("orders").query(
+        Q.where("business_id", activeBiz.id),
+        Q.where("status", "paid")
+      );
+
+      const today = new Date();
+      let startTs = 0;
+      let endTs = Date.now();
+
+      if (period === "daily") {
+        startTs = new Date().setHours(0, 0, 0, 0);
+        endTs = new Date().setHours(23, 59, 59, 999);
+      } else if (period === "monthly") {
+        startTs = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+        endTs = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      } else if (period === "yearly") {
+        startTs = new Date(today.getFullYear(), 0, 1).getTime();
+        endTs = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
+      } else if (period === "custom" && startDate && endDate) {
+        startTs = new Date(startDate).getTime();
+        endTs = new Date(endDate).getTime();
+      }
+
+      query = query.extend(
+        Q.where("created_at", Q.between(startTs, endTs)),
+        Q.sortBy("created_at", Q.desc),
+        Q.skip(offset),
+        Q.take(PAGE_SIZE)
+      );
+
+      const dbOrders = await query.fetch();
+      return dbOrders.map((o: any) => ({
+        id: o.id,
+        invoiceNumber: o.invoiceNumber,
+        totalAmount: o.totalAmount,
+        status: o.status,
+        createdAt: o.createdAt ? new Date(o.createdAt).getTime() : Date.now(),
+        paymentMethod: o.paymentMethod,
+        bankName: o.bankName,
+        cardLastFour: o.cardLastFour,
+        discountType: o.discountType,
+        discountValue: o.discountValue,
+        taxRate: o.taxRate,
+        taxValue: o.taxValue,
+      }));
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length < PAGE_SIZE ? undefined : allPages.length;
+    },
+  });
+
+  const flattenedData = result.data ? result.data.pages.flat() : [];
+
+  return {
+    ...result,
+    data: flattenedData,
+  };
 }

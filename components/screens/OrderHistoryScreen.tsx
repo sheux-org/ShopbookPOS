@@ -53,7 +53,13 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
   const router = useRouter();
 
   const activeBiz = cartState.getActiveBusiness();
-  const { data: orders = [], isLoading: ordersLoading } = useGetOrders();
+  const {
+    data: orders = [],
+    isLoading: ordersLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useGetOrders();
   const { data: staffList = [] } = useStaff(activeBiz.id ?? "");
   const [selectedOrder, setSelectedOrder] = useState<DBOrder | null>(null);
 
@@ -339,6 +345,17 @@ Thank you for shopping with us!
           keyExtractor={(item) => item.id}
           renderItem={renderOrderItem}
           style={styles.scrollWrapper}
+          onEndReached={() => {
+            if (hasNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+            ) : null
+          }
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={OrderCardSeparator}

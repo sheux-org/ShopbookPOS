@@ -7,6 +7,7 @@ import {
   ScrollView,
   FlatList,
   useWindowDimensions,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -53,8 +54,12 @@ export const CatalogScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
-  // Dynamic catalog products synced via React Query hook
-  const { data: productsList = [] } = useProducts(selectedCategory);
+  const {
+    data: productsList = [],
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(selectedCategory);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -161,6 +166,17 @@ export const CatalogScreen: React.FC = () => {
             keyExtractor={(item) => item.id}
             numColumns={2}
             showsVerticalScrollIndicator={false}
+            onEndReached={() => {
+              if (hasNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+              ) : null
+            }
             contentContainerStyle={styles.gridContent}
             columnWrapperStyle={styles.gridColumns}
             renderItem={({ item }) => (

@@ -18,7 +18,7 @@ export interface BusinessInsightsData {
   slowMovers: ProductStat[];
   chartData: { label: string; value: number }[];
   resolvedOrders: any[];
-  productsList: any[];
+  productsList?: any[];
 }
 
 export function useBusinessInsights(
@@ -161,22 +161,7 @@ export function useBusinessInsights(
         items: itemsByOrderMap[order.id] || [],
       }));
 
-      // 5c. Fetch all products of this business for refill
-      const allProducts = await database
-        .get("products")
-        .query(Q.where("business_id", dbBiz.id))
-        .fetch();
 
-      const productsList = allProducts.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        sku: p.sku || "N/A",
-        quickCode: p.quickCode || null,
-        category: p.category || "General",
-        stockCount: p.stockCount,
-        price: p.price,
-        icon: p.icon || "📦",
-      }));
 
       // 6. Format product lists
       const salesList: ProductStat[] = Object.keys(productSalesMap).map(
@@ -229,7 +214,6 @@ export function useBusinessInsights(
         slowMovers,
         chartData,
         resolvedOrders,
-        productsList,
       };
     },
   });

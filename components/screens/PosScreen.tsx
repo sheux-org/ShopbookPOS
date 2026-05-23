@@ -20,7 +20,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { usePermission } from "../../hooks/usePermissionHandler";
-import { useProducts } from "../../hooks/useProducts";
+import { useFindProductByCode, DBProduct } from "../../hooks/useProducts";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { HeaderCartButton } from "../common/HeaderCartButton";
@@ -74,8 +74,26 @@ export const PosScreen: React.FC = () => {
   const [quickCode, setQuickCode] = useState("");
   const [cursorVisible, setCursorVisible] = useState(true);
 
-  // Real products fetched dynamically from WatermelonDB via React Query for barcode/quick-code matching
-  const { data: searchProducts = [] } = useProducts();
+  const findProductByCode = useFindProductByCode();
+  const [matchedProduct, setMatchedProduct] = useState<DBProduct | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!quickCode) {
+      setMatchedProduct(null);
+      return;
+    }
+
+    findProductByCode(quickCode).then((prod) => {
+      if (isMounted) {
+        setMatchedProduct(prod);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [quickCode, findProductByCode]);
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -146,14 +164,7 @@ export const PosScreen: React.FC = () => {
     );
   }, [invoiceItems]);
 
-  const matchedProduct = useMemo(() => {
-    if (!quickCode) return null;
-    return (
-      searchProducts.find(
-        (p) => p.quickCode === quickCode || p.barcode === quickCode,
-      ) || null
-    );
-  }, [quickCode, searchProducts]);
+
 
   // Handle numpad key presses
   const handleNumPress = (val: string) => {
@@ -172,24 +183,19 @@ export const PosScreen: React.FC = () => {
 
   // Auto-add product if fully typed valid quick code from dynamic catalog
   useEffect(() => {
-    if (!quickCode) return;
-    const prod = searchProducts.find(
-      (p) => p.quickCode === quickCode || p.barcode === quickCode,
-    );
-    if (prod) {
-      const timer = setTimeout(() => {
-        addItemToInvoice(
-          prod.name,
-          prod.price,
-          prod.icon,
-          `SKU 23400${prod.id}`,
-          prod.stockCount,
-        );
-        setQuickCode(""); // Reset after adding
-      }, 700);
-      return () => clearTimeout(timer);
-    }
-  }, [quickCode, searchProducts, addItemToInvoice]);
+    if (!matchedProduct || !quickCode) return;
+    const timer = setTimeout(() => {
+      addItemToInvoice(
+        matchedProduct.name,
+        matchedProduct.price,
+        matchedProduct.icon,
+        `SKU 23400${matchedProduct.id}`,
+        matchedProduct.stockCount,
+      );
+      setQuickCode(""); // Reset after adding
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [matchedProduct, quickCode, addItemToInvoice]);
 
   // Camera Barcode Scanning Handler
   const handleBarcodeScanned = ({
@@ -204,24 +210,23 @@ export const PosScreen: React.FC = () => {
       return;
     lastScanTime.current = Date.now();
 
-    const prod = searchProducts.find(
-      (p) => p.barcode === data || p.quickCode === data,
-    );
-    if (prod) {
-      addItemToInvoice(
-        prod.name,
-        prod.price,
-        prod.icon,
-        `SKU 23400${prod.id}`,
-        prod.stockCount,
-      );
-    } else {
-      Alert.alert(
-        "Product Not Registered",
-        `Scanned code "${data}" is not registered in catalog. Please register it in Stocks Screen first.`,
-        [{ text: "Okay" }],
-      );
-    }
+    findProductByCode(data).then((prod) => {
+      if (prod) {
+        addItemToInvoice(
+          prod.name,
+          prod.price,
+          prod.icon,
+          `SKU 23400${prod.id}`,
+          prod.stockCount,
+        );
+      } else {
+        Alert.alert(
+          "Product Not Registered",
+          `Scanned code "${data}" is not registered in catalog. Please register it in Stocks Screen first.`,
+          [{ text: "Okay" }],
+        );
+      }
+    });
   };
 
   return (

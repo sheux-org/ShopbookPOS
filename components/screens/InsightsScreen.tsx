@@ -19,12 +19,63 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { useBusinessInsights } from "../../hooks/useInsights";
-import { useStockInProduct } from "../../hooks/useProducts";
+import { useProducts, useStockInProduct } from "../../hooks/useProducts";
+import { useGetOrderItems, useGetPeriodOrders } from "../../hooks/useOrders";
 import { syncDatabase } from "../../services/sync";
 import { BottomSheet } from "../common/BottomSheet";
 import { ProductImage } from "../common/ProductImage";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { cartState } from "../data/cartState";
+
+const OrderItemsList: React.FC<{ orderId: string }> = ({ orderId }) => {
+  const { data: items = [], isLoading } = useGetOrderItems(orderId);
+
+  if (isLoading) {
+    return <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 8 }} />;
+  }
+
+  return (
+    <>
+      {items.map((item: any) => (
+        <View key={item.id} style={styles.expandedItemRow}>
+          <Text style={styles.expandedItemName}>
+            {item.name}
+          </Text>
+          <Text style={styles.expandedItemQty}>
+            {item.quantity} x Rs.{" "}
+            {item.price.toLocaleString()}
+          </Text>
+          <Text style={styles.expandedItemSubtotal}>
+            Rs.{" "}
+            {(item.quantity * item.price).toLocaleString()}
+          </Text>
+        </View>
+      ))}
+    </>
+  );
+};
+
+const OrderCardHeaderRight: React.FC<{ orderId: string; isExpanded: boolean }> = ({ orderId, isExpanded }) => {
+  const { data: items = [] } = useGetOrderItems(orderId);
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 2,
+      }}
+    >
+      <Text style={styles.historyItemCount}>
+        {items.length} items
+      </Text>
+      <Feather
+        name={isExpanded ? "chevron-up" : "chevron-down"}
+        size={14}
+        color={TOKENS.muted}
+      />
+    </View>
+  );
+};
 
 export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -86,6 +137,22 @@ export const InsightsScreen: React.FC = () => {
     resolvedStartDate,
     resolvedEndDate,
   );
+
+  // Dynamic catalog products for Stock-In Refills tab
+  const {
+    data: productsList = [],
+    fetchNextPage: fetchNextProducts,
+    hasNextPage: hasNextProducts,
+    isFetchingNextPage: isFetchingNextProducts,
+  } = useProducts(undefined, undefined, undefined);
+
+  // Paginated order history for the Reports tab
+  const {
+    data: periodOrdersList = [],
+    fetchNextPage: fetchNextPeriodOrders,
+    hasNextPage: hasNextPeriodOrders,
+    isFetchingNextPage: isFetchingNextPeriodOrders,
+  } = useGetPeriodOrders(period, resolvedStartDate, resolvedEndDate);
 
   // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
@@ -789,8 +856,19 @@ export const InsightsScreen: React.FC = () => {
           {/* TAB CONTENT: ORDER HISTORY */}
           {reportsActiveTab === "orders" && (
             <FlatList
-              data={stats?.resolvedOrders || []}
+              data={periodOrdersList}
               keyExtractor={(item) => item.id}
+              onEndReached={() => {
+                if (hasNextPeriodOrders) {
+                  fetchNextPeriodOrders();
+                }
+              }}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={
+                isFetchingNextPeriodOrders ? (
+                  <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+                ) : null
+              }
               showsVerticalScrollIndicator={false}
               style={{ flex: 1, marginTop: 10 }}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
@@ -819,43 +897,14 @@ export const InsightsScreen: React.FC = () => {
                         <Text style={styles.historyTotalAmount}>
                           Rs. {order.totalAmount.toLocaleString()}
                         </Text>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 2,
-                          }}
-                        >
-                          <Text style={styles.historyItemCount}>
-                            {order.items.length} items
-                          </Text>
-                          <Feather
-                            name={isExpanded ? "chevron-up" : "chevron-down"}
-                            size={14}
-                            color={TOKENS.muted}
-                          />
-                        </View>
+                        <OrderCardHeaderRight orderId={order.id} isExpanded={isExpanded} />
                       </View>
                     </TouchableOpacity>
 
                     {isExpanded && (
                       <View style={styles.historyItemsExpandedPanel}>
                         <View style={styles.expandedDivider} />
-                        {order.items.map((item: any) => (
-                          <View key={item.id} style={styles.expandedItemRow}>
-                            <Text style={styles.expandedItemName}>
-                              {item.name}
-                            </Text>
-                            <Text style={styles.expandedItemQty}>
-                              {item.quantity} x Rs.{" "}
-                              {item.price.toLocaleString()}
-                            </Text>
-                            <Text style={styles.expandedItemSubtotal}>
-                              Rs.{" "}
-                              {(item.quantity * item.price).toLocaleString()}
-                            </Text>
-                          </View>
-                        ))}
+                        <OrderItemsList orderId={order.id} />
                       </View>
                     )}
                   </View>
@@ -875,11 +924,22 @@ export const InsightsScreen: React.FC = () => {
           {/* TAB CONTENT: STOCK-IN INVENTORY REFILL */}
           {reportsActiveTab === "inventory" && (
             <FlatList
-              data={stats?.productsList || []}
+              data={productsList}
               keyExtractor={(item) => item.id}
               showsVerticalScrollIndicator={false}
               style={{ flex: 1, marginTop: 10 }}
               contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+              onEndReached={() => {
+                if (hasNextProducts) {
+                  fetchNextProducts();
+                }
+              }}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={
+                isFetchingNextProducts ? (
+                  <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+                ) : null
+              }
               ListHeaderComponent={
                 <Text style={styles.refillSectionLabel}>
                   Select a product below to refill / Stock-In units:

@@ -36,11 +36,55 @@ export const ItemDetailsScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const { data: product, isLoading: isProductLoading } = useProduct(id);
-  const { data: stockHistory = [], isLoading: isHistoryLoading } = useGetStockHistory(
-    id || ""
-  );
+  const {
+    data: stockHistory = [],
+    isLoading: isHistoryLoading,
+    fetchNextPage: fetchNextHistory,
+    hasNextPage: hasNextHistory,
+    isFetchingNextPage: isFetchingNextHistory,
+  } = useGetStockHistory(id || "");
 
   const stockInMutation = useStockInProduct();
+
+  const processedStockHistory = useMemo(() => {
+    if (!product || !stockHistory) return [];
+
+    let runningBalance = product.stockCount;
+    // Map logs to include calculated running balances (walking backward since history is newest to oldest)
+    const logsWithBalances = stockHistory.map((log) => {
+      const newBalance = runningBalance;
+      let prevBalance = runningBalance;
+      if (log.type === "in") {
+        prevBalance = runningBalance - log.quantity;
+      } else if (log.type === "out") {
+        prevBalance = runningBalance + log.quantity;
+      }
+      runningBalance = prevBalance;
+      return {
+        ...log,
+        prevBalance,
+        newBalance,
+      };
+    });
+
+    // If there's remaining running balance > 0 (or no logs at all but positive stockCount),
+    // append a virtual Initial Stock log
+    if (!hasNextHistory && runningBalance > 0) {
+      logsWithBalances.push({
+        id: `virtual-initial-stock-${product.id}`,
+        productId: product.id,
+        type: "in",
+        quantity: runningBalance,
+        reason: "Initial Stock",
+        createdAt: product.createdAt ? new Date(product.createdAt).getTime() : (stockHistory.length > 0 ? stockHistory[stockHistory.length - 1].createdAt - 1000 : Date.now()),
+        prevBalance: 0,
+        newBalance: runningBalance,
+        isVirtual: true,
+      } as any);
+    }
+
+    return logsWithBalances;
+  }, [product, stockHistory, hasNextHistory]);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -116,46 +160,6 @@ export const ItemDetailsScreen: React.FC = () => {
       </ScreenWrapper>
     );
   }
-
-  const processedStockHistory = useMemo(() => {
-    if (!product || !stockHistory) return [];
-
-    let runningBalance = product.stockCount;
-    // Map logs to include calculated running balances (walking backward since history is newest to oldest)
-    const logsWithBalances = stockHistory.map((log) => {
-      const newBalance = runningBalance;
-      let prevBalance = runningBalance;
-      if (log.type === "in") {
-        prevBalance = runningBalance - log.quantity;
-      } else if (log.type === "out") {
-        prevBalance = runningBalance + log.quantity;
-      }
-      runningBalance = prevBalance;
-      return {
-        ...log,
-        prevBalance,
-        newBalance,
-      };
-    });
-
-    // If there's remaining running balance > 0 (or no logs at all but positive stockCount),
-    // append a virtual Initial Stock log
-    if (runningBalance > 0) {
-      logsWithBalances.push({
-        id: `virtual-initial-stock-${product.id}`,
-        productId: product.id,
-        type: "in",
-        quantity: runningBalance,
-        reason: "Initial Stock",
-        createdAt: product.createdAt ? new Date(product.createdAt).getTime() : (stockHistory.length > 0 ? stockHistory[stockHistory.length - 1].createdAt - 1000 : Date.now()),
-        prevBalance: 0,
-        newBalance: runningBalance,
-        isVirtual: true,
-      } as any);
-    }
-
-    return logsWithBalances;
-  }, [product, stockHistory]);
 
   const sections = [
     {
@@ -462,6 +466,17 @@ export const ItemDetailsScreen: React.FC = () => {
               </>
             )}
           </View>
+        }
+        onEndReached={() => {
+          if (hasNextHistory) {
+            fetchNextHistory();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingNextHistory ? (
+            <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+          ) : null
         }
       />
     </ScreenWrapper>
