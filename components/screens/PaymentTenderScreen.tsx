@@ -257,6 +257,13 @@ export const PaymentTenderScreen: React.FC = () => {
       <View style={styles.tenderDetailsCard}>
         {activeMethod === "cash" && (
           <>
+            <View style={styles.totalAmountBox}>
+              <Text style={styles.totalAmountLabel}>Total Bill Amount</Text>
+              <Text style={styles.totalAmountValue}>Rs. {totalAmount.toLocaleString()}.00</Text>
+            </View>
+
+            <View style={styles.divider} />
+
             <Text style={styles.tenderLabel}>Cash Tendered</Text>
             <Text style={styles.tenderValueText}>
               Rs. {parsedTendered > 0 ? parsedTendered.toLocaleString() : "0"}
@@ -274,6 +281,13 @@ export const PaymentTenderScreen: React.FC = () => {
 
         {activeMethod === "card" && (
           <View style={styles.cardPaymentContainer}>
+            <View style={styles.totalAmountBox}>
+              <Text style={styles.totalAmountLabel}>Total Bill Amount</Text>
+              <Text style={styles.totalAmountValue}>Rs. {totalAmount.toLocaleString()}.00</Text>
+            </View>
+
+            <View style={styles.divider} />
+
             {/* Visual Simulated Credit Card */}
             <View style={styles.simCard}>
               <View style={styles.simCardHeader}>
@@ -338,9 +352,9 @@ export const PaymentTenderScreen: React.FC = () => {
 
             <View style={styles.cardStatusBox}>
               <Feather name="loader" size={18} color={TOKENS.primary} />
-              <Text style={styles.cardAreaTitle}>Swipe, Tap, or Insert Card</Text>
+              <Text style={styles.cardAreaTitle}>Process on Card Terminal</Text>
               <Text style={styles.cardAreaSubtitle}>
-                Connected POS terminal is ready for payment of Rs. {totalAmount.toLocaleString()}
+                Swipe, tap, or insert the card on your physical terminal.
               </Text>
             </View>
           </View>
@@ -630,6 +644,29 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: "center",
     justifyContent: "center",
+  },
+  totalAmountBox: {
+    alignItems: "center",
+    width: "100%",
+  },
+  totalAmountLabel: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  totalAmountValue: {
+    fontSize: 30,
+    fontWeight: "bold",
+    color: TOKENS.primary,
+    marginTop: 4,
+  },
+  divider: {
+    width: "100%",
+    height: 1,
+    backgroundColor: TOKENS.border,
+    marginVertical: 12,
   },
   tenderLabel: {
     fontSize: 14,
