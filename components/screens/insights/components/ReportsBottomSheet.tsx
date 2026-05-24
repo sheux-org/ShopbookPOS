@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View, useWindowDimensions, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -166,10 +166,11 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
               );
             }}
             ListEmptyComponent={
-              <View style={styles.emptyLowStockState}>
-                <Feather name="file-text" size={32} color={TOKENS.muted} />
-                <Text style={styles.emptyLowStockText}>
-                  No invoices found for this active period!
+              <View style={localStyles.emptyStateContainer}>
+                <Feather name="file-text" size={48} color="#D1D5DB" style={{ marginBottom: 12 }} />
+                <Text style={localStyles.emptyStateTitle}>No invoices found</Text>
+                <Text style={localStyles.emptyStateSubtitle}>
+                  No sales invoices recorded for this active branch during this period.
                 </Text>
               </View>
             }
@@ -324,10 +325,11 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
               );
             }}
             ListEmptyComponent={
-              <View style={styles.emptyLowStockState}>
-                <Feather name="package" size={32} color={TOKENS.muted} />
-                <Text style={styles.emptyLowStockText}>
-                  No products found for this business!
+              <View style={localStyles.emptyStateContainer}>
+                <Feather name="package" size={48} color="#D1D5DB" style={{ marginBottom: 12 }} />
+                <Text style={localStyles.emptyStateTitle}>No products found</Text>
+                <Text style={localStyles.emptyStateSubtitle}>
+                  Add some products in Catalog or Refill screens first.
                 </Text>
               </View>
             }
@@ -337,3 +339,25 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
     </BottomSheet>
   );
 };
+
+const localStyles = StyleSheet.create({
+  emptyStateContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 64,
+    paddingHorizontal: 24,
+    marginTop: 32,
+  },
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+    marginBottom: 4,
+  },
+  emptyStateSubtitle: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+});

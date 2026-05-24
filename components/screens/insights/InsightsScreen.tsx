@@ -245,11 +245,15 @@ export const InsightsScreen: React.FC = () => {
     }
   };
 
-  const handleApplyCalendarRange = (start: Date, end: Date) => {
+  const handleApplyCalendarRange = (start: Date | null, end: Date | null) => {
     setResolvedStartDate(start);
     setResolvedEndDate(end);
     setIsCustomModalOpen(false);
-    setPeriod("custom");
+    if (start && end) {
+      setPeriod("custom");
+    } else {
+      setPeriod("monthly");
+    }
   };
 
 
