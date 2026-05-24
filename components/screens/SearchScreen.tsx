@@ -5,9 +5,9 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  FlatList,
   ActivityIndicator,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import { useRouter } from "expo-router";
@@ -145,7 +145,7 @@ export const SearchScreen: React.FC = () => {
       </View>
 
       {/* Results Scrollable list */}
-      <FlatList
+      <FlashList
         data={filteredProducts}
         keyExtractor={(item) => item.id.toString()}
         style={styles.resultsList}

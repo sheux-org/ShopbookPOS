@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
-  FlatList,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import {
   useWindowDimensions,
   View
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
@@ -312,7 +312,7 @@ export const HomeScreen: React.FC = () => {
       </View>
 
       {/* Product List Grid */}
-      <FlatList
+      <FlashList
         key={numColumns}
         data={filteredProducts}
         keyExtractor={(item) => item.id}
@@ -333,84 +333,87 @@ export const HomeScreen: React.FC = () => {
           styles.gridContainer,
           { paddingBottom: insets.bottom + 100 },
         ]}
-        columnWrapperStyle={styles.gridColumns}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        renderItem={({ item }) => (
-          <View style={styles.productCard}>
-            {/* Image Section */}
-            <View style={styles.imageContainer}>
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => handleAddProduct(item)}
-                style={{ width: "100%", height: 110 }}
-              >
-                <ProductImage
-                  icon={item.icon}
-                  category={item.category}
-                  style={{ width: "100%", height: 110, borderRadius: 0 }}
-                />
-              </TouchableOpacity>
-
-              {/* Overlay heart button */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => {
-                  hapticFeedback.impactLight();
-                  toggleFavoriteMutation.mutate(item.id);
-                }}
-                style={styles.heartBtnWrapper}
-              >
-                <Ionicons
-                  name={item.isFavorite ? "heart" : "heart-outline"}
-                  size={15}
-                  color={item.isFavorite ? TOKENS.error : TOKENS.muted}
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Bottom details - touchable to add */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => handleAddProduct(item)}
-              style={styles.productDetails}
-            >
-              <Text style={styles.productName} numberOfLines={1}>
-                {item.name}
-              </Text>
-
-              <View style={styles.priceStockRow}>
-                <Text style={styles.productPrice}>Rs. {item.price}</Text>
-                <View style={styles.stockPlusRow}>
-                  <Text
-                    style={[
-                      styles.stockText,
-                      item.stockType === "low" && styles.stockTextLow,
-                      item.stockType === "out" && styles.stockTextOut,
-                    ]}
+        renderItem={({ item }) => {
+          return (
+            <View style={{ flex: 1, padding: 6 }}>
+              <View style={styles.productCard}>
+                {/* Image Section */}
+                <View style={styles.imageContainer}>
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => handleAddProduct(item)}
+                    style={{ width: "100%", height: 110 }}
                   >
-                    {item.stockText}
+                    <ProductImage
+                      icon={item.icon}
+                      category={item.category}
+                      style={{ width: "100%", height: 110, borderRadius: 0 }}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Overlay heart button */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      hapticFeedback.impactLight();
+                      toggleFavoriteMutation.mutate(item.id);
+                    }}
+                    style={styles.heartBtnWrapper}
+                  >
+                    <Ionicons
+                      name={item.isFavorite ? "heart" : "heart-outline"}
+                      size={15}
+                      color={item.isFavorite ? TOKENS.error : TOKENS.muted}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Bottom details - touchable to add */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleAddProduct(item)}
+                  style={styles.productDetails}
+                >
+                  <Text style={styles.productName} numberOfLines={1}>
+                    {item.name}
                   </Text>
 
-                  <View
-                    style={[
-                      styles.plusIconBadge,
-                      item.stockType === "out" && styles.plusIconBadgeOut,
-                    ]}
-                  >
-                    <Feather
-                      name="plus"
-                      size={20}
-                      color={
-                        item.stockType === "out" ? TOKENS.muted : TOKENS.card
-                      }
-                    />
+                  <View style={styles.priceStockRow}>
+                    <Text style={styles.productPrice}>Rs. {item.price}</Text>
+                    <View style={styles.stockPlusRow}>
+                      <Text
+                        style={[
+                          styles.stockText,
+                          item.stockType === "low" && styles.stockTextLow,
+                          item.stockType === "out" && styles.stockTextOut,
+                        ]}
+                      >
+                        {item.stockText}
+                      </Text>
+
+                      <View
+                        style={[
+                          styles.plusIconBadge,
+                          item.stockType === "out" && styles.plusIconBadgeOut,
+                        ]}
+                      >
+                        <Feather
+                          name="plus"
+                          size={20}
+                          color={
+                            item.stockType === "out" ? TOKENS.muted : TOKENS.card
+                          }
+                        />
+                      </View>
+                    </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </View>
-        )}
+            </View>
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.emptyGridState}>
             <Feather name="search" size={48} color="#D1D5DB" />
@@ -670,8 +673,7 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
   },
   gridContainer: {
-    padding: 16,
-    gap: 12,
+    padding: 10,
   },
   gridColumns: {
     gap: 12,

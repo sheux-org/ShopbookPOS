@@ -5,7 +5,6 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Modal,
   ScrollView,
   Share,
@@ -16,6 +15,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
 import { useBusinessInsights } from "../../hooks/useInsights";
@@ -870,7 +870,7 @@ export const InsightsScreen: React.FC = () => {
 
           {/* TAB CONTENT: ORDER HISTORY */}
           {reportsActiveTab === "orders" && (
-            <FlatList
+            <FlashList
               data={periodOrdersList}
               keyExtractor={(item) => item.id}
               onEndReached={() => {
@@ -938,7 +938,7 @@ export const InsightsScreen: React.FC = () => {
 
           {/* TAB CONTENT: STOCK-IN INVENTORY REFILL */}
           {reportsActiveTab === "inventory" && (
-            <FlatList
+            <FlashList
               data={productsList}
               keyExtractor={(item) => item.id}
               showsVerticalScrollIndicator={false}

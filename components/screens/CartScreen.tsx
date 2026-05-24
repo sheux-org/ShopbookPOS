@@ -8,10 +8,10 @@ import {
   Platform,
   Alert,
   TextInput,
-  FlatList,
   ActivityIndicator,
   Dimensions,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -708,17 +708,12 @@ export const CartScreen: React.FC = () => {
                   <Text style={styles.loadingText}>Loading contacts...</Text>
                 </View>
               ) : (
-                <FlatList
+                <FlashList
                   data={filteredContacts}
                   keyExtractor={(item) => item.id}
                   renderItem={renderContactItem}
                   showsVerticalScrollIndicator={true}
                   contentContainerStyle={styles.listContent}
-                  initialNumToRender={15}
-                  maxToRenderPerBatch={15}
-                  windowSize={7}
-                  removeClippedSubviews={true}
-                  getItemLayout={(data, index) => ({ length: 54, offset: 54 * index, index })}
                   ListEmptyComponent={
                     <View style={styles.emptyList}>
                       <Feather name="users" size={36} color={TOKENS.muted} />

@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   ScrollView,
-  FlatList,
   useWindowDimensions,
   ActivityIndicator,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../common/ScreenWrapper";
@@ -53,7 +53,7 @@ export const CatalogScreen: React.FC = () => {
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  
+
   const {
     data: productsList = [],
     fetchNextPage,
@@ -61,27 +61,34 @@ export const CatalogScreen: React.FC = () => {
     isFetchingNextPage,
   } = useProducts(selectedCategory);
 
-  const triggerToast = (msg: string) => {
+  const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 1500);
-  };
+  }, []);
 
-  const filteredProducts = productsList;
+  const handleAddProduct = useCallback(
+    (prod: CatalogProduct) => {
+      if (prod.stockType === "out") {
+        hapticFeedback.notificationWarning();
+        triggerToast("Product is out of stock!");
+        return;
+      }
 
-  const handleAddProduct = (prod: CatalogProduct) => {
-    if (prod.stockType === "out") {
-      hapticFeedback.notificationWarning();
-      triggerToast("Product is out of stock!");
-      return;
-    }
-    hapticFeedback.impactLight();
-    cartState.addCartItem(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
-    triggerToast(`Added ${prod.name} to active invoice`);
-  };
+      hapticFeedback.impactLight();
+      cartState.addCartItem(
+        prod.name,
+        prod.price,
+        prod.icon,
+        `SKU 23400${prod.id}`,
+        prod.stockCount,
+      );
+      triggerToast(`Added ${prod.name} to active invoice`);
+    },
+    [triggerToast],
+  );
 
   return (
     <ScreenWrapper style={styles.container}>
-      {/* Toast popup */}
       {toastMessage && (
         <View style={styles.toastContainer}>
           <Feather name="check-circle" size={16} color={TOKENS.card} />
@@ -89,8 +96,8 @@ export const CatalogScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Header exactly matching Image 1: Catalog */}
-      <View style={styles.header}>
+      <View style={styles.header}
+      >
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
@@ -124,11 +131,12 @@ export const CatalogScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Two Columns Body Area */}
       <View style={styles.bodyWrapper}>
-        {/* Left Side: Category Strip */}
         <View style={styles.sidebar}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sidebarScroll}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.sidebarScroll}
+          >
             {CATEGORIES.map((cat) => {
               const isActive = selectedCategory === cat.id;
               return (
@@ -159,10 +167,9 @@ export const CatalogScreen: React.FC = () => {
           </ScrollView>
         </View>
 
-        {/* Right Side: Product Card Grid */}
         <View style={styles.gridWrapper}>
-          <FlatList
-            data={filteredProducts}
+          <FlashList
+            data={productsList}
             keyExtractor={(item) => item.id}
             numColumns={2}
             showsVerticalScrollIndicator={false}
@@ -174,95 +181,100 @@ export const CatalogScreen: React.FC = () => {
             onEndReachedThreshold={0.3}
             ListFooterComponent={
               isFetchingNextPage ? (
-                <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+                <ActivityIndicator
+                  size="small"
+                  color={TOKENS.primary}
+                  style={{ marginVertical: 16 }}
+                />
               ) : null
             }
             contentContainerStyle={styles.gridContent}
-            columnWrapperStyle={styles.gridColumns}
-            renderItem={({ item }) => (
-              <View style={styles.productCard}>
-                {/* Image Section */}
-                <View style={styles.imageContainer}>
-                  <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={() => handleAddProduct(item)}
-                    style={{ width: "100%", height: 100 }}
-                  >
-                    <ProductImage
-                      icon={item.icon}
-                      category={item.category}
-                      style={{ width: "100%", height: 100, borderRadius: 0 }}
-                    />
-                  </TouchableOpacity>
-                </View>
+            renderItem={({ item }) => {
+              return (
+                <View style={{ flex: 1, padding: 6 }}>
+                  <View style={styles.productCard}>
+                    <View style={styles.imageContainer}>
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => handleAddProduct(item)}
+                        style={{ width: "100%", height: 100 }}
+                      >
+                        <ProductImage
+                          icon={item.icon}
+                          category={item.category}
+                          style={{ width: "100%", height: 100, borderRadius: 0 }}
+                        />
+                      </TouchableOpacity>
+                    </View>
 
-                {/* Bottom details - touchable to add */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => handleAddProduct(item)}
-                  style={styles.productDetails}
-                >
-                  <Text style={styles.productName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  
-                  <View style={styles.priceStockRow}>
-                    <Text style={styles.productPrice}>Rs. {item.price}</Text>
-                    {isTablet ? (
-                      <View style={styles.stockPlusRow}>
-                        <Text
-                          style={[
-                            styles.stockText,
-                            item.stockType === "low" && styles.stockTextLow,
-                            item.stockType === "out" && styles.stockTextOut,
-                          ]}
-                        >
-                          {item.stockText}
-                        </Text>
-                        
-                        <View
-                          style={[
-                            styles.plusIconBadge,
-                            item.stockType === "out" && styles.plusIconBadgeOut,
-                          ]}
-                        >
-                          <Feather
-                            name="plus"
-                            size={15}
-                            color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
-                          />
-                        </View>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => handleAddProduct(item)}
+                      style={styles.productDetails}
+                    >
+                      <Text style={styles.productName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+
+                      <View style={styles.priceStockRow}>
+                        <Text style={styles.productPrice}>Rs. {item.price}</Text>
+                        {isTablet ? (
+                          <View style={styles.stockPlusRow}>
+                            <Text
+                              style={[
+                                styles.stockText,
+                                item.stockType === "low" && styles.stockTextLow,
+                                item.stockType === "out" && styles.stockTextOut,
+                              ]}
+                            >
+                              {item.stockText}
+                            </Text>
+
+                            <View
+                              style={[
+                                styles.plusIconBadge,
+                                item.stockType === "out" && styles.plusIconBadgeOut,
+                              ]}
+                            >
+                              <Feather
+                                name="plus"
+                                size={15}
+                                color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                              />
+                            </View>
+                          </View>
+                        ) : (
+                          <View style={styles.mobileStockPlusColumn}>
+                            <Text
+                              style={[
+                                styles.stockText,
+                                item.stockType === "low" && styles.stockTextLow,
+                                item.stockType === "out" && styles.stockTextOut,
+                              ]}
+                            >
+                              {item.stockText}
+                            </Text>
+
+                            <View
+                              style={[
+                                styles.mobilePlusIconBadge,
+                                item.stockType === "out" && styles.mobilePlusIconBadgeOut,
+                              ]}
+                            >
+                              <Feather
+                                name="plus"
+                                size={14}
+                                color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                              />
+                            </View>
+                          </View>
+                        )}
                       </View>
-                    ) : (
-                      <View style={styles.mobileStockPlusColumn}>
-                        <Text
-                          style={[
-                            styles.stockText,
-                            item.stockType === "low" && styles.stockTextLow,
-                            item.stockType === "out" && styles.stockTextOut,
-                          ]}
-                        >
-                          {item.stockText}
-                        </Text>
-                        
-                        <View
-                          style={[
-                            styles.mobilePlusIconBadge,
-                            item.stockType === "out" && styles.mobilePlusIconBadgeOut,
-                          ]}
-                        >
-                          <Feather
-                            name="plus"
-                            size={14}
-                            color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
-                          />
-                        </View>
-                      </View>
-                    )}
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
-              </View>
-            )}
+                </View>
+              );
+            }}
             ListEmptyComponent={
               <View style={styles.emptyGridState}>
                 <Feather name="search" size={48} color="#D1D5DB" />
@@ -275,10 +287,6 @@ export const CatalogScreen: React.FC = () => {
           />
         </View>
       </View>
-
-
-
-
     </ScreenWrapper>
   );
 };
@@ -395,8 +403,7 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   gridContent: {
-    padding: 12,
-    gap: 12,
+    padding: 6,
   },
   gridColumns: {
     gap: 12,
@@ -420,10 +427,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 100,
     backgroundColor: "#F3F4F6",
-  },
-  productCardImage: {
-    width: "100%",
-    height: 100,
   },
   productDetails: {
     padding: 10,

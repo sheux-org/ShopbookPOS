@@ -9,8 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Image,
 } from "react-native";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

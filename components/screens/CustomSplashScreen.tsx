@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View, Image } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue,
@@ -93,7 +94,7 @@ export function CustomSplashScreen({ isReady, onAnimationComplete }: CustomSplas
             <Image
               source={require("../../assets/images/icon.png")}
               style={styles.logo}
-              resizeMode="contain"
+              contentFit="contain"
             />
           </Animated.View>
 

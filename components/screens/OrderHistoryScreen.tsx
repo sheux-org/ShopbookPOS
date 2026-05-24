@@ -4,9 +4,6 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
-  Image,
-  ListRenderItem,
   Platform,
   ScrollView,
   Share,
@@ -16,6 +13,8 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
+import { Image } from "expo-image";
 import * as Print from "expo-print";
 import Barcode from "react-native-barcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -132,8 +131,8 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
     [staffList]
   );
 
-  const renderOrderItem: ListRenderItem<DBOrder> = useCallback(
-    ({ item: order }) => (
+  const renderOrderItem = useCallback(
+    ({ item: order }: { item: DBOrder }) => (
       <TouchableOpacity
         style={styles.orderCard}
         activeOpacity={0.75}
@@ -349,7 +348,7 @@ Thank you for shopping with us!
           </Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={orders}
           keyExtractor={(item) => item.id}
           renderItem={renderOrderItem}

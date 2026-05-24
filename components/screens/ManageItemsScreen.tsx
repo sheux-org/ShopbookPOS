@@ -7,7 +7,6 @@ import React, { useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Modal,
   ScrollView,
   StyleSheet,
@@ -18,6 +17,7 @@ import {
   Animated,
   Pressable,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { hapticFeedback } from "../../utils/haptics";
 import { TOKENS } from "../../constants/tokens";
@@ -374,7 +374,7 @@ export const ManageItemsScreen: React.FC = () => {
           <Text style={styles.loaderText}>Loading catalog items...</Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={productsList}
           keyExtractor={(item) => item.id}
           onEndReached={() => {
