@@ -26,6 +26,13 @@ When `isPremium` is `false` (Free tier), the client intercepts premium features 
 5. **PDF & CSV Financial Reports Export**:
    - **Where**: [InsightsScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/InsightsScreen.tsx#L199-L211).
    - **Behavior**: Compiles store gross sales distribution and shares statement documents via native sharing sheets.
+6. **Ultimate Staff Accounts & Permissions**:
+   - **Where**: [ProfileScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/ProfileScreen.tsx#L224-L239) and the staff routing view [manage-staff.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/app/(modules)/profile/manage-staff.tsx).
+   - **Behavior**: Unlocks multi-user support, allowing owners to create and configure unlimited employee profiles (Admins, Managers, Cashiers) with strict Role-Based Access Control (RBAC). Free tier accounts are restricted to the single owner/admin session. (For comprehensive detail, refer to the [Role & Staff Management Documentation](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/doc/ROLE_MANAGEMENT.md)).
+7. **Web Browser Access (Live POS from any device)**:
+   - **Where**: Standard web-browser interface synchronized with Supabase data storage.
+   - **Behavior**: Allows store owners and administrators to open the POS checkout terminal directly in any desktop/laptop web browser, ensuring instant data parity and real-time operations across mobile register terminals and back-office portals.
+
 
 ---
 
