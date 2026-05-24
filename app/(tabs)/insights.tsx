@@ -1,6 +1,6 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { InsightsScreen } from "@/components/screens/InsightsScreen";
+import { InsightsScreen } from "@/components/screens/insights/InsightsScreen";
 import { OrderHistoryScreen } from "@/components/screens/OrderHistoryScreen";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 
