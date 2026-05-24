@@ -132,7 +132,13 @@ export default function PremiumPlansRoute() {
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/profile")}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push("/profile");
+            }
+          }}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
