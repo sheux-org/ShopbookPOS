@@ -18,7 +18,7 @@ import {
 import { FlashList } from "@shopify/flash-list";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { useBusinessInsights } from "../../hooks/useInsights";
+import { useBusinessInsights, useInsightsExport } from "../../hooks/useInsights";
 import { useProducts, useStockInProduct } from "../../hooks/useProducts";
 import { useGetOrderItems, useGetPeriodOrders } from "../../hooks/useOrders";
 import { syncDatabase } from "../../services/sync";
@@ -28,6 +28,8 @@ import { ScreenWrapper } from "../common/ScreenWrapper";
 import { cartState } from "../data/cartState";
 import { useSettingsStore } from "../../stores/useSettingsStore";
 import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
+import * as Print from "expo-print";
+import { buildReportHtml, buildReportCsv, ReportType } from "../../utils/reportTemplates";
 
 const OrderItemsList: React.FC<{ orderId: string }> = ({ orderId }) => {
   const { data: items = [], isLoading } = useGetOrderItems(orderId);
@@ -109,6 +111,14 @@ export const InsightsScreen: React.FC = () => {
   const [exportType, setExportType] = useState<"PDF" | "CSV" | null>(null);
   const [exportResultModal, setExportResultModal] = useState(false);
 
+  // PDF Statement selection states
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [selectedReportType, setSelectedReportType] = useState<ReportType>("best_sellers");
+
+  // CSV Statement selection states
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [selectedCsvReportType, setSelectedCsvReportType] = useState<ReportType>("best_sellers");
+
   // Low stock details drawer
   const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
 
@@ -143,6 +153,9 @@ export const InsightsScreen: React.FC = () => {
     resolvedStartDate,
     resolvedEndDate,
   );
+
+  // Export reports data helper from custom hook
+  const { fetchReportData } = useInsightsExport(activeBiz.id);
 
   // Dynamic catalog products for Stock-In Refills tab
   const {
@@ -202,12 +215,86 @@ export const InsightsScreen: React.FC = () => {
       setPremiumModalVisible(true);
       return;
     }
-    setExportType(type);
+    if (type === "PDF") {
+      setIsPdfModalOpen(true);
+    } else {
+      setIsCsvModalOpen(true);
+    }
+  };
+
+  const handleGenerateCsvReport = async (reportType: ReportType) => {
+    if (!isPremium) {
+      setIsCsvModalOpen(false);
+      setPremiumFeatureName("CSV ledger reports export");
+      setPremiumModalVisible(true);
+      return;
+    }
+    setIsCsvModalOpen(false);
     setIsExporting(true);
-    setTimeout(() => {
+    setExportType("CSV");
+    try {
+      // 1. Fetch reporting dataset via custom hook
+      const { business, orders, orderItems, products } = await fetchReportData();
+
+      // 2. Generate Report CSV
+      const csvText = buildReportCsv(reportType, {
+        business: {
+          name: (business as any).name || "Store",
+          category: (business as any).category,
+          address: (business as any).address,
+          phone: (business as any).phone,
+        },
+        orders,
+        orderItems,
+        products,
+      });
+
+      // 3. Share the CSV text
+      await Share.share({
+        message: csvText,
+        title: `${(business as any).name || "Store"} - CSV Ledger Report`,
+      });
+    } catch (err: any) {
+      Alert.alert("Report Export Failed", err.message || "Failed to generate report CSV.");
+    } finally {
       setIsExporting(false);
-      setExportResultModal(true);
-    }, 2000);
+    }
+  };
+
+  const handleGeneratePdfReport = async (reportType: ReportType) => {
+    if (!isPremium) {
+      setIsPdfModalOpen(false);
+      setPremiumFeatureName("PDF statement reports export");
+      setPremiumModalVisible(true);
+      return;
+    }
+    setIsPdfModalOpen(false);
+    setIsExporting(true);
+    setExportType("PDF");
+    try {
+      // 1. Fetch reporting dataset via custom hook
+      const { business, orders, orderItems, products } = await fetchReportData();
+
+      // 2. Generate Report HTML
+      const html = buildReportHtml(reportType, {
+        business: {
+          name: (business as any).name || "Store",
+          category: (business as any).category,
+          address: (business as any).address,
+          phone: (business as any).phone,
+        },
+        orders,
+        orderItems,
+        products,
+      });
+
+      // 3. Trigger System Printing (allows Save as PDF natively)
+      await Print.printAsync({ html });
+    } catch (err: any) {
+      Alert.alert("Report Export Failed", err.message || "Failed to generate report statement.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleShare = async () => {
@@ -1155,6 +1242,284 @@ export const InsightsScreen: React.FC = () => {
         onClose={() => setPremiumModalVisible(false)}
         featureName={premiumFeatureName}
       />
+
+      {/* PDF Statement selector Modal */}
+      <Modal
+        visible={isPdfModalOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsPdfModalOpen(false)}
+      >
+        <View style={styles.premiumModalOverlay}>
+          {/* Backdrop Touch Dismiss */}
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            activeOpacity={1}
+            onPress={() => setIsPdfModalOpen(false)}
+          />
+
+          <View style={[styles.premiumModalContainer, { height: Math.min(windowHeight * 0.82, 580) }]}>
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.absoluteCloseBtn}
+              onPress={() => setIsPdfModalOpen(false)}
+            >
+              <Feather name="x" size={16} color={TOKENS.muted} />
+            </TouchableOpacity>
+
+            <View style={styles.premiumModalHeader}>
+              <View style={styles.pdfModalTitleRow}>
+                <Feather name="file-text" size={20} color={TOKENS.primary} />
+                <Text style={styles.pdfModalTitle}>PDF Statement Report</Text>
+              </View>
+              <Text style={styles.pdfModalDescription}>
+                Compile comprehensive reports using all history records stored in your branch database.
+              </Text>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={styles.premiumModalScroll}
+              contentContainerStyle={styles.premiumModalScrollContent}
+            >
+              {[
+                {
+                  id: "best_sellers",
+                  title: "Best Selling Products",
+                  desc: "Sales ranking, units sold, and revenue shares.",
+                  icon: "trending-up",
+                  color: "#10B981",
+                  bgColor: "#E8FDF0",
+                },
+                {
+                  id: "slow_movers",
+                  title: "Slow Moving Inventory",
+                  desc: "Identify stagnant stock items with low sales.",
+                  icon: "clock",
+                  color: "#F59E0B",
+                  bgColor: "#FEF7E0",
+                },
+                {
+                  id: "orders_ledger",
+                  title: "Orders History Ledger",
+                  desc: "Chronological transaction database logs.",
+                  icon: "list",
+                  color: "#3B82F6",
+                  bgColor: "#EFF6FF",
+                },
+                {
+                  id: "item_sales",
+                  title: "Item-Wise Sales Summary",
+                  desc: "Total quantities and revenues per catalog product.",
+                  icon: "package",
+                  color: "#7C3AED",
+                  bgColor: "#EDE9FE",
+                },
+                {
+                  id: "branch_performance",
+                  title: "Branch Audit & Low Stock",
+                  desc: "Cashier checkout ranks and critical stock alerts.",
+                  icon: "activity",
+                  color: "#EF4444",
+                  bgColor: "#FCE8E6",
+                },
+              ].map((opt) => {
+                const isSelected = selectedReportType === opt.id;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.pdfOptionCard,
+                      isSelected && styles.pdfOptionCardSelected,
+                    ]}
+                    onPress={() => setSelectedReportType(opt.id as ReportType)}
+                  >
+                    <View
+                      style={[
+                        styles.pdfOptionIconBox,
+                        { backgroundColor: opt.bgColor },
+                      ]}
+                    >
+                      <Feather name={opt.icon as any} size={15} color={opt.color} />
+                    </View>
+                    <View style={styles.pdfOptionTextCol}>
+                      <Text style={styles.pdfOptionTitle}>{opt.title}</Text>
+                      <Text style={styles.pdfOptionDesc}>{opt.desc}</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.pdfOptionRadio,
+                        isSelected && styles.pdfOptionRadioSelected,
+                      ]}
+                    >
+                      {isSelected && <View style={styles.pdfOptionRadioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.premiumModalFooter}>
+              <TouchableOpacity
+                style={styles.pdfGenerateBtn}
+                activeOpacity={0.85}
+                onPress={() => handleGeneratePdfReport(selectedReportType)}
+              >
+                <Feather name="file-text" size={16} color="#FFFFFF" />
+                <Text style={styles.pdfGenerateBtnText}>Generate PDF Report</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.pdfCancelBtn}
+                activeOpacity={0.8}
+                onPress={() => setIsPdfModalOpen(false)}
+              >
+                <Text style={styles.pdfCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* CSV Statement selector Modal */}
+      <Modal
+        visible={isCsvModalOpen}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsCsvModalOpen(false)}
+      >
+        <View style={styles.premiumModalOverlay}>
+          {/* Backdrop Touch Dismiss */}
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            activeOpacity={1}
+            onPress={() => setIsCsvModalOpen(false)}
+          />
+
+          <View style={[styles.premiumModalContainer, { height: Math.min(windowHeight * 0.82, 580) }]}>
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.absoluteCloseBtn}
+              onPress={() => setIsCsvModalOpen(false)}
+            >
+              <Feather name="x" size={16} color={TOKENS.muted} />
+            </TouchableOpacity>
+
+            <View style={styles.premiumModalHeader}>
+              <View style={styles.pdfModalTitleRow}>
+                <Feather name="grid" size={20} color={TOKENS.success} />
+                <Text style={styles.pdfModalTitle}>CSV Ledger Report</Text>
+              </View>
+              <Text style={styles.pdfModalDescription}>
+                Compile tabular CSV spreadsheet ledger reports from your store database history.
+              </Text>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={styles.premiumModalScroll}
+              contentContainerStyle={styles.premiumModalScrollContent}
+            >
+              {[
+                {
+                  id: "best_sellers",
+                  title: "Best Selling Products",
+                  desc: "Sales ranking, units sold, and revenue shares.",
+                  icon: "trending-up",
+                  color: "#10B981",
+                  bgColor: "#E8FDF0",
+                },
+                {
+                  id: "slow_movers",
+                  title: "Slow Moving Inventory",
+                  desc: "Identify stagnant stock items with low sales.",
+                  icon: "clock",
+                  color: "#F59E0B",
+                  bgColor: "#FEF7E0",
+                },
+                {
+                  id: "orders_ledger",
+                  title: "Orders History Ledger",
+                  desc: "Chronological transaction database logs.",
+                  icon: "list",
+                  color: "#3B82F6",
+                  bgColor: "#EFF6FF",
+                },
+                {
+                  id: "item_sales",
+                  title: "Item-Wise Sales Summary",
+                  desc: "Total quantities and revenues per catalog product.",
+                  icon: "package",
+                  color: "#7C3AED",
+                  bgColor: "#EDE9FE",
+                },
+                {
+                  id: "branch_performance",
+                  title: "Branch Audit & Low Stock",
+                  desc: "Cashier checkout ranks and critical stock alerts.",
+                  icon: "activity",
+                  color: "#EF4444",
+                  bgColor: "#FCE8E6",
+                },
+              ].map((opt) => {
+                const isSelected = selectedCsvReportType === opt.id;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.pdfOptionCard,
+                      isSelected && styles.pdfOptionCardSelected,
+                    ]}
+                    onPress={() => setSelectedCsvReportType(opt.id as ReportType)}
+                  >
+                    <View
+                      style={[
+                        styles.pdfOptionIconBox,
+                        { backgroundColor: opt.bgColor },
+                      ]}
+                    >
+                      <Feather name={opt.icon as any} size={15} color={opt.color} />
+                    </View>
+                    <View style={styles.pdfOptionTextCol}>
+                      <Text style={styles.pdfOptionTitle}>{opt.title}</Text>
+                      <Text style={styles.pdfOptionDesc}>{opt.desc}</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.pdfOptionRadio,
+                        isSelected && styles.pdfOptionRadioSelected,
+                      ]}
+                    >
+                      {isSelected && <View style={styles.pdfOptionRadioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.premiumModalFooter}>
+              <TouchableOpacity
+                style={[styles.pdfGenerateBtn, { backgroundColor: TOKENS.success }]}
+                activeOpacity={0.85}
+                onPress={() => handleGenerateCsvReport(selectedCsvReportType)}
+              >
+                <Feather name="grid" size={16} color="#FFFFFF" />
+                <Text style={styles.pdfGenerateBtnText}>Generate CSV Report</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.pdfCancelBtn}
+                activeOpacity={0.8}
+                onPress={() => setIsCsvModalOpen(false)}
+              >
+                <Text style={styles.pdfCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 };
@@ -2017,6 +2382,164 @@ const styles = StyleSheet.create({
   refillCurrentStockValue: {
     fontSize: 13,
     color: TOKENS.dark,
+    fontWeight: "bold",
+  },
+  absoluteCloseBtn: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  premiumModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  premiumModalContainer: {
+    width: "100%",
+    maxWidth: 380,
+    backgroundColor: TOKENS.card,
+    borderRadius: 24,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+  },
+  premiumModalHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+    gap: 4,
+  },
+  premiumModalScroll: {
+    flex: 1,
+  },
+  premiumModalScrollContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  premiumModalFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: TOKENS.border,
+    backgroundColor: TOKENS.card,
+    gap: 6,
+  },
+  pdfModalTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+    paddingRight: 24,
+  },
+  pdfModalTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  pdfModalDescription: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    lineHeight: 15,
+  },
+  pdfOptionsList: {
+    gap: 8,
+  },
+  pdfOptionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 14,
+    padding: 10,
+    gap: 10,
+  },
+  pdfOptionCardSelected: {
+    borderColor: TOKENS.primary,
+    backgroundColor: TOKENS.lightBlue,
+  },
+  pdfOptionIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pdfOptionTextCol: {
+    flex: 1,
+    gap: 1,
+  },
+  pdfOptionTitle: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: TOKENS.dark,
+  },
+  pdfOptionDesc: {
+    fontSize: 10,
+    color: TOKENS.muted,
+    lineHeight: 13,
+  },
+  pdfOptionRadio: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: TOKENS.muted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pdfOptionRadioSelected: {
+    borderColor: TOKENS.primary,
+  },
+  pdfOptionRadioInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: TOKENS.primary,
+  },
+  pdfGenerateBtn: {
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: TOKENS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  pdfGenerateBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  pdfCancelBtn: {
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  pdfCancelBtnText: {
+    color: TOKENS.muted,
+    fontSize: 12,
     fontWeight: "bold",
   },
 });

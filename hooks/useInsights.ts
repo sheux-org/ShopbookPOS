@@ -221,3 +221,53 @@ export function useBusinessInsights(
     },
   });
 }
+
+export function useInsightsExport(businessId: string) {
+  return {
+    fetchReportData: async () => {
+      // 1. Fetch active business SQLite record
+      const businesses = await database
+        .get("businesses")
+        .query(Q.where("id", businessId))
+        .fetch();
+      const dbBiz = businesses[0];
+      if (!dbBiz) {
+        throw new Error("Active business not found in local database!");
+      }
+
+      // 2. Fetch completed orders for active business (Paid status, all-time)
+      const orders = await database
+        .get("orders")
+        .query(Q.where("business_id", dbBiz.id), Q.where("status", "paid"))
+        .fetch();
+
+      // 3. Gather all order items for these orders
+      let orderItems: any[] = [];
+      if (orders.length > 0) {
+        const orderIds = orders.map((o: any) => o.id);
+        const chunkSize = 100;
+        for (let i = 0; i < orderIds.length; i += chunkSize) {
+          const chunk = orderIds.slice(i, i + chunkSize);
+          const itemsChunk = await database
+            .get("order_items")
+            .query(Q.where("order_id", Q.oneOf(chunk)))
+            .fetch();
+          orderItems = [...orderItems, ...itemsChunk];
+        }
+      }
+
+      // 4. Fetch all active business products
+      const products = await database
+        .get("products")
+        .query(Q.where("business_id", dbBiz.id))
+        .fetch();
+
+      return {
+        business: dbBiz,
+        orders,
+        orderItems,
+        products,
+      };
+    }
+  };
+}
