@@ -65,7 +65,7 @@ export default function PaymentSelectRoute() {
   const handleWhatsAppPay = () => {
     hapticFeedback.impactMedium();
     const msg = "Hey Mini POS Bill";
-    const phone = "94771234567";
+    const phone = "94782470168";
     Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
   };
 

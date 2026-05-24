@@ -54,7 +54,7 @@ The upgrade path is designed as a secure, premium light-themed experience split 
   2. **Bank Transfer / Deposit**:
      - Lists **Seylan Bank** details (Account: `008013639890001`, Name: `SHOPBOOK TECHNOLOGIES (PVT) LTD`, Branch: `Kollupitiya`).
      - Includes native clipboard overlays to copy credentials.
-     - The primary action button **"Share Receipt via WhatsApp"** triggers a direct WhatsApp redirect to **+94 77 123 4567** with prefilled text `"Hey Mini POS Bill"` for manual backend invoice activation.
+     - The primary action button **"Share Receipt via WhatsApp"** triggers a direct WhatsApp redirect to **+94 78 247 0168** with prefilled text `"Hey Mini POS Bill"` for manual backend invoice activation.
 
 ---
 
