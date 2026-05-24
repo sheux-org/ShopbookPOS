@@ -27,6 +27,8 @@ import { useAddProduct, useProducts, useToggleFavoriteProduct } from "../../hook
 import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
 import { ProductImage } from "../common/ProductImage";
 import { hapticFeedback } from "../../utils/haptics";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 
 function getRelativeTimeAgo(timestamp?: number): string {
@@ -91,6 +93,8 @@ export const StocksScreen: React.FC = () => {
   const [formLowStock, setFormLowStock] = useState("");
   const { requestCameraAccess } = usePermission();
   const { canPerform } = useUserPermissions();
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const [formQuickCode, setFormQuickCode] = useState("");
   const [formBarcode, setFormBarcode] = useState("");
@@ -111,9 +115,13 @@ export const StocksScreen: React.FC = () => {
   };
 
   const triggerBarcodeScanner = () => {
-    requestCameraAccess(() => {
-      setIsScanning(true);
-    });
+    if (isPremium) {
+      requestCameraAccess(() => {
+        setIsScanning(true);
+      });
+    } else {
+      setPremiumModalVisible(true);
+    }
   };
 
   const handlePickImage = async (source: 'camera' | 'gallery') => {
@@ -787,7 +795,11 @@ export const StocksScreen: React.FC = () => {
         }}
       />
 
-
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="In-app barcode stock scanning"
+      />
     </ScreenWrapper>
   );
 };

@@ -9,7 +9,7 @@ import {
   Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
@@ -20,6 +20,7 @@ import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { BottomSheet } from "../common/BottomSheet";
 import { BusinessAvatar } from "../common/BusinessAvatar";
 import { deleteCurrentDeviceSession } from "../../hooks/useActiveDeviceTracker";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 const FAQS = [
   {
@@ -58,9 +59,12 @@ export const ProfileScreen: React.FC = () => {
   const isBackupEnabled = useSettingsStore((s) => s.isBackupEnabled);
   const toggleBackup = useSettingsStore((s) => s.toggleBackup);
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
+  const isPremium = useSettingsStore((s) => s.isPremium);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<"1_month" | "3_month" | "1_year">("3_month");
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+  const [premiumFeatureName, setPremiumFeatureName] = useState("");
   
   // Real business details from local SQLite database
   const [activeBusiness, setActiveBusiness] = useState(cartState.getActiveBusiness());
@@ -80,6 +84,15 @@ export const ProfileScreen: React.FC = () => {
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 1500);
+  };
+
+  const checkPremiumAction = (featureName: string, action: () => void) => {
+    if (isPremium) {
+      action();
+    } else {
+      setPremiumFeatureName(featureName);
+      setPremiumModalVisible(true);
+    }
   };
 
   const { canPerform, role: userRole } = useUserPermissions();
@@ -161,7 +174,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push("/profile/manage-businesses")}
+            onPress={() => checkPremiumAction("Multiple branch management", () => router.push("/profile/manage-businesses"))}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#FEF7E0" }]}>
               <Feather name="briefcase" size={18} color="#B06000" />
@@ -177,7 +190,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push("/profile/bluetooth-printer")}
+            onPress={() => checkPremiumAction("Bluetooth thermal printer printing", () => router.push("/profile/bluetooth-printer"))}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#EFF6FF" }]}>
               <Feather name="printer" size={18} color={TOKENS.primary} />
@@ -195,7 +208,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push("/profile/active-devices")}
+            onPress={() => checkPremiumAction("Active devices monitoring", () => router.push("/profile/active-devices"))}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#E8F0FE" }]}>
               <Feather name="smartphone" size={18} color={TOKENS.primary} />
@@ -212,7 +225,7 @@ export const ProfileScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
-              onPress={() => router.push("/profile/manage-staff")}
+              onPress={() => checkPremiumAction("Staff accounts management", () => router.push("/profile/manage-staff"))}
             >
               <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
                 <Feather name="users" size={18} color="#137333" />
@@ -225,19 +238,19 @@ export const ProfileScreen: React.FC = () => {
             </TouchableOpacity>
           )}
  
-          {/* Option: Payments Setup (Hidden for Manager & Cashier!) */}
+          {/* Option: Premium Plans Setup (Hidden for Manager & Cashier!) */}
           {canPerform("create", "settings") && (
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
-              onPress={() => triggerToast("Pricing subscription setup initialized")}
+              onPress={() => router.push("/profile/premium-plans")}
             >
-              <View style={[styles.optionIconBox, { backgroundColor: "#FCE8E6" }]}>
-                <Feather name="credit-card" size={18} color={TOKENS.error} />
+              <View style={[styles.optionIconBox, { backgroundColor: "#FEF3C7" }]}>
+                <Ionicons name="diamond" size={18} color="#D97706" />
               </View>
               <View style={styles.optionTextWrapper}>
-                <Text style={styles.optionTitle}>Payments</Text>
-                <Text style={styles.optionSubtitle}>Subscription plans, invoice billing, and receipts history</Text>
+                <Text style={styles.optionTitle}>Premium Plans</Text>
+                <Text style={styles.optionSubtitle}>Manage subscriptions, billing cycles, and feature access</Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
@@ -264,8 +277,10 @@ export const ProfileScreen: React.FC = () => {
               </View>
               <TouchableOpacity 
                 onPress={() => {
-                  toggleBackup();
-                  triggerToast(isBackupEnabled ? "Cloud backup disabled" : "Cloud backup enabled! ☁️");
+                  checkPremiumAction("Cloud backup and database synchronization", () => {
+                    toggleBackup();
+                    triggerToast(isBackupEnabled ? "Cloud backup disabled" : "Cloud backup enabled! ☁️");
+                  });
                 }}
                 style={[
                   styles.switchButton, 
@@ -286,13 +301,15 @@ export const ProfileScreen: React.FC = () => {
                 style={styles.optionRow}
                 activeOpacity={0.7}
                 onPress={async () => {
-                  triggerToast("Syncing database... 🔄");
-                  const success = await syncDatabase();
-                  if (success) {
-                    triggerToast("Database synced successfully! ✅");
-                  } else {
-                    Alert.alert("Sync Failed", "Check your internet connection and Supabase environment configuration.");
-                  }
+                  checkPremiumAction("Manual database synchronization", async () => {
+                    triggerToast("Syncing database... 🔄");
+                    const success = await syncDatabase();
+                    if (success) {
+                      triggerToast("Database synced successfully! ✅");
+                    } else {
+                      Alert.alert("Sync Failed", "Check your internet connection and Supabase environment configuration.");
+                    }
+                  });
                 }}
               >
                 <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
@@ -320,69 +337,75 @@ export const ProfileScreen: React.FC = () => {
             >
               {/* 1 Month Plan Card */}
               <TouchableOpacity
-                style={[styles.planCard, selectedPlan === "1_month" && styles.planCardActive]}
+                style={[styles.planCard, isPremium && styles.planCardActive]}
                 activeOpacity={0.9}
                 onPress={() => {
-                  setSelectedPlan("1_month");
-                  triggerToast("1-Month Pro Plan selected! 💳");
+                  router.push("/profile/premium-plans");
                 }}
               >
                 <View style={styles.planHeader}>
                   <Text style={styles.planTitle}>Starter</Text>
                   <Text style={styles.planDuration}>1 Month Access</Text>
                 </View>
-                <Text style={styles.planPrice}>Rs. 2,500</Text>
-                <Text style={styles.planPriceSub}>billed monthly</Text>
-                <View style={[styles.planStatusBadge, selectedPlan === "1_month" && styles.planStatusBadgeActive]}>
-                  <Text style={[styles.planStatusText, selectedPlan === "1_month" && { color: "#fff" }]}>
-                    {selectedPlan === "1_month" ? "Active Plan" : "Choose Plan"}
+                <View style={styles.priceContainer}>
+                  <Text style={styles.originalPriceText}>Rs. 5,000</Text>
+                  <Text style={styles.planPrice}>Rs. 3,500</Text>
+                </View>
+                <Text style={styles.planPriceSub}>Save Rs. 1,500 · billed monthly</Text>
+                <View style={[styles.planStatusBadge, isPremium && styles.planStatusBadgeActive]}>
+                  <Text style={[styles.planStatusText, isPremium && { color: "#fff" }]}>
+                    {isPremium ? "Unlocked" : "Choose Plan"}
                   </Text>
                 </View>
               </TouchableOpacity>
 
               {/* 3 Months Plan Card (Popular) */}
               <TouchableOpacity
-                style={[styles.planCard, styles.planCardPopular, selectedPlan === "3_month" && styles.planCardActive]}
+                style={[styles.planCard, styles.planCardPopular, isPremium && styles.planCardActive]}
                 activeOpacity={0.9}
                 onPress={() => {
-                  setSelectedPlan("3_month");
-                  triggerToast("3-Month Pro Plan selected! 🌟");
+                  router.push("/profile/premium-plans");
                 }}
               >
                 <View style={styles.popularRibbon}>
                   <Text style={styles.popularRibbonText}>MOST POPULAR</Text>
                 </View>
                 <View style={styles.planHeader}>
-                  <Text style={[styles.planTitle, { color: TOKENS.primary, marginTop: 12 }]}>Retail Pro</Text>
-                  <Text style={styles.planDuration}>3 Months Access</Text>
+                  <Text style={[styles.planTitle, { color: "#FFFFFF", marginTop: 12 }]}>Retail Pro</Text>
+                  <Text style={[styles.planDuration, { color: "#94A3B8" }]}>3 Months Access</Text>
                 </View>
-                <Text style={styles.planPrice}>Rs. 6,800</Text>
-                <Text style={styles.planPriceSub}>Save 10% · billed quarterly</Text>
-                <View style={[styles.planStatusBadge, selectedPlan === "3_month" ? styles.planStatusBadgeActive : { backgroundColor: TOKENS.primary }]}>
+                <View style={styles.priceContainer}>
+                  <Text style={[styles.originalPriceText, { color: "#64748B" }]}>Rs. 12,000</Text>
+                  <Text style={[styles.planPrice, { color: "#FFFFFF" }]}>Rs. 10,000</Text>
+                </View>
+                <Text style={[styles.planPriceSub, { color: "#94A3B8" }]}>Save Rs. 2,000 · billed quarterly</Text>
+                <View style={[styles.planStatusBadge, isPremium ? styles.planStatusBadgeActive : { backgroundColor: "#D97706" }]}>
                   <Text style={[styles.planStatusText, { color: '#fff' }]}>
-                    {selectedPlan === "3_month" ? "Active Plan" : "Choose Plan"}
+                    {isPremium ? "Unlocked" : "Choose Plan"}
                   </Text>
                 </View>
               </TouchableOpacity>
 
               {/* 1 Year Plan Card */}
               <TouchableOpacity
-                style={[styles.planCard, selectedPlan === "1_year" && styles.planCardActive]}
+                style={[styles.planCard, isPremium && styles.planCardActive]}
                 activeOpacity={0.9}
                 onPress={() => {
-                  setSelectedPlan("1_year");
-                  triggerToast("1-Year Pro Plan selected! 🚀");
+                  router.push("/profile/premium-plans");
                 }}
               >
                 <View style={styles.planHeader}>
                   <Text style={styles.planTitle}>Enterprise</Text>
                   <Text style={styles.planDuration}>12 Months Access</Text>
                 </View>
-                <Text style={styles.planPrice}>Rs. 15,000</Text>
-                <Text style={styles.planPriceSub}>Save 50% · billed annually</Text>
-                <View style={[styles.planStatusBadge, selectedPlan === "1_year" && styles.planStatusBadgeActive]}>
-                  <Text style={[styles.planStatusText, selectedPlan === "1_year" && { color: "#fff" }]}>
-                    {selectedPlan === "1_year" ? "Active Plan" : "Choose Plan"}
+                <View style={styles.priceContainer}>
+                  <Text style={styles.originalPriceText}>Rs. 48,000</Text>
+                  <Text style={styles.planPrice}>Rs. 36,000</Text>
+                </View>
+                <Text style={styles.planPriceSub}>Save 25% · billed annually</Text>
+                <View style={[styles.planStatusBadge, isPremium && styles.planStatusBadgeActive]}>
+                  <Text style={[styles.planStatusText, isPremium && { color: "#fff" }]}>
+                    {isPremium ? "Unlocked" : "Choose Plan"}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -521,8 +544,11 @@ export const ProfileScreen: React.FC = () => {
         </ScrollView>
       </BottomSheet>
 
-
-
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName={premiumFeatureName}
+      />
 
     </ScreenWrapper>
   );
@@ -760,7 +786,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   planCardPopular: {
-    borderColor: "#FCD34D",
+    backgroundColor: "#0F172A",
+    borderColor: "#D97706",
     borderWidth: 1.5,
   },
   popularRibbon: {
@@ -768,14 +795,14 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#D97706",
     paddingVertical: 3,
     alignItems: "center",
   },
   popularRibbonText: {
     color: "#fff",
     fontSize: 8,
-    fontWeight: "900",
+    fontWeight: "bold",
     letterSpacing: 0.5,
   },
   planHeader: {
@@ -796,7 +823,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: TOKENS.dark,
+  },
+  priceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     marginTop: 12,
+  },
+  originalPriceText: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    textDecorationLine: "line-through",
+    fontWeight: "500",
   },
   planPriceSub: {
     fontSize: 8,

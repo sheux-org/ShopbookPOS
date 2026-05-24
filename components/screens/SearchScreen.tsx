@@ -20,6 +20,8 @@ import { HeaderCartButton } from "../common/HeaderCartButton";
 import { useProducts } from "../../hooks/useProducts";
 import { ProductImage } from "../common/ProductImage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 export const SearchScreen: React.FC = () => {
   const router = useRouter();
@@ -30,6 +32,9 @@ export const SearchScreen: React.FC = () => {
   const [activeChip, setActiveChip] = useState("All");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const {
     data: productsList = [],
@@ -45,9 +50,13 @@ export const SearchScreen: React.FC = () => {
   };
 
   const triggerBarcodeScanner = () => {
-    requestCameraAccess(() => {
-      setIsScanning(true);
-    });
+    if (isPremium) {
+      requestCameraAccess(() => {
+        setIsScanning(true);
+      });
+    } else {
+      setPremiumModalVisible(true);
+    }
   };
 
   const handleAddProduct = (prod: CatalogProduct) => {
@@ -240,6 +249,12 @@ export const SearchScreen: React.FC = () => {
           setIsScanning(false);
           triggerToast(`Found Barcode: ${data} 🔍`);
         }}
+      />
+
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="In-app barcode search scanning"
       />
     </ScreenWrapper>
   );

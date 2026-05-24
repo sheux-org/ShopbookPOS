@@ -22,6 +22,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { hapticFeedback } from "../../utils/haptics";
 import { TOKENS } from "../../constants/tokens";
 import { usePermission } from "../../hooks/usePermissionHandler";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 import {
   useDeleteProduct,
   useProducts,
@@ -42,6 +44,8 @@ export const ManageItemsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestCameraAccess } = usePermission();
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   // Search input state
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,9 +56,13 @@ export const ManageItemsScreen: React.FC = () => {
   const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
 
   const triggerBarcodeScanner = () => {
-    requestCameraAccess(() => {
-      setIsScanning(true);
-    });
+    if (isPremium) {
+      requestCameraAccess(() => {
+        setIsScanning(true);
+      });
+    } else {
+      setPremiumModalVisible(true);
+    }
   };
 
   const {
@@ -893,7 +901,11 @@ export const ManageItemsScreen: React.FC = () => {
         </Pressable>
       </Modal>
 
-
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="In-app barcode catalog scanning"
+      />
     </ScreenWrapper>
   );
 };

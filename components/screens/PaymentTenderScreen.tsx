@@ -26,6 +26,7 @@ import { BottomSheet } from "../common/BottomSheet";
 import { hapticFeedback } from "../../utils/haptics";
 import { printReceipt } from "../../utils/printThermalReceipt";
 import { getInvoiceLabel } from "../../utils/orderInvoice";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 type TenderMethod = "cash" | "card";
 
@@ -68,6 +69,9 @@ export const PaymentTenderScreen: React.FC = () => {
   const [lastFourDigits, setLastFourDigits] = useState("");
   const [showBankSheet, setShowBankSheet] = useState(false);
   const [createdInvoiceNumber, setCreatedInvoiceNumber] = useState("");
+
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   // Dynamic values
   const parsedTendered = useMemo(() => {
@@ -164,6 +168,10 @@ export const PaymentTenderScreen: React.FC = () => {
   };
 
   const handlePrintReceipt = async () => {
+    if (!isPremium) {
+      setPremiumModalVisible(true);
+      return;
+    }
     const cart = cartState.getCart();
     const items = cart.map(item => ({
       name: item.name,
@@ -555,6 +563,11 @@ export const PaymentTenderScreen: React.FC = () => {
           ))}
         </ScrollView>
       </BottomSheet>
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="Receipt printing"
+      />
     </ScreenWrapper>
   );
 };

@@ -26,6 +26,8 @@ import { ScreenWrapper } from "../common/ScreenWrapper";
 import { HeaderCartButton } from "../common/HeaderCartButton";
 import { cartState } from "../data/cartState";
 import { InvoiceItemCard } from "../common/InvoiceItemCard";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 interface InvoiceItem {
   id: string;
@@ -73,6 +75,9 @@ export const PosScreen: React.FC = () => {
   // Quick code state
   const [quickCode, setQuickCode] = useState("");
   const [cursorVisible, setCursorVisible] = useState(true);
+
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const findProductByCode = useFindProductByCode();
   const [matchedProduct, setMatchedProduct] = useState<DBProduct | null>(null);
@@ -332,7 +337,13 @@ export const PosScreen: React.FC = () => {
               styles.segmentButton,
               activeMode === "scan" && styles.segmentButtonActive,
             ]}
-            onPress={() => setActiveMode("scan")}
+            onPress={() => {
+              if (isPremium) {
+                setActiveMode("scan");
+              } else {
+                setPremiumModalVisible(true);
+              }
+            }}
             activeOpacity={0.8}
           >
             <Ionicons
@@ -610,6 +621,12 @@ export const PosScreen: React.FC = () => {
           </TouchableOpacity>
         )}
       </View>
+
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="In-app barcode transactions scanning"
+      />
     </ScreenWrapper>
   );
 };

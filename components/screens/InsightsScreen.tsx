@@ -26,6 +26,8 @@ import { BottomSheet } from "../common/BottomSheet";
 import { ProductImage } from "../common/ProductImage";
 import { ScreenWrapper } from "../common/ScreenWrapper";
 import { cartState } from "../data/cartState";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 const OrderItemsList: React.FC<{ orderId: string }> = ({ orderId }) => {
   const { data: items = [], isLoading } = useGetOrderItems(orderId);
@@ -83,6 +85,10 @@ export const InsightsScreen: React.FC = () => {
   const router = useRouter();
   const activeBusiness = cartState.getActiveBusiness();
   const { height: windowHeight } = useWindowDimensions();
+
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+  const [premiumFeatureName, setPremiumFeatureName] = useState("This feature");
 
   // Period filters
   const [period, setPeriod] = useState<
@@ -158,6 +164,11 @@ export const InsightsScreen: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSyncDatabase = async () => {
+    if (!isPremium) {
+      setPremiumFeatureName("Cloud database sync");
+      setPremiumModalVisible(true);
+      return;
+    }
     setIsSyncing(true);
     try {
       const result = await syncDatabase();
@@ -186,6 +197,11 @@ export const InsightsScreen: React.FC = () => {
   const stockInMutation = useStockInProduct();
 
   const handleExport = (type: "PDF" | "CSV") => {
+    if (!isPremium) {
+      setPremiumFeatureName("PDF/CSV reports export");
+      setPremiumModalVisible(true);
+      return;
+    }
     setExportType(type);
     setIsExporting(true);
     setTimeout(() => {
@@ -1134,6 +1150,11 @@ export const InsightsScreen: React.FC = () => {
           </View>
         </View>
       </BottomSheet>
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName={premiumFeatureName}
+      />
     </ScreenWrapper>
   );
 };

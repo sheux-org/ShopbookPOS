@@ -24,6 +24,8 @@ import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
 import { HeaderCartButton } from "../common/HeaderCartButton";
 import { Business, cartState } from "../data/cartState";
 import { hapticFeedback } from "../../utils/haptics";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 interface HomeProduct {
   id: string;
@@ -55,6 +57,9 @@ export const HomeScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const {
     data: productsList = [],
@@ -231,7 +236,13 @@ export const HomeScreen: React.FC = () => {
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder="Quick search products..."
-        onScanPress={() => setIsScanning(true)}
+        onScanPress={() => {
+          if (isPremium) {
+            setIsScanning(true);
+          } else {
+            setPremiumModalVisible(true);
+          }
+        }}
         containerStyle={{ marginHorizontal: 16, marginTop: 12 }}
       />
 
@@ -466,9 +477,14 @@ export const HomeScreen: React.FC = () => {
                 activeOpacity={0.8}
                 onPress={() => {
                   hapticFeedback.impactMedium();
-                  cartState.setActiveBusiness(biz.id);
-                  setIsBusinessSheetOpen(false);
-                  triggerToast(`Switched to ${biz.name}`);
+                  if (isPremium || isSelected) {
+                    cartState.setActiveBusiness(biz.id);
+                    setIsBusinessSheetOpen(false);
+                    triggerToast(`Switched to ${biz.name}`);
+                  } else {
+                    setIsBusinessSheetOpen(false);
+                    setPremiumModalVisible(true);
+                  }
                 }}
               >
                 <View style={styles.bizCardLeft}>
@@ -511,6 +527,12 @@ export const HomeScreen: React.FC = () => {
           setIsScanning(false);
           triggerToast(`Scanned Barcode: ${data} 🔍`);
         }}
+      />
+
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="Multi-branch swapping"
       />
     </ScreenWrapper>
   );

@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   brandPos: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "bold",
     color: "#B0B0B0",
     letterSpacing: 0.5,
   },

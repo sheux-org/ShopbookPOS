@@ -86,6 +86,8 @@ function MainAppContent() {
       <Stack.Screen name="(modules)/profile/manage-businesses" />
       <Stack.Screen name="(modules)/profile/manage-staff" />
       <Stack.Screen name="(modules)/profile/active-devices" />
+      <Stack.Screen name="(modules)/profile/premium-plans" />
+      <Stack.Screen name="(modules)/profile/payment-select" />
     </Stack>
   );
 }

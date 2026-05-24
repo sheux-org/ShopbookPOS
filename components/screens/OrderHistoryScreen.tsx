@@ -33,6 +33,8 @@ import { buildThermalReceiptHtml } from "../../utils/thermalReceiptHtml";
 import { printReceipt } from "../../utils/printThermalReceipt";
 import { BottomSheet } from "../common/BottomSheet";
 import { cartState } from "../data/cartState";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 const CARD_GAP = 12;
 const INNER_TEXT_GAP = 4;
@@ -51,6 +53,9 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const router = useRouter();
+
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const activeBiz = cartState.getActiveBusiness();
   const {
@@ -266,6 +271,10 @@ Thank you for shopping with us!
 
   const handlePrintReceipt = async () => {
     if (!selectedOrder) return;
+    if (!isPremium) {
+      setPremiumModalVisible(true);
+      return;
+    }
     if (itemsLoading) {
       Alert.alert("Please wait", "Receipt lines are still loading.");
       return;
@@ -517,6 +526,11 @@ Thank you for shopping with us!
           </View>
         </View>
       </BottomSheet>
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="Invoice printing"
+      />
     </ScreenWrapper>
   );
 };
