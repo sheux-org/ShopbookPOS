@@ -1,34 +1,99 @@
-import React, { useState, useEffect } from "react";
+import { Feather } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  ScrollView,
+  Share,
   StyleSheet,
   Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  Platform,
-  Alert,
-  Modal,
-  ActivityIndicator,
-  Share,
   TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { cartState } from "../data/cartState";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useBusinessInsights } from "../../hooks/useInsights";
+import { useProducts, useStockInProduct } from "../../hooks/useProducts";
+import { useGetOrderItems, useGetPeriodOrders } from "../../hooks/useOrders";
+import { syncDatabase } from "../../services/sync";
 import { BottomSheet } from "../common/BottomSheet";
+import { ProductImage } from "../common/ProductImage";
+import { ScreenWrapper } from "../common/ScreenWrapper";
+import { cartState } from "../data/cartState";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
+
+const OrderItemsList: React.FC<{ orderId: string }> = ({ orderId }) => {
+  const { data: items = [], isLoading } = useGetOrderItems(orderId);
+
+  if (isLoading) {
+    return <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 8 }} />;
+  }
+
+  return (
+    <>
+      {items.map((item: any) => (
+        <View key={item.id} style={styles.expandedItemRow}>
+          <Text style={styles.expandedItemName}>
+            {item.name}
+          </Text>
+          <Text style={styles.expandedItemQty}>
+            {item.quantity} x Rs.{" "}
+            {item.price.toLocaleString()}
+          </Text>
+          <Text style={styles.expandedItemSubtotal}>
+            Rs.{" "}
+            {(item.quantity * item.price).toLocaleString()}
+          </Text>
+        </View>
+      ))}
+    </>
+  );
+};
+
+const OrderCardHeaderRight: React.FC<{ orderId: string; isExpanded: boolean }> = ({ orderId, isExpanded }) => {
+  const { data: items = [] } = useGetOrderItems(orderId);
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 2,
+      }}
+    >
+      <Text style={styles.historyItemCount}>
+        {items.length} items
+      </Text>
+      <Feather
+        name={isExpanded ? "chevron-up" : "chevron-down"}
+        size={14}
+        color={TOKENS.muted}
+      />
+    </View>
+  );
+};
 
 export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
   const activeBusiness = cartState.getActiveBusiness();
+  const { height: windowHeight } = useWindowDimensions();
+
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+  const [premiumFeatureName, setPremiumFeatureName] = useState("This feature");
 
   // Period filters
-  const [period, setPeriod] = useState<"daily" | "monthly" | "yearly" | "custom">("monthly");
+  const [period, setPeriod] = useState<
+    "daily" | "monthly" | "yearly" | "custom"
+  >("monthly");
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
 
   // Calendar interactive range selections (May 2026 default)
@@ -49,9 +114,13 @@ export const InsightsScreen: React.FC = () => {
 
   // Reports Drawer states
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
-  const [reportsActiveTab, setReportsActiveTab] = useState<"orders" | "inventory">("orders");
+  const [reportsActiveTab, setReportsActiveTab] = useState<
+    "orders" | "inventory"
+  >("orders");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(
+    null,
+  );
   const [refillValues, setRefillValues] = useState<Record<string, string>>({});
 
   // Active business details sync
@@ -65,59 +134,74 @@ export const InsightsScreen: React.FC = () => {
   }, []);
 
   // Real-time WatermelonDB statistics fetch using custom hook
-  const { data: stats, isLoading, refetch } = useBusinessInsights(
+  const {
+    data: stats,
+    isLoading,
+  } = useBusinessInsights(
     activeBiz.id,
     period,
     resolvedStartDate,
-    resolvedEndDate
+    resolvedEndDate,
   );
+
+  // Dynamic catalog products for Stock-In Refills tab
+  const {
+    data: productsList = [],
+    fetchNextPage: fetchNextProducts,
+    hasNextPage: hasNextProducts,
+    isFetchingNextPage: isFetchingNextProducts,
+  } = useProducts(undefined, undefined, undefined);
+
+  // Paginated order history for the Reports tab
+  const {
+    data: periodOrdersList = [],
+    fetchNextPage: fetchNextPeriodOrders,
+    hasNextPage: hasNextPeriodOrders,
+    isFetchingNextPage: isFetchingNextPeriodOrders,
+  } = useGetPeriodOrders(period, resolvedStartDate, resolvedEndDate);
 
   // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSyncDatabase = async () => {
+    if (!isPremium) {
+      setPremiumFeatureName("Cloud database sync");
+      setPremiumModalVisible(true);
+      return;
+    }
     setIsSyncing(true);
     try {
-      const { syncDatabase } = require("../../services/sync");
       const result = await syncDatabase();
       if (result) {
         queryClient.invalidateQueries({ queryKey: ["insights"] });
-        Alert.alert("Sync Success", "Database successfully synchronized with Cloud Storage!");
+        Alert.alert(
+          "Sync Success",
+          "Database successfully synchronized with Cloud Storage!",
+        );
       } else {
-        Alert.alert("Sync Skipped", "Backup/sync is disabled or environment is not configured. Please enable it in Settings.");
+        Alert.alert(
+          "Sync Skipped",
+          "Backup/sync is disabled or environment is not configured. Please enable it in Settings.",
+        );
       }
     } catch (err: any) {
-      Alert.alert("Sync Failed", err.message || "Failed to synchronize database.");
+      Alert.alert(
+        "Sync Failed",
+        err.message || "Failed to synchronize database.",
+      );
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // Refill Inventory Stocks Mutation
-  const refillMutation = useMutation({
-    mutationFn: async ({ productId, refillAmount }: { productId: string; refillAmount: number }) => {
-      const db = require("../data/db").default;
-      const product = await db.get("products").find(productId);
-      await db.write(async () => {
-        await product.update((p: any) => {
-          p.stockCount = (p.stockCount || 0) + refillAmount;
-        });
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["insights"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      Alert.alert("Stock In success", "Product stock refilled successfully!");
-      // Reset expanded refill values
-      setRefillValues({});
-      setExpandedProductId(null);
-    },
-    onError: (err: any) => {
-      Alert.alert("Refill Failed", err.message);
-    },
-  });
+  const stockInMutation = useStockInProduct();
 
   const handleExport = (type: "PDF" | "CSV") => {
+    if (!isPremium) {
+      setPremiumFeatureName("PDF/CSV reports export");
+      setPremiumModalVisible(true);
+      return;
+    }
     setExportType(type);
     setIsExporting(true);
     setTimeout(() => {
@@ -154,7 +238,10 @@ export const InsightsScreen: React.FC = () => {
 
   const applyCalendarRange = () => {
     if (!selectedStartDay || !selectedEndDay) {
-      Alert.alert("Range Selection Needed", "Please select both a Start Date and an End Date on the calendar grid first.");
+      Alert.alert(
+        "Range Selection Needed",
+        "Please select both a Start Date and an End Date on the calendar grid first.",
+      );
       return;
     }
     const start = new Date(2026, 4, selectedStartDay); // May index is 4
@@ -167,7 +254,7 @@ export const InsightsScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Dashboard Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -179,7 +266,12 @@ export const InsightsScreen: React.FC = () => {
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrapper}>
-          <Text style={styles.headerTitle}>Business Insights</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">
+            Business Insights
+          </Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
+            {isSyncing ? "Syncing..." : "Real-time reports"}
+          </Text>
         </View>
 
         <View style={styles.headerActionsWrapper}>
@@ -188,28 +280,21 @@ export const InsightsScreen: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => setIsReportsModalOpen(true)}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Feather name="bar-chart-2" size={15} color={TOKENS.primary} />
-              <Text style={[styles.headerTextBtnLabel, { color: TOKENS.primary }]}>Reports</Text>
-            </View>
+            <Feather name="bar-chart-2" size={15} color={TOKENS.primary} />
+            <Text style={styles.headerTextBtnLabel}>Reports</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.headerTextBtn}
+            style={[styles.headerIconBtn, isSyncing && styles.headerTextBtnDisabled]}
             activeOpacity={0.7}
             onPress={handleSyncDatabase}
             disabled={isSyncing}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              {isSyncing ? (
-                <ActivityIndicator size="small" color={TOKENS.primary} />
-              ) : (
-                <Feather name="refresh-cw" size={12} color={TOKENS.muted} />
-              )}
-              <Text style={styles.headerTextBtnLabel}>
-                {isSyncing ? "Syncing..." : "Sync"}
-              </Text>
-            </View>
+            {isSyncing ? (
+              <ActivityIndicator size="small" color={TOKENS.primary} />
+            ) : (
+              <Feather name="refresh-cw" size={15} color={TOKENS.primary} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -217,36 +302,79 @@ export const InsightsScreen: React.FC = () => {
       {/* Main Insights Panel Scroll */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 90 },
+        ]}
       >
         {/* Period Selector pills */}
         <View style={styles.periodPillsRow}>
           <TouchableOpacity
-            style={[styles.periodPill, period === "daily" && styles.periodPillActive]}
+            style={[
+              styles.periodPill,
+              period === "daily" && styles.periodPillActive,
+            ]}
             onPress={() => setPeriod("daily")}
           >
-            <Text style={[styles.periodPillText, period === "daily" && styles.periodPillTextActive]}>Today</Text>
+            <Text
+              style={[
+                styles.periodPillText,
+                period === "daily" && styles.periodPillTextActive,
+              ]}
+            >
+              Today
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.periodPill, period === "monthly" && styles.periodPillActive]}
+            style={[
+              styles.periodPill,
+              period === "monthly" && styles.periodPillActive,
+            ]}
             onPress={() => setPeriod("monthly")}
           >
-            <Text style={[styles.periodPillText, period === "monthly" && styles.periodPillTextActive]}>Monthly</Text>
+            <Text
+              style={[
+                styles.periodPillText,
+                period === "monthly" && styles.periodPillTextActive,
+              ]}
+            >
+              Monthly
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.periodPill, period === "yearly" && styles.periodPillActive]}
+            style={[
+              styles.periodPill,
+              period === "yearly" && styles.periodPillActive,
+            ]}
             onPress={() => setPeriod("yearly")}
           >
-            <Text style={[styles.periodPillText, period === "yearly" && styles.periodPillTextActive]}>Yearly</Text>
+            <Text
+              style={[
+                styles.periodPillText,
+                period === "yearly" && styles.periodPillTextActive,
+              ]}
+            >
+              Yearly
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.periodPill, period === "custom" && styles.periodPillActive]}
+            style={[
+              styles.periodPill,
+              period === "custom" && styles.periodPillActive,
+            ]}
             onPress={() => setIsCustomModalOpen(true)}
           >
-            <Text style={[styles.periodPillText, period === "custom" && styles.periodPillTextActive]}>Custom</Text>
+            <Text
+              style={[
+                styles.periodPillText,
+                period === "custom" && styles.periodPillTextActive,
+              ]}
+            >
+              Custom
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -261,15 +389,21 @@ export const InsightsScreen: React.FC = () => {
             {/* KPI Cards Grid */}
             <View style={styles.kpiGrid}>
               <View style={styles.kpiCard}>
-                <View style={[styles.kpiIconCircle, { backgroundColor: "#E8FDF0" }]}>
+                <View
+                  style={[styles.kpiIconCircle, { backgroundColor: "#E8FDF0" }]}
+                >
                   <Feather name="trending-up" size={16} color="#10B981" />
                 </View>
                 <Text style={styles.kpiLabel}>Gross Sales</Text>
-                <Text style={styles.kpiValue}>Rs. {stats?.grossRevenue.toLocaleString()}</Text>
+                <Text style={styles.kpiValue}>
+                  Rs. {stats?.grossRevenue.toLocaleString()}
+                </Text>
               </View>
 
               <View style={styles.kpiCard}>
-                <View style={[styles.kpiIconCircle, { backgroundColor: "#EFF6FF" }]}>
+                <View
+                  style={[styles.kpiIconCircle, { backgroundColor: "#EFF6FF" }]}
+                >
                   <Feather name="file-text" size={16} color={TOKENS.primary} />
                 </View>
                 <Text style={styles.kpiLabel}>Transactions</Text>
@@ -277,11 +411,15 @@ export const InsightsScreen: React.FC = () => {
               </View>
 
               <View style={styles.kpiCard}>
-                <View style={[styles.kpiIconCircle, { backgroundColor: "#FEF7E0" }]}>
+                <View
+                  style={[styles.kpiIconCircle, { backgroundColor: "#FEF7E0" }]}
+                >
                   <Feather name="shopping-bag" size={16} color="#B06000" />
                 </View>
                 <Text style={styles.kpiLabel}>Avg Basket</Text>
-                <Text style={styles.kpiValue}>Rs. {Math.round(stats?.avgTicket || 0).toLocaleString()}</Text>
+                <Text style={styles.kpiValue}>
+                  Rs. {Math.round(stats?.avgTicket || 0).toLocaleString()}
+                </Text>
               </View>
 
               <TouchableOpacity
@@ -291,15 +429,29 @@ export const InsightsScreen: React.FC = () => {
                   if (stats?.lowStockCount && stats.lowStockCount > 0) {
                     setIsLowStockModalOpen(true);
                   } else {
-                    Alert.alert("All Stock Normal", "All product stock counts are above the alert threshold! Great job!");
+                    Alert.alert(
+                      "All Stock Normal",
+                      "All product stock counts are above the alert threshold! Great job!",
+                    );
                   }
                 }}
               >
-                <View style={[styles.kpiIconCircle, { backgroundColor: "#FCE8E6" }]}>
-                  <Feather name="alert-triangle" size={16} color={TOKENS.error} />
+                <View
+                  style={[styles.kpiIconCircle, { backgroundColor: "#FCE8E6" }]}
+                >
+                  <Feather
+                    name="alert-triangle"
+                    size={16}
+                    color={TOKENS.error}
+                  />
                 </View>
                 <Text style={styles.kpiLabel}>Low Stock Items</Text>
-                <Text style={[styles.kpiValue, stats?.lowStockCount! > 0 && { color: TOKENS.error }]}>
+                <Text
+                  style={[
+                    styles.kpiValue,
+                    stats?.lowStockCount! > 0 && { color: TOKENS.error },
+                  ]}
+                >
                   {stats?.lowStockCount}
                 </Text>
               </TouchableOpacity>
@@ -310,7 +462,10 @@ export const InsightsScreen: React.FC = () => {
               <Text style={styles.sectionTitle}>Weekly Sales Distribution</Text>
               <View style={styles.barGraphRow}>
                 {stats?.chartData.map((item, index) => {
-                  const maxVal = Math.max(...stats.chartData.map((c) => c.value), 1000);
+                  const maxVal = Math.max(
+                    ...stats.chartData.map((c) => c.value),
+                    1000,
+                  );
                   const pct = Math.min((item.value / maxVal) * 100, 100);
                   return (
                     <View key={index} style={styles.barGraphCol}>
@@ -328,15 +483,25 @@ export const InsightsScreen: React.FC = () => {
             {stats?.ordersCount === 0 && (
               <View style={styles.seederContainer}>
                 <Feather name="refresh-cw" size={24} color={TOKENS.muted} />
-                <Text style={styles.seederText}>No sales invoices recorded for this active branch yet.</Text>
+                <Text style={styles.seederText}>
+                  No sales invoices recorded for this active branch yet.
+                </Text>
                 <TouchableOpacity
                   style={styles.seederBtn}
                   activeOpacity={0.8}
                   onPress={handleSyncDatabase}
                   disabled={isSyncing}
                 >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    {isSyncing && <ActivityIndicator size="small" color="#fff" />}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    {isSyncing && (
+                      <ActivityIndicator size="small" color="#fff" />
+                    )}
                     <Text style={styles.seederBtnText}>
                       {isSyncing ? "Syncing..." : "Sync Database Now"}
                     </Text>
@@ -348,16 +513,29 @@ export const InsightsScreen: React.FC = () => {
             {/* Best Sellers Section */}
             {stats?.bestSellers.length! > 0 && (
               <View style={styles.statsSection}>
-                <Text style={styles.sectionTitle}>🔥 Best Selling Products</Text>
+                <Text style={styles.sectionTitle}>
+                  🔥 Best Selling Products
+                </Text>
                 <View style={styles.statsCardList}>
                   {stats?.bestSellers.map((item, index) => (
                     <View key={index} style={styles.statListItem}>
-                      <View style={[styles.rankCircle, index === 0 && styles.rankGold, index === 1 && styles.rankSilver, index === 2 && styles.rankBronze]}>
+                      <View
+                        style={[
+                          styles.rankCircle,
+                          index === 0 && styles.rankGold,
+                          index === 1 && styles.rankSilver,
+                          index === 2 && styles.rankBronze,
+                        ]}
+                      >
                         <Text style={styles.rankText}>{index + 1}</Text>
                       </View>
                       <Text style={styles.statItemName}>{item.name}</Text>
-                      <Text style={styles.statItemQty}>{item.quantity} units</Text>
-                      <Text style={styles.statItemRevenue}>Rs. {item.revenue.toLocaleString()}</Text>
+                      <Text style={styles.statItemQty}>
+                        {item.quantity} units
+                      </Text>
+                      <Text style={styles.statItemRevenue}>
+                        Rs. {item.revenue.toLocaleString()}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -367,16 +545,31 @@ export const InsightsScreen: React.FC = () => {
             {/* Slow Movers Section */}
             {stats?.slowMovers.length! > 0 && (
               <View style={styles.statsSection}>
-                <Text style={styles.sectionTitle}>⏳ Slow Moving Inventory</Text>
+                <Text style={styles.sectionTitle}>
+                  ⏳ Slow Moving Inventory
+                </Text>
                 <View style={styles.statsCardList}>
                   {stats?.slowMovers.map((item, index) => (
                     <View key={index} style={styles.statListItem}>
-                      <View style={[styles.rankCircle, { backgroundColor: "#F3F4F6" }]}>
-                        <Text style={[styles.rankText, { color: TOKENS.muted }]}>{index + 1}</Text>
+                      <View
+                        style={[
+                          styles.rankCircle,
+                          { backgroundColor: "#F3F4F6" },
+                        ]}
+                      >
+                        <Text
+                          style={[styles.rankText, { color: TOKENS.muted }]}
+                        >
+                          {index + 1}
+                        </Text>
                       </View>
                       <Text style={styles.statItemName}>{item.name}</Text>
-                      <Text style={styles.statItemQty}>{item.quantity} units</Text>
-                      <Text style={styles.statItemRevenue}>Rs. {item.revenue.toLocaleString()}</Text>
+                      <Text style={styles.statItemQty}>
+                        {item.quantity} units
+                      </Text>
+                      <Text style={styles.statItemRevenue}>
+                        Rs. {item.revenue.toLocaleString()}
+                      </Text>
                     </View>
                   ))}
                 </View>
@@ -386,7 +579,9 @@ export const InsightsScreen: React.FC = () => {
             {/* Export Actions Section */}
             {stats?.ordersCount! > 0 && (
               <View style={styles.exportSection}>
-                <Text style={styles.sectionTitle}>📄 Export Business Reports</Text>
+                <Text style={styles.sectionTitle}>
+                  📄 Export Business Reports
+                </Text>
                 <View style={styles.exportButtonsRow}>
                   <TouchableOpacity
                     style={[styles.exportCardBtn, styles.exportPdfCard]}
@@ -397,7 +592,9 @@ export const InsightsScreen: React.FC = () => {
                       <Feather name="file-text" size={18} color="#EF4444" />
                     </View>
                     <Text style={styles.exportPdfTextTitle}>PDF Statement</Text>
-                    <Text style={styles.exportCardSubtitle}>Formatted store summary</Text>
+                    <Text style={styles.exportCardSubtitle}>
+                      Formatted store summary
+                    </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -409,7 +606,9 @@ export const InsightsScreen: React.FC = () => {
                       <Feather name="grid" size={18} color="#10B981" />
                     </View>
                     <Text style={styles.exportCsvTextTitle}>CSV Ledger</Text>
-                    <Text style={styles.exportCardSubtitle}>Spreadsheet ledger data</Text>
+                    <Text style={styles.exportCardSubtitle}>
+                      Spreadsheet ledger data
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -424,16 +623,26 @@ export const InsightsScreen: React.FC = () => {
                 disabled={isSyncing}
               >
                 {isSyncing ? (
-                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                  <ActivityIndicator
+                    size="small"
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
                 ) : (
-                  <Feather name="refresh-cw" size={16} color="#fff" style={{ marginRight: 8 }} />
+                  <Feather
+                    name="refresh-cw"
+                    size={16}
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
                 )}
                 <Text style={styles.syncDatabaseBtnText}>
                   {isSyncing ? "Syncing Database..." : "Sync Database Now"}
                 </Text>
               </TouchableOpacity>
               <Text style={styles.syncDatabaseHelpText}>
-                Pull latest transaction reports and product inventory directly from your remote Cloud Storage.
+                Pull latest transaction reports and product inventory directly
+                from your remote Cloud Storage.
               </Text>
             </View>
           </>
@@ -449,12 +658,16 @@ export const InsightsScreen: React.FC = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.datePickerContent}>
-            <Text style={styles.modalTitle}>Select Custom Range (May 2026)</Text>
-            
+            <Text style={styles.modalTitle}>
+              Select Custom Range (May 2026)
+            </Text>
+
             {/* Weekdays Headers */}
             <View style={styles.weekdaysRow}>
               {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, idx) => (
-                <Text key={idx} style={styles.weekdayLabel}>{day}</Text>
+                <Text key={idx} style={styles.weekdayLabel}>
+                  {day}
+                </Text>
               ))}
             </View>
 
@@ -462,18 +675,31 @@ export const InsightsScreen: React.FC = () => {
             <View style={styles.daysGrid}>
               {(() => {
                 const daysInMonth = 31;
-                const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+                const daysArray = Array.from(
+                  { length: daysInMonth },
+                  (_, i) => i + 1,
+                );
                 const startOffset = 5; // May 2026 starts on Friday
-                const calendarCells = [...Array(startOffset).fill(null), ...daysArray];
+                const calendarCells = [
+                  ...Array(startOffset).fill(null),
+                  ...daysArray,
+                ];
 
                 return calendarCells.map((day, idx) => {
                   if (day === null) {
-                    return <View key={`empty-${idx}`} style={styles.emptyDayCell} />;
+                    return (
+                      <View key={`empty-${idx}`} style={styles.emptyDayCell} />
+                    );
                   }
 
                   const isSelectedStart = selectedStartDay === day;
                   const isSelectedEnd = selectedEndDay === day;
-                  const isWithinRange = !!(selectedStartDay && selectedEndDay && day > selectedStartDay && day < selectedEndDay);
+                  const isWithinRange = !!(
+                    selectedStartDay &&
+                    selectedEndDay &&
+                    day > selectedStartDay &&
+                    day < selectedEndDay
+                  );
 
                   return (
                     <TouchableOpacity
@@ -487,11 +713,14 @@ export const InsightsScreen: React.FC = () => {
                       ]}
                       onPress={() => handleCalendarDayPress(day)}
                     >
-                      <Text style={[
-                        styles.dayText,
-                        isWithinRange && styles.dayTextInRange,
-                        (isSelectedStart || isSelectedEnd) && styles.dayTextSelected,
-                      ]}>
+                      <Text
+                        style={[
+                          styles.dayText,
+                          isWithinRange && styles.dayTextInRange,
+                          (isSelectedStart || isSelectedEnd) &&
+                            styles.dayTextSelected,
+                        ]}
+                      >
                         {day}
                       </Text>
                     </TouchableOpacity>
@@ -504,7 +733,9 @@ export const InsightsScreen: React.FC = () => {
             <View style={styles.selectedDatesPreview}>
               <Text style={styles.previewLabel}>Selected Period:</Text>
               <Text style={styles.previewValue}>
-                {selectedStartDay ? `May ${selectedStartDay}, 2026` : "Start Date"}
+                {selectedStartDay
+                  ? `May ${selectedStartDay}, 2026`
+                  : "Start Date"}
                 {" ➔ "}
                 {selectedEndDay ? `May ${selectedEndDay}, 2026` : "End Date"}
               </Text>
@@ -518,7 +749,7 @@ export const InsightsScreen: React.FC = () => {
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.modalConfirmBtn}
                 onPress={applyCalendarRange}
@@ -537,10 +768,10 @@ export const InsightsScreen: React.FC = () => {
         title="Low Stock Products List"
       >
         <Text style={styles.lowStockModalSubtitle}>
-          The following inventory items are running critically low (5 units or less):
+          The following inventory items are running critically low (at or below alert threshold):
         </Text>
 
-        <ScrollView 
+        <ScrollView
           showsVerticalScrollIndicator={false}
           style={[styles.lowStockItemsScroll, { maxHeight: 350 }]}
           contentContainerStyle={{ gap: 10, paddingVertical: 10 }}
@@ -556,15 +787,21 @@ export const InsightsScreen: React.FC = () => {
                   <Text style={styles.lowStockItemSku}>SKU: {item.sku}</Text>
                 </View>
                 <View style={styles.lowStockCountBadge}>
-                  <Text style={styles.lowStockCountText}>{item.stockCount} left</Text>
-                  <Text style={styles.lowStockLimitText}>Alert Threshold: {item.lowStockAlert}</Text>
+                  <Text style={styles.lowStockCountText}>
+                    {item.stockCount} left
+                  </Text>
+                  <Text style={styles.lowStockLimitText}>
+                    Alert Threshold: {item.lowStockAlert}
+                  </Text>
                 </View>
               </View>
             ))
           ) : (
             <View style={styles.emptyLowStockState}>
               <Feather name="check-circle" size={32} color="#10B981" />
-              <Text style={styles.emptyLowStockText}>All products are sufficiently stocked!</Text>
+              <Text style={styles.emptyLowStockText}>
+                All products are sufficiently stocked!
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -575,26 +812,57 @@ export const InsightsScreen: React.FC = () => {
         visible={isReportsModalOpen}
         onClose={() => setIsReportsModalOpen(false)}
         title="Reports & Management"
+        maxHeight={windowHeight * 0.88}
       >
-        <View style={{ height: 500 }}>
+        <View style={{ height: windowHeight * 0.88 - 75 }}>
           {/* Premium Subheader Tabs */}
           <View style={styles.modalTabsRow}>
             <TouchableOpacity
-              style={[styles.modalTab, reportsActiveTab === "orders" && styles.modalTabActive]}
+              style={[
+                styles.modalTab,
+                reportsActiveTab === "orders" && styles.modalTabActive,
+              ]}
               onPress={() => setReportsActiveTab("orders")}
             >
-              <Feather name="list" size={14} color={reportsActiveTab === "orders" ? TOKENS.primary : TOKENS.muted} />
-              <Text style={[styles.modalTabText, reportsActiveTab === "orders" && styles.modalTabTextActive]}>
+              <Feather
+                name="list"
+                size={14}
+                color={
+                  reportsActiveTab === "orders" ? TOKENS.primary : TOKENS.muted
+                }
+              />
+              <Text
+                style={[
+                  styles.modalTabText,
+                  reportsActiveTab === "orders" && styles.modalTabTextActive,
+                ]}
+              >
                 Order History
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.modalTab, reportsActiveTab === "inventory" && styles.modalTabActive]}
+              style={[
+                styles.modalTab,
+                reportsActiveTab === "inventory" && styles.modalTabActive,
+              ]}
               onPress={() => setReportsActiveTab("inventory")}
             >
-              <Feather name="plus-circle" size={14} color={reportsActiveTab === "inventory" ? TOKENS.primary : TOKENS.muted} />
-              <Text style={[styles.modalTabText, reportsActiveTab === "inventory" && styles.modalTabTextActive]}>
+              <Feather
+                name="plus-circle"
+                size={14}
+                color={
+                  reportsActiveTab === "inventory"
+                    ? TOKENS.primary
+                    : TOKENS.muted
+                }
+              />
+              <Text
+                style={[
+                  styles.modalTabText,
+                  reportsActiveTab === "inventory" && styles.modalTabTextActive,
+                ]}
+              >
                 Stock-In Refills
               </Text>
             </TouchableOpacity>
@@ -602,137 +870,228 @@ export const InsightsScreen: React.FC = () => {
 
           {/* TAB CONTENT: ORDER HISTORY */}
           {reportsActiveTab === "orders" && (
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
-              {stats?.resolvedOrders && stats.resolvedOrders.length > 0 ? (
-                stats.resolvedOrders.map((order: any) => {
-                  const isExpanded = expandedOrderId === order.id;
-                  const orderDate = new Date(order.createdAt);
-                  return (
-                    <View key={order.id} style={styles.historyOrderCard}>
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        style={styles.historyCardHeader}
-                        onPress={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.historyInvoiceNum}>Invoice #{order.invoiceNumber}</Text>
-                          <Text style={styles.historyDateText}>
-                            {orderDate.toLocaleDateString()} at {orderDate.toLocaleTimeString()}
-                          </Text>
-                        </View>
-                        <View style={{ alignItems: "flex-end", gap: 4 }}>
-                          <Text style={styles.historyTotalAmount}>Rs. {order.totalAmount.toLocaleString()}</Text>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-                            <Text style={styles.historyItemCount}>{order.items.length} items</Text>
-                            <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
-                          </View>
-                        </View>
-                      </TouchableOpacity>
+            <FlatList
+              data={periodOrdersList}
+              keyExtractor={(item) => item.id}
+              onEndReached={() => {
+                if (hasNextPeriodOrders) {
+                  fetchNextPeriodOrders();
+                }
+              }}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={
+                isFetchingNextPeriodOrders ? (
+                  <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+                ) : null
+              }
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1, marginTop: 10 }}
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+              renderItem={({ item: order }) => {
+                const isExpanded = expandedOrderId === order.id;
+                const orderDate = new Date(order.createdAt);
+                return (
+                  <View style={styles.historyOrderCard}>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      style={styles.historyCardHeader}
+                      onPress={() =>
+                        setExpandedOrderId(isExpanded ? null : order.id)
+                      }
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.historyInvoiceNum}>
+                          Invoice #{order.invoiceNumber}
+                        </Text>
+                        <Text style={styles.historyDateText}>
+                          {orderDate.toLocaleDateString()} at{" "}
+                          {orderDate.toLocaleTimeString()}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end", gap: 4 }}>
+                        <Text style={styles.historyTotalAmount}>
+                          Rs. {order.totalAmount.toLocaleString()}
+                        </Text>
+                        <OrderCardHeaderRight orderId={order.id} isExpanded={isExpanded} />
+                      </View>
+                    </TouchableOpacity>
 
-                      {isExpanded && (
-                        <View style={styles.historyItemsExpandedPanel}>
-                          <View style={styles.expandedDivider} />
-                          {order.items.map((item: any) => (
-                            <View key={item.id} style={styles.expandedItemRow}>
-                              <Text style={styles.expandedItemName}>{item.name}</Text>
-                              <Text style={styles.expandedItemQty}>
-                                {item.quantity} x Rs. {item.price.toLocaleString()}
-                              </Text>
-                              <Text style={styles.expandedItemSubtotal}>
-                                Rs. {(item.quantity * item.price).toLocaleString()}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  );
-                })
-              ) : (
+                    {isExpanded && (
+                      <View style={styles.historyItemsExpandedPanel}>
+                        <View style={styles.expandedDivider} />
+                        <OrderItemsList orderId={order.id} />
+                      </View>
+                    )}
+                  </View>
+                );
+              }}
+              ListEmptyComponent={
                 <View style={styles.emptyLowStockState}>
                   <Feather name="file-text" size={32} color={TOKENS.muted} />
-                  <Text style={styles.emptyLowStockText}>No invoices found for this active period!</Text>
+                  <Text style={styles.emptyLowStockText}>
+                    No invoices found for this active period!
+                  </Text>
                 </View>
-              )}
-            </ScrollView>
+              }
+            />
           )}
 
           {/* TAB CONTENT: STOCK-IN INVENTORY REFILL */}
           {reportsActiveTab === "inventory" && (
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1, marginTop: 10 }}>
-              <Text style={styles.refillSectionLabel}>Select a product below to refill / Stock-In units:</Text>
-              {stats?.productsList && stats.productsList.length > 0 ? (
-                stats.productsList.map((prod: any) => {
-                  const isExpanded = expandedProductId === prod.id;
-                  const val = refillValues[prod.id] || "";
-                  return (
-                    <View key={prod.id} style={styles.historyOrderCard}>
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        style={styles.historyCardHeader}
-                        onPress={() => setExpandedProductId(isExpanded ? null : prod.id)}
-                      >
-                        <View style={styles.lowStockIconWrapper}>
-                          <Text style={{ fontSize: 16 }}>{prod.icon || "📦"}</Text>
-                        </View>
-                        <View style={{ flex: 1, marginLeft: 8 }}>
-                          <Text style={styles.historyInvoiceNum}>{prod.name}</Text>
-                          <Text style={styles.historyDateText}>SKU: {prod.sku} | Price: Rs. {prod.price}</Text>
-                        </View>
-                        <View style={{ alignItems: "flex-end", gap: 4 }}>
-                          <Text style={[styles.historyTotalAmount, prod.stockCount <= 5 && { color: TOKENS.error }]}>
-                            {prod.stockCount} left
-                          </Text>
-                          <Feather name={isExpanded ? "chevron-up" : "chevron-down"} size={14} color={TOKENS.muted} />
-                        </View>
-                      </TouchableOpacity>
+            <FlatList
+              data={productsList}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1, marginTop: 10 }}
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+              onEndReached={() => {
+                if (hasNextProducts) {
+                  fetchNextProducts();
+                }
+              }}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={
+                isFetchingNextProducts ? (
+                  <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+                ) : null
+              }
+              ListHeaderComponent={
+                <Text style={styles.refillSectionLabel}>
+                  Select a product below to refill / Stock-In units:
+                </Text>
+              }
+              renderItem={({ item: prod }) => {
+                const isExpanded = expandedProductId === prod.id;
+                const val = refillValues[prod.id] || "";
+                return (
+                  <View style={styles.historyOrderCard}>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      style={styles.refillCardHeader}
+                      onPress={() =>
+                        setExpandedProductId(isExpanded ? null : prod.id)
+                      }
+                    >
+                      <ProductImage
+                        icon={prod.icon}
+                        category={prod.category}
+                        size={60}
+                        style={styles.refillProductImage}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.refillProductName} numberOfLines={1}>
+                          {prod.name}
+                        </Text>
+                        <Text style={styles.refillProductMeta} numberOfLines={1}>
+                          Code: {prod.quickCode || prod.sku || "—"} | Price: Rs. {prod.price}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end", gap: 4 }}>
+                        <Text
+                          style={[
+                            styles.refillStockCount,
+                            prod.stockCount <= 5 && { color: TOKENS.error },
+                          ]}
+                        >
+                          Stock: {prod.stockCount}
+                        </Text>
+                        <Feather
+                          name={isExpanded ? "chevron-up" : "chevron-down"}
+                          size={14}
+                          color={TOKENS.muted}
+                        />
+                      </View>
+                    </TouchableOpacity>
 
-                      {isExpanded && (
-                        <View style={styles.historyItemsExpandedPanel}>
-                          <View style={styles.expandedDivider} />
-                          <View style={styles.refillActionForm}>
-                            <TextInput
-                              style={styles.refillInput}
-                              placeholder="Refill amount (e.g. 10)"
-                              placeholderTextColor="#9CA3AF"
-                              keyboardType="number-pad"
-                              value={val}
-                              onChangeText={(text) => setRefillValues({ ...refillValues, [prod.id]: text })}
-                            />
-                            <TouchableOpacity
-                              style={styles.refillSubmitBtn}
-                              activeOpacity={0.7}
-                              onPress={() => {
-                                const refillAmt = parseInt(val, 10);
-                                if (isNaN(refillAmt) || refillAmt <= 0) {
-                                  Alert.alert("Invalid Quantity", "Please enter a valid stock refill quantity!");
-                                  return;
-                                }
-                                refillMutation.mutate({ productId: prod.id, refillAmount: refillAmt });
-                              }}
-                            >
-                              {refillMutation.isPending ? (
-                                <ActivityIndicator size="small" color="#fff" />
-                              ) : (
-                                <>
-                                  <Feather name="plus" size={14} color="#fff" />
-                                  <Text style={styles.refillSubmitBtnText}>Stock-In</Text>
-                                </>
-                              )}
-                            </TouchableOpacity>
-                          </View>
+                    {isExpanded && (
+                      <View style={styles.historyItemsExpandedPanel}>
+                        <View style={styles.expandedDivider} />
+
+                        <View style={styles.refillInfoRow}>
+                          <Text style={styles.refillCurrentStockLabel}>Current Stock:</Text>
+                          <Text
+                            style={[
+                              styles.refillCurrentStockValue,
+                              prod.stockCount <= 5 && { color: TOKENS.error },
+                            ]}
+                          >
+                            {prod.stockCount} units
+                          </Text>
                         </View>
-                      )}
-                    </View>
-                  );
-                })
-              ) : (
+
+                        <View style={styles.refillInputContainer}>
+                          <TextInput
+                            style={styles.refillInputInline}
+                            placeholder="Refill amount (e.g. 10)"
+                            placeholderTextColor="#9CA3AF"
+                            keyboardType="number-pad"
+                            value={val}
+                            onChangeText={(text) =>
+                              setRefillValues({
+                                ...refillValues,
+                                [prod.id]: text,
+                              })
+                            }
+                          />
+                          <TouchableOpacity
+                            style={styles.refillSubmitBtnInline}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              const refillAmt = parseInt(val, 10);
+                              if (isNaN(refillAmt) || refillAmt <= 0) {
+                                Alert.alert(
+                                  "Invalid Quantity",
+                                  "Please enter a valid stock refill quantity!",
+                                );
+                                return;
+                              }
+                              stockInMutation.mutate(
+                                {
+                                  productId: prod.id,
+                                  quantity: refillAmt,
+                                  reason: "Restock",
+                                },
+                                {
+                                  onSuccess: () => {
+                                    queryClient.invalidateQueries({ queryKey: ["insights"] });
+                                    Alert.alert("Stock In success", "Product stock refilled successfully!");
+                                    // Reset expanded refill values
+                                    setRefillValues({});
+                                    setExpandedProductId(null);
+                                  },
+                                  onError: (err: any) => {
+                                    Alert.alert("Refill Failed", err.message);
+                                  },
+                                }
+                              );
+                            }}
+                          >
+                            {stockInMutation.isPending ? (
+                              <ActivityIndicator size="small" color="#fff" style={{ marginRight: 4 }} />
+                            ) : (
+                              <>
+                                <Feather name="plus-circle" size={14} color="#fff" />
+                                <Text style={styles.refillSubmitBtnInlineText}>
+                                  Stock-In
+                                </Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                );
+              }}
+              ListEmptyComponent={
                 <View style={styles.emptyLowStockState}>
                   <Feather name="package" size={32} color={TOKENS.muted} />
-                  <Text style={styles.emptyLowStockText}>No products found for this business!</Text>
+                  <Text style={styles.emptyLowStockText}>
+                    No products found for this business!
+                  </Text>
                 </View>
-              )}
-            </ScrollView>
+              }
+            />
           )}
         </View>
       </BottomSheet>
@@ -742,7 +1101,9 @@ export const InsightsScreen: React.FC = () => {
         <View style={styles.modalOverlayCenter}>
           <View style={styles.exportProgressCard}>
             <ActivityIndicator size="large" color={TOKENS.primary} />
-            <Text style={styles.exportProgressText}>Structuring {exportType} statement reports...</Text>
+            <Text style={styles.exportProgressText}>
+              Structuring {exportType} statement reports...
+            </Text>
           </View>
         </View>
       </Modal>
@@ -759,7 +1120,8 @@ export const InsightsScreen: React.FC = () => {
           </View>
 
           <Text style={styles.successSubtitle}>
-            Your business statement files for {activeBiz.name} are structured and ready to distribute.
+            Your business statement files for {activeBiz.name} are structured
+            and ready to distribute.
           </Text>
 
           <View style={styles.successActions}>
@@ -768,8 +1130,15 @@ export const InsightsScreen: React.FC = () => {
               activeOpacity={0.8}
               onPress={handleShare}
             >
-              <Feather name="share-2" size={16} color="#fff" style={{ marginRight: 6 }} />
-              <Text style={styles.shareReportBtnText}>Share & Save Statement</Text>
+              <Feather
+                name="share-2"
+                size={16}
+                color="#fff"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.shareReportBtnText}>
+                Share & Save Statement
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -781,7 +1150,12 @@ export const InsightsScreen: React.FC = () => {
           </View>
         </View>
       </BottomSheet>
-    </View>
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName={premiumFeatureName}
+      />
+    </ScreenWrapper>
   );
 };
 
@@ -815,25 +1189,49 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: TOKENS.dark,
+    lineHeight: 20,
   },
   headerSubtitle: {
     fontSize: 11,
     color: TOKENS.muted,
     marginTop: 2,
+    lineHeight: 14,
   },
   headerActionsWrapper: {
     flexDirection: "row",
-    gap: 14,
+    gap: 10,
     alignItems: "center",
   },
   headerTextBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    paddingHorizontal: 12,
+    borderRadius: 19,
+    gap: 4,
+    height: 38,
+  },
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTextBtnDisabled: {
+    opacity: 0.8,
   },
   headerTextBtnLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: TOKENS.muted,
+    fontSize: 12,
+    fontWeight: "bold",
+    color: TOKENS.primary,
+    lineHeight: 14,
   },
   scrollContent: {
     padding: 16,
@@ -1500,14 +1898,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   historyItemsExpandedPanel: {
-    paddingHorizontal: 14,
-    paddingBottom: 14,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
     backgroundColor: "#FAFAFA",
   },
   expandedDivider: {
     height: 1,
     backgroundColor: "#E5E7EB",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   expandedItemRow: {
     flexDirection: "row",
@@ -1541,35 +1939,84 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontWeight: "600",
   },
-  refillActionForm: {
+  refillCardHeader: {
     flexDirection: "row",
-    gap: 8,
     alignItems: "center",
+    paddingRight: 14,
+    paddingLeft: 3,
+    paddingTop: 3,
+    paddingBottom: 3,
+    gap: 12,
   },
-  refillInput: {
-    flex: 1.5,
-    height: 38,
-    backgroundColor: TOKENS.card,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-    paddingHorizontal: 12,
-    fontSize: 12,
+  refillProductImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+  },
+  refillProductName: {
+    fontSize: 14,
+    fontWeight: "bold",
     color: TOKENS.dark,
   },
-  refillSubmitBtn: {
+  refillProductMeta: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    marginTop: 2,
+  },
+  refillStockCount: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: TOKENS.dark,
+  },
+  refillInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 42,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 10,
+    paddingLeft: 10,
+    paddingRight: 4,
+  },
+  refillInputInline: {
     flex: 1,
-    height: 38,
-    backgroundColor: "#10B981",
+    height: "100%",
+    fontSize: 13,
+    color: TOKENS.dark,
+    padding: 0,
+  },
+  refillSubmitBtnInline: {
+    height: 34,
+    backgroundColor: TOKENS.success,
     borderRadius: 8,
+    paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
   },
-  refillSubmitBtnText: {
-    color: "#fff",
+  refillSubmitBtnInlineText: {
+    color: "#FFFFFF",
     fontSize: 12,
+    fontWeight: "bold",
+  },
+  refillInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  refillCurrentStockLabel: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    fontWeight: "500",
+  },
+  refillCurrentStockValue: {
+    fontSize: 13,
+    color: TOKENS.dark,
     fontWeight: "bold",
   },
 });

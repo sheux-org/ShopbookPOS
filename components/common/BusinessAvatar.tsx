@@ -31,7 +31,7 @@ export const BusinessAvatar: React.FC<BusinessAvatarProps> = ({
   if (isUploading) {
     return (
       <View style={[styles.avatarCircle, { width: size, height: size, borderRadius: radius }]}>
-        <ActivityIndicator size="small" color={TOKENS.card} />
+        <ActivityIndicator size="small" color={TOKENS.primary} />
       </View>
     );
   }
@@ -49,7 +49,7 @@ export const BusinessAvatar: React.FC<BusinessAvatarProps> = ({
   return (
     <View style={[styles.avatarCircle, { width: size, height: size, borderRadius: radius, overflow: 'hidden' }]}>
       {/* Background Initials (always rendered behind/underneath the image) */}
-      <Text style={[styles.avatarInitials, { fontSize: size * 0.36 }]}>
+      <Text style={[styles.avatarInitials, { fontSize: size * 0.46 }]}>
         {logoUri && logoUri.length <= 2 ? logoUri : initials}
       </Text>
 
@@ -75,17 +75,18 @@ export const BusinessAvatar: React.FC<BusinessAvatarProps> = ({
 
 const styles = StyleSheet.create({
   avatarCircle: {
-    backgroundColor: TOKENS.primary,
+    backgroundColor: TOKENS.accentBlue,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: TOKENS.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 3,
   },
   avatarInitials: {
     fontWeight: 'bold',
-    color: TOKENS.card,
+    color: TOKENS.primary,
   },
 });
+

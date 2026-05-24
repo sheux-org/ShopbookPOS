@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,34 +6,30 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Platform,
   Alert,
   Modal,
+  Animated,
+  ActivityIndicator,
+  Pressable,
 } from "react-native";
-import { CameraView } from "expo-camera";
+import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
+import * as ImagePicker from "expo-image-picker";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
-import { useAddProduct, useProducts } from "../../hooks/useProducts";
+import { HeaderCartButton } from "../common/HeaderCartButton";
+import { useAddProduct, useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
+import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
+import { ProductImage } from "../common/ProductImage";
+import { hapticFeedback } from "../../utils/haptics";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
-interface FavoriteProduct {
-  id: string;
-  name: string;
-  price: number;
-  icon: string;
-}
-
-interface RecentAdd {
-  id: string;
-  name: string;
-  timeAgo: string;
-  price: number;
-  icon: string;
-}
 
 function getRelativeTimeAgo(timestamp?: number): string {
   if (!timestamp) return "Just now";
@@ -52,13 +48,6 @@ function getRelativeTimeAgo(timestamp?: number): string {
 
 const CATEGORIES_LIST = ["grocery", "dairy", "drinks", "snacks", "household"];
 const UNIT_TYPES = ["Pieces", "kg", "Liters", "Packets"];
-const CATEGORY_ICONS: Record<string, string> = {
-  grocery: "🧼",
-  dairy: "🥛",
-  drinks: "🥤",
-  snacks: "🍪",
-  household: "🧹",
-};
 
 export const StocksScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -68,10 +57,33 @@ export const StocksScreen: React.FC = () => {
   const { data: favoriteProducts = [] } = useProducts(undefined, undefined, "Favorites");
   const { data: recentProducts = [] } = useProducts(undefined, undefined, "Recents");
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [cartCount, setCartCount] = useState(0);
+  const toggleFavoriteMutation = useToggleFavoriteProduct();
+  const [isEditingFavorites, setIsEditingFavorites] = useState(false);
 
-  // Form states
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Image picker bottom sheet state
+  const [imgSheetVisible, setImgSheetVisible] = useState(false);
+  const [formImageUploading, setFormImageUploading] = useState(false);
+  const imgSheetAnim = useRef(new Animated.Value(300)).current;
+
+  const openImgSheet = () => {
+    setImgSheetVisible(true);
+    Animated.spring(imgSheetAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 4,
+    }).start();
+  };
+
+  const closeImgSheet = () => {
+    Animated.timing(imgSheetAnim, {
+      toValue: 300,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => setImgSheetVisible(false));
+  };
+
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("grocery");
   const [formUnitType, setFormUnitType] = useState("Pieces");
@@ -81,20 +93,15 @@ export const StocksScreen: React.FC = () => {
   const [formLowStock, setFormLowStock] = useState("");
   const { requestCameraAccess } = usePermission();
   const { canPerform } = useUserPermissions();
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const [formQuickCode, setFormQuickCode] = useState("");
   const [formBarcode, setFormBarcode] = useState("");
-  const [formImage, setFormImage] = useState("🍎");
+  const [formImage, setFormImage] = useState("");
   const [isScanning, setIsScanning] = useState(false);
 
-  useEffect(() => {
-    const updateCount = () => {
-      const cart = cartState.getCart();
-      setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-    };
-    updateCount();
-    return cartState.subscribe(updateCount);
-  }, []);
+
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -102,28 +109,112 @@ export const StocksScreen: React.FC = () => {
   };
 
   const handleAddProductToCart = (name: string, price: number, icon: string) => {
+    hapticFeedback.impactLight();
     cartState.addCartItem(name, price, icon);
     triggerToast(`Added ${name} to checkout invoice`);
   };
 
   const triggerBarcodeScanner = () => {
-    requestCameraAccess(() => {
-      setIsScanning(true);
-    });
+    if (isPremium) {
+      requestCameraAccess(() => {
+        setIsScanning(true);
+      });
+    } else {
+      setPremiumModalVisible(true);
+    }
+  };
+
+  const handlePickImage = async (source: 'camera' | 'gallery') => {
+    closeImgSheet();
+
+    // Small delay to let the sheet close before opening picker
+    await new Promise((r) => setTimeout(r, 280));
+
+    let localUri: string | null = null;
+
+    if (source === 'camera') {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Camera permission is required.');
+        return;
+      }
+      try {
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: [1, 1] as [number, number],
+          quality: 0.85,
+        });
+        if (!result.canceled && result.assets[0]?.uri) {
+          localUri = result.assets[0].uri;
+        }
+      } catch {
+        Alert.alert('Camera Unavailable', 'Camera is not available. Please use Gallery.');
+        return;
+      }
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Photo library permission is required.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1] as [number, number],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets[0]?.uri) {
+        localUri = result.assets[0].uri;
+      }
+    }
+
+    if (!localUri) return;
+
+    // Show local image immediately while uploading
+    setFormImage(localUri);
+    setFormImageUploading(true);
+    triggerToast('Uploading image... ⏳');
+
+    try {
+      const remoteUrl = await uploadToUploadThing(localUri);
+      if (remoteUrl) {
+        setFormImage(remoteUrl);
+        triggerToast('Image uploaded! ✅');
+      } else {
+        // Keep local URI if upload failed — will try again on save
+        triggerToast('Upload failed — image saved locally');
+      }
+    } catch {
+      triggerToast('Upload error — image saved locally');
+    } finally {
+      setFormImageUploading(false);
+    }
+  };
+
+  const handleRemoveFormImage = async () => {
+    // If there's a remote UploadThing URL, delete it from storage
+    if (formImage.startsWith('http')) {
+      await deleteUploadThingFile(formImage);
+    }
+    setFormImage("");
   };
 
   const handleSaveProduct = () => {
     if (!canPerform("create", "products")) {
+      hapticFeedback.notificationError();
       Alert.alert("Access Denied", "Your profile role is not authorized to add new catalog items.");
       return;
     }
 
     if (!formName || !formSalesPrice || !formStockIn) {
+      hapticFeedback.notificationWarning();
       Alert.alert("Required Fields Missing", "Please enter product name, selling price, and initial stock quantity.");
       return;
     }
 
     if (!formQuickCode && !formBarcode) {
+      hapticFeedback.notificationWarning();
       Alert.alert("Identification Required", "Please enter at least either a Quick Code or a Barcode to identify this product.");
       return;
     }
@@ -134,6 +225,7 @@ export const StocksScreen: React.FC = () => {
     const lowStockThreshold = parseInt(formLowStock, 10) || 5;
 
     if (isNaN(priceNum) || isNaN(stockCount)) {
+      hapticFeedback.notificationWarning();
       Alert.alert("Invalid input type", "Please verify numeric fields.");
       return;
     }
@@ -143,14 +235,17 @@ export const StocksScreen: React.FC = () => {
       name: formName,
       price: priceNum,
       category: formCategory,
-      icon: formImage || CATEGORY_ICONS[formCategory] || "📦",
+      // icon is the real uploaded photo URL, or empty string if no photo was set
+      icon: formImage,
       stockCount: stockCount,
       unitType: formUnitType,
       costPrice: costNum,
       quickCode: formQuickCode || undefined,
       barcode: formBarcode || undefined,
+      lowStockAlert: lowStockThreshold,
     });
 
+    hapticFeedback.notificationSuccess();
     triggerToast(`Product "${formName}" saved to catalog!`);
 
     // Reset form fields
@@ -161,11 +256,11 @@ export const StocksScreen: React.FC = () => {
     setFormLowStock("");
     setFormQuickCode("");
     setFormBarcode("");
-    setFormImage("🍎");
+    setFormImage("");
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper withKeyboard noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -179,28 +274,33 @@ export const StocksScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/")}
+          onPress={() => {
+            hapticFeedback.selection();
+            router.push("/");
+          }}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Stocks Manager</Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>Stocks</Text>
+          <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 1 }}>Catalog Manager</Text>
+        </View>
 
         <View style={styles.headerRightActions}>
-          {cartCount > 0 ? (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{cartCount}</Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.placeholderWidth} />
-          )}
+          <TouchableOpacity
+            style={styles.headerHistoryBtn}
+            activeOpacity={0.7}
+            onPress={() => {
+              hapticFeedback.selection();
+              router.push("/stocks/items");
+            }}
+          >
+            <Feather name="archive" size={15} color={TOKENS.primary} />
+            <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Items</Text>
+          </TouchableOpacity>
+
+          <HeaderCartButton />
         </View>
       </View>
 
@@ -214,23 +314,13 @@ export const StocksScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Search row touching search results */}
-        <TouchableOpacity
-          style={styles.searchBarTouch}
-          activeOpacity={0.9}
-          onPress={() => router.push("/pos/search")}
-        >
-          <Feather name="search" size={18} color={TOKENS.muted} />
-          <Text style={styles.searchPlaceholder}>Search products in stock...</Text>
-        </TouchableOpacity>
 
-        {/* ➕ ADD NEW PRODUCT FORM CARD (Sleek and beautiful border card) ➕ */}
         {/* ➕ ADD NEW PRODUCT FORM CARD (Sleek and beautiful border card) ➕ */}
         {canPerform("create", "products") ? (
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>➕ Add Product to Catalog</Text>
             <Text style={styles.formSubtitle}>Enter item specifications to dynamically update sales catalog list</Text>
-            
+
             <View style={styles.formGrid}>
               {/* Field: Name */}
               <View style={styles.fieldRow}>
@@ -271,9 +361,12 @@ export const StocksScreen: React.FC = () => {
                     <TouchableOpacity
                       style={styles.barcodeScanBtn}
                       activeOpacity={0.8}
-                      onPress={triggerBarcodeScanner}
+                      onPress={() => {
+                        hapticFeedback.impactLight();
+                        triggerBarcodeScanner();
+                      }}
                     >
-                      <Ionicons name="scan-outline" size={15} color={TOKENS.primary} />
+                      <Ionicons name="qr-code-outline" size={16} color={TOKENS.primary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -289,7 +382,10 @@ export const StocksScreen: React.FC = () => {
                       <TouchableOpacity
                         key={cat}
                         style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                        onPress={() => setFormCategory(cat)}
+                        onPress={() => {
+                          hapticFeedback.selection();
+                          setFormCategory(cat);
+                        }}
                       >
                         <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
                           {cat.toUpperCase()}
@@ -310,7 +406,10 @@ export const StocksScreen: React.FC = () => {
                       <TouchableOpacity
                         key={u}
                         style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                        onPress={() => setFormUnitType(u)}
+                        onPress={() => {
+                          hapticFeedback.selection();
+                          setFormUnitType(u);
+                        }}
                       >
                         <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
                           {u}
@@ -375,54 +474,84 @@ export const StocksScreen: React.FC = () => {
                 </View>
               </View>
 
-              {/* Field: Product Image Picker */}
+              {/* ────── Product Image / Icon field ────── */}
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Product Image / Icon *</Text>
-                <Text style={styles.fieldHelpText}>Select an image/emoji representing the product catalog icon</Text>
-                
-                <View style={styles.imagePickerContainer}>
-                  {/* Current Active Preview */}
-                  <View style={styles.imagePreviewBox}>
-                    <Text style={styles.imagePreviewText}>{formImage}</Text>
-                  </View>
-                  
-                  {/* Horizontal Emojis selector list */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.imageOptionsScroll}
-                  >
-                    {["🍎", "🥛", "🥤", "🍪", "🧼", "🍞", "🥚", "🌾", "🥣", "🧴", "🍫", "🥦", "🥩", "🧅", "🍌", "🥫", "🔋"].map((emoji) => {
-                      const isSelected = formImage === emoji;
-                      return (
+                <Text style={styles.fieldLabel}>Product Image *</Text>
+                <Text style={styles.fieldHelpText}>Tap the image to take a photo or pick from gallery</Text>
+
+                <View style={styles.imgPickerPanel}>
+                  {formImage ? (
+                    <View style={styles.imgContainerWrap}>
+                      <ProductImage
+                        icon={formImage}
+                        category={formCategory}
+                        size={160}
+                        style={styles.premiumImagePreview}
+                      />
+                      
+                      {/* Change Button Overlay */}
+                      {!formImageUploading && (
                         <TouchableOpacity
-                          key={emoji}
-                          style={[
-                            styles.imageOptionChip,
-                            isSelected && styles.imageOptionChipActive
-                          ]}
-                          onPress={() => setFormImage(emoji)}
+                          style={styles.changeImageOverlay}
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            hapticFeedback.impactMedium();
+                            openImgSheet();
+                          }}
                         >
-                          <Text style={styles.imageOptionText}>{emoji}</Text>
+                          <View style={styles.changeImageBadge}>
+                            <Feather name="camera" size={14} color="#FFFFFF" />
+                            <Text style={styles.changeImageText}>Change Image</Text>
+                          </View>
                         </TouchableOpacity>
-                      );
-                    })}
-                    
-                    {/* Simulated Gallery custom upload box */}
-                    <TouchableOpacity
-                      style={styles.imageOptionChipUpload}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        const mockCustoms = ["🍕", "🍔", "🍟", "🍩", "🍦", "🍗", "🍣", "🍇"];
-                        const picked = mockCustoms[Math.floor(Math.random() * mockCustoms.length)];
-                        setFormImage(picked);
-                        triggerToast("Simulated Photo uploaded successfully! 📸");
-                      }}
-                    >
-                      <Feather name="camera" size={14} color={TOKENS.primary} />
-                      <Text style={styles.imageUploadText}>Upload</Text>
-                    </TouchableOpacity>
-                  </ScrollView>
+                      )}
+
+                      {/* Delete Floating Pill */}
+                      {!formImageUploading && (
+                        <TouchableOpacity
+                          style={styles.floatingRemoveBtn}
+                          activeOpacity={0.8}
+                          onPress={handleRemoveFormImage}
+                        >
+                          <Feather name="trash-2" size={14} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Loading overlay */}
+                      {formImageUploading && (
+                        <View style={styles.imgUploadingOverlay}>
+                          <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                          <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                        </View>
+                      )}
+                    </View>
+                  ) : (
+                    <View style={{ position: 'relative' }}>
+                      <TouchableOpacity
+                        style={styles.premiumUploadArea}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          hapticFeedback.impactMedium();
+                          openImgSheet();
+                        }}
+                        disabled={formImageUploading}
+                      >
+                        <View style={styles.uploadIconCircle}>
+                          <Ionicons name="cloud-upload-outline" size={24} color={TOKENS.primary} />
+                        </View>
+                        <Text style={styles.uploadAreaTitle}>Upload Product Image</Text>
+                        <Text style={styles.uploadAreaSubtitle}>Tap to take a photo or select from gallery</Text>
+                      </TouchableOpacity>
+
+                      {/* Loading overlay for empty image state */}
+                      {formImageUploading && (
+                        <View style={[styles.imgUploadingOverlay, { borderRadius: 12 }]}>
+                          <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                          <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -452,12 +581,19 @@ export const StocksScreen: React.FC = () => {
         <View style={styles.favoritesSection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionHeaderTitle}>Favorites</Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => Alert.alert("Edit Favorites", "Favorites items unlocked.")}
-            >
-              <Text style={styles.editLink}>Edit</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  hapticFeedback.impactMedium();
+                  setIsEditingFavorites(!isEditingFavorites);
+                }}
+              >
+                <Text style={[styles.editLink, isEditingFavorites && { color: TOKENS.primary, fontWeight: "700" }]}>
+                  {isEditingFavorites ? "Done" : "Edit"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.favGrid}>
@@ -477,9 +613,36 @@ export const StocksScreen: React.FC = () => {
                   key={item.id}
                   style={styles.favCard}
                   activeOpacity={0.75}
-                  onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
+                  onPress={() => {
+                    if (isEditingFavorites) {
+                      hapticFeedback.impactMedium();
+                      toggleFavoriteMutation.mutate(item.id);
+                    } else {
+                      handleAddProductToCart(item.name, item.price, item.icon);
+                    }
+                  }}
                 >
-                  <Text style={styles.favIcon}>{item.icon}</Text>
+                  {/* Product image */}
+                  <View style={{ width: "100%", height: 65, position: "relative" }}>
+                    <ProductImage
+                      icon={item.icon}
+                      category={item.category}
+                      size={65}
+                      style={{ width: "100%", height: 65, borderTopLeftRadius: 11, borderTopRightRadius: 11 }}
+                    />
+                    {isEditingFavorites && (
+                      <TouchableOpacity
+                        style={styles.favRemoveBtn}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          hapticFeedback.impactMedium();
+                          toggleFavoriteMutation.mutate(item.id);
+                        }}
+                      >
+                        <Ionicons name="close-circle" size={22} color="#EF4444" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   <Text style={styles.favName} numberOfLines={1}>
                     {item.name}
                   </Text>
@@ -511,18 +674,34 @@ export const StocksScreen: React.FC = () => {
             ) : (
               recentProducts.map((item) => (
                 <View key={item.id} style={styles.recentRow}>
-                  <View style={styles.recentInfoWrapper}>
-                    <Text style={styles.recentItemName}>{item.name}</Text>
-                    <Text style={styles.recentTimeAgo}>{getRelativeTimeAgo(item.createdAt)}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+                    <ProductImage
+                      icon={item.icon}
+                      category={item.category}
+                      size={58}
+                      style={{ width: 58, height: 58, borderRadius: 10 }}
+                    />
+                    <View style={styles.recentInfoWrapper}>
+                      <Text style={styles.recentItemName} numberOfLines={1}>{item.name}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
+                        <Text style={{ fontSize: 12, fontWeight: "600", color: TOKENS.primary }}>
+                          Rs. {item.price.toLocaleString()}
+                        </Text>
+                        <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#E2E8F0" }} />
+                        <Text style={styles.recentTimeAgo}>{getRelativeTimeAgo(item.createdAt)}</Text>
+                      </View>
+                    </View>
                   </View>
 
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    activeOpacity={0.8}
-                    onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
-                  >
-                    <Text style={styles.addButtonText}>+ Add</Text>
-                  </TouchableOpacity>
+                  <View style={styles.recentActions}>
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      activeOpacity={0.8}
+                      onPress={() => handleAddProductToCart(item.name, item.price, item.icon)}
+                    >
+                      <Text style={styles.addButtonText}>+ Add</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             )}
@@ -530,80 +709,98 @@ export const StocksScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      {/* SIMULATED HIGH-FIDELITY BARCODE SCANNER OVERLAY MODAL */}
+      {/* ── Image Picker Bottom Sheet ── */}
       <Modal
-        visible={isScanning}
+        visible={imgSheetVisible}
         transparent
-        animationType="fade"
-        onRequestClose={() => setIsScanning(false)}
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={closeImgSheet}
       >
-        <View style={styles.scannerBg}>
-          <View style={styles.scannerCard}>
-            <View style={styles.scannerHeaderRow}>
-              <Text style={styles.scannerTitle}>📷 Barcode Scanner Active</Text>
-              <TouchableOpacity
-                style={styles.closeScannerBtn}
-                onPress={() => setIsScanning(false)}
-              >
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-            
-            <Text style={styles.scannerInstruction}>
-              Align the retail product barcode within the viewfinder to automatically scan and catalog
-            </Text>
-            
-             {/* Viewfinder area with blinking animation and moving laser line */}
-            <View style={styles.scannerViewfinder}>
-              {isScanning ? (
-                <CameraView
-                  style={StyleSheet.absoluteFillObject}
-                  barcodeScannerSettings={{
-                    barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
-                  }}
-                  onBarcodeScanned={({ type, data }) => {
-                    setFormBarcode(data);
-                    setIsScanning(false);
-                    triggerToast(`Barcode Scanned: ${data} ✅`);
-                  }}
-                />
-              ) : null}
+        {/* Scrim — tap to dismiss */}
+        <Pressable style={styles.sheetScrim} onPress={closeImgSheet}>
+          <Animated.View
+            style={[styles.sheetContainer, { transform: [{ translateY: imgSheetAnim }] }]}
+          >
+            {/* Stop tap-through on the sheet itself */}
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              {/* Drag handle */}
+              <View style={styles.sheetHandle} />
 
-              {/* Four corners */}
-              <View style={[styles.viewfinderCorner, styles.cornerTL]} />
-              <View style={[styles.viewfinderCorner, styles.cornerTR]} />
-              <View style={[styles.viewfinderCorner, styles.cornerBL]} />
-              <View style={[styles.viewfinderCorner, styles.cornerBR]} />
-              
-              {/* Moving Laser line */}
-              <View style={styles.scannerLaserLine} />
-              
-              <Text style={styles.scanningText}>SCANNING...</Text>
-            </View>
-            
-            <TouchableOpacity
-              style={styles.scannerForceScanBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                const mockBarcodes = [
-                  "8901030777551",
-                  "501234567890",
-                  "4902430582766",
-                  "7622300744961",
-                ];
-                const randomBarcode = mockBarcodes[Math.floor(Math.random() * mockBarcodes.length)];
-                setFormBarcode(randomBarcode);
-                setIsScanning(false);
-                triggerToast(`Barcode Scanned: ${randomBarcode} ✅`);
-              }}
-            >
-              <Text style={styles.forceScanText}>⚡ Instant Capture</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              <Text style={styles.sheetTitle}>Product Photo</Text>
+              <Text style={styles.sheetSubtitle}>Choose how to add an image for this product</Text>
+
+              {/* Camera option */}
+              <TouchableOpacity
+                style={styles.sheetOption}
+                activeOpacity={0.75}
+                onPress={() => {
+                  hapticFeedback.impactMedium();
+                  handlePickImage('camera');
+                }}
+              >
+                <View style={[styles.sheetOptionIcon, { backgroundColor: TOKENS.lightBlue }]}>
+                  <Feather name="camera" size={22} color={TOKENS.primary} />
+                </View>
+                <View style={styles.sheetOptionText}>
+                  <Text style={styles.sheetOptionTitle}>Camera</Text>
+                  <Text style={styles.sheetOptionSub}>Take a new photo right now</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+              </TouchableOpacity>
+
+              {/* Gallery option */}
+              <TouchableOpacity
+                style={styles.sheetOption}
+                activeOpacity={0.75}
+                onPress={() => {
+                  hapticFeedback.impactMedium();
+                  handlePickImage('gallery');
+                }}
+              >
+                <View style={[styles.sheetOptionIcon, { backgroundColor: '#F0FDF4' }]}>
+                  <Feather name="image" size={22} color="#16A34A" />
+                </View>
+                <View style={styles.sheetOptionText}>
+                  <Text style={styles.sheetOptionTitle}>Photo Library</Text>
+                  <Text style={styles.sheetOptionSub}>Pick from your gallery</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+              </TouchableOpacity>
+
+              {/* Cancel */}
+              <TouchableOpacity
+                style={styles.sheetCancelBtn}
+                activeOpacity={0.8}
+                onPress={() => {
+                  hapticFeedback.selection();
+                  closeImgSheet();
+                }}
+              >
+                <Text style={styles.sheetCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
       </Modal>
 
-    </View>
+      {/* SIMULATED HIGH-FIDELITY BARCODE SCANNER OVERLAY MODAL */}
+      <BarcodeScannerModal
+        visible={isScanning}
+        onClose={() => setIsScanning(false)}
+        onBarcodeScanned={(data) => {
+          setFormBarcode(data);
+          setIsScanning(false);
+          triggerToast(`Barcode Scanned: ${data} ✅`);
+        }}
+      />
+
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="In-app barcode stock scanning"
+      />
+    </ScreenWrapper>
   );
 };
 
@@ -684,19 +881,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     gap: 16,
-  },
-  searchBarTouch: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-  },
-  searchPlaceholder: {
-    fontSize: 15,
-    color: TOKENS.muted,
   },
   formCard: {
     backgroundColor: TOKENS.card,
@@ -821,32 +1005,37 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   favCard: {
-    width: "23.5%",
+    width: "31.5%",
     backgroundColor: TOKENS.card,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    padding: 8,
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+    paddingBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 1,
-    elevation: 0.5,
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  favIcon: {
-    fontSize: 22,
-    marginBottom: 4,
+  favImageBox: {
+    width: "100%",
+    height: 65,
+    borderRadius: 0,
+    marginBottom: 6,
   },
   favName: {
-    fontSize: 10,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "600",
     color: TOKENS.dark,
     textAlign: "center",
+    paddingHorizontal: 6,
+    marginTop: 6,
   },
   favPrice: {
-    fontSize: 10,
+    fontSize: 11,
     color: TOKENS.primary,
     fontWeight: "bold",
     marginTop: 2,
@@ -873,11 +1062,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingRight: 16,
+    paddingLeft: 3,
+    paddingTop: 3,
+    paddingBottom: 3,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    minHeight: 64,
   },
   recentInfoWrapper: {
     flex: 1,
@@ -913,32 +1105,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  headerCartBtn: {
-    width: 38,
+  headerHistoryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
     height: 38,
     borderRadius: 19,
     backgroundColor: TOKENS.lightBlue,
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
+    paddingHorizontal: 12,
   },
   placeholderWidth: {
     width: 38,
@@ -972,34 +1147,174 @@ const styles = StyleSheet.create({
   fieldHelpText: {
     fontSize: 11,
     color: TOKENS.muted,
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  imagePickerContainer: {
-    flexDirection: "row",
+  // ── Redesigned premium product photo picker — wide card layout ──
+  imgPickerPanel: {
+    marginTop: 6,
+  },
+  premiumUploadArea: {
+    width: "100%",
+    height: 120,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: TOKENS.accentBlue,
+    borderStyle: "dashed" as const,
+    backgroundColor: TOKENS.lightBlue,
     alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    gap: 8,
+  },
+  uploadIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  uploadAreaTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: TOKENS.primary,
+  },
+  uploadAreaSubtitle: {
+    fontSize: 11,
+    color: TOKENS.muted,
+  },
+  imgContainerWrap: {
+    position: "relative" as const,
+    width: "100%",
+    height: 160,
+    borderRadius: 12,
+    overflow: "hidden" as const,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    backgroundColor: "#F8FAFC",
+  },
+  premiumImagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+  changeImageOverlay: {
+    position: "absolute" as const,
+    bottom: 12,
+    left: 12,
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  changeImageBadge: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  changeImageText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: "#FFFFFF",
+  },
+  floatingRemoveBtn: {
+    position: "absolute" as const,
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(239, 68, 68, 0.9)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  imgUploadingOverlay: {
+    position: 'absolute' as const,
+    inset: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderRadius: 12,
+  },
+  imgUploadingText: {
+    fontSize: 13,
+    color: "#FFFFFF",
+    fontWeight: '600' as const,
+  },
+  // ── Standard upload placeholder & Fav edit styles ──
+  standardPhotoPlaceholder: {
+    width: '100%' as const,
+    height: '100%' as const,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    backgroundColor: '#F8FAFC',
+  },
+  standardPhotoPlaceholderText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: '#64748B',
+    marginTop: 6,
+  },
+  favRemoveBtn: {
+    position: 'absolute' as const,
+    top: 6,
+    right: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 11,
+    width: 22,
+    height: 22,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+    zIndex: 10,
+  },
+  // ── (old picker styles kept for reference, unused) ──
+  imagePickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     marginTop: 4,
   },
   imagePreviewBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: "#EFF6FF",
+    width: 56,
+    height: 56,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  imagePreviewText: {
-    fontSize: 28,
+  imagePreviewInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+  },
+  imagePreviewCameraOverlay: {
+    position: 'absolute',
+    bottom: 3,
+    right: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: TOKENS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   imageOptionsScroll: {
-    alignItems: "center",
+    alignItems: 'center',
     gap: 8,
     paddingRight: 16,
   },
@@ -1007,9 +1322,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: TOKENS.border,
   },
@@ -1022,8 +1337,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   imageOptionChipUpload: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
     paddingHorizontal: 10,
     height: 36,
@@ -1034,127 +1349,8 @@ const styles = StyleSheet.create({
   },
   imageUploadText: {
     fontSize: 11,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.primary,
-  },
-  scannerBg: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  scannerCard: {
-    backgroundColor: TOKENS.card,
-    borderRadius: 24,
-    padding: 24,
-    width: "100%",
-    alignItems: "center",
-    gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  scannerHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-  },
-  scannerTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  closeScannerBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scannerInstruction: {
-    fontSize: 12,
-    color: TOKENS.muted,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-  scannerViewfinder: {
-    width: 220,
-    height: 140,
-    borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.3)",
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
-  },
-  viewfinderCorner: {
-    position: "absolute",
-    width: 16,
-    height: 16,
-    borderColor: TOKENS.primary,
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-  },
-  scannerLaserLine: {
-    position: "absolute",
-    width: "90%",
-    height: 2,
-    backgroundColor: "#EF4444",
-    top: "50%",
-  },
-  scanningText: {
-    position: "absolute",
-    bottom: 10,
-    fontSize: 10,
-    fontWeight: "bold",
-    color: TOKENS.primary,
-    letterSpacing: 1.5,
-  },
-  scannerForceScanBtn: {
-    backgroundColor: TOKENS.primary,
-    height: 40,
-    borderRadius: 20,
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-  forceScanText: {
-    color: TOKENS.card,
-    fontSize: 14,
-    fontWeight: "bold",
   },
   emptyStateCard: {
     width: "100%",
@@ -1189,5 +1385,120 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 16,
     paddingHorizontal: 12,
+  },
+  // Camera overlay button on favorites grid cards
+  favCameraBtn: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(37, 99, 235, 0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  // Row wrapper for camera + add button in recents
+  recentActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  // Camera icon button in recents rows
+  recentCameraBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: TOKENS.lightBlue,
+    borderWidth: 1,
+    borderColor: TOKENS.accentBlue,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // ── Image picker bottom sheet ──
+  sheetScrim: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheetContainer: {
+    backgroundColor: TOKENS.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 36,
+    paddingTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: TOKENS.dark,
+    marginBottom: 4,
+  },
+  sheetSubtitle: {
+    fontSize: 13,
+    color: TOKENS.muted,
+    marginBottom: 20,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+  },
+  sheetOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetOptionText: {
+    flex: 1,
+    gap: 2,
+  },
+  sheetOptionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: TOKENS.dark,
+  },
+  sheetOptionSub: {
+    fontSize: 12,
+    color: TOKENS.muted,
+  },
+  sheetCancelBtn: {
+    marginTop: 16,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+  },
+  sheetCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: TOKENS.dark,
   },
 });

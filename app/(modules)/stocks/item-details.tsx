@@ -1,12 +1,12 @@
 import React from "react";
 import { Stack } from "expo-router";
-import { AddItemScreen } from "@/components/screens/AddItemScreen";
+import { ItemDetailsScreen } from "@/components/screens/ItemDetailsScreen";
 
-export default function AddItemRoute() {
+export default function ItemDetailsRoute() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <AddItemScreen />
+      <ItemDetailsScreen />
     </>
   );
 }

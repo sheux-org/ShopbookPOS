@@ -5,13 +5,13 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Platform,
   Alert,
   Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useSettingsStore } from "../../stores/useSettingsStore";
@@ -19,6 +19,8 @@ import { syncDatabase } from "../../services/sync";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
 import { BottomSheet } from "../common/BottomSheet";
 import { BusinessAvatar } from "../common/BusinessAvatar";
+import { deleteCurrentDeviceSession } from "../../hooks/useActiveDeviceTracker";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 const FAQS = [
   {
@@ -57,26 +59,26 @@ export const ProfileScreen: React.FC = () => {
   const isBackupEnabled = useSettingsStore((s) => s.isBackupEnabled);
   const toggleBackup = useSettingsStore((s) => s.toggleBackup);
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
+  const isPremium = useSettingsStore((s) => s.isPremium);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [cartCount, setCartCount] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<"1_month" | "3_month" | "1_year">("3_month");
-  
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+  const [premiumFeatureName, setPremiumFeatureName] = useState("");
+
   // Real business details from local SQLite database
   const [activeBusiness, setActiveBusiness] = useState(cartState.getActiveBusiness());
-  
+
   // Help & Support Modal state
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    const updateCount = () => {
-      const cart = cartState.getCart();
-      setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
+    const updateBusiness = () => {
       setActiveBusiness(cartState.getActiveBusiness());
     };
-    updateCount();
-    return cartState.subscribe(updateCount);
+    updateBusiness();
+    return cartState.subscribe(updateBusiness);
   }, []);
 
   const triggerToast = (msg: string) => {
@@ -84,10 +86,19 @@ export const ProfileScreen: React.FC = () => {
     setTimeout(() => setToastMessage(null), 1500);
   };
 
+  const checkPremiumAction = (featureName: string, action: () => void) => {
+    if (isPremium) {
+      action();
+    } else {
+      setPremiumFeatureName(featureName);
+      setPremiumModalVisible(true);
+    }
+  };
+
   const { canPerform, role: userRole } = useUserPermissions();
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -124,10 +135,10 @@ export const ProfileScreen: React.FC = () => {
       >
         {/* Avatar Card Glassmorphic Premium */}
         <View style={styles.avatarCard}>
-          <BusinessAvatar 
-            logoUri={activeBusiness?.logoUri} 
-            name={activeBusiness?.name || "SP"} 
-            size={72} 
+          <BusinessAvatar
+            logoUri={activeBusiness?.logoUri}
+            name={activeBusiness?.name || "SP"}
+            size={72}
           />
 
           <Text style={styles.partnerName}>{activeBusiness?.name || "Shopbook Partner Store"}</Text>
@@ -163,7 +174,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push("/profile/manage-businesses")}
+            onPress={() => checkPremiumAction("Multiple branch management", () => router.push("/profile/manage-businesses"))}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#FEF7E0" }]}>
               <Feather name="briefcase" size={18} color="#B06000" />
@@ -179,7 +190,7 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push("/profile/bluetooth-printer")}
+            onPress={() => checkPremiumAction("Bluetooth thermal printer printing", () => router.push("/profile/bluetooth-printer"))}
           >
             <View style={[styles.optionIconBox, { backgroundColor: "#EFF6FF" }]}>
               <Feather name="printer" size={18} color={TOKENS.primary} />
@@ -193,12 +204,28 @@ export const ProfileScreen: React.FC = () => {
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
 
+          {/* Option: Active Devices */}
+          <TouchableOpacity
+            style={styles.optionRow}
+            activeOpacity={0.7}
+            onPress={() => checkPremiumAction("Active devices monitoring", () => router.push("/profile/active-devices"))}
+          >
+            <View style={[styles.optionIconBox, { backgroundColor: "#E8F0FE" }]}>
+              <Feather name="smartphone" size={18} color={TOKENS.primary} />
+            </View>
+            <View style={styles.optionTextWrapper}>
+              <Text style={styles.optionTitle}>Active Devices</Text>
+              <Text style={styles.optionSubtitle}>Monitor and manage active devices logged into your account</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+          </TouchableOpacity>
+
           {/* Option: Staff Management (Hidden for Manager & Cashier!) */}
           {canPerform("create", "staff") && (
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
-              onPress={() => router.push("/profile/manage-staff")}
+              onPress={() => checkPremiumAction("Staff accounts management", () => router.push("/profile/manage-staff"))}
             >
               <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
                 <Feather name="users" size={18} color="#137333" />
@@ -210,26 +237,26 @@ export const ProfileScreen: React.FC = () => {
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
           )}
- 
-          {/* Option: Payments Setup (Hidden for Manager & Cashier!) */}
+
+          {/* Option: Premium Plans Setup (Hidden for Manager & Cashier!) */}
           {canPerform("create", "settings") && (
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
-              onPress={() => triggerToast("Pricing subscription setup initialized")}
+              onPress={() => router.push("/profile/premium-plans")}
             >
-              <View style={[styles.optionIconBox, { backgroundColor: "#FCE8E6" }]}>
-                <Feather name="credit-card" size={18} color={TOKENS.error} />
+              <View style={[styles.optionIconBox, { backgroundColor: "#FEF3C7" }]}>
+                <Ionicons name="diamond" size={18} color="#D97706" />
               </View>
               <View style={styles.optionTextWrapper}>
-                <Text style={styles.optionTitle}>Payments</Text>
-                <Text style={styles.optionSubtitle}>Subscription plans, invoice billing, and receipts history</Text>
+                <Text style={styles.optionTitle}>Premium Plans</Text>
+                <Text style={styles.optionSubtitle}>Manage subscriptions, billing cycles, and feature access</Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
           )}
         </View>
- 
+
         {/* Option Group: Sync & Backup (Hidden for Cashier!) */}
         {canPerform("read", "sync") && (
           <View style={styles.optionsGroup}>
@@ -243,24 +270,26 @@ export const ProfileScreen: React.FC = () => {
               <View style={styles.optionTextWrapper}>
                 <Text style={styles.optionTitle}>Auto Backup to Cloud</Text>
                 <Text style={styles.optionSubtitle}>
-                  {isBackupEnabled 
-                    ? "Real-time sync to Supabase is active" 
+                  {isBackupEnabled
+                    ? "Real-time sync to Supabase is active"
                     : "Enable real-time cloud backup to Supabase"}
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => {
-                  toggleBackup();
-                  triggerToast(isBackupEnabled ? "Cloud backup disabled" : "Cloud backup enabled! ☁️");
+                  checkPremiumAction("Cloud backup and database synchronization", () => {
+                    toggleBackup();
+                    triggerToast(isBackupEnabled ? "Cloud backup disabled" : "Cloud backup enabled! ☁️");
+                  });
                 }}
                 style={[
-                  styles.switchButton, 
+                  styles.switchButton,
                   isBackupEnabled ? styles.switchButtonActive : styles.switchButtonInactive
                 ]}
                 activeOpacity={0.8}
               >
                 <View style={[
-                  styles.switchThumb, 
+                  styles.switchThumb,
                   isBackupEnabled ? styles.switchThumbActive : styles.switchThumbInactive
                 ]} />
               </TouchableOpacity>
@@ -272,13 +301,15 @@ export const ProfileScreen: React.FC = () => {
                 style={styles.optionRow}
                 activeOpacity={0.7}
                 onPress={async () => {
-                  triggerToast("Syncing database... 🔄");
-                  const success = await syncDatabase();
-                  if (success) {
-                    triggerToast("Database synced successfully! ✅");
-                  } else {
-                    Alert.alert("Sync Failed", "Check your internet connection and Supabase environment configuration.");
-                  }
+                  checkPremiumAction("Manual database synchronization", async () => {
+                    triggerToast("Syncing database... 🔄");
+                    const success = await syncDatabase();
+                    if (success) {
+                      triggerToast("Database synced successfully! ✅");
+                    } else {
+                      Alert.alert("Sync Failed", "Check your internet connection and Supabase environment configuration.");
+                    }
+                  });
                 }}
               >
                 <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
@@ -291,88 +322,6 @@ export const ProfileScreen: React.FC = () => {
                 <Feather name="chevron-right" size={16} color={TOKENS.muted} />
               </TouchableOpacity>
             )}
-          </View>
-        )}
-
-        {/* Payments & Subscriptions visual carousel plans (Hidden for Manager & Cashier!) */}
-        {canPerform("create", "settings") && (
-          <View style={styles.optionsGroup}>
-            <Text style={styles.groupHeader}>Premium Plans</Text>
-            
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.plansScrollContent}
-            >
-              {/* 1 Month Plan Card */}
-              <TouchableOpacity
-                style={[styles.planCard, selectedPlan === "1_month" && styles.planCardActive]}
-                activeOpacity={0.9}
-                onPress={() => {
-                  setSelectedPlan("1_month");
-                  triggerToast("1-Month Pro Plan selected! 💳");
-                }}
-              >
-                <View style={styles.planHeader}>
-                  <Text style={styles.planTitle}>Starter</Text>
-                  <Text style={styles.planDuration}>1 Month Access</Text>
-                </View>
-                <Text style={styles.planPrice}>Rs. 2,500</Text>
-                <Text style={styles.planPriceSub}>billed monthly</Text>
-                <View style={[styles.planStatusBadge, selectedPlan === "1_month" && styles.planStatusBadgeActive]}>
-                  <Text style={[styles.planStatusText, selectedPlan === "1_month" && { color: "#fff" }]}>
-                    {selectedPlan === "1_month" ? "Active Plan" : "Choose Plan"}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* 3 Months Plan Card (Popular) */}
-              <TouchableOpacity
-                style={[styles.planCard, styles.planCardPopular, selectedPlan === "3_month" && styles.planCardActive]}
-                activeOpacity={0.9}
-                onPress={() => {
-                  setSelectedPlan("3_month");
-                  triggerToast("3-Month Pro Plan selected! 🌟");
-                }}
-              >
-                <View style={styles.popularRibbon}>
-                  <Text style={styles.popularRibbonText}>MOST POPULAR</Text>
-                </View>
-                <View style={styles.planHeader}>
-                  <Text style={[styles.planTitle, { color: TOKENS.primary, marginTop: 12 }]}>Retail Pro</Text>
-                  <Text style={styles.planDuration}>3 Months Access</Text>
-                </View>
-                <Text style={styles.planPrice}>Rs. 6,800</Text>
-                <Text style={styles.planPriceSub}>Save 10% · billed quarterly</Text>
-                <View style={[styles.planStatusBadge, selectedPlan === "3_month" ? styles.planStatusBadgeActive : { backgroundColor: TOKENS.primary }]}>
-                  <Text style={[styles.planStatusText, { color: '#fff' }]}>
-                    {selectedPlan === "3_month" ? "Active Plan" : "Choose Plan"}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              {/* 1 Year Plan Card */}
-              <TouchableOpacity
-                style={[styles.planCard, selectedPlan === "1_year" && styles.planCardActive]}
-                activeOpacity={0.9}
-                onPress={() => {
-                  setSelectedPlan("1_year");
-                  triggerToast("1-Year Pro Plan selected! 🚀");
-                }}
-              >
-                <View style={styles.planHeader}>
-                  <Text style={styles.planTitle}>Enterprise</Text>
-                  <Text style={styles.planDuration}>12 Months Access</Text>
-                </View>
-                <Text style={styles.planPrice}>Rs. 15,000</Text>
-                <Text style={styles.planPriceSub}>Save 50% · billed annually</Text>
-                <View style={[styles.planStatusBadge, selectedPlan === "1_year" && styles.planStatusBadgeActive]}>
-                  <Text style={[styles.planStatusText, selectedPlan === "1_year" && { color: "#fff" }]}>
-                    {selectedPlan === "1_year" ? "Active Plan" : "Choose Plan"}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </ScrollView>
           </View>
         )}
 
@@ -405,7 +354,8 @@ export const ProfileScreen: React.FC = () => {
                 {
                   text: "Sign Out",
                   style: "destructive",
-                  onPress: () => {
+                  onPress: async () => {
+                    await deleteCurrentDeviceSession();
                     cartState.logout();
                     triggerToast("Profile logged out");
                     router.replace("/auth/number-input");
@@ -424,7 +374,7 @@ export const ProfileScreen: React.FC = () => {
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
         </View>
-{/* Footer info: Made in Sri Lanka & App Version */}
+        {/* Footer info: Made in Sri Lanka & App Version */}
         <View style={styles.footerContainer}>
           <Text style={styles.versionText}>Version: 1.0.4</Text>
           <Text style={styles.madeInText}>Made in 🇱🇰 with ❤️</Text>
@@ -447,14 +397,14 @@ export const ProfileScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.premiumSupportCard}
               activeOpacity={0.7}
-              onPress={() => Linking.openURL("tel:+94771234567")}
+              onPress={() => Linking.openURL("tel:+94782470168")}
             >
               <View style={[styles.supportIconCircle, { backgroundColor: "#EFF6FF" }]}>
                 <Feather name="phone" size={18} color={TOKENS.primary} />
               </View>
               <View style={styles.supportCardTextWrapper}>
                 <Text style={styles.supportCardTitle}>Call Helpline</Text>
-                <Text style={styles.supportCardSubtitle}>Call +94 77 123 4567 · Active 24/7</Text>
+                <Text style={styles.supportCardSubtitle}>Call +94 78 247 0168 · Active 24/7</Text>
               </View>
               <Feather name="chevron-right" size={18} color={TOKENS.muted} />
             </TouchableOpacity>
@@ -462,7 +412,7 @@ export const ProfileScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.premiumSupportCard}
               activeOpacity={0.7}
-              onPress={() => Linking.openURL("https://wa.me/94771234567")}
+              onPress={() => Linking.openURL("https://wa.me/94782470168")}
             >
               <View style={[styles.supportIconCircle, { backgroundColor: "#E8FDF0" }]}>
                 <Feather name="message-circle" size={18} color="#10B981" />
@@ -506,10 +456,13 @@ export const ProfileScreen: React.FC = () => {
         </ScrollView>
       </BottomSheet>
 
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName={premiumFeatureName}
+      />
 
-
-
-    </View>
+    </ScreenWrapper>
   );
 };
 
@@ -714,123 +667,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  headerCartBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
-  },
-  plansScrollContent: {
-    paddingHorizontal: 4,
-    paddingVertical: 6,
-    gap: 12,
-  },
-  planCard: {
-    width: 170,
-    backgroundColor: TOKENS.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-    padding: 16,
-    position: "relative",
-    overflow: "hidden",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 3,
-    elevation: 0.5,
-  },
-  planCardActive: {
-    borderColor: TOKENS.primary,
-    borderWidth: 2,
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  planCardPopular: {
-    borderColor: "#FCD34D",
-    borderWidth: 1.5,
-  },
-  popularRibbon: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#F59E0B",
-    paddingVertical: 3,
-    alignItems: "center",
-  },
-  popularRibbonText: {
-    color: "#fff",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  planHeader: {
-    alignItems: "center",
-    marginTop: 8,
-    gap: 2,
-  },
-  planTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  planDuration: {
-    fontSize: 10,
-    color: TOKENS.muted,
-  },
-  planPrice: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-    marginTop: 12,
-  },
-  planPriceSub: {
-    fontSize: 8,
-    color: TOKENS.muted,
-    marginTop: 2,
-  },
-  planStatusBadge: {
-    marginTop: 14,
-    paddingVertical: 6,
-    width: "100%",
-    borderRadius: 10,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-  },
-  planStatusBadgeActive: {
-    backgroundColor: TOKENS.primary,
-  },
-  planStatusText: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
+
   switchButton: {
     width: 46,
     height: 24,

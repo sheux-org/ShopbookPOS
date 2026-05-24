@@ -7,17 +7,19 @@ import {
   ScrollView,
   Animated,
   Easing,
-  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
+import { HeaderCartButton } from "../common/HeaderCartButton";
 import { CameraView } from "expo-camera";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CartItem } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
+import { InvoiceItemCard } from "../common/InvoiceItemCard";
 
 export const ScanScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -70,7 +72,7 @@ export const ScanScreen: React.FC = () => {
 
   const laserTranslateY = scanAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [6, 174],
+    outputRange: [2, 116],
   });
 
   const triggerToast = (msg: string) => {
@@ -96,7 +98,7 @@ export const ScanScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Popover feedback toast */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -132,20 +134,7 @@ export const ScanScreen: React.FC = () => {
             </TouchableOpacity>
           )}
 
-          {invoiceItems.length > 0 && (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>
-                  {invoiceItems.reduce((sum, item) => sum + item.quantity, 0)}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <HeaderCartButton />
         </View>
       </View>
 
@@ -156,39 +145,7 @@ export const ScanScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {invoiceItems.map((item) => (
-          <View key={item.id} style={styles.itemCard}>
-            <View style={styles.itemIconBox}>
-              <Text style={{ fontSize: 20 }}>{item.icon}</Text>
-            </View>
-            <View style={styles.itemMainInfo}>
-              <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-              <Text style={styles.itemQuantities}>
-                {item.quantity} × Rs. {item.price.toLocaleString()}
-              </Text>
-            </View>
-
-            <View style={styles.itemRightRow}>
-              <Text style={styles.itemTotal}>
-                Rs. {(item.price * item.quantity).toLocaleString()}
-              </Text>
-
-              <View style={styles.cardActions}>
-                <TouchableOpacity
-                  style={styles.smallActionBtn}
-                  onPress={() => cartState.updateQuantity(item.id, -1)}
-                >
-                  <Feather name="minus" size={12} color={TOKENS.muted} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.smallActionBtn}
-                  onPress={() => cartState.updateQuantity(item.id, 1)}
-                >
-                  <Feather name="plus" size={12} color={TOKENS.muted} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          <InvoiceItemCard key={item.id} item={item} />
         ))}
 
         {invoiceItems.length === 0 && (
@@ -203,7 +160,7 @@ export const ScanScreen: React.FC = () => {
       {/* Bottom Panel - Live Camera Viewfinder & Proceed to Checkout Button */}
       <View style={[styles.bottomPanel, { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 }]}>
         <Text style={styles.scannerLabel}>CAMERA VIEWFINDER ACTIVE</Text>
-        
+
         <View style={styles.mockViewfinder}>
           {hasCameraAccess ? (
             <CameraView
@@ -252,10 +209,10 @@ export const ScanScreen: React.FC = () => {
           onPress={() => router.push("/pos/cart")}
         >
           <View style={styles.summaryBarLeft}>
-            <Feather 
-              name="shopping-bag" 
-              size={16} 
-              color={invoiceItems.length === 0 ? TOKENS.muted : TOKENS.card} 
+            <Feather
+              name="shopping-bag"
+              size={16}
+              color={invoiceItems.length === 0 ? TOKENS.muted : TOKENS.card}
             />
             <Text style={[
               styles.summaryLabelActive,
@@ -274,7 +231,7 @@ export const ScanScreen: React.FC = () => {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 };
 
@@ -352,33 +309,6 @@ const styles = StyleSheet.create({
     borderColor: TOKENS.accentBlue,
     paddingHorizontal: 12,
   },
-  headerCartBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
-  },
   itemsList: {
     flex: 1,
   },
@@ -386,62 +316,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  itemCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: TOKENS.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-    padding: 12,
-  },
-  itemIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F9FAFB",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-  },
-  itemMainInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  itemQuantities: {
-    fontSize: 12,
-    color: TOKENS.muted,
-    marginTop: 4,
-  },
-  itemRightRow: {
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  itemTotal: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  cardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  smallActionBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+
   emptyInvoiceState: {
     alignItems: "center",
     justifyContent: "center",
@@ -523,6 +398,7 @@ const styles = StyleSheet.create({
   },
   scanLaser: {
     position: "absolute",
+    top: 0,
     left: 4,
     right: 4,
     height: 2,

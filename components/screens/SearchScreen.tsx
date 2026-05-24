@@ -1,46 +1,48 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   ScrollView,
-  TextInput,
-  Platform,
-  Modal,
-  Alert,
+  FlatList,
+  ActivityIndicator,
 } from "react-native";
-import { CameraView } from "expo-camera";
+import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
 import { usePermission } from "../../hooks/usePermissionHandler";
 import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import { SearchInput } from "../common/SearchInput";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CatalogProduct } from "../data/cartState";
+import { HeaderCartButton } from "../common/HeaderCartButton";
 import { useProducts } from "../../hooks/useProducts";
+import { ProductImage } from "../common/ProductImage";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 export const SearchScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestCameraAccess } = usePermission();
+  const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeChip, setActiveChip] = useState("All");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
-  // Live products catalog list synced via React Query hook
-  const { data: productsList = [] } = useProducts(undefined, searchQuery, activeChip);
-  const [cartCount, setCartCount] = useState(0);
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
-  useEffect(() => {
-    const syncCart = () => {
-      const cart = cartState.getCart();
-      setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-    };
-    syncCart();
-    return cartState.subscribe(syncCart);
-  }, []);
+  const {
+    data: productsList = [],
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(undefined, searchQuery, activeChip);
+
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -48,9 +50,13 @@ export const SearchScreen: React.FC = () => {
   };
 
   const triggerBarcodeScanner = () => {
-    requestCameraAccess(() => {
-      setIsScanning(true);
-    });
+    if (isPremium) {
+      requestCameraAccess(() => {
+        setIsScanning(true);
+      });
+    } else {
+      setPremiumModalVisible(true);
+    }
   };
 
   const handleAddProduct = (prod: CatalogProduct) => {
@@ -65,7 +71,7 @@ export const SearchScreen: React.FC = () => {
   const filteredProducts = productsList;
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper withKeyboard noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -85,40 +91,16 @@ export const SearchScreen: React.FC = () => {
         </TouchableOpacity>
 
         {/* Input Bar */}
-        <View style={styles.searchInputWrapper}>
-          <Feather name="search" size={18} color={TOKENS.muted} />
-          <TextInput
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search products..."
-            placeholderTextColor="#9CA3AF"
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 ? (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Feather name="x-circle" size={16} color={TOKENS.muted} />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={triggerBarcodeScanner}>
-              <Ionicons name="qr-code-outline" size={16} color={TOKENS.primary} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search products..."
+          onScanPress={triggerBarcodeScanner}
+          containerStyle={{ flex: 1 }}
+        />
 
         <View style={styles.headerRightActions}>
-          {cartCount > 0 && (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={16} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{cartCount}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <HeaderCartButton />
         </View>
       </View>
 
@@ -163,13 +145,35 @@ export const SearchScreen: React.FC = () => {
       </View>
 
       {/* Results Scrollable list */}
-      <ScrollView style={styles.resultsList} showsVerticalScrollIndicator={false}>
-        {filteredProducts.map((item) => (
-          <View key={item.id} style={styles.resultItemRow}>
+      <FlatList
+        data={filteredProducts}
+        keyExtractor={(item) => item.id.toString()}
+        style={styles.resultsList}
+        showsVerticalScrollIndicator={false}
+        onEndReached={() => {
+          if (hasNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+          ) : null
+        }
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 20,
+          flexGrow: 1,
+        }}
+        renderItem={({ item }) => (
+          <View style={styles.resultItemRow}>
             {/* Left Box Icon */}
-            <View style={styles.iconBox}>
-              <Text style={styles.iconText}>{item.icon}</Text>
-            </View>
+            <ProductImage
+              icon={item.icon}
+              category={item.category}
+              size={42}
+              style={styles.iconBox}
+            />
 
             {/* Middle Details */}
             <View style={styles.itemDetails}>
@@ -222,9 +226,8 @@ export const SearchScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
-
-        {filteredProducts.length === 0 && (
+        )}
+        ListEmptyComponent={
           <View style={styles.emptySearchState}>
             <Feather name="search" size={48} color="#D1D5DB" />
             <Text style={styles.emptySearchTitle}>No items found</Text>
@@ -232,84 +235,28 @@ export const SearchScreen: React.FC = () => {
               Try searching for another product or add a new one to catalog.
             </Text>
           </View>
-        )}
-      </ScrollView>
+        }
+      />
 
       {/* REAL HIGH-PERFORMANCE CAMERA BARCODE SCANNER OVERLAY MODAL */}
-      <Modal
+      <BarcodeScannerModal
         visible={isScanning}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsScanning(false)}
-      >
-        <View style={styles.scannerBg}>
-          <View style={styles.scannerCard}>
-            <View style={styles.scannerHeaderRow}>
-              <Text style={styles.scannerTitle}>📷 Search Barcode Active</Text>
-              <TouchableOpacity
-                style={styles.closeScannerBtn}
-                onPress={() => setIsScanning(false)}
-              >
-                <Feather name="x" size={20} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-            
-            <Text style={styles.scannerInstruction}>
-              Align a product barcode within the viewfinder box to search and locate it instantly
-            </Text>
-            
-            {/* Viewfinder area containing live CameraView */}
-            <View style={styles.scannerViewfinder}>
-              {isScanning ? (
-                <CameraView
-                  style={StyleSheet.absoluteFillObject}
-                  barcodeScannerSettings={{
-                    barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
-                  }}
-                  onBarcodeScanned={({ type, data }) => {
-                    setSearchQuery(data);
-                    setIsScanning(false);
-                    triggerToast(`Found Barcode: ${data} 🔍`);
-                  }}
-                />
-              ) : null}
+        onClose={() => setIsScanning(false)}
+        title="📷 Search Barcode Active"
+        instruction="Align a product barcode within the viewfinder box to search and locate it instantly"
+        onBarcodeScanned={(data) => {
+          setSearchQuery(data);
+          setIsScanning(false);
+          triggerToast(`Found Barcode: ${data} 🔍`);
+        }}
+      />
 
-              {/* Viewfinder corners overlay */}
-              <View style={[styles.viewfinderCorner, styles.cornerTL]} />
-              <View style={[styles.viewfinderCorner, styles.cornerTR]} />
-              <View style={[styles.viewfinderCorner, styles.cornerBL]} />
-              <View style={[styles.viewfinderCorner, styles.cornerBR]} />
-              
-              {/* Animated Laser line */}
-              <View style={styles.scannerLaserLine} />
-              
-              <Text style={styles.scanningText}>SCANNING...</Text>
-            </View>
-            
-            {/* Instant mock capture for simulator environments */}
-            <TouchableOpacity
-              style={styles.scannerForceScanBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                const mockBarcodes = [
-                  "8901030777551",
-                  "501234567890",
-                  "4902430582766",
-                  "7622300744961",
-                ];
-                const randomBarcode = mockBarcodes[Math.floor(Math.random() * mockBarcodes.length)];
-                setSearchQuery(randomBarcode);
-                setIsScanning(false);
-                triggerToast(`Simulated Scan: ${randomBarcode} 🔍`);
-              }}
-            >
-              <Text style={styles.forceScanText}>⚡ Instant Capture</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-    </View>
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="In-app barcode search scanning"
+      />
+    </ScreenWrapper>
   );
 };
 
@@ -358,21 +305,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-  },
-  searchInputWrapper: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    height: 40,
-    gap: 6,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: TOKENS.dark,
   },
   scanHeaderButton: {
     width: 38,
@@ -540,33 +472,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
-  headerCartBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
-  },
   emptySearchState: {
     alignItems: "center",
     justifyContent: "center",
@@ -587,124 +492,5 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
     textAlign: "center",
     lineHeight: 18,
-  },
-  scannerBg: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  scannerCard: {
-    backgroundColor: TOKENS.card,
-    borderRadius: 24,
-    padding: 24,
-    width: "100%",
-    alignItems: "center",
-    gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  scannerHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
-  },
-  scannerTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  closeScannerBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scannerInstruction: {
-    fontSize: 12,
-    color: TOKENS.muted,
-    textAlign: "center",
-    lineHeight: 16,
-  },
-  scannerViewfinder: {
-    width: 220,
-    height: 140,
-    borderWidth: 1,
-    borderColor: "rgba(37, 99, 235, 0.3)",
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
-  },
-  viewfinderCorner: {
-    position: "absolute",
-    width: 16,
-    height: 16,
-    borderColor: TOKENS.primary,
-  },
-  cornerTL: {
-    top: 0,
-    left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-  },
-  cornerTR: {
-    top: 0,
-    right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-  },
-  cornerBL: {
-    bottom: 0,
-    left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-  },
-  cornerBR: {
-    bottom: 0,
-    right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-  },
-  scannerLaserLine: {
-    position: "absolute",
-    width: "90%",
-    height: 2,
-    backgroundColor: "#EF4444",
-    top: "50%",
-  },
-  scanningText: {
-    position: "absolute",
-    bottom: 10,
-    fontSize: 10,
-    fontWeight: "bold",
-    color: TOKENS.primary,
-    letterSpacing: 1.5,
-  },
-  scannerForceScanBtn: {
-    backgroundColor: TOKENS.primary,
-    height: 40,
-    borderRadius: 20,
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-  forceScanText: {
-    color: TOKENS.card,
-    fontSize: 14,
-    fontWeight: "bold",
   },
 });

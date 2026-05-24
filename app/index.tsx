@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from "react";
 import { Redirect } from "expo-router";
-import { View, ActivityIndicator } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { cartState } from "../components/data/cartState";
+import { useAuthStore } from "../stores/useAuthStore";
+import { useBusinessStore } from "../stores/useBusinessStore";
 
 export default function SessionGateRoute() {
   const [isLoggedIn, setIsLoggedIn] = useState(cartState.getIsLoggedIn());
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
-    const { useAuthStore } = require("../stores/useAuthStore");
-    
     const checkHydration = () => {
       if (useAuthStore.persist.hasHydrated()) {
         setHasHydrated(true);
@@ -36,14 +36,20 @@ export default function SessionGateRoute() {
 
   useEffect(() => {
     if (hasHydrated && isLoggedIn) {
-      const { useBusinessStore } = require("../stores/useBusinessStore");
       useBusinessStore.getState().loadBusinessesFromDb();
     }
   }, [hasHydrated, isLoggedIn]);
 
   if (!hasHydrated) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#FFFFFF", justifyContent: "center", alignItems: "center" }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#FFFFFF",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <ActivityIndicator size="large" color="#3B82F6" />
       </View>
     );

@@ -18,7 +18,9 @@ export type BuildThermalReceiptOptions = {
   items: ThermalReceiptLineItem[];
   subtotal: number;
   tax: number;
-  discount: number;
+  discount?: number;
+  discountLabel?: string;
+  taxLabel?: string;
   grandTotal: number;
   /** Shown as decorative footer line (digits from invoice work well). */
   barcodeLine?: string;
@@ -62,11 +64,12 @@ export function buildThermalReceiptHtml(opts: BuildThermalReceiptOptions): strin
     )
     .join("");
 
+  const discountLabel = opts.discountLabel || "Discount";
   const discountBlock =
-    opts.discount > 0
+    opts.discount && opts.discount > 0
       ? `
           <div class="flex-row">
-            <span>Discount</span>
+            <span>${escapeHtml(discountLabel)}</span>
             <span>- Rs. ${opts.discount.toFixed(2)}</span>
           </div>`
       : "";
@@ -152,7 +155,7 @@ export function buildThermalReceiptHtml(opts: BuildThermalReceiptOptions): strin
             <span>Rs. ${opts.subtotal.toFixed(2)}</span>
           </div>
           <div class="flex-row">
-            <span>Standard Tax (8%)</span>
+            <span>${escapeHtml(opts.taxLabel || "Standard Tax (8%)")}</span>
             <span>Rs. ${opts.tax.toFixed(2)}</span>
           </div>
           ${discountBlock}

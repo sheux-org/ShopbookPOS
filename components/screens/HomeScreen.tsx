@@ -1,25 +1,31 @@
-import React, { useState, useEffect, useRef } from "react";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Animated,
+  FlatList,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  ScrollView,
-  FlatList,
-  Platform,
-  TextInput,
-  Modal,
-  Pressable,
-  Animated,
+  useWindowDimensions,
+  View
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { cartState, Business } from "../data/cartState";
+import { useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
 import { useTabBarVisible } from "../../hooks/useTabBarVisible";
 import { BottomSheet } from "../common/BottomSheet";
-import { useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
+import { ProductImage } from "../common/ProductImage";
+import { ScreenWrapper } from "../common/ScreenWrapper";
+import { SearchInput } from "../common/SearchInput";
+import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
+import { HeaderCartButton } from "../common/HeaderCartButton";
+import { Business, cartState } from "../data/cartState";
+import { hapticFeedback } from "../../utils/haptics";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 interface HomeProduct {
   id: string;
@@ -44,19 +50,31 @@ const CATEGORIES = [
 export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const numColumns = width > 768 ? 4 : 2;
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Dynamic products list fetched via React Query custom hook
-  const { data: productsList = [] } = useProducts(selectedCategory, searchQuery);
-  const toggleFavoriteMutation = useToggleFavoriteProduct();
-  const [cartItemsCount, setCartItemsCount] = useState(0);
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
-  // console.log("productsList", productsList);
-  // Active Business dropdown states
-  const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
+  const {
+    data: productsList = [],
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(
+    selectedCategory,
+    searchQuery,
+  );
+  const toggleFavoriteMutation = useToggleFavoriteProduct();
+
+  const [activeBusiness, setActiveBusiness] = useState<Business>(
+    cartState.getActiveBusiness(),
+  );
   const [isBusinessSheetOpen, setIsBusinessSheetOpen] = useState(false);
 
   const { tabBarVisible, setTabBarVisible } = useTabBarVisible();
@@ -101,27 +119,25 @@ export const HomeScreen: React.FC = () => {
   // Scroll handler for hiding/showing tab bar dynamically
   const handleScroll = (event: any) => {
     const currentY = event.nativeEvent.contentOffset.y;
-    
+
     // Scrolling down (with threshold)
     if (currentY > 50 && currentY > lastScrollY.current) {
       if (tabBarVisible) {
         setTabBarVisible(false);
       }
-    } 
+    }
     // Scrolling up or at the absolute top
     else if (currentY < lastScrollY.current || currentY <= 10) {
       if (!tabBarVisible) {
         setTabBarVisible(true);
       }
     }
-    
+
     lastScrollY.current = currentY;
   };
 
   useEffect(() => {
     const syncCart = () => {
-      const cart = cartState.getCart();
-      setCartItemsCount(cart.reduce((sum, item) => sum + item.quantity, 0));
       setActiveBusiness(cartState.getActiveBusiness());
     };
 
@@ -136,30 +152,26 @@ export const HomeScreen: React.FC = () => {
 
   const handleAddProduct = (prod: HomeProduct) => {
     if (prod.stockType === "out") {
+      hapticFeedback.notificationWarning();
       triggerToast("Product is out of stock!");
       return;
     }
-    cartState.addCartItem(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
+    hapticFeedback.impactLight();
+    cartState.addCartItem(
+      prod.name,
+      prod.price,
+      prod.icon,
+      `SKU 23400${prod.id}`,
+      prod.stockCount,
+    );
     triggerToast(`Added ${prod.name} to active invoice`);
-  };
-
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "pos") {
-      router.push("/pos");
-    } else if (tabId === "stocks") {
-      router.push("/stocks");
-    } else if (tabId === "profile") {
-      router.push("/profile");
-    } else if (tabId !== "home") {
-      triggerToast(`${tabId.toUpperCase()} view tab selected`);
-    }
   };
 
   // WatermelonDB performs search & filter queries directly
   const filteredProducts = productsList;
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Toast popup */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -175,33 +187,44 @@ export const HomeScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.businessSwitcherBtn}
             activeOpacity={0.7}
-            onPress={() => setIsBusinessSheetOpen(true)}
+            onPress={() => {
+              hapticFeedback.impactMedium();
+              setIsBusinessSheetOpen(true);
+            }}
           >
-            <Text style={styles.headerSubtitle} numberOfLines={1}>
-              🏢 {activeBusiness.name}
-            </Text>
-            <Feather name="chevron-down" size={13} color={TOKENS.muted} style={{ marginLeft: 3 }} />
+            <View style={styles.businessRow}>
+              <Ionicons
+                name="storefront-outline"
+                size={18}
+                color={TOKENS.muted}
+                style={{ marginRight: 8 }}
+              />
+              <Text
+                style={[styles.headerSubtitle, styles.headerSubtitleDark]}
+                numberOfLines={1}
+              >
+                {activeBusiness.name}
+              </Text>
+            </View>
+            <Feather
+              name="chevron-down"
+              size={13}
+              color={TOKENS.muted}
+              style={{ marginLeft: 6 }}
+            />
           </TouchableOpacity>
         </View>
 
         <View style={styles.headerActions}>
-          {cartItemsCount > 0 && (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/(modules)/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{cartItemsCount}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <HeaderCartButton />
 
           <TouchableOpacity
             style={styles.searchIconBtn}
             activeOpacity={0.7}
-            onPress={() => router.push("/(modules)/pos/search")}
+            onPress={() => {
+              hapticFeedback.selection();
+              router.push("/(modules)/pos/search");
+            }}
           >
             <Feather name="search" size={20} color={TOKENS.dark} />
           </TouchableOpacity>
@@ -209,31 +232,40 @@ export const HomeScreen: React.FC = () => {
       </View>
 
       {/* Search Input Box */}
-      <View style={styles.searchRow}>
-        <Feather name="search" size={16} color={TOKENS.muted} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Quick search products..."
-          placeholderTextColor="#9CA3AF"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          clearButtonMode="while-editing"
-        />
-      </View>
+      <SearchInput
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Quick search products..."
+        onScanPress={() => {
+          if (isPremium) {
+            setIsScanning(true);
+          } else {
+            setPremiumModalVisible(true);
+          }
+        }}
+        containerStyle={{ marginHorizontal: 16, marginTop: 12 }}
+      />
 
       {/* 🌟 GORGEOUS HIGH-FIDELITY REDIRECT BANNER TO SIDEBAR CATALOG SCREEN as requested 🌟 */}
       <TouchableOpacity
         style={styles.catalogBanner}
         activeOpacity={0.85}
-        onPress={() => router.push("/(modules)/pos/catalog")}
+        onPress={() => {
+          hapticFeedback.impactLight();
+          router.push("/(modules)/pos/catalog");
+        }}
       >
         <View style={styles.catalogBannerLeft}>
           <View style={styles.bannerIconWrapper}>
             <Feather name="grid" size={16} color={TOKENS.primary} />
           </View>
           <View>
-            <Text style={styles.catalogBannerTitle}>Browse Catalog (Sidebar Layout)</Text>
-            <Text style={styles.catalogBannerSubtitle}>Switch to vertical splits with category counts</Text>
+            <Text style={styles.catalogBannerTitle}>
+              Browse Catalog (Sidebar Layout)
+            </Text>
+            <Text style={styles.catalogBannerSubtitle}>
+              Switch to vertical splits with category counts
+            </Text>
           </View>
         </View>
         <Feather name="arrow-right" size={18} color={TOKENS.primary} />
@@ -253,15 +285,22 @@ export const HomeScreen: React.FC = () => {
                 key={cat.id}
                 style={[
                   styles.categoryChip,
-                  isActive ? styles.categoryChipActive : styles.categoryChipInactive,
+                  isActive
+                    ? styles.categoryChipActive
+                    : styles.categoryChipInactive,
                 ]}
                 activeOpacity={0.8}
-                onPress={() => setSelectedCategory(cat.id)}
+                onPress={() => {
+                  hapticFeedback.selection();
+                  setSelectedCategory(cat.id);
+                }}
               >
                 <Text
                   style={[
                     styles.categoryText,
-                    isActive ? styles.categoryTextActive : styles.categoryTextInactive,
+                    isActive
+                      ? styles.categoryTextActive
+                      : styles.categoryTextInactive,
                   ]}
                 >
                   {cat.label}
@@ -274,71 +313,102 @@ export const HomeScreen: React.FC = () => {
 
       {/* Product List Grid */}
       <FlatList
+        key={numColumns}
         data={filteredProducts}
         keyExtractor={(item) => item.id}
-        numColumns={2}
+        numColumns={numColumns}
         showsVerticalScrollIndicator={false}
+        onEndReached={() => {
+          if (hasNextPage) {
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+          ) : null
+        }
         contentContainerStyle={[
           styles.gridContainer,
-          { paddingBottom: insets.bottom + 100 }
+          { paddingBottom: insets.bottom + 100 },
         ]}
         columnWrapperStyle={styles.gridColumns}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         renderItem={({ item }) => (
           <View style={styles.productCard}>
-            {/* Top row */}
-            <View style={styles.cardHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={styles.productIcon}>{item.icon}</Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => toggleFavoriteMutation.mutate(item.id)}
-                  style={{ padding: 4 }}
-                >
-                  <Ionicons
-                    name={item.isFavorite ? "heart" : "heart-outline"}
-                    size={16}
-                    color={item.isFavorite ? TOKENS.error : TOKENS.muted}
-                  />
-                </TouchableOpacity>
-              </View>
-
+            {/* Image Section */}
+            <View style={styles.imageContainer}>
               <TouchableOpacity
-                style={[
-                  styles.plusBtn,
-                  item.stockType === "out" && styles.plusBtnOut,
-                ]}
-                activeOpacity={0.8}
+                activeOpacity={0.9}
                 onPress={() => handleAddProduct(item)}
+                style={{ width: "100%", height: 110 }}
               >
-                <Feather
-                  name="plus"
-                  size={14}
-                  color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                <ProductImage
+                  icon={item.icon}
+                  category={item.category}
+                  style={{ width: "100%", height: 110, borderRadius: 0 }}
+                />
+              </TouchableOpacity>
+
+              {/* Overlay heart button */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  hapticFeedback.impactLight();
+                  toggleFavoriteMutation.mutate(item.id);
+                }}
+                style={styles.heartBtnWrapper}
+              >
+                <Ionicons
+                  name={item.isFavorite ? "heart" : "heart-outline"}
+                  size={15}
+                  color={item.isFavorite ? TOKENS.error : TOKENS.muted}
                 />
               </TouchableOpacity>
             </View>
 
-            {/* Bottom details */}
-            <View style={styles.productDetails}>
-              <Text style={styles.productName} numberOfLines={2}>
+            {/* Bottom details - touchable to add */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => handleAddProduct(item)}
+              style={styles.productDetails}
+            >
+              <Text style={styles.productName} numberOfLines={1}>
                 {item.name}
               </Text>
-              
+
               <View style={styles.priceStockRow}>
                 <Text style={styles.productPrice}>Rs. {item.price}</Text>
-                <Text
-                  style={[
-                    styles.stockText,
-                    item.stockType === "low" && styles.stockTextLow,
-                    item.stockType === "out" && styles.stockTextOut,
-                  ]}
-                >
-                  {item.stockText}
-                </Text>
+                <View style={styles.stockPlusRow}>
+                  <Text
+                    style={[
+                      styles.stockText,
+                      item.stockType === "low" && styles.stockTextLow,
+                      item.stockType === "out" && styles.stockTextOut,
+                    ]}
+                  >
+                    {item.stockText}
+                  </Text>
+
+                  <View
+                    style={[
+                      styles.plusIconBadge,
+                      item.stockType === "out" && styles.plusIconBadgeOut,
+                    ]}
+                  >
+                    <Feather
+                      name="plus"
+                      size={20}
+                      color={
+                        item.stockType === "out" ? TOKENS.muted : TOKENS.card
+                      }
+                    />
+                  </View>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           </View>
         )}
         ListEmptyComponent={
@@ -359,13 +429,16 @@ export const HomeScreen: React.FC = () => {
           {
             bottom: insets.bottom + 75,
             width: fabWidthAnim,
-          }
+          },
         ]}
       >
         <TouchableOpacity
           style={styles.fabTouchable}
           activeOpacity={0.85}
-          onPress={() => router.push("/(modules)/stocks/scan")}
+          onPress={() => {
+            hapticFeedback.impactMedium();
+            router.push("/(modules)/stocks/scan");
+          }}
         >
           <View style={styles.fabIconWrapper}>
             <Ionicons name="qr-code-outline" size={18} color="#FFFFFF" />
@@ -376,7 +449,7 @@ export const HomeScreen: React.FC = () => {
               {
                 opacity: fabTextOpacityAnim,
                 transform: [{ scale: fabTextScaleAnim }],
-              }
+              },
             ]}
           >
             <Text style={styles.fabText}>Scan</Text>
@@ -390,26 +463,42 @@ export const HomeScreen: React.FC = () => {
         onClose={() => setIsBusinessSheetOpen(false)}
         title="Select Active Business"
       >
-        <ScrollView contentContainerStyle={styles.sheetScrollContent} style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.sheetScrollContent}
+          style={{ maxHeight: 400 }}
+          showsVerticalScrollIndicator={false}
+        >
           {cartState.getBusinesses().map((biz) => {
             const isSelected = activeBusiness.id === biz.id;
             return (
               <TouchableOpacity
                 key={biz.id}
-                style={[
-                  styles.bizCard,
-                  isSelected && styles.bizCardSelected
-                ]}
+                style={[styles.bizCard, isSelected && styles.bizCardSelected]}
                 activeOpacity={0.8}
                 onPress={() => {
-                  cartState.setActiveBusiness(biz.id);
-                  setIsBusinessSheetOpen(false);
-                  triggerToast(`Switched to ${biz.name}`);
+                  hapticFeedback.impactMedium();
+                  if (isPremium || isSelected) {
+                    cartState.setActiveBusiness(biz.id);
+                    setIsBusinessSheetOpen(false);
+                    triggerToast(`Switched to ${biz.name}`);
+                  } else {
+                    setIsBusinessSheetOpen(false);
+                    setPremiumModalVisible(true);
+                  }
                 }}
               >
                 <View style={styles.bizCardLeft}>
-                  <View style={[styles.bizIconBox, isSelected && styles.bizIconBoxActive]}>
-                    <Feather name="home" size={18} color={isSelected ? TOKENS.card : TOKENS.primary} />
+                  <View
+                    style={[
+                      styles.bizIconBox,
+                      isSelected && styles.bizIconBoxActive,
+                    ]}
+                  >
+                    <Feather
+                      name="home"
+                      size={18}
+                      color={isSelected ? TOKENS.card : TOKENS.primary}
+                    />
                   </View>
                   <View style={styles.bizDetails}>
                     <Text style={styles.bizName}>{biz.name}</Text>
@@ -418,14 +507,34 @@ export const HomeScreen: React.FC = () => {
                   </View>
                 </View>
                 {isSelected && (
-                  <Feather name="check-circle" size={20} color={TOKENS.success} />
+                  <Feather
+                    name="check-circle"
+                    size={20}
+                    color={TOKENS.success}
+                  />
                 )}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
       </BottomSheet>
-    </View>
+
+      <BarcodeScannerModal
+        visible={isScanning}
+        onClose={() => setIsScanning(false)}
+        onBarcodeScanned={(data) => {
+          setSearchQuery(data);
+          setIsScanning(false);
+          triggerToast(`Scanned Barcode: ${data} 🔍`);
+        }}
+      />
+
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="Multi-branch swapping"
+      />
+    </ScreenWrapper>
   );
 };
 
@@ -476,7 +585,8 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 16,
+    fontWeight: "600",
     color: TOKENS.muted,
     marginTop: 1,
   },
@@ -487,22 +597,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-  },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-    marginHorizontal: 16,
-    marginTop: 12,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: TOKENS.dark,
   },
   catalogBanner: {
     flexDirection: "row",
@@ -585,46 +679,50 @@ const styles = StyleSheet.create({
   productCard: {
     flex: 1,
     backgroundColor: TOKENS.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    padding: 12,
     justifyContent: "space-between",
-    minHeight: 120,
+    overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+  imageContainer: {
+    position: "relative",
+    width: "100%",
+    height: 110,
+    backgroundColor: "#F3F4F6",
   },
-  productIcon: {
-    fontSize: 28,
+  productCardImage: {
+    width: "100%",
+    height: 110,
   },
-  plusBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: TOKENS.primary,
+  heartBtnWrapper: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
     alignItems: "center",
     justifyContent: "center",
-  },
-  plusBtnOut: {
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1,
-    borderColor: TOKENS.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1.5,
   },
   productDetails: {
-    marginTop: 10,
+    padding: 12,
     gap: 4,
   },
   productName: {
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: "700",
     color: TOKENS.dark,
     lineHeight: 16,
   },
@@ -634,11 +732,17 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: "800",
     color: TOKENS.primary,
   },
+  stockPlusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
   stockText: {
-    fontSize: 10,
+    fontSize: 11,
     color: TOKENS.muted,
   },
   stockTextLow: {
@@ -648,6 +752,24 @@ const styles = StyleSheet.create({
   stockTextOut: {
     color: TOKENS.error,
     fontWeight: "600",
+  },
+  plusIconBadge: {
+    width: 40,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: TOKENS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  plusIconBadgeOut: {
+    backgroundColor: "#E5E7EB",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   emptyGridState: {
     alignItems: "center",
@@ -718,38 +840,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  headerCartBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
-  },
   businessSwitcherBtn: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 2,
     alignSelf: "flex-start",
+  },
+  businessRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  bizBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: TOKENS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bizBadgeText: {
+    color: TOKENS.card,
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  headerSubtitleDark: {
+    color: TOKENS.dark,
   },
   sheetOverlay: {
     flex: 1,

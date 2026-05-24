@@ -19,9 +19,9 @@ export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
       profile: {
-        name: 'Shenux',
-        email: 'shenux@example.com',
-        avatar: 'S',
+        name: 'Pahasara',
+        email: 'pahasara@shopbook.lk',
+        avatar: 'P',
         role: 'Pro Member',
         isVerified: true,
       },

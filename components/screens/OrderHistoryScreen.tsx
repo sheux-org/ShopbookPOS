@@ -19,6 +19,7 @@ import {
 import * as Print from "expo-print";
 import Barcode from "react-native-barcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import { TOKENS } from "../../constants/tokens";
 import { DBOrder, useGetOrderItems, useGetOrders } from "../../hooks/useOrders";
 import { useStaff } from "../../hooks/useStaff";
@@ -29,8 +30,11 @@ import {
   getInvoiceLabel,
 } from "../../utils/orderInvoice";
 import { buildThermalReceiptHtml } from "../../utils/thermalReceiptHtml";
+import { printReceipt } from "../../utils/printThermalReceipt";
 import { BottomSheet } from "../common/BottomSheet";
 import { cartState } from "../data/cartState";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 const CARD_GAP = 12;
 const INNER_TEXT_GAP = 4;
@@ -50,8 +54,17 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
   const { height: windowHeight } = useWindowDimensions();
   const router = useRouter();
 
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+
   const activeBiz = cartState.getActiveBusiness();
-  const { data: orders = [], isLoading: ordersLoading } = useGetOrders();
+  const {
+    data: orders = [],
+    isLoading: ordersLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useGetOrders();
   const { data: staffList = [] } = useStaff(activeBiz.id ?? "");
   const [selectedOrder, setSelectedOrder] = useState<DBOrder | null>(null);
 
@@ -64,15 +77,31 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
     return orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [orderItems]);
 
-  const tax = useMemo(() => {
-    // 8% dynamic tax
-    return Math.round(subtotal * 0.08);
-  }, [subtotal]);
+  const { tax, taxLabel } = useMemo(() => {
+    if (!selectedOrder) return { tax: 0, taxLabel: "Tax" };
+    if (typeof selectedOrder.taxValue === "number" && typeof selectedOrder.taxRate === "number") {
+      const taxRate = selectedOrder.taxRate;
+      return { tax: selectedOrder.taxValue, taxLabel: taxRate > 0 ? `Tax (${taxRate}%)` : "Tax" };
+    }
+    return { tax: Math.round(subtotal * 0.08), taxLabel: "Standard Tax (8%)" };
+  }, [selectedOrder, subtotal]);
 
-  const discount = useMemo(() => {
-    if (!selectedOrder) return 0;
-    // Calculate discount implicitly: subtotal + tax - total
-    return Math.max(0, subtotal + tax - selectedOrder.totalAmount);
+  const { discount, discountLabel } = useMemo(() => {
+    if (!selectedOrder) return { discount: 0, discountLabel: "Discount" };
+    let calcDiscount = 0;
+    let label = "Discount";
+    if (selectedOrder.discountType === "percentage" && typeof selectedOrder.discountValue === "number") {
+      calcDiscount = subtotal * (selectedOrder.discountValue / 100);
+      label = `Discount (${selectedOrder.discountValue}%)`;
+    } else if (selectedOrder.discountType === "flat" && typeof selectedOrder.discountValue === "number") {
+      calcDiscount = selectedOrder.discountValue;
+      label = "Discount";
+    } else {
+      // Fallback for older orders or when fields are missing
+      calcDiscount = Math.max(0, subtotal + tax - selectedOrder.totalAmount);
+      label = "Discount";
+    }
+    return { discount: calcDiscount, discountLabel: label };
   }, [selectedOrder, subtotal, tax]);
 
   /** Receipt scroll area: grow with content until ~92% screen; then scrolls inside. */
@@ -127,6 +156,15 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
 
         <View style={styles.dividerLine} />
 
+        {order.paymentMethod === "card" && (
+          <View style={styles.paymentInfoRow}>
+            <Feather name="credit-card" size={12} color={TOKENS.muted} />
+            <Text style={styles.paymentInfoText}>
+              Card · {order.bankName} (•••• {order.cardLastFour})
+            </Text>
+          </View>
+        )}
+
         <View style={styles.orderFooter}>
           <Text style={styles.orderDate}>
             {new Date(order.createdAt).toLocaleDateString()} ·{" "}
@@ -170,8 +208,8 @@ Items:
 ${itemsListText}
 ---------------------------------
 Subtotal: Rs. ${subtotal.toLocaleString()}
-Tax (8%): Rs. ${tax.toLocaleString()}
-Discount: Rs. ${discount.toLocaleString()}
+${taxLabel}: Rs. ${tax.toLocaleString()}
+${discountLabel}: Rs. ${discount.toLocaleString()}
 ---------------------------------
 Total Amount: Rs. ${selectedOrder.totalAmount.toLocaleString()}
 =================================
@@ -209,7 +247,9 @@ Thank you for shopping with us!
       items,
       subtotal,
       tax,
+      taxLabel,
       discount,
+      discountLabel,
       grandTotal: selectedOrder.totalAmount,
       barcodeLine: getInvoiceBarcodeValue(selectedOrder.invoiceNumber, selectedOrder.id),
     });
@@ -220,30 +260,60 @@ Thank you for shopping with us!
     activeBiz.name,
     activeBiz.phone,
     discount,
+    discountLabel,
     orderItems,
     selectedOrder,
     staffLabelFromInvoice,
     subtotal,
     tax,
+    taxLabel,
   ]);
 
   const handlePrintReceipt = async () => {
     if (!selectedOrder) return;
+    if (!isPremium) {
+      setPremiumModalVisible(true);
+      return;
+    }
     if (itemsLoading) {
       Alert.alert("Please wait", "Receipt lines are still loading.");
       return;
     }
-    try {
-      const html = buildHistoryReceiptHtml();
-      await Print.printAsync({ html });
-    } catch (error) {
-      console.error(error);
-      Alert.alert("Print Error", "Could not complete printing.");
-    }
+    
+    const invoiceLabel = getInvoiceLabel(selectedOrder.invoiceNumber);
+    const cashierLabel = staffLabelFromInvoice(selectedOrder.invoiceNumber);
+    const items = orderItems.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      lineTotal: item.price * item.quantity,
+    }));
+
+    const printOptions = {
+      logoUri: activeBiz.logoUri,
+      businessName: activeBiz.name,
+      category: activeBiz.category,
+      address: activeBiz.address || "Sri Lanka",
+      phone: activeBiz.phone,
+      cashierLabel,
+      invoiceLabel,
+      dateStr: new Date(selectedOrder.createdAt).toLocaleString(),
+      status: selectedOrder.status.toUpperCase(),
+      items,
+      subtotal,
+      tax,
+      taxLabel,
+      discount,
+      discountLabel,
+      grandTotal: selectedOrder.totalAmount,
+      barcodeLine: getInvoiceBarcodeValue(selectedOrder.invoiceNumber, selectedOrder.id),
+      paymentMethod: selectedOrder.paymentMethod,
+    };
+
+    await printReceipt(printOptions);
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         {!isTab && (
@@ -284,6 +354,17 @@ Thank you for shopping with us!
           keyExtractor={(item) => item.id}
           renderItem={renderOrderItem}
           style={styles.scrollWrapper}
+          onEndReached={() => {
+            if (hasNextPage) {
+              fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+            ) : null
+          }
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={OrderCardSeparator}
@@ -387,12 +468,12 @@ Thank you for shopping with us!
                   <Text style={styles.thermalSummaryBold}>Rs. {subtotal.toFixed(2)}</Text>
                 </View>
                 <View style={styles.thermalRow}>
-                  <Text style={styles.thermalRowLeft}>Standard Tax (8%)</Text>
+                  <Text style={styles.thermalRowLeft}>{taxLabel}</Text>
                   <Text style={styles.thermalRowRight}>Rs. {tax.toFixed(2)}</Text>
                 </View>
                 {discount > 0 ? (
                   <View style={styles.thermalRow}>
-                    <Text style={styles.thermalRowLeft}>Discount</Text>
+                    <Text style={styles.thermalRowLeft}>{discountLabel}</Text>
                     <Text style={styles.thermalRowRight}>- Rs. {discount.toFixed(2)}</Text>
                   </View>
                 ) : null}
@@ -445,7 +526,12 @@ Thank you for shopping with us!
           </View>
         </View>
       </BottomSheet>
-    </View>
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="Invoice printing"
+      />
+    </ScreenWrapper>
   );
 };
 
@@ -768,5 +854,23 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
     fontSize: 14,
     fontWeight: "bold",
+  },
+  paymentInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    alignSelf: "flex-start",
+  },
+  paymentInfoText: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    fontWeight: "500",
   },
 });

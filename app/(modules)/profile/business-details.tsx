@@ -19,6 +19,8 @@ import { useUpdateActiveBusiness, useUploadBusinessLogo } from "../../../hooks/u
 import { useBusinessStore } from "../../../stores/useBusinessStore";
 import { BottomSheet } from "../../../components/common/BottomSheet";
 import { BusinessAvatar } from "../../../components/common/BusinessAvatar";
+import { useSettingsStore } from "../../../stores/useSettingsStore";
+import { hapticFeedback } from "../../../utils/haptics";
 
 const PRESET_EMOJIS = ["🛒", "🛍️", "🥛", "👕", "💊", "☕", "🍔", "📦", "🌾", "🏢", "🛠️", "📚"];
 
@@ -28,6 +30,18 @@ export default function BusinessDetailsRoute() {
   const { canPerform } = useUserPermissions();
 
   const activeBusiness = useBusinessStore((state) => state.activeBusiness);
+  const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
+  const toggleHaptics = useSettingsStore((state) => state.toggleHaptics);
+  
+  const handleToggleHaptics = () => {
+    toggleHaptics();
+    if (!hapticsEnabled) {
+      setTimeout(() => {
+        hapticFeedback.impactLight();
+      }, 50);
+    }
+  };
+
   const updateActiveBizMutation = useUpdateActiveBusiness();
   const uploadLogoMutation = useUploadBusinessLogo();
   const isUploading = uploadLogoMutation.isPending;
@@ -246,6 +260,33 @@ export default function BusinessDetailsRoute() {
           <Text style={styles.storeStatus}>
             {isEditing ? "Tap icon to change profile image 📸" : "🛡️ Admin Control Terminal"}
           </Text>
+        </View>
+
+        {/* Haptics Switch Toggle */}
+        <View style={styles.infoGroup}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "bold", color: TOKENS.dark }}>Haptic Feedback</Text>
+              <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 4 }}>
+                {hapticsEnabled 
+                  ? "Vibration feedback is active across the app" 
+                  : "Enable tactile vibration feedback for interactions"}
+              </Text>
+            </View>
+            <TouchableOpacity 
+              onPress={handleToggleHaptics}
+              style={[
+                styles.switchButton, 
+                hapticsEnabled ? styles.switchButtonActive : styles.switchButtonInactive
+              ]}
+              activeOpacity={0.8}
+            >
+              <View style={[
+                styles.switchThumb, 
+                hapticsEnabled ? styles.switchThumbActive : styles.switchThumbInactive
+              ]} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Info Group */}
@@ -713,6 +754,36 @@ const styles = StyleSheet.create({
     color: TOKENS.error,
     fontSize: 13,
     fontWeight: "bold",
+  },
+  switchButton: {
+    width: 46,
+    height: 24,
+    borderRadius: 12,
+    padding: 2,
+    justifyContent: "center",
+  },
+  switchButtonActive: {
+    backgroundColor: TOKENS.primary,
+  },
+  switchButtonInactive: {
+    backgroundColor: "#D1D5DB",
+  },
+  switchThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  switchThumbActive: {
+    alignSelf: "flex-end",
+  },
+  switchThumbInactive: {
+    alignSelf: "flex-start",
   },
   storeInitialsText: {
     fontSize: 22,

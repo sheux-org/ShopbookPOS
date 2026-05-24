@@ -48,14 +48,22 @@
     "plugins": [
       "expo-router",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mini POS shares approximate device location with your store admin on the Active Devices panel.",
+          "locationAlwaysAndWhenInUsePermission": "Mini POS shares approximate device location with your store admin on the Active Devices panel.",
+          "locationAlwaysPermission": "Mini POS shares approximate device location with your store admin on the Active Devices panel."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#2563EB",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#2563EB"
           }
         }
       ],
@@ -64,9 +72,7 @@
         {
           "peripheralUsageDescription": "Mini POS uses Bluetooth to connect with your thermal printer.",
           "alwaysUsageDescription": "Mini POS requires Bluetooth to print invoices in the background.",
-          "protocols": [
-            "com.shopbook.pos"
-          ]
+          "protocols": ["com.shopbook.pos"]
         }
       ]
     ],

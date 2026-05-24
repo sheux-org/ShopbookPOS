@@ -8,31 +8,23 @@ import {
   Platform,
   Alert,
   TextInput,
-  Modal,
   FlatList,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
 import * as Contacts from "expo-contacts";
 import { TOKENS } from "../../constants/tokens";
 import { cartState, CartItem } from "../data/cartState";
 import { BottomSheet } from "../common/BottomSheet";
+import { ProductImage } from "../common/ProductImage";
+import { useCart } from "../../stores/useCart";
+import { hapticFeedback } from "../../utils/haptics";
 
-// Static mock contacts for offline fallback and simulator testing
-const MOCK_CONTACTS = [
-  { id: "mock-1", name: "Pasan Pahasara", phone: "0771234567" },
-  { id: "mock-2", name: "Shenal Jayasinghe", phone: "0718765432" },
-  { id: "mock-3", name: "John Doe", phone: "0751112223" },
-  { id: "mock-4", name: "Jane Smith", phone: "0723334445" },
-  { id: "mock-5", name: "Amara Perera", phone: "0777778888" },
-  { id: "mock-6", name: "Kasun Silva", phone: "0766543210" },
-  { id: "mock-7", name: "Nimal Fernando", phone: "0701234789" },
-  { id: "mock-8", name: "Ruwan Bandara", phone: "0719876543" },
-  { id: "mock-9", name: "Dilini Weerasinghe", phone: "0771122334" },
-  { id: "mock-10", name: "Suresh Kumar", phone: "0788899001" },
-];
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // Helper colors for premium initials avatars
 const getAvatarColor = (name: string) => {
@@ -61,19 +53,36 @@ export const CartScreen: React.FC = () => {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<CartItem[]>([]);
-  const [discountAmount, setDiscountAmount] = useState(100); // Default Rs. 100
+  const [discountType, setDiscountType] = useState<"flat" | "percentage">("flat");
+  const [discountValue, setDiscountValue] = useState(0); // Default Rs. 0
   const [isEditingDiscount, setIsEditingDiscount] = useState(false);
-  const [tempDiscount, setTempDiscount] = useState("100");
+  const [tempDiscount, setTempDiscount] = useState("0");
+  const [tempDiscountType, setTempDiscountType] = useState<"flat" | "percentage">("flat");
+
+  // Tax rate state variables
+  const [taxRate, setTaxRate] = useState(0); // Default 0%
+  const [isEditingTax, setIsEditingTax] = useState(false);
+  const [tempTaxRate, setTempTaxRate] = useState("0");
 
   // Customer state hooks
   const [isCustomerModalVisible, setIsCustomerModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<"contacts" | "new">("contacts");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [deviceContacts, setDeviceContacts] = useState<{ id: string; name: string; phone: string }[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [attachedCustomer, setAttachedCustomer] = useState<{ name: string; phone: string } | null>(null);
+
+  const customCustomers = useCart((state) => state.customCustomers) || [];
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 180);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   useEffect(() => {
     const syncCart = () => {
@@ -114,14 +123,14 @@ export const CartScreen: React.FC = () => {
           formatted.sort((a, b) => a.name.localeCompare(b.name));
           setDeviceContacts(formatted);
         } else {
-          setDeviceContacts(MOCK_CONTACTS);
+          setDeviceContacts([]);
         }
       } else {
-        setDeviceContacts(MOCK_CONTACTS);
+        setDeviceContacts([]);
       }
     } catch (error) {
       console.log("Failed to fetch native contacts:", error);
-      setDeviceContacts(MOCK_CONTACTS);
+      setDeviceContacts([]);
     } finally {
       setIsLoadingContacts(false);
     }
@@ -133,16 +142,45 @@ export const CartScreen: React.FC = () => {
     }
   }, [isCustomerModalVisible]);
 
+  const allContacts = useMemo(() => {
+    const customWithIds = customCustomers.map((c, index) => ({
+      id: `custom-${index}-${c.name}-${c.phone}`,
+      name: c.name,
+      phone: c.phone,
+      isCustom: true,
+    }));
+    
+    const combined = [...customWithIds];
+    
+    for (const dc of deviceContacts) {
+      const isDuplicate = customCustomers.some(
+        (cc) =>
+          cc.name.toLowerCase() === dc.name.toLowerCase() &&
+          cc.phone.replace(/[^0-9]/g, "") === dc.phone.replace(/[^0-9]/g, "")
+      );
+      if (!isDuplicate) {
+        combined.push({
+          id: dc.id,
+          name: dc.name,
+          phone: dc.phone,
+          isCustom: false,
+        });
+      }
+    }
+    
+    combined.sort((a, b) => a.name.localeCompare(b.name));
+    return combined;
+  }, [deviceContacts, customCustomers]);
+
   const filteredContacts = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    const source = deviceContacts.length > 0 ? deviceContacts : MOCK_CONTACTS;
-    if (!q) return source;
-    return source.filter(
+    const q = debouncedQuery.toLowerCase().trim();
+    if (!q) return allContacts;
+    return allContacts.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.phone.replace(/[^0-9]/g, "").includes(q)
     );
-  }, [searchQuery, deviceContacts]);
+  }, [debouncedQuery, allContacts]);
 
   const handleAddManualCustomer = () => {
     if (!newCustomerName.trim()) {
@@ -153,6 +191,9 @@ export const CartScreen: React.FC = () => {
       name: newCustomerName.trim(),
       phone: newCustomerPhone.trim() || "Walking Customer",
     };
+    // Save to custom customers persistent list
+    useCart.getState().addCustomCustomer(customer);
+
     cartState.setCustomer(customer);
     setAttachedCustomer(customer);
     setIsCustomerModalVisible(false);
@@ -168,21 +209,19 @@ export const CartScreen: React.FC = () => {
     triggerToast("Set as Walking Customer");
   };
 
-  const handleRemoveCustomer = () => {
-    cartState.setCustomer(null);
-    setAttachedCustomer(null);
-    triggerToast("Customer removed (Walking checkout)");
-  };
-
   const renderContactItem = ({ item }: { item: { id: string; name: string; phone: string } }) => {
     const avatarColor = getAvatarColor(item.name);
     const initials = getInitials(item.name);
+    const isSelected = attachedCustomer !== null &&
+      attachedCustomer.name.toLowerCase() === item.name.toLowerCase() &&
+      attachedCustomer.phone === item.phone;
     
     return (
       <TouchableOpacity
         style={styles.contactItem}
         activeOpacity={0.7}
         onPress={() => {
+          hapticFeedback.selection();
           const customer = { name: item.name, phone: item.phone || "Walking Customer" };
           cartState.setCustomer(customer);
           setAttachedCustomer(customer);
@@ -197,12 +236,16 @@ export const CartScreen: React.FC = () => {
           <Text style={styles.contactName}>{item.name}</Text>
           <Text style={styles.contactPhone}>{item.phone || "No phone number"}</Text>
         </View>
+        {isSelected && (
+          <Feather name="check" size={16} color={TOKENS.primary} style={{ marginRight: 8 }} />
+        )}
         <Feather name="chevron-right" size={16} color={TOKENS.muted} />
       </TouchableOpacity>
     );
   };
 
   const handleClearCart = () => {
+    hapticFeedback.notificationWarning();
     Alert.alert(
       "Clear Invoice",
       "Are you sure you want to remove all items from this active checkout invoice?",
@@ -212,6 +255,7 @@ export const CartScreen: React.FC = () => {
           text: "Clear All",
           style: "destructive",
           onPress: () => {
+            hapticFeedback.impactMedium();
             cartState.clearCart();
             triggerToast("Invoice cleared");
             router.push("/pos");
@@ -226,33 +270,45 @@ export const CartScreen: React.FC = () => {
     return invoiceItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [invoiceItems]);
 
+  const computedDiscountAmount = useMemo(() => {
+    if (discountType === "percentage") {
+      return Math.round(subtotal * (discountValue / 100));
+    }
+    return discountValue;
+  }, [subtotal, discountType, discountValue]);
+
   const tax = useMemo(() => {
-    // Exact tax matching or 8% dynamic tax
-    if (subtotal === 2790) return 215; // match Image 7 screenshot exactly for fidelity!
-    return Math.round(subtotal * 0.08);
-  }, [subtotal]);
+    return Math.round(subtotal * (taxRate / 100));
+  }, [subtotal, taxRate]);
 
   const total = useMemo(() => {
-    return Math.max(0, subtotal - discountAmount + tax);
-  }, [subtotal, discountAmount, tax]);
+    return Math.max(0, subtotal - computedDiscountAmount + tax);
+  }, [subtotal, computedDiscountAmount, tax]);
 
   const handleUpdateQuantity = (id: string, delta: number) => {
+    hapticFeedback.impactLight();
     cartState.updateQuantity(id, delta);
   };
 
   const handleProceedToPayment = () => {
     if (invoiceItems.length === 0) {
+      hapticFeedback.notificationWarning();
       Alert.alert("Empty Cart", "Please add products before checking out.");
       return;
     }
-    // Navigate to Choose Payment Method, passing parameters
+    hapticFeedback.selection();
+    // Navigate directly to Payment Tender screen, passing parameters
     router.push({
-      pathname: "/pos/payment",
+      pathname: "/pos/payment-tender",
       params: {
         totalAmount: total.toString(),
         subtotal: subtotal.toString(),
-        discount: discountAmount.toString(),
+        discount: computedDiscountAmount.toString(),
+        discountType: discountType,
+        discountValue: discountValue.toString(),
         tax: tax.toString(),
+        taxRate: taxRate.toString(),
+        paymentMethod: "cash",
       },
     });
   };
@@ -260,16 +316,43 @@ export const CartScreen: React.FC = () => {
   const handleSaveDiscount = () => {
     const val = parseFloat(tempDiscount);
     if (!isNaN(val) && val >= 0) {
-      setDiscountAmount(val);
+      if (tempDiscountType === "percentage" && val > 100) {
+        hapticFeedback.notificationWarning();
+        Alert.alert("Invalid input", "Percentage discount cannot exceed 100%.");
+        return;
+      }
+      hapticFeedback.notificationSuccess();
+      setDiscountType(tempDiscountType);
+      setDiscountValue(val);
       setIsEditingDiscount(false);
-      triggerToast(`Discount set to Rs. ${val}`);
+      const label = tempDiscountType === "percentage" ? `${val}%` : `Rs. ${val}`;
+      triggerToast(`Discount set to ${label}`);
     } else {
+      hapticFeedback.notificationError();
       Alert.alert("Invalid input", "Please enter a valid positive discount amount.");
     }
   };
 
+  const handleSaveTax = () => {
+    const val = parseFloat(tempTaxRate);
+    if (!isNaN(val) && val >= 0) {
+      if (val > 100) {
+        hapticFeedback.notificationWarning();
+        Alert.alert("Invalid input", "Tax rate cannot exceed 100%.");
+        return;
+      }
+      hapticFeedback.notificationSuccess();
+      setTaxRate(val);
+      setIsEditingTax(false);
+      triggerToast(`Tax rate set to ${val}%`);
+    } else {
+      hapticFeedback.notificationError();
+      Alert.alert("Invalid input", "Please enter a valid positive tax rate.");
+    }
+  };
+
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper withKeyboard noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -309,9 +392,11 @@ export const CartScreen: React.FC = () => {
         {invoiceItems.map((item) => (
           <View key={item.id} style={styles.itemRow}>
             {/* Left Box Icon */}
-            <View style={styles.iconBox}>
-              <Text style={styles.iconText}>{item.icon || "🥛"}</Text>
-            </View>
+            <ProductImage
+              icon={item.icon || "🥛"}
+              size={47}
+              style={styles.iconBox}
+            />
 
             {/* Middle Details */}
             <View style={styles.itemDetails}>
@@ -382,6 +467,40 @@ export const CartScreen: React.FC = () => {
               <Text style={styles.summaryLabelActive}>Discount</Text>
               {isEditingDiscount ? (
                 <View style={styles.editDiscountRow}>
+                  <View style={styles.discountTypeToggleGroup}>
+                    <TouchableOpacity
+                      style={[
+                        styles.discountTypeToggleBtn,
+                        tempDiscountType === "flat" && styles.discountTypeToggleBtnActive,
+                      ]}
+                      onPress={() => setTempDiscountType("flat")}
+                    >
+                      <Text
+                        style={[
+                          styles.discountTypeToggleText,
+                          tempDiscountType === "flat" && styles.discountTypeToggleTextActive,
+                        ]}
+                      >
+                        Rs.
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.discountTypeToggleBtn,
+                        tempDiscountType === "percentage" && styles.discountTypeToggleBtnActive,
+                      ]}
+                      onPress={() => setTempDiscountType("percentage")}
+                    >
+                      <Text
+                        style={[
+                          styles.discountTypeToggleText,
+                          tempDiscountType === "percentage" && styles.discountTypeToggleTextActive,
+                        ]}
+                      >
+                        %
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   <TextInput
                     style={styles.discountInput}
                     keyboardType="numeric"
@@ -395,8 +514,14 @@ export const CartScreen: React.FC = () => {
                 </View>
               ) : (
                 <View style={styles.summaryDiscountWrapper}>
-                  <Text style={styles.summaryDiscountValue}>- Rs. {discountAmount.toLocaleString()}.00</Text>
-                  <TouchableOpacity onPress={() => { setTempDiscount(discountAmount.toString()); setIsEditingDiscount(true); }}>
+                  <Text style={styles.summaryDiscountValue}>
+                    - Rs. {computedDiscountAmount.toLocaleString()}.00{discountType === "percentage" ? ` (${discountValue}%)` : ""}
+                  </Text>
+                  <TouchableOpacity onPress={() => {
+                    setTempDiscount(discountValue.toString());
+                    setTempDiscountType(discountType);
+                    setIsEditingDiscount(true);
+                  }}>
                     <Feather name="edit-3" size={14} color={TOKENS.primary} style={styles.editIcon} />
                   </TouchableOpacity>
                 </View>
@@ -406,12 +531,38 @@ export const CartScreen: React.FC = () => {
             {/* Tax */}
             <View style={styles.summaryRow}>
               <View style={styles.taxLabelWrapper}>
-                <Text style={styles.summaryLabel}>Tax (8%)</Text>
-                <TouchableOpacity onPress={() => Alert.alert("Tax details", "A standard sales tax of 8% is automatically applied to dairy/grocery items.")}>
-                  <Text style={styles.taxChangeLink}>change</Text>
-                </TouchableOpacity>
+                <Text style={[styles.summaryLabelActive, { color: TOKENS.dark }]}>
+                  Tax
+                  {taxRate > 0 && (
+                    <Text style={{ color: TOKENS.primary }}> ({taxRate}%)</Text>
+                  )}
+                </Text>
               </View>
-              <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
+              {isEditingTax ? (
+                <View style={styles.editDiscountRow}>
+                  <Text style={styles.discountTypeToggleText}>%</Text>
+                  <TextInput
+                    style={styles.discountInput}
+                    keyboardType="numeric"
+                    value={tempTaxRate}
+                    onChangeText={setTempTaxRate}
+                    autoFocus
+                  />
+                  <TouchableOpacity onPress={handleSaveTax}>
+                    <Feather name="check" size={16} color={TOKENS.success} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.summaryDiscountWrapper}>
+                  <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
+                  <TouchableOpacity onPress={() => {
+                    setTempTaxRate(taxRate.toString());
+                    setIsEditingTax(true);
+                  }}>
+                    <Feather name="edit-3" size={14} color={TOKENS.primary} style={styles.editIcon} />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             <View style={styles.dividerLine} />
@@ -476,14 +627,21 @@ export const CartScreen: React.FC = () => {
         visible={isCustomerModalVisible}
         onClose={() => setIsCustomerModalVisible(false)}
         title="Select Customer"
+        contentPaddingHorizontal={0}
       >
-        <View style={{ height: 500 }}>
+        <View style={{ height: Math.min(680, SCREEN_HEIGHT * 0.85) }}>
           {/* Segmented Control / Tabs */}
           <View style={styles.tabBar}>
             <TouchableOpacity
               style={[styles.tabItem, activeTab === "contacts" && styles.activeTabItem]}
               onPress={() => setActiveTab("contacts")}
+              activeOpacity={0.7}
             >
+              <Feather
+                name="search"
+                size={14}
+                color={activeTab === "contacts" ? TOKENS.primary : TOKENS.muted}
+              />
               <Text style={[styles.tabText, activeTab === "contacts" && styles.activeTabText]}>
                 Search Contacts
               </Text>
@@ -491,7 +649,13 @@ export const CartScreen: React.FC = () => {
             <TouchableOpacity
               style={[styles.tabItem, activeTab === "new" && styles.activeTabItem]}
               onPress={() => setActiveTab("new")}
+              activeOpacity={0.7}
             >
+              <Feather
+                name="user-plus"
+                size={14}
+                color={activeTab === "new" ? TOKENS.primary : TOKENS.muted}
+              />
               <Text style={[styles.tabText, activeTab === "new" && styles.activeTabText]}>
                 Create Customer
               </Text>
@@ -500,17 +664,19 @@ export const CartScreen: React.FC = () => {
 
           {/* Content based on tab */}
           {activeTab === "contacts" ? (
-            <View style={styles.tabContent}>
+            <View style={{ flex: 1 }}>
               {/* Search Bar */}
-              <View style={styles.searchBarWrapper}>
-                <Feather name="search" size={16} color={TOKENS.muted} style={styles.searchIcon} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search name or phone..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  clearButtonMode="while-editing"
-                />
+              <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+                <View style={styles.searchBarWrapper}>
+                  <Feather name="search" size={16} color={TOKENS.muted} style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search name or phone..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    clearButtonMode="while-editing"
+                  />
+                </View>
               </View>
 
               {/* Walking Customer Option */}
@@ -526,7 +692,9 @@ export const CartScreen: React.FC = () => {
                   <Text style={styles.walkingText}>Walking Customer</Text>
                   <Text style={styles.contactPhone}>Default non-attached checkout</Text>
                 </View>
-                <Feather name="check" size={16} color={TOKENS.primary} />
+                {attachedCustomer === null && (
+                  <Feather name="check" size={16} color={TOKENS.primary} />
+                )}
               </TouchableOpacity>
 
               <View style={styles.listHeader}>
@@ -544,8 +712,13 @@ export const CartScreen: React.FC = () => {
                   data={filteredContacts}
                   keyExtractor={(item) => item.id}
                   renderItem={renderContactItem}
-                  showsVerticalScrollIndicator={false}
+                  showsVerticalScrollIndicator={true}
                   contentContainerStyle={styles.listContent}
+                  initialNumToRender={15}
+                  maxToRenderPerBatch={15}
+                  windowSize={7}
+                  removeClippedSubviews={true}
+                  getItemLayout={(data, index) => ({ length: 54, offset: 54 * index, index })}
                   ListEmptyComponent={
                     <View style={styles.emptyList}>
                       <Feather name="users" size={36} color={TOKENS.muted} />
@@ -556,23 +729,29 @@ export const CartScreen: React.FC = () => {
               )}
             </View>
           ) : (
-            <View style={[styles.tabContent, styles.newFormContainer]}>
-              <Text style={styles.formLabel}>Customer Name *</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. Pasan Pahasara"
-                value={newCustomerName}
-                onChangeText={setNewCustomerName}
-              />
+            <View style={[styles.newFormContainer, { paddingHorizontal: 20 }]}>
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Customer Name *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. Pasan Pahasara"
+                  placeholderTextColor={TOKENS.muted}
+                  value={newCustomerName}
+                  onChangeText={setNewCustomerName}
+                />
+              </View>
 
-              <Text style={styles.formLabel}>Phone Number</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. 077 123 4567"
-                keyboardType="phone-pad"
-                value={newCustomerPhone}
-                onChangeText={setNewCustomerPhone}
-              />
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Phone Number</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. 077 123 4567"
+                  placeholderTextColor={TOKENS.muted}
+                  keyboardType="phone-pad"
+                  value={newCustomerPhone}
+                  onChangeText={setNewCustomerPhone}
+                />
+              </View>
 
               <TouchableOpacity
                 style={styles.submitBtn}
@@ -585,6 +764,7 @@ export const CartScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={handleSelectWalkingCustomer}
+                activeOpacity={0.7}
               >
                 <Text style={styles.cancelBtnText}>Or set as Walking Customer</Text>
               </TouchableOpacity>
@@ -592,7 +772,7 @@ export const CartScreen: React.FC = () => {
           )}
         </View>
       </BottomSheet>
-    </View>
+    </ScreenWrapper>
   );
 };
 
@@ -675,19 +855,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
+    paddingRight: 16,
+    paddingLeft: 3,
+    paddingTop: 3,
+    paddingBottom: 3,
   },
   iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F9FAFB",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 58,
+    height: 58,
+    borderRadius: 10,
     marginRight: 12,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
   },
   iconText: {
     fontSize: 22,
@@ -806,6 +983,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "right",
   },
+  discountTypeToggleGroup: {
+    flexDirection: "row",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 6,
+    padding: 2,
+    marginRight: 4,
+  },
+  discountTypeToggleBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  discountTypeToggleBtnActive: {
+    backgroundColor: TOKENS.card,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  discountTypeToggleText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: TOKENS.muted,
+  },
+  discountTypeToggleTextActive: {
+    color: TOKENS.primary,
+    fontWeight: "bold",
+  },
   taxLabelWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -911,27 +1119,38 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    gap: 12,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    marginTop: 4,
   },
   tabItem: {
     flex: 1,
-    paddingVertical: 10,
+    flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    justifyContent: "center",
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
   },
   activeTabItem: {
-    borderBottomColor: TOKENS.primary,
+    backgroundColor: TOKENS.card,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
     color: TOKENS.muted,
   },
   activeTabText: {
     color: TOKENS.primary,
+    fontWeight: "bold",
   },
   tabContent: {
     flex: 1,
@@ -945,7 +1164,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 40,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   searchIcon: {
     marginRight: 8,
@@ -959,7 +1178,8 @@ const styles = StyleSheet.create({
   walkingCustomerRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: TOKENS.border,
   },
@@ -969,28 +1189,33 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   listHeader: {
-    paddingVertical: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: "#F9FAFB",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
   listHeaderText: {
     fontSize: 11,
     fontWeight: "bold",
     color: TOKENS.muted,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   listContent: {
     paddingBottom: 24,
   },
   contactItem: {
+    height: 54,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
   contactAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -1035,39 +1260,42 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
   },
   newFormContainer: {
-    gap: 16,
-    paddingTop: 24,
+    paddingTop: 16,
+  },
+  formField: {
+    marginBottom: 12,
   },
   formLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
     color: TOKENS.dark,
+    marginBottom: 6,
   },
   formInput: {
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 8,
     paddingHorizontal: 12,
-    height: 44,
+    height: 40,
     fontSize: 14,
     color: TOKENS.dark,
     backgroundColor: "#F9FAFB",
   },
   submitBtn: {
     backgroundColor: TOKENS.primary,
-    height: 46,
-    borderRadius: 23,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
+    marginTop: 10,
   },
   submitBtnText: {
     color: TOKENS.card,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "bold",
   },
   cancelBtn: {
-    height: 46,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },

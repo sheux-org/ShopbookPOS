@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -28,6 +29,8 @@ interface BottomSheetProps {
   contentPaddingTop?: number;
   /** Cap total sheet height (e.g. fraction of screen). Scroll should live inside children when used. */
   maxHeight?: number;
+  /** Force the sheet to take the full calculated height instead of wrapping content */
+  forceMaxHeight?: boolean;
 }
 
 export const BottomSheet: React.FC<BottomSheetProps> = ({
@@ -38,12 +41,34 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   contentPaddingHorizontal = 20,
   contentPaddingTop = 12,
   maxHeight,
+  forceMaxHeight = false,
 }) => {
   const insets = useSafeAreaInsets();
   const [showModal, setShowModal] = useState(visible);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const sheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -100,6 +125,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   if (!showModal) return null;
 
+  const calculatedMaxHeight = maxHeight ?? (SCREEN_HEIGHT - insets.top - 40);
+  const dynamicMaxHeight = Math.max(120, calculatedMaxHeight - keyboardHeight);
+
   return (
     <Modal
       visible={showModal}
@@ -135,8 +163,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                 paddingBottom: Math.max(insets.bottom, 16),
                 paddingHorizontal: contentPaddingHorizontal,
                 paddingTop: contentPaddingTop,
-                ...(maxHeight != null ? { maxHeight } : null),
+                maxHeight: dynamicMaxHeight,
               },
+              forceMaxHeight && { height: dynamicMaxHeight },
             ]}
           >
             {/* Visual drag handle indictator */}
@@ -156,7 +185,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               </View>
             ) : null}
 
-            <View style={styles.sheetBody}>{children}</View>
+            <View style={[styles.sheetBody, forceMaxHeight && { flex: 1 }]}>{children}</View>
           </Animated.View>
         </KeyboardAvoidingView>
       </View>

@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 3,
+  version: 8,
   tables: [
     tableSchema({
       name: 'businesses',
@@ -45,6 +45,7 @@ export const schema = appSchema({
         { name: 'low_stock_alert', type: 'number', isOptional: true },
         { name: 'icon', type: 'string', isOptional: true },
         { name: 'is_favorite', type: 'boolean', isOptional: true },
+        { name: 'icon_pending_upload', type: 'boolean', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -56,6 +57,13 @@ export const schema = appSchema({
         { name: 'invoice_number', type: 'string', isIndexed: true },
         { name: 'total_amount', type: 'number' },
         { name: 'status', type: 'string' },
+        { name: 'payment_method', type: 'string', isOptional: true },
+        { name: 'bank_name', type: 'string', isOptional: true },
+        { name: 'card_last_four', type: 'string', isOptional: true },
+        { name: 'discount_type', type: 'string', isOptional: true },
+        { name: 'discount_value', type: 'number', isOptional: true },
+        { name: 'tax_rate', type: 'number', isOptional: true },
+        { name: 'tax_value', type: 'number', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
@@ -68,6 +76,17 @@ export const schema = appSchema({
         { name: 'name', type: 'string' },
         { name: 'quantity', type: 'number' },
         { name: 'price', type: 'number' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'inventory_logs',
+      columns: [
+        { name: 'product_id', type: 'string', isIndexed: true },
+        { name: 'type', type: 'string' },
+        { name: 'quantity', type: 'number' },
+        { name: 'reason', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

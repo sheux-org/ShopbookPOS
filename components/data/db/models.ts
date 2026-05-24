@@ -55,6 +55,7 @@ export class Product extends Model {
   static associations = {
     businesses: { type: 'belongs_to' as const, key: 'business_id' },
     order_items: { type: 'has_many' as const, foreignKey: 'product_id' },
+    inventory_logs: { type: 'has_many' as const, foreignKey: 'product_id' },
   };
 
   @text('name') name!: string;
@@ -69,9 +70,11 @@ export class Product extends Model {
   @field('low_stock_alert') lowStockAlert?: number;
   @text('icon') icon?: string;
   @field('is_favorite') isFavorite!: boolean;
+  @field('icon_pending_upload') iconPendingUpload?: boolean;
 
   @relation('businesses', 'business_id') business!: Relation<any>;
   @children('order_items') orderItems!: any;
+  @children('inventory_logs') inventoryLogs!: any;
 
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
@@ -90,6 +93,13 @@ export class Order extends Model {
   @text('invoice_number') invoiceNumber!: string;
   @field('total_amount') totalAmount!: number;
   @text('status') status!: 'pending' | 'paid' | 'void';
+  @text('payment_method') paymentMethod?: string;
+  @text('bank_name') bankName?: string;
+  @text('card_last_four') cardLastFour?: string;
+  @text('discount_type') discountType?: string;
+  @field('discount_value') discountValue?: number;
+  @field('tax_rate') taxRate?: number;
+  @field('tax_value') taxValue?: number;
 
   @relation('businesses', 'business_id') business!: Relation<any>;
   @children('order_items') orderItems!: any;
@@ -114,6 +124,25 @@ export class OrderItem extends Model {
 
   @relation('orders', 'order_id') order!: Relation<any>;
   @relation('products', 'product_id') product!: Relation<any>;
+
+  @readonly @date('created_at') createdAt!: Date;
+  @readonly @date('updated_at') updatedAt!: Date;
+}
+
+// ==========================================
+// 6. INVENTORY LOG MODEL
+// ==========================================
+export class InventoryLog extends Model {
+  static table = 'inventory_logs';
+  static associations = {
+    products: { type: 'belongs_to' as const, key: 'product_id' },
+  };
+
+  @text('type') type!: 'in' | 'out';
+  @field('quantity') quantity!: number;
+  @text('reason') reason?: string;
+
+  @relation('products', 'product_id') product!: Relation<Product>;
 
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;

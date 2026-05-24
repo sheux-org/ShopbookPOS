@@ -66,6 +66,13 @@ CREATE TABLE IF NOT EXISTS orders (
   invoice_number text NOT NULL,
   total_amount numeric NOT NULL,
   status text NOT NULL,
+  payment_method text,
+  bank_name text,
+  card_last_four text,
+  discount_type text,
+  discount_value numeric,
+  tax_rate numeric,
+  tax_value numeric,
   created_at bigint NOT NULL,
   updated_at bigint NOT NULL,
   server_updated_at bigint NOT NULL
@@ -83,6 +90,24 @@ CREATE TABLE IF NOT EXISTS order_items (
   updated_at bigint NOT NULL,
   server_updated_at bigint NOT NULL
 );
+
+-- F. Inventory Logs Table
+CREATE TABLE IF NOT EXISTS inventory_logs (
+  id text PRIMARY KEY,
+  product_id text NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  type text NOT NULL,
+  quantity numeric NOT NULL,
+  reason text,
+  created_at bigint NOT NULL,
+  updated_at bigint NOT NULL,
+  server_updated_at bigint NOT NULL
+);
+
+-- Index for search performance
+CREATE INDEX IF NOT EXISTS idx_inventory_logs_product_id ON inventory_logs(product_id);
+
+-- Enable RLS
+ALTER TABLE public.inventory_logs ENABLE ROW LEVEL SECURITY;
 
 -- -------------------------------------------------------------------------
 -- 2. CREATE DELETED RECORDS TRACKER (Tombstones for Client Synchronization)
@@ -135,6 +160,11 @@ CREATE TRIGGER tr_timestamp_order_items
   BEFORE INSERT OR UPDATE ON order_items
   FOR EACH ROW EXECUTE FUNCTION set_server_updated_at();
 
+DROP TRIGGER IF EXISTS tr_timestamp_inventory_logs ON inventory_logs;
+CREATE TRIGGER tr_timestamp_inventory_logs
+  BEFORE INSERT OR UPDATE ON inventory_logs
+  FOR EACH ROW EXECUTE FUNCTION set_server_updated_at();
+
 -- -------------------------------------------------------------------------
 -- 4. TRIGGERS: AUTOMATICALLY LOG DELETIONS TO `deleted_records`
 -- -------------------------------------------------------------------------
@@ -176,6 +206,11 @@ CREATE TRIGGER tr_delete_order_items
   AFTER DELETE ON order_items
   FOR EACH ROW EXECUTE FUNCTION record_deletion();
 
+DROP TRIGGER IF EXISTS tr_delete_inventory_logs ON inventory_logs;
+CREATE TRIGGER tr_delete_inventory_logs
+  AFTER DELETE ON inventory_logs
+  FOR EACH ROW EXECUTE FUNCTION record_deletion();
+
 -- -------------------------------------------------------------------------
 -- 5. FUNCTION: `pull_watermelondb_changes` RPC
 -- -------------------------------------------------------------------------
@@ -209,14 +244,19 @@ BEGIN
         'deleted', coalesce((SELECT json_agg(record_id) FROM deleted_records WHERE table_name = 'products' AND deleted_at > last_pulled_at), '[]'::json)
       ),
       'orders', json_build_object(
-        'created', coalesce((SELECT json_agg(t) FROM (SELECT id, business_id, invoice_number, total_amount, status, created_at, updated_at FROM orders WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
-        'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, business_id, invoice_number, total_amount, status, created_at, updated_at FROM orders WHERE server_updated_at > last_pulled_at AND created_at <= last_pulled_at) t), '[]'::json),
+        'created', coalesce((SELECT json_agg(t) FROM (SELECT id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, tax_rate, tax_value, created_at, updated_at FROM orders WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
+        'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, tax_rate, tax_value, created_at, updated_at FROM orders WHERE server_updated_at > last_pulled_at AND created_at <= last_pulled_at) t), '[]'::json),
         'deleted', coalesce((SELECT json_agg(record_id) FROM deleted_records WHERE table_name = 'orders' AND deleted_at > last_pulled_at), '[]'::json)
       ),
       'order_items', json_build_object(
         'created', coalesce((SELECT json_agg(t) FROM (SELECT id, order_id, product_id, name, quantity, price, created_at, updated_at FROM order_items WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
         'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, order_id, product_id, name, quantity, price, created_at, updated_at FROM order_items WHERE server_updated_at > last_pulled_at AND created_at <= last_pulled_at) t), '[]'::json),
         'deleted', coalesce((SELECT json_agg(record_id) FROM deleted_records WHERE table_name = 'order_items' AND deleted_at > last_pulled_at), '[]'::json)
+      ),
+      'inventory_logs', json_build_object(
+        'created', coalesce((SELECT json_agg(t) FROM (SELECT id, product_id, type, quantity, reason, created_at, updated_at FROM inventory_logs WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
+        'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, product_id, type, quantity, reason, created_at, updated_at FROM inventory_logs WHERE server_updated_at > last_pulled_at AND created_at <= last_pulled_at) t), '[]'::json),
+        'deleted', coalesce((SELECT json_agg(record_id) FROM deleted_records WHERE table_name = 'inventory_logs' AND deleted_at > last_pulled_at), '[]'::json)
       )
     ),
     'timestamp', current_time_ms
@@ -465,13 +505,20 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        INSERT INTO orders (id, business_id, invoice_number, total_amount, status, created_at, updated_at)
+        INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, tax_rate, tax_value, created_at, updated_at)
         VALUES (
           (r->>'id'),
           (r->>'business_id'),
           (r->>'invoice_number'),
           (r->>'total_amount')::numeric,
           (r->>'status'),
+          (r->>'payment_method'),
+          (r->>'bank_name'),
+          (r->>'card_last_four'),
+          (r->>'discount_type'),
+          (r->>'discount_value')::numeric,
+          (r->>'tax_rate')::numeric,
+          (r->>'tax_value')::numeric,
           (r->>'created_at')::bigint,
           (r->>'updated_at')::bigint
         )
@@ -480,6 +527,13 @@ BEGIN
           invoice_number = EXCLUDED.invoice_number,
           total_amount = EXCLUDED.total_amount,
           status = EXCLUDED.status,
+          payment_method = EXCLUDED.payment_method,
+          bank_name = EXCLUDED.bank_name,
+          card_last_four = EXCLUDED.card_last_four,
+          discount_type = EXCLUDED.discount_type,
+          discount_value = EXCLUDED.discount_value,
+          tax_rate = EXCLUDED.tax_rate,
+          tax_value = EXCLUDED.tax_value,
           updated_at = EXCLUDED.updated_at;
       END LOOP;
     END IF;
@@ -487,13 +541,20 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        INSERT INTO orders (id, business_id, invoice_number, total_amount, status, created_at, updated_at)
+        INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, tax_rate, tax_value, created_at, updated_at)
         VALUES (
           (r->>'id'),
           (r->>'business_id'),
           (r->>'invoice_number'),
           (r->>'total_amount')::numeric,
           (r->>'status'),
+          (r->>'payment_method'),
+          (r->>'bank_name'),
+          (r->>'card_last_four'),
+          (r->>'discount_type'),
+          (r->>'discount_value')::numeric,
+          (r->>'tax_rate')::numeric,
+          (r->>'tax_value')::numeric,
           (r->>'created_at')::bigint,
           (r->>'updated_at')::bigint
         )
@@ -502,6 +563,13 @@ BEGIN
           invoice_number = EXCLUDED.invoice_number,
           total_amount = EXCLUDED.total_amount,
           status = EXCLUDED.status,
+          payment_method = EXCLUDED.payment_method,
+          bank_name = EXCLUDED.bank_name,
+          card_last_four = EXCLUDED.card_last_four,
+          discount_type = EXCLUDED.discount_type,
+          discount_value = EXCLUDED.discount_value,
+          tax_rate = EXCLUDED.tax_rate,
+          tax_value = EXCLUDED.tax_value,
           updated_at = EXCLUDED.updated_at;
       END LOOP;
     END IF;
@@ -568,6 +636,59 @@ BEGIN
       DELETE FROM order_items WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
+  -- -------------------------------------------------------------
+  -- INVENTORY LOGS TABLE UPSERT / DELETE
+  -- -------------------------------------------------------------
+  ELSIF table_name = 'inventory_logs' THEN
+    -- Upsert created
+    IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
+      FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
+        INSERT INTO inventory_logs (id, product_id, type, quantity, reason, created_at, updated_at)
+        VALUES (
+          (r->>'id'),
+          (r->>'product_id'),
+          (r->>'type'),
+          (r->>'quantity')::numeric,
+          (r->>'reason'),
+          (r->>'created_at')::bigint,
+          (r->>'updated_at')::bigint
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          product_id = EXCLUDED.product_id,
+          type = EXCLUDED.type,
+          quantity = EXCLUDED.quantity,
+          reason = EXCLUDED.reason,
+          updated_at = EXCLUDED.updated_at;
+      END LOOP;
+    END IF;
+    
+    -- Upsert updated
+    IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
+      FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
+        INSERT INTO inventory_logs (id, product_id, type, quantity, reason, created_at, updated_at)
+        VALUES (
+          (r->>'id'),
+          (r->>'product_id'),
+          (r->>'type'),
+          (r->>'quantity')::numeric,
+          (r->>'reason'),
+          (r->>'created_at')::bigint,
+          (r->>'updated_at')::bigint
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          product_id = EXCLUDED.product_id,
+          type = EXCLUDED.type,
+          quantity = EXCLUDED.quantity,
+          reason = EXCLUDED.reason,
+          updated_at = EXCLUDED.updated_at;
+      END LOOP;
+    END IF;
+    
+    -- Delete records
+    IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
+      DELETE FROM inventory_logs WHERE id IN (SELECT json_array_elements_text(deleted_ids));
+    END IF;
+
   END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -577,3 +698,40 @@ $$ LANGUAGE plpgsql;
 -- -------------------------------------------------------------------------
 GRANT EXECUTE ON FUNCTION pull_watermelondb_changes(bigint) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION push_watermelondb_changes(json) TO anon, authenticated;
+
+-- =========================================================================
+-- 8. ACTIVE DEVICES SESSION TRACKING
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.active_devices (
+  id text PRIMARY KEY,
+  business_id text NOT NULL,
+  employee_id text,
+  employee_name text NOT NULL,
+  role text NOT NULL,
+  device_id text NOT NULL,
+  device_model text NOT NULL,
+  battery_level integer,
+  is_online boolean NOT NULL DEFAULT true,
+  latitude numeric,
+  longitude numeric,
+  location_name text,
+  push_token text,
+  last_active_at timestamp with time zone NOT NULL DEFAULT clock_timestamp()
+);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.active_devices ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS Policies
+DROP POLICY IF EXISTS "Allow public select" ON public.active_devices;
+CREATE POLICY "Allow public select" ON public.active_devices FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow public insert" ON public.active_devices;
+CREATE POLICY "Allow public insert" ON public.active_devices FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public update" ON public.active_devices;
+CREATE POLICY "Allow public update" ON public.active_devices FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public delete" ON public.active_devices;
+CREATE POLICY "Allow public delete" ON public.active_devices FOR DELETE USING (true);
+

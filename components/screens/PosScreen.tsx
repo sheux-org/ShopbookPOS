@@ -1,24 +1,33 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { CameraView } from "expo-camera";
+import { useRouter } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  Platform,
   Alert,
   Animated,
-  TextInput,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { CameraView } from "expo-camera";
-import { usePermission } from "../../hooks/usePermissionHandler";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TOKENS } from "../../constants/tokens";
-import { cartState } from "../data/cartState";
-import { useProducts } from "../../hooks/useProducts";
+import { usePermission } from "../../hooks/usePermissionHandler";
+import { useFindProductByCode, DBProduct } from "../../hooks/useProducts";
 import { useUserPermissions } from "../../hooks/useUserPermissions";
+import { ScreenWrapper } from "../common/ScreenWrapper";
+import { HeaderCartButton } from "../common/HeaderCartButton";
+import { cartState } from "../data/cartState";
+import { InvoiceItemCard } from "../common/InvoiceItemCard";
+import { useSettingsStore } from "../../stores/useSettingsStore";
+import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
 
 interface InvoiceItem {
   id: string;
@@ -37,7 +46,7 @@ export const PosScreen: React.FC = () => {
   const { role } = useUserPermissions();
 
   const [activeMode, setActiveMode] = useState<"scan" | "quick_code">("scan");
-  
+
   // Sync state with shared cartState store
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -61,14 +70,35 @@ export const PosScreen: React.FC = () => {
         requestCameraAccess();
       }
     }
-  }, [activeMode, hasCameraAccess]);
+  }, [activeMode, hasCameraAccess, requestCameraAccess]);
 
   // Quick code state
   const [quickCode, setQuickCode] = useState("");
   const [cursorVisible, setCursorVisible] = useState(true);
 
-  // Real products fetched dynamically from WatermelonDB via React Query for barcode/quick-code matching
-  const { data: searchProducts = [] } = useProducts();
+  const isPremium = useSettingsStore((s) => s.isPremium);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+
+  const findProductByCode = useFindProductByCode();
+  const [matchedProduct, setMatchedProduct] = useState<DBProduct | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!quickCode) {
+      setMatchedProduct(null);
+      return;
+    }
+
+    findProductByCode(quickCode).then((prod) => {
+      if (isMounted) {
+        setMatchedProduct(prod);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [quickCode, findProductByCode]);
 
   // Toast notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -99,7 +129,7 @@ export const PosScreen: React.FC = () => {
             duration: 1200,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       loop.start();
       return () => loop.stop();
@@ -108,7 +138,7 @@ export const PosScreen: React.FC = () => {
 
   const laserTranslateY = laserAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [4, 96],
+    outputRange: [2, 68],
   });
 
   const showToast = (message: string) => {
@@ -117,20 +147,29 @@ export const PosScreen: React.FC = () => {
   };
 
   // Helper to add item to invoice using cartState
-  const addItemToInvoice = (name: string, price: number, icon?: string, sku?: string, stock?: number) => {
-    cartState.addCartItem(name, price, icon, sku, stock);
-    showToast(`Added ${name} to invoice`);
-  };
+  const addItemToInvoice = useCallback(
+    (
+      name: string,
+      price: number,
+      icon?: string,
+      sku?: string,
+      stock?: number,
+    ) => {
+      cartState.addCartItem(name, price, icon, sku, stock);
+      showToast(`Added ${name} to invoice`);
+    },
+    [],
+  );
 
   // Total invoice calculation
   const totalInvoiceAmount = useMemo(() => {
-    return invoiceItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    return invoiceItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
   }, [invoiceItems]);
 
-  const matchedProduct = useMemo(() => {
-    if (!quickCode) return null;
-    return searchProducts.find((p) => p.quickCode === quickCode || p.barcode === quickCode) || null;
-  }, [quickCode, searchProducts]);
+
 
   // Handle numpad key presses
   const handleNumPress = (val: string) => {
@@ -149,51 +188,54 @@ export const PosScreen: React.FC = () => {
 
   // Auto-add product if fully typed valid quick code from dynamic catalog
   useEffect(() => {
-    if (!quickCode) return;
-    const prod = searchProducts.find((p) => p.quickCode === quickCode || p.barcode === quickCode);
-    if (prod) {
-      const timer = setTimeout(() => {
-        addItemToInvoice(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
-        setQuickCode(""); // Reset after adding
-      }, 700);
-      return () => clearTimeout(timer);
-    }
-  }, [quickCode, searchProducts]);
-
-
-
-  const handleTabPress = (tabId: string) => {
-    if (tabId === "home") {
-      router.push("/");
-    } else if (tabId === "stocks") {
-      router.push("/stocks");
-    } else if (tabId === "profile") {
-      router.push("/profile");
-    } else if (tabId !== "pos") {
-      showToast(`${tabId.toUpperCase()} view tab selected`);
-    }
-  };
+    if (!matchedProduct || !quickCode) return;
+    const timer = setTimeout(() => {
+      addItemToInvoice(
+        matchedProduct.name,
+        matchedProduct.price,
+        matchedProduct.icon,
+        `SKU 23400${matchedProduct.id}`,
+        matchedProduct.stockCount,
+      );
+      setQuickCode(""); // Reset after adding
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [matchedProduct, quickCode, addItemToInvoice]);
 
   // Camera Barcode Scanning Handler
-  const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
+  const handleBarcodeScanned = ({
+    type,
+    data,
+  }: {
+    type: string;
+    data: string;
+  }) => {
     // Prevent double rapid scan triggers
-    if (lastScanTime.current && Date.now() - lastScanTime.current < 2000) return;
+    if (lastScanTime.current && Date.now() - lastScanTime.current < 2000)
+      return;
     lastScanTime.current = Date.now();
 
-    const prod = searchProducts.find((p) => p.barcode === data || p.quickCode === data);
-    if (prod) {
-      addItemToInvoice(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
-    } else {
-      Alert.alert(
-        "Product Not Registered",
-        `Scanned code "${data}" is not registered in catalog. Please register it in Stocks Screen first.`,
-        [{ text: "Okay" }]
-      );
-    }
+    findProductByCode(data).then((prod) => {
+      if (prod) {
+        addItemToInvoice(
+          prod.name,
+          prod.price,
+          prod.icon,
+          `SKU 23400${prod.id}`,
+          prod.stockCount,
+        );
+      } else {
+        Alert.alert(
+          "Product Not Registered",
+          `Scanned code "${data}" is not registered in catalog. Please register it in Stocks Screen first.`,
+          [{ text: "Okay" }],
+        );
+      }
+    });
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper noPaddingBottom style={styles.container}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -225,24 +267,20 @@ export const PosScreen: React.FC = () => {
               onPress={() => router.push("/pos/history")}
             >
               <Feather name="list" size={16} color={TOKENS.primary} />
-              <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Orders</Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "bold",
+                  color: TOKENS.primary,
+                  marginLeft: 4,
+                }}
+              >
+                Orders
+              </Text>
             </TouchableOpacity>
           )}
 
-          {invoiceItems.length > 0 && (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>
-                  {invoiceItems.reduce((sum, item) => sum + item.quantity, 0)}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <HeaderCartButton />
         </View>
       </View>
 
@@ -253,44 +291,16 @@ export const PosScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {invoiceItems.map((item) => (
-          <View key={item.id} style={styles.itemCard}>
-            <View style={styles.itemMainInfo}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemQuantities}>
-                {item.quantity} × Rs. {item.price.toLocaleString()}
-              </Text>
-            </View>
-
-            <View style={styles.itemRightRow}>
-              <Text style={styles.itemTotal}>
-                Rs. {(item.price * item.quantity).toLocaleString()}
-              </Text>
-
-              {/* Quick quantity modifiers for high fidelity interactiveness */}
-              <View style={styles.cardActions}>
-                <TouchableOpacity
-                  style={styles.smallActionBtn}
-                  onPress={() => cartState.updateQuantity(item.id, -1)}
-                >
-                  <Feather name="minus" size={12} color={TOKENS.muted} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.smallActionBtn}
-                  onPress={() => cartState.updateQuantity(item.id, 1)}
-                >
-                  <Feather name="plus" size={12} color={TOKENS.muted} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          <InvoiceItemCard key={item.id} item={item} />
         ))}
 
         {invoiceItems.length === 0 && (
           <View style={styles.emptyInvoiceState}>
             <Feather name="shopping-bag" size={40} color={TOKENS.muted} />
             <Text style={styles.emptyInvoiceTitle}>No items in invoice</Text>
-            <Text style={styles.emptyInvoiceSub}>Use quick codes or search below to add items.</Text>
+            <Text style={styles.emptyInvoiceSub}>
+              Use quick codes or search below to add items.
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -323,8 +333,17 @@ export const PosScreen: React.FC = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.segmentButton, activeMode === "scan" && styles.segmentButtonActive]}
-            onPress={() => setActiveMode("scan")}
+            style={[
+              styles.segmentButton,
+              activeMode === "scan" && styles.segmentButtonActive,
+            ]}
+            onPress={() => {
+              if (isPremium) {
+                setActiveMode("scan");
+              } else {
+                setPremiumModalVisible(true);
+              }
+            }}
             activeOpacity={0.8}
           >
             <Ionicons
@@ -333,7 +352,10 @@ export const PosScreen: React.FC = () => {
               color={activeMode === "scan" ? TOKENS.card : TOKENS.dark}
             />
             <Text
-              style={[styles.segmentText, activeMode === "scan" && styles.segmentTextActive]}
+              style={[
+                styles.segmentText,
+                activeMode === "scan" && styles.segmentTextActive,
+              ]}
             >
               Scan
             </Text>
@@ -344,16 +366,8 @@ export const PosScreen: React.FC = () => {
             onPress={() => router.push("/pos/search")}
             activeOpacity={0.8}
           >
-            <Feather
-              name="search"
-              size={15}
-              color={TOKENS.dark}
-            />
-            <Text
-              style={styles.segmentText}
-            >
-              Search
-            </Text>
+            <Feather name="search" size={15} color={TOKENS.dark} />
+            <Text style={styles.segmentText}>Search</Text>
           </TouchableOpacity>
         </View>
 
@@ -378,17 +392,25 @@ export const PosScreen: React.FC = () => {
                       style={styles.matchBadgeClickable}
                       activeOpacity={0.7}
                       onPress={() => {
-                        addItemToInvoice(matchedProduct.name, matchedProduct.price, matchedProduct.icon);
+                        addItemToInvoice(
+                          matchedProduct.name,
+                          matchedProduct.price,
+                          matchedProduct.icon,
+                        );
                         setQuickCode("");
                       }}
                     >
-                      <Text style={styles.matchedText}>{matchedProduct.name}</Text>
+                      <Text style={styles.matchedText}>
+                        {matchedProduct.name}
+                      </Text>
                       <View style={styles.addSmallBadge}>
                         <Feather name="plus" size={12} color={TOKENS.card} />
                       </View>
                     </TouchableOpacity>
                   ) : (
-                    quickCode.length >= 4 && <Text style={styles.noMatchText}>No match</Text>
+                    quickCode.length >= 4 && (
+                      <Text style={styles.noMatchText}>No match</Text>
+                    )
                   )}
                 </View>
               </View>
@@ -396,53 +418,90 @@ export const PosScreen: React.FC = () => {
               {/* Numpad Block */}
               <View style={styles.numpadContainer}>
                 <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("1")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("1")}
+                  >
                     <Text style={styles.numpadBtnText}>1</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("2")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("2")}
+                  >
                     <Text style={styles.numpadBtnText}>2</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("3")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("3")}
+                  >
                     <Text style={styles.numpadBtnText}>3</Text>
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("4")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("4")}
+                  >
                     <Text style={styles.numpadBtnText}>4</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("5")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("5")}
+                  >
                     <Text style={styles.numpadBtnText}>5</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("6")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("6")}
+                  >
                     <Text style={styles.numpadBtnText}>6</Text>
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("7")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("7")}
+                  >
                     <Text style={styles.numpadBtnText}>7</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("8")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("8")}
+                  >
                     <Text style={styles.numpadBtnText}>8</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("9")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("9")}
+                  >
                     <Text style={styles.numpadBtnText}>9</Text>
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.numpadRow}>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress(".")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress(".")}
+                  >
                     <Text style={styles.numpadBtnText}>.</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.numpadBtn} onPress={() => handleNumPress("0")}>
+                  <TouchableOpacity
+                    style={styles.numpadBtn}
+                    onPress={() => handleNumPress("0")}
+                  >
                     <Text style={styles.numpadBtnText}>0</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.numpadBtn, styles.deleteBtn]}
                     onPress={() => handleNumPress("backspace")}
                   >
-                    <Ionicons name="backspace-outline" size={22} color={TOKENS.dark} />
+                    <Ionicons
+                      name="backspace-outline"
+                      size={22}
+                      color={TOKENS.dark}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -459,20 +518,55 @@ export const PosScreen: React.FC = () => {
                   <CameraView
                     style={StyleSheet.absoluteFillObject}
                     barcodeScannerSettings={{
-                      barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
+                      barcodeTypes: [
+                        "upc_a",
+                        "upc_e",
+                        "ean13",
+                        "ean8",
+                        "qr",
+                        "code128",
+                        "code39",
+                      ],
                     }}
                     onBarcodeScanned={handleBarcodeScanned}
                   />
                 ) : (
-                  <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16 }}>
-                    <Text style={{ color: "#fff", fontSize: 12, textAlign: "center", marginBottom: 10 }}>
+                  <View
+                    style={{
+                      flex: 1,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 16,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#fff",
+                        fontSize: 12,
+                        textAlign: "center",
+                        marginBottom: 10,
+                      }}
+                    >
                       Camera Access Required
                     </Text>
                     <TouchableOpacity
                       onPress={() => requestCameraAccess()}
-                      style={{ backgroundColor: TOKENS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+                      style={{
+                        backgroundColor: TOKENS.primary,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                      }}
                     >
-                      <Text style={{ color: "#fff", fontSize: 11, fontWeight: "bold" }}>Grant Permission</Text>
+                      <Text
+                        style={{
+                          color: "#fff",
+                          fontSize: 11,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        Grant Permission
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -486,36 +580,54 @@ export const PosScreen: React.FC = () => {
 
                   {/* Moving animated sweep laser */}
                   <Animated.View
-                    style={[styles.scanLaser, { transform: [{ translateY: laserTranslateY }] }]}
+                    style={[
+                      styles.scanLaser,
+                      { transform: [{ translateY: laserTranslateY }] },
+                    ]}
                   />
                 </View>
               </View>
-
-             </View>
+            </View>
           )}
-
-
         </View>
 
         {/* Proceed to Checkout button placed perfectly below inputs */}
         {invoiceItems.length > 0 && (
           <TouchableOpacity
-            style={[styles.summaryBarButton, { marginTop: 12, marginBottom: 8 }]}
+            style={[
+              styles.summaryBarButton,
+              { marginTop: 12},
+            ]}
             activeOpacity={0.85}
             onPress={() => router.push("/pos/cart")}
           >
             <View style={styles.summaryBarLeft}>
-              <Feather name="shopping-bag" size={16} color={TOKENS.card} style={styles.bagIcon} />
+              <Feather
+                name="shopping-bag"
+                size={16}
+                color={TOKENS.card}
+                style={styles.bagIcon}
+              />
               <Text style={styles.summaryLabelActive}>Proceed to Checkout</Text>
             </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()}</Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <Text style={styles.summaryValueActive}>
+                Rs. {totalInvoiceAmount.toLocaleString()}
+              </Text>
               <Feather name="arrow-right" size={16} color={TOKENS.card} />
             </View>
           </TouchableOpacity>
         )}
       </View>
-    </View>
+
+      <PremiumUpgradeModal
+        visible={premiumModalVisible}
+        onClose={() => setPremiumModalVisible(false)}
+        featureName="In-app barcode transactions scanning"
+      />
+    </ScreenWrapper>
   );
 };
 
@@ -598,57 +710,7 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  itemCard: {
-    backgroundColor: TOKENS.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  itemMainInfo: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  itemQuantities: {
-    fontSize: 13,
-    color: TOKENS.muted,
-    marginTop: 4,
-  },
-  itemRightRow: {
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  itemTotal: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: TOKENS.dark,
-  },
-  cardActions: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 2,
-  },
-  smallActionBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+
   emptyInvoiceState: {
     alignItems: "center",
     justifyContent: "center",
@@ -683,7 +745,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     height: 48,
     marginHorizontal: 16,
-    marginVertical: 3,
+    marginTop: 3,
     borderRadius: 24,
     shadowColor: TOKENS.primary,
     shadowOffset: { width: 0, height: 4 },
@@ -942,6 +1004,7 @@ const styles = StyleSheet.create({
   },
   scanLaser: {
     position: "absolute",
+    top: 0,
     left: 2,
     right: 2,
     height: 2,
@@ -1038,32 +1101,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
     paddingHorizontal: 12,
-  },
-  headerCartBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
   },
 });

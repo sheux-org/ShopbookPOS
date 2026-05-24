@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,14 +6,18 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
-  Platform,
+  useWindowDimensions,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ScreenWrapper } from "../common/ScreenWrapper";
+import { HeaderCartButton } from "../common/HeaderCartButton";
 import { TOKENS } from "../../constants/tokens";
 import { cartState } from "../data/cartState";
 import { useProducts } from "../../hooks/useProducts";
+import { ProductImage } from "../common/ProductImage";
+import { hapticFeedback } from "../../utils/haptics";
 
 interface CatalogProduct {
   id: string;
@@ -43,25 +47,19 @@ const CATEGORIES: CategoryItem[] = [
 ];
 
 export const CatalogScreen: React.FC = () => {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
-  // Dynamic catalog products synced via React Query hook
-  const { data: productsList = [] } = useProducts(selectedCategory);
-  const [cartItemsCount, setCartItemsCount] = useState(0);
-
-  useEffect(() => {
-    const syncCart = () => {
-      const cart = cartState.getCart();
-      setCartItemsCount(cart.reduce((sum, item) => sum + item.quantity, 0));
-    };
-
-    syncCart();
-    return cartState.subscribe(syncCart);
-  }, []);
+  const {
+    data: productsList = [],
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(selectedCategory);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -72,15 +70,17 @@ export const CatalogScreen: React.FC = () => {
 
   const handleAddProduct = (prod: CatalogProduct) => {
     if (prod.stockType === "out") {
+      hapticFeedback.notificationWarning();
       triggerToast("Product is out of stock!");
       return;
     }
+    hapticFeedback.impactLight();
     cartState.addCartItem(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
     triggerToast(`Added ${prod.name} to active invoice`);
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <ScreenWrapper style={styles.container}>
       {/* Toast popup */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -95,6 +95,7 @@ export const CatalogScreen: React.FC = () => {
           style={styles.backButton}
           activeOpacity={0.7}
           onPress={() => {
+            hapticFeedback.selection();
             if (router.canGoBack()) {
               router.back();
             } else {
@@ -108,23 +109,15 @@ export const CatalogScreen: React.FC = () => {
         <Text style={styles.headerTitle}>Catalog</Text>
 
         <View style={styles.headerRightActions}>
-          {cartItemsCount > 0 && (
-            <TouchableOpacity
-              style={styles.headerCartBtn}
-              activeOpacity={0.8}
-              onPress={() => router.push("/pos/cart")}
-            >
-              <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
-              <View style={styles.headerCartBadge}>
-                <Text style={styles.headerCartBadgeText}>{cartItemsCount}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <HeaderCartButton />
 
           <TouchableOpacity
             style={styles.searchHeaderButton}
             activeOpacity={0.7}
-            onPress={() => router.push("/pos/search")}
+            onPress={() => {
+              hapticFeedback.selection();
+              router.push("/pos/search");
+            }}
           >
             <Feather name="search" size={22} color={TOKENS.dark} />
           </TouchableOpacity>
@@ -143,7 +136,10 @@ export const CatalogScreen: React.FC = () => {
                   key={cat.id}
                   style={[styles.sidebarTab, isActive && styles.sidebarTabActive]}
                   activeOpacity={0.8}
-                  onPress={() => setSelectedCategory(cat.id)}
+                  onPress={() => {
+                    hapticFeedback.selection();
+                    setSelectedCategory(cat.id);
+                  }}
                 >
                   {isActive && <View style={styles.activeStrip} />}
                   <Ionicons
@@ -170,45 +166,101 @@ export const CatalogScreen: React.FC = () => {
             keyExtractor={(item) => item.id}
             numColumns={2}
             showsVerticalScrollIndicator={false}
+            onEndReached={() => {
+              if (hasNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+              ) : null
+            }
             contentContainerStyle={styles.gridContent}
             columnWrapperStyle={styles.gridColumns}
             renderItem={({ item }) => (
               <View style={styles.productCard}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.productIcon}>{item.icon}</Text>
+                {/* Image Section */}
+                <View style={styles.imageContainer}>
                   <TouchableOpacity
-                    style={[
-                      styles.plusBtn,
-                      item.stockType === "out" && styles.plusBtnOut,
-                    ]}
-                    activeOpacity={0.8}
+                    activeOpacity={0.9}
                     onPress={() => handleAddProduct(item)}
+                    style={{ width: "100%", height: 100 }}
                   >
-                    <Feather
-                      name="plus"
-                      size={14}
-                      color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                    <ProductImage
+                      icon={item.icon}
+                      category={item.category}
+                      style={{ width: "100%", height: 100, borderRadius: 0 }}
                     />
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.productDetails}>
-                  <Text style={styles.productName} numberOfLines={2}>
+                {/* Bottom details - touchable to add */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => handleAddProduct(item)}
+                  style={styles.productDetails}
+                >
+                  <Text style={styles.productName} numberOfLines={1}>
                     {item.name}
                   </Text>
+                  
                   <View style={styles.priceStockRow}>
                     <Text style={styles.productPrice}>Rs. {item.price}</Text>
-                    <Text
-                      style={[
-                        styles.stockText,
-                        item.stockType === "low" && styles.stockTextLow,
-                        item.stockType === "out" && styles.stockTextOut,
-                      ]}
-                    >
-                      {item.stockText}
-                    </Text>
+                    {isTablet ? (
+                      <View style={styles.stockPlusRow}>
+                        <Text
+                          style={[
+                            styles.stockText,
+                            item.stockType === "low" && styles.stockTextLow,
+                            item.stockType === "out" && styles.stockTextOut,
+                          ]}
+                        >
+                          {item.stockText}
+                        </Text>
+                        
+                        <View
+                          style={[
+                            styles.plusIconBadge,
+                            item.stockType === "out" && styles.plusIconBadgeOut,
+                          ]}
+                        >
+                          <Feather
+                            name="plus"
+                            size={15}
+                            color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                          />
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={styles.mobileStockPlusColumn}>
+                        <Text
+                          style={[
+                            styles.stockText,
+                            item.stockType === "low" && styles.stockTextLow,
+                            item.stockType === "out" && styles.stockTextOut,
+                          ]}
+                        >
+                          {item.stockText}
+                        </Text>
+                        
+                        <View
+                          style={[
+                            styles.mobilePlusIconBadge,
+                            item.stockType === "out" && styles.mobilePlusIconBadgeOut,
+                          ]}
+                        >
+                          <Feather
+                            name="plus"
+                            size={14}
+                            color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                          />
+                        </View>
+                      </View>
+                    )}
                   </View>
-                </View>
+                </TouchableOpacity>
               </View>
             )}
             ListEmptyComponent={
@@ -227,7 +279,7 @@ export const CatalogScreen: React.FC = () => {
 
 
 
-    </View>
+    </ScreenWrapper>
   );
 };
 
@@ -352,57 +404,51 @@ const styles = StyleSheet.create({
   productCard: {
     flex: 1,
     backgroundColor: TOKENS.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    padding: 12,
     justifyContent: "space-between",
-    minHeight: 120,
+    overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  productIcon: {
-    fontSize: 28,
-  },
-  plusBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: TOKENS.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  plusBtnOut: {
+  imageContainer: {
+    position: "relative",
+    width: "100%",
+    height: 100,
     backgroundColor: "#F3F4F6",
-    borderWidth: 1,
-    borderColor: TOKENS.border,
+  },
+  productCardImage: {
+    width: "100%",
+    height: 100,
   },
   productDetails: {
-    marginTop: 10,
+    padding: 10,
     gap: 4,
   },
   productName: {
-    fontSize: 13,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "700",
     color: TOKENS.dark,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   priceStockRow: {
     marginTop: 4,
     gap: 2,
   },
   productPrice: {
-    fontSize: 14,
-    fontWeight: "bold",
+    fontSize: 13,
+    fontWeight: "800",
     color: TOKENS.primary,
+  },
+  stockPlusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
   },
   stockText: {
     fontSize: 10,
@@ -416,37 +462,51 @@ const styles = StyleSheet.create({
     color: TOKENS.error,
     fontWeight: "600",
   },
+  plusIconBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: TOKENS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  plusIconBadgeOut: {
+    backgroundColor: "#E5E7EB",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  mobileStockPlusColumn: {
+    marginTop: 4,
+    gap: 4,
+  },
+  mobilePlusIconBadge: {
+    width: "100%",
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: TOKENS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  mobilePlusIconBadgeOut: {
+    backgroundColor: "#E5E7EB",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   headerRightActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-  },
-  headerCartBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: TOKENS.lightBlue,
-    borderWidth: 1,
-    borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  headerCartBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: TOKENS.error,
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCartBadgeText: {
-    color: TOKENS.card,
-    fontSize: 9,
-    fontWeight: "bold",
   },
   emptyGridState: {
     alignItems: "center",
