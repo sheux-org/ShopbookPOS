@@ -1,6 +1,6 @@
 # Shopbook POS (Point of Sale) 📱🛒
 
-Welcome to the **Shopbook POS** mobile application. This is a high-fidelity, ultra-premium tablet and mobile Point-of-Sale interface designed for modern retail environments. Built with Expo, React Native, and Expo Router, it features an advanced modular structure, type-safe database mapping, and offline-first database synchronization.
+Welcome to the **Shopbook POS** (also known as **Mini POS**) mobile application. This is a high-fidelity, ultra-premium tablet and mobile Point-of-Sale interface designed for modern retail environments. Built with Expo, React Native, and Expo Router, it features an advanced modular structure, type-safe database mapping, offline-first database synchronization, local device telemetry, and hardware integrations.
 
 ---
 
@@ -40,10 +40,38 @@ Welcome to the **Shopbook POS** mobile application. This is a high-fidelity, ult
 * **Pristine Checkout Flow**: Restructured compact keypads and quick-code search entries that conserve screen height while offering card (Sunmi terminal simulator) and cash billing.
 * **Unified Global Tab Layout**: Beautiful bottom navigation bar with active blue accent indicators and haptic feedback triggers.
 
-### 7. 💬 Help & FAQ Support Drawer
+### 7. 💬 Help & FAQ Drawer
 * **Direct Hotline Support**: Quick dial hotkeys for live assistance.
 * **WhatsApp Chat Launching**: Direct link to open WhatsApp support for instant troubleshooting.
 * **Pre-bundled FAQs**: Help drawers detailing tax computation, print receipts, and backup flows.
+
+### 8. ☁️ UploadThing Image Upload Queue (Offline-First)
+* **Immediate Local Saves**: When adding/editing products offline, local image file paths are saved immediately to WatermelonDB with `iconPendingUpload = true`.
+* **Network Status Monitor**: The queue system monitors connection states using NetInfo. When the device comes back online, it processes the queue and uploads local files to the cloud.
+* **Cache Invalidation & Real-Time Sync**: Successfully uploaded images receive remote HTTPS URLs, trigger local DB syncs to Supabase, and invalidate React Query caches to refresh screens instantly.
+
+### 9. 🖨️ Bluetooth Thermal ESC/POS Receipt Printing
+* **Printer Pairing & Connection**: Integrated scanning, pairing, and connection to 58mm/80mm ESC/POS hardware thermal receipt printers.
+* **Virtual Printer Output**: A simulated receipt feed modal to inspect layout, alignments, totals, and barcode elements prior to physical print triggers.
+* **ESC/POS Command Payloads**: Generates correct native control byte sequences for text alignments, text styling (regular, bold, double-width/height), paper separators, and cuts.
+
+### 10. 🛰️ Active Device Telemetry & Session Monitoring
+* **Real-Time Telemetry Tracking**: Logs active device sessions (battery level, network state, device model, push notification tokens, and GPS location geocoded to city/country).
+* **Remote Session Control**: Allows admins/owners to view active logins for their branch and terminate sessions remotely.
+* **Real-Time Client Invalidation**: Devices check session status periodically; if their session is terminated in the Supabase table, they are forced to log out immediately.
+
+### 11. 🔔 Native Push Notifications
+* **Token Registry**: Fetches and registers FCM/APNs push notification tokens automatically for active device logs.
+* **Foreground & Click Handlers**: Custom listeners capture push payloads in the foreground or on user notification taps.
+
+### 12. 🔄 Mandatory Application Force Updates
+* **Version Enforcement**: Checks client application versions against global configurations on Supabase.
+* **Blocking Upgrade Dialog**: Prompts a mandatory blocking modal if the running version falls below the required threshold, guiding cashiers to App Store / Google Play links.
+
+### 13. 💎 Premium Licensing & Monetization
+* **License Check System**: Real-time Pro tier membership validation checks that unlock advanced features (unlimited outlets, active device logs, auto cloud sync, Bluetooth printing, etc.).
+* **Flexible Subscriptions**: Custom plan selector (1 month, 3 months, 1 year) with interactive details and savings badges.
+* **Dual Payment Selectors**: Instant activation with credit/debit card checkout via RevenueCat or bank transfer deposit slips (featuring copyable Seylan Bank details and direct WhatsApp receipt submission).
 
 ---
 
@@ -55,7 +83,7 @@ The application's routing is powered by **Expo Router v3**, utilizing a modular 
 app/
 ├── (tabs)/                      # Core Application Navigation Tabs
 │   ├── _layout.tsx              # Tab layout using custom BottomTabBar
-│   ├── index.tsx                # Session check -> Redirect to home or auth
+│   ├── index.tsx                # Initial tab controller (HomeScreen)
 │   ├── pos.tsx                  # POS Billing screen
 │   ├── insights.tsx             # Real-time dashboard analytics
 │   ├── stocks.tsx               # Stock Registry / Product directory
@@ -67,22 +95,31 @@ app/
 │   ├── pos/
 │   │   ├── cart.tsx             # Cart details & item adjustment
 │   │   ├── catalog.tsx          # Scrollable catalog grid
-│   │   ├── payment.tsx          # Payment tender selector
+│   │   ├── history.tsx          # Transaction / Order History List
 │   │   ├── payment-tender.tsx   # Card (Sunmi simulator) / Cash processor
 │   │   └── search.tsx           # Quick product finder
 │   ├── stocks/
-│   │   ├── add-item.tsx         # Add products with automated quick codes
+│   │   ├── item-details.tsx     # Product detail display & management
+│   │   ├── items.tsx            # Add/edit products with automated quick codes
 │   │   └── scan.tsx             # Live camera barcode scanner
 │   └── profile/
+│       ├── active-devices.tsx   # View logged in sessions and terminate them
+│       ├── bluetooth-printer.tsx# Scan, pair and connect to ESC/POS thermal printers
 │       ├── business-details.tsx # Store name, address, category configuration
 │       ├── manage-businesses.tsx# Switch branches or register new business
-│       └── manage-staff.tsx     # Add/edit staff roles (Admins, Managers, Cashiers)
+│       ├── manage-staff.tsx     # Add/edit staff roles (Admins, Managers, Cashiers)
+│       ├── payment-select.tsx   # Plan payment method options selector
+│       └── premium-plans.tsx    # Pro licensing plans (1 month, 3 months, 1 year)
 │
-└── _layout.tsx                  # Root layout nesting Query & Permission Providers
+├── api/                         # Local backend endpoints
+│   └── uploadthing+api.ts       # UploadThing server-side file router endpoint
+│
+├── index.tsx                    # Root gate: Checks session & redirects to /auth or /(tabs)
+└── _layout.tsx                  # Root layout nesting Query, Theme, & Permission Providers
 ```
 
 > [!NOTE]
-> Parenthesis groups like `(modules)` and `(tabs)` are automatically ignored in routes. Push commands like `router.push("/cart")` or `router.push("/add-item")` remain fully decoupled from structural folders.
+> Parenthesis groups like `(modules)` and `(tabs)` are automatically ignored in routes. Push commands like `router.push("/cart")` or `router.push("/bluetooth-printer")` remain fully decoupled from structural folders.
 
 ---
 
@@ -92,9 +129,13 @@ app/
 2. **Package Manager**: **pnpm** (Fast, disk-efficient, strict resolution)
 3. **Database Layer**: **WatermelonDB** (Local SQLite) with Supabase Cloud backup
 4. **Data Fetching**: **TanStack React Query v5** (Robust cache invalidations & mutation triggers)
-5. **State Management**: **Zustand** (Auth & Business persistence stores)
+5. **State Management**: **Zustand** (Auth, settings & Business persistence stores)
 6. **Styling & UI**: StyleSheet API using custom design tokens (`constants/tokens.ts`)
 7. **Icons**: Vector Icons (Feather, Ionicons)
+8. **Cloud Uploads**: **UploadThing** (`@uploadthing/expo` + `uploadthing`) for media storage
+9. **Receipt Printing**: **react-native-bluetooth-classic** for ESC/POS hardware pairing
+10. **Device API**: **expo-battery**, **expo-location** (for telemetry tracking), and **expo-notifications** (for push notifications)
+11. **Barcodes**: **react-native-barcode-svg** (for receipt barcode generation)
 
 ---
 
@@ -179,6 +220,9 @@ npx supabase link --project-ref <your-project-ref>
 npx supabase db push
 ```
 
+For app configurations and force updates, the configuration table is defined in the migrations directory:
+- [20260523000000_add_app_config.sql](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase/migrations/20260523000000_add_app_config.sql)
+
 ### 3. Row Level Security (RLS) Recommendations
 
 By default, the tables created in the public schema are accessible via the Supabase REST API using the client's `anon` key. 
@@ -192,12 +236,13 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.deleted_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.active_devices ENABLE ROW LEVEL SECURITY;
 ```
 
 ---
 
 ## 🎨 Premium UI Styles & Design System
-
 
 Theme variables are configured centrally inside `constants/tokens.ts` for uniform visual styling:
 * **Primary Blue (`#3B82F6`)**: Premium accents for core POS actions and tab navigations.
