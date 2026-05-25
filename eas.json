@@ -20,6 +20,13 @@
         "buildType": "apk"
       }
     },
+    "android-preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "production": {}
   },
   "submit": {

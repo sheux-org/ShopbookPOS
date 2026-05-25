@@ -22,7 +22,8 @@
         "android.permission.BLUETOOTH_CONNECT",
         "android.permission.BLUETOOTH_SCAN",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.BLUETOOTH_ADVERTISE"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -64,7 +65,9 @@
         {
           "peripheralUsageDescription": "Mini POS uses Bluetooth to connect with your thermal printer.",
           "alwaysUsageDescription": "Mini POS requires Bluetooth to print invoices in the background.",
-          "protocols": ["com.shopbook.pos"]
+          "protocols": [
+            "com.shopbook.pos"
+          ]
         }
       ]
     ],
@@ -77,6 +80,12 @@
       "eas": {
         "projectId": "c3dfd340-0c26-4a74-9dd9-062842904f76"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c3dfd340-0c26-4a74-9dd9-062842904f76"
     }
   }
 }
