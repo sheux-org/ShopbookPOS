@@ -103,6 +103,16 @@ export default function CatalogManagerPage() {
     }
   }, [isLoggedIn, activeBusiness]);
 
+  useEffect(() => {
+    const handleOpenModal = () => {
+      openAddModal();
+    };
+    window.addEventListener('open-register-product-modal', handleOpenModal);
+    return () => {
+      window.removeEventListener('open-register-product-modal', handleOpenModal);
+    };
+  }, []);
+
   // Handle Favorites toggle
   const toggleFavorite = async (productId: string, currentFav: boolean) => {
     try {
@@ -271,17 +281,7 @@ export default function CatalogManagerPage() {
         </div>
       )}
 
-      {/* Breadcrumb Header */}
-      <div style={styles.header}>
-        <div>
-          <h2 style={styles.title}>Catalog Management</h2>
-          <p style={styles.subtitle}>Configure products, prices, categories, and inventory alerts</p>
-        </div>
-        <button onClick={openAddModal} style={styles.addBtn}>
-          <Plus size={18} />
-          <span>Register Product</span>
-        </button>
-      </div>
+
 
       {/* Search and Category filters row */}
       <div style={styles.filterRow}>

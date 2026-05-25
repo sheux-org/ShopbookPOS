@@ -243,13 +243,6 @@ Thank you for shopping with us!
         </div>
       )}
 
-      {/* Header section */}
-      <div style={styles.header}>
-        <div>
-          <h2 style={styles.title}>Invoices Sales Ledger</h2>
-          <p style={styles.subtitle}>Audit history of past sales, print receipts, and void invoices</p>
-        </div>
-      </div>
 
       {/* Filter panel */}
       <div style={styles.filterRow}>

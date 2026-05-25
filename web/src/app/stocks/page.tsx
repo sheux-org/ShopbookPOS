@@ -189,13 +189,6 @@ export default function StocksPage() {
         </div>
       )}
 
-      {/* Header bar */}
-      <div style={styles.header}>
-        <div>
-          <h2 style={styles.headerTitle}>Stocks & Inventory Log</h2>
-          <p style={styles.headerSubtitle}>Real-time stock alerts and audit tracking ledger</p>
-        </div>
-      </div>
 
       <div style={styles.workspace} className="stocks-workspace">
         {/* Left Side: Search & Table list */}

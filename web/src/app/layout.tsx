@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, BarChart3, Package, User, LogOut, Cloud, RefreshCw, Menu, X, Receipt, Tag } from 'lucide-react';
+import { ShoppingBag, BarChart3, Package, User, LogOut, Cloud, RefreshCw, Menu, X, Receipt, Tag, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useBusinessStore } from '../stores/businessStore';
 import { syncDatabase } from '../services/sync';
@@ -26,6 +26,21 @@ export default function RootLayout({
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sidebar-collapsed') === 'true';
+    }
+    return false;
+  });
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebar-collapsed', String(next));
+      return next;
+    });
+  };
 
   // Initialize DB and load profiles on startup
   useEffect(() => {
@@ -71,6 +86,39 @@ export default function RootLayout({
     { name: 'Profile', path: '/profile', icon: User },
   ];
 
+  const getHeaderInfo = () => {
+    switch (pathname) {
+      case '/catalog':
+        return {
+          title: 'Catalog Management',
+          subtitle: 'Configure products, prices, categories, and inventory alerts',
+        };
+      case '/history':
+        return {
+          title: 'Invoices Sales Ledger',
+          subtitle: 'Audit history of past sales, print receipts, and void invoices',
+        };
+      case '/insights':
+        return {
+          title: 'Analytics Insights Dashboard',
+          subtitle: 'Weekly sales graphs, order history and ledger summaries',
+        };
+      case '/stocks':
+        return {
+          title: 'Stocks & Inventory Log',
+          subtitle: 'Real-time stock alerts and audit tracking ledger',
+        };
+      case '/profile':
+        return {
+          title: 'Profile Settings Dashboard',
+          subtitle: 'Configure branches, staff logs, backups and terminal details',
+        };
+      default:
+        return null;
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
   const showSidebar = isLoggedIn && pathname !== '/auth';
 
   return (
@@ -114,32 +162,65 @@ export default function RootLayout({
 
           <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
             {showSidebar && (
-              <aside className={`pos-sidebar ${sidebarOpen ? 'open' : ''}`}>
+              <aside className={`pos-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${sidebarOpen ? 'open' : ''}`}>
                 {/* Brand Title */}
                 <div style={styles.brandWrapper}>
                   <div style={styles.brandLogo}>S</div>
-                  <div style={{ flex: 1 }}>
-                    <h1 style={styles.brandTitle}>Shopbook</h1>
-                    <span style={styles.brandSubtitle}>Web Mini POS Pro</span>
-                  </div>
+                  {!sidebarCollapsed && (
+                    <div style={{ flex: 1 }}>
+                      <h1 style={styles.brandTitle}>Shopbook</h1>
+                      <span style={styles.brandSubtitle}>Web Mini POS Pro</span>
+                    </div>
+                  )}
                   <button 
                     onClick={() => setSidebarOpen(false)} 
                     className="sidebar-close-btn"
                   >
                     <X size={18} />
                   </button>
+                  <button 
+                    onClick={toggleSidebarCollapsed}
+                    className="sidebar-collapse-toggle-btn hide-mobile"
+                    style={{
+                      border: 'none',
+                      background: '#f3f4f6',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: 'var(--muted)',
+                      marginLeft: sidebarCollapsed ? '0' : 'auto',
+                    }}
+                    title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                  >
+                    {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                  </button>
                 </div>
 
                 {/* Active Business Info Card */}
-                <div style={styles.businessCard}>
+                <div 
+                  style={{ 
+                    ...styles.businessCard, 
+                    padding: sidebarCollapsed ? '8px' : '12px',
+                    justifyContent: 'center'
+                  }}
+                  title={`${activeBusiness?.name || 'Partner Store'} - ${employeeName}`}
+                >
                   <div style={styles.avatar}>
                     {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={styles.bizName}>{activeBusiness?.name || 'Partner Store'}</h3>
-                    <p style={styles.employeeName}>{employeeName}</p>
-                    <span style={styles.roleBadge}>{userRole.toUpperCase()}</span>
-                  </div>
+                  {!sidebarCollapsed && (
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 style={styles.bizName}>{activeBusiness?.name || 'Partner Store'}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                        <p style={styles.employeeName}>{employeeName}</p>
+                        <span style={styles.roleBadge}>{userRole.toUpperCase()}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Navigation Menu */}
@@ -157,10 +238,13 @@ export default function RootLayout({
                         style={{
                           ...styles.navBtn,
                           ...(isActive ? styles.navBtnActive : {}),
+                          justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                          padding: sidebarCollapsed ? '12px 0' : '12px',
                         }}
+                        title={sidebarCollapsed ? item.name : undefined}
                       >
                         <Icon size={18} />
-                        <span>{item.name}</span>
+                        {!sidebarCollapsed && <span>{item.name}</span>}
                       </button>
                     );
                   })}
@@ -172,14 +256,22 @@ export default function RootLayout({
                   <button 
                     onClick={handleSync} 
                     disabled={syncing}
-                    style={styles.syncBtn}
+                    style={{
+                      ...styles.syncBtn,
+                      justifyContent: sidebarCollapsed ? 'center' : 'center',
+                      padding: sidebarCollapsed ? '10px 0' : '10px',
+                    }}
+                    title={sidebarCollapsed ? (syncing ? 'Backing up...' : 'Backup to Cloud') : undefined}
                   >
                     <RefreshCw size={16} className={syncing ? 'spin-anim' : ''} style={{
-                      animation: syncing ? 'spin 1.5s linear infinite' : 'none'
+                      animation: syncing ? 'spin 1.5s linear infinite' : 'none',
+                      marginRight: sidebarCollapsed ? '0' : '8px'
                     }} />
-                    <span>
-                      {syncing ? 'Backing up...' : syncSuccess === true ? 'Sync Complete!' : syncSuccess === false ? 'Sync Failed' : 'Backup to Cloud'}
-                    </span>
+                    {!sidebarCollapsed && (
+                      <span>
+                        {syncing ? 'Backing up...' : syncSuccess === true ? 'Sync Complete!' : syncSuccess === false ? 'Sync Failed' : 'Backup to Cloud'}
+                      </span>
+                    )}
                   </button>
                   <style jsx global>{`
                     @keyframes spin {
@@ -196,19 +288,44 @@ export default function RootLayout({
                         router.push('/auth');
                       }
                     }}
-                    style={styles.logoutBtn}
+                    style={{
+                      ...styles.logoutBtn,
+                      justifyContent: sidebarCollapsed ? 'center' : 'center',
+                      padding: sidebarCollapsed ? '10px 0' : '10px',
+                    }}
+                    title={sidebarCollapsed ? 'Sign Out' : undefined}
                   >
-                    <LogOut size={16} />
-                    <span>Sign Out</span>
+                    <LogOut size={16} style={{ marginRight: sidebarCollapsed ? '0' : '8px' }} />
+                    {!sidebarCollapsed && <span>Sign Out</span>}
                   </button>
                 </div>
               </aside>
             )}
 
-            {/* Main workspace contents */}
-            <main className="main-content">
-              {children}
-            </main>
+            <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
+              {showSidebar && headerInfo && (
+                <header className="common-header">
+                  <div>
+                    <h2 className="common-header-title">{headerInfo.title}</h2>
+                    <p className="common-header-subtitle">{headerInfo.subtitle}</p>
+                  </div>
+                  {pathname === '/catalog' && (
+                    <button 
+                      onClick={() => window.dispatchEvent(new Event('open-register-product-modal'))}
+                      className="common-header-btn"
+                    >
+                      <Plus size={18} />
+                      <span>Register Product</span>
+                    </button>
+                  )}
+                </header>
+              )}
+
+              {/* Main workspace contents */}
+              <main className="main-content">
+                {children}
+              </main>
+            </div>
           </div>
         </div>
       </body>

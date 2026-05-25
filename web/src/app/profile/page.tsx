@@ -187,13 +187,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Header */}
-      <div style={styles.header}>
-        <div>
-          <h2 style={styles.headerTitle}>Profile Settings Dashboard</h2>
-          <p style={styles.headerSubtitle}>Configure branches, staff logs, backups and terminal details</p>
-        </div>
-      </div>
 
       {/* Workspace Settings Content */}
       <div style={styles.body}>

@@ -144,13 +144,6 @@ export default function InsightsPage() {
 
   return (
     <div style={styles.container} className="fade-in">
-      {/* Header bar */}
-      <div style={styles.header}>
-        <div>
-          <h2 style={styles.headerTitle}>Analytics Insights Dashboard</h2>
-          <p style={styles.headerSubtitle}>Weekly sales graphs, order history and ledger summaries</p>
-        </div>
-      </div>
 
       <div style={styles.workspace} className="insights-workspace">
         {/* Left Side: KPIs and Chart */}
