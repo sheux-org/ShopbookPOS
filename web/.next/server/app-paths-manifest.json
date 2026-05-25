@@ -1,7 +1,5 @@
 {
-  "/catalog/page": "app/catalog/page.js",
   "/page": "app/page.js",
-  "/history/page": "app/history/page.js",
-  "/insights/page": "app/insights/page.js",
-  "/stocks/page": "app/stocks/page.js"
+  "/catalog/page": "app/catalog/page.js",
+  "/insights/page": "app/insights/page.js"
 }
