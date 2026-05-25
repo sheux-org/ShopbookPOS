@@ -1,0 +1,286 @@
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { Q } from "@nozbe/watermelondb";
+import database from "../db/database";
+import { SEEDING_PRODUCTS } from "../utils/seedProducts";
+import { useAuthStore } from "./authStore";
+
+export interface Business {
+  id: string;
+  name: string;
+  category: string;
+  address: string;
+  phone: string;
+  logoUri?: string;
+}
+
+interface BusinessState {
+  businesses: Business[];
+  activeBusiness: Business;
+  setActiveBusiness: (id: string) => void;
+  loadBusinessesFromDb: () => Promise<void>;
+  registerBusiness: (
+    name: string,
+    address: string,
+    phone: string,
+    category?: string
+  ) => Promise<void>;
+  updateActiveBusinessDetails: (details: {
+    name: string;
+    category: string;
+    address: string;
+    phone: string;
+    logoUri?: string;
+  }) => Promise<void>;
+  updateBusinessDetails: (
+    id: string,
+    details: {
+      name: string;
+      category: string;
+      address: string;
+      phone: string;
+      logoUri?: string;
+    }
+  ) => Promise<void>;
+  deleteBusiness: (id: string) => Promise<void>;
+}
+
+const PLACEHOLDER_BUSINESS: Business = {
+  id: "0",
+  name: "Register Your Shop",
+  category: "General Retail",
+  address: "Complete onboarding setup",
+  phone: "",
+  logoUri: "",
+};
+
+const DEFAULT_BUSINESSES: Business[] = [PLACEHOLDER_BUSINESS];
+
+export const useBusinessStore = create<BusinessState>()(
+  persist(
+    (set, get) => ({
+      businesses: DEFAULT_BUSINESSES,
+      activeBusiness: DEFAULT_BUSINESSES[0],
+      setActiveBusiness: (id) => {
+        const found = get().businesses.find((b) => b.id === id);
+        if (found) {
+          set({ activeBusiness: found });
+        }
+      },
+      loadBusinessesFromDb: async () => {
+        if (typeof window === 'undefined') return;
+        try {
+          if (!useAuthStore.persist.hasHydrated()) {
+            console.log("Skipping business load: AuthStore not hydrated yet");
+            return;
+          }
+
+          const loggedInPhone = useAuthStore.getState().userPhone;
+          if (!loggedInPhone) {
+            if (!useAuthStore.getState().isLoggedIn) {
+              set({
+                businesses: DEFAULT_BUSINESSES,
+                activeBusiness: DEFAULT_BUSINESSES[0],
+              });
+            }
+            return;
+          }
+
+          const normalizePhone = (phoneStr: string): string => {
+            let cleaned = phoneStr.replace(/\D/g, "");
+            if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
+            if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+            return cleaned;
+          };
+
+          const cleanLoggedInPhone = normalizePhone(loggedInPhone);
+          const matchedBusinessesMap = new Map<string, any>();
+
+          // 1. Employees query
+          const allEmployees = await database.get("employees").query().fetch();
+          const matchedEmployees = allEmployees.filter((emp: any) => {
+            return normalizePhone(emp.phone || "") === cleanLoggedInPhone;
+          });
+
+          for (const emp of matchedEmployees) {
+            const biz = await (emp as any).business.fetch();
+            if (biz) {
+              matchedBusinessesMap.set(biz.id, biz);
+            }
+          }
+
+          // 2. Direct business owner query
+          const allBusinesses = await database.get("businesses").query().fetch();
+          const matchedOwned = allBusinesses.filter((b: any) => {
+            return normalizePhone(b.phoneNumber || "") === cleanLoggedInPhone;
+          });
+
+          for (const biz of matchedOwned) {
+            matchedBusinessesMap.set(biz.id, biz);
+          }
+
+          const uniqueBusinesses = Array.from(matchedBusinessesMap.values());
+
+          const list: Business[] = uniqueBusinesses.map((b: any) => ({
+            id: b.id,
+            name: b.name,
+            category: b.businessType,
+            address: b.address || "No Address Provided",
+            phone: b.phoneNumber || "+94 ** *** ****",
+            logoUri: b.logoUri || "",
+          }));
+
+          const targetBizId = useAuthStore.getState().activeBusinessId || get().activeBusiness.id;
+
+          if (list.length > 0) {
+            const selectedBiz = list.find((b) => b.id === targetBizId) || list[0];
+            set({
+              businesses: list,
+              activeBusiness: selectedBiz,
+            });
+          } else {
+            set({
+              businesses: [PLACEHOLDER_BUSINESS],
+              activeBusiness: PLACEHOLDER_BUSINESS,
+            });
+          }
+        } catch (err) {
+          console.error("Failed to load businesses from IndexedDB:", err);
+        }
+      },
+      registerBusiness: async (name, address, phone, category = "General Retail") => {
+        try {
+          let newBusinessRecord: any;
+          await database.write(async () => {
+            newBusinessRecord = await database.get("businesses").create((biz: any) => {
+              biz.name = name;
+              biz.businessType = category;
+              biz.address = address;
+              biz.phoneNumber = phone;
+            });
+
+            await database.get("employees").create((emp: any) => {
+              emp.business.set(newBusinessRecord);
+              emp.name = "Owner / Admin";
+              emp.role = "admin";
+              emp.phone = phone;
+            });
+          });
+
+          // Seed catalog products for first registered store
+          const dbBizs = await database.get("businesses").query().fetch();
+          if (dbBizs.length === 1) {
+            const existingProducts = await database.get("products").query().fetch();
+            if (existingProducts.length === 0) {
+              await database.write(async () => {
+                for (const item of SEEDING_PRODUCTS) {
+                  await database.get("products").create((p: any) => {
+                    p.business.set(newBusinessRecord);
+                    p.name = item.name;
+                    p.price = item.price;
+                    p.category = item.category;
+                    p.icon = item.icon;
+                    p.stockCount = item.stockCount;
+                    p.unitType = item.unitType;
+                    p.costPrice = item.costPrice;
+                    p.quickCode = item.quickCode;
+                  });
+                }
+              });
+            }
+          }
+
+          await get().loadBusinessesFromDb();
+
+          if (newBusinessRecord) {
+            const found = get().businesses.find((b) => b.name === name);
+            if (found) {
+              set({ activeBusiness: found });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to register business to IndexedDB:", err);
+        }
+      },
+      updateActiveBusinessDetails: async (details) => {
+        const activeBiz = get().activeBusiness;
+        try {
+          const businesses = await database
+            .get("businesses")
+            .query(Q.where("id", activeBiz.id))
+            .fetch();
+          if (businesses.length > 0) {
+            const targetBiz = businesses[0];
+            await database.write(async () => {
+              await targetBiz.update((b: any) => {
+                b.name = details.name;
+                b.businessType = details.category;
+                b.address = details.address;
+                b.phoneNumber = details.phone;
+                if (details.logoUri !== undefined) {
+                  b.logoUri = details.logoUri;
+                }
+              });
+            });
+          }
+          await get().loadBusinessesFromDb();
+        } catch (err) {
+          console.error("Failed to update active business in IndexedDB:", err);
+        }
+      },
+      updateBusinessDetails: async (id, details) => {
+        try {
+          const businesses = await database
+            .get("businesses")
+            .query(Q.where("id", id))
+            .fetch();
+          if (businesses.length > 0) {
+            const targetBiz = businesses[0];
+            await database.write(async () => {
+              await targetBiz.update((b: any) => {
+                b.name = details.name;
+                b.businessType = details.category;
+                b.address = details.address;
+                b.phoneNumber = details.phone;
+                if (details.logoUri !== undefined) {
+                  b.logoUri = details.logoUri;
+                }
+              });
+            });
+          }
+          await get().loadBusinessesFromDb();
+        } catch (err) {
+          console.error("Failed to update business in IndexedDB:", err);
+        }
+      },
+      deleteBusiness: async (id) => {
+        try {
+          const businesses = await database
+            .get("businesses")
+            .query(Q.where("id", id))
+            .fetch();
+          if (businesses.length > 0) {
+            const targetBiz = businesses[0];
+            await database.write(async () => {
+              await targetBiz.destroyPermanently();
+            });
+          }
+          await get().loadBusinessesFromDb();
+
+          if (get().activeBusiness.id === id) {
+            const remaining = get().businesses;
+            if (remaining.length > 0) {
+              set({ activeBusiness: remaining[0] });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to delete business from IndexedDB:", err);
+        }
+      },
+    }),
+    {
+      name: "business-storage",
+      storage: typeof window !== 'undefined' ? createJSONStorage(() => localStorage) : undefined,
+    }
+  )
+);
