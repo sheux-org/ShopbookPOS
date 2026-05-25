@@ -425,11 +425,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderWidth: 1.5,
     borderColor: "#D97706",
-    shadowColor: "#D97706",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    boxShadow: "0px 4px 8px 0px rgba(217, 119, 6, 0.08)",
     marginBottom: 8,
   },
   proPassLeft: {
@@ -505,11 +501,7 @@ const styles = StyleSheet.create({
   },
   tabButtonActive: {
     backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    boxShadow: "0px 2px 3px 0px rgba(0, 0, 0, 0.08)",
   },
   tabButtonText: {
     fontSize: 13,
@@ -526,11 +518,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     backgroundColor: TOKENS.card,
     gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
+    boxShadow: "0px 4px 8px 0px rgba(0, 0, 0, 0.03)",
   },
   planDetailCardDefault: {
     borderColor: TOKENS.border,

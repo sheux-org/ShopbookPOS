@@ -238,9 +238,17 @@ export const CatalogScreen: React.FC = () => {
                             >
                               <Feather
                                 name="plus"
-                                size={15}
+                                size={16}
                                 color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
                               />
+                              <Text
+                                style={[
+                                  styles.plusIconBadgeText,
+                                  item.stockType === "out" && styles.plusIconBadgeTextOut,
+                                ]}
+                              >
+                                Add
+                              </Text>
                             </View>
                           </View>
                         ) : (
@@ -263,9 +271,17 @@ export const CatalogScreen: React.FC = () => {
                             >
                               <Feather
                                 name="plus"
-                                size={14}
+                                size={15}
                                 color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
                               />
+                              <Text
+                                style={[
+                                  styles.mobilePlusIconBadgeText,
+                                  item.stockType === "out" && styles.mobilePlusIconBadgeTextOut,
+                                ]}
+                              >
+                                Add
+                              </Text>
                             </View>
                           </View>
                         )}
@@ -308,11 +324,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 5,
+    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
   },
   toastText: {
     color: TOKENS.card,
@@ -416,11 +428,7 @@ const styles = StyleSheet.create({
     borderColor: TOKENS.border,
     justifyContent: "space-between",
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 2,
+    boxShadow: "0px 2px 3px 0px rgba(0, 0, 0, 0.04)",
   },
   imageContainer: {
     position: "relative",
@@ -466,17 +474,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   plusIconBadge: {
-    width: 30,
+    flexDirection: "row",
     height: 30,
     borderRadius: 15,
+    paddingHorizontal: 12,
     backgroundColor: TOKENS.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 4,
+    gap: 4,
+    boxShadow: `0px 2px 4px 0px ${TOKENS.primary}59`,
+  },
+  plusIconBadgeText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: TOKENS.card,
+  },
+  plusIconBadgeTextOut: {
+    color: TOKENS.muted,
   },
   plusIconBadgeOut: {
     backgroundColor: "#E5E7EB",
@@ -488,18 +502,24 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   mobilePlusIconBadge: {
+    flexDirection: "row",
     width: "100%",
-    height: 26,
-    borderRadius: 13,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: TOKENS.primary,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    gap: 4,
+    boxShadow: `0px 2px 3px 0px ${TOKENS.primary}33`,
+  },
+  mobilePlusIconBadgeText: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: TOKENS.card,
+  },
+  mobilePlusIconBadgeTextOut: {
+    color: TOKENS.muted,
   },
   mobilePlusIconBadgeOut: {
     backgroundColor: "#E5E7EB",

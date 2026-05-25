@@ -377,6 +377,7 @@ export const ManageItemsScreen: React.FC = () => {
         <FlashList
           data={productsList}
           keyExtractor={(item) => item.id}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           onEndReached={() => {
             if (hasNextPage) {
               fetchNextPage();
@@ -927,11 +928,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 5,
+    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
   },
   toastText: {
     color: TOKENS.card,
@@ -987,8 +984,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   listContent: {
-    padding: 12,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   productItemCard: {
     flexDirection: "row",
@@ -1222,11 +1219,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 12,
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    boxShadow: `0px 2px 4px 0px ${TOKENS.primary}33`,
   },
   saveSubmitBtnText: {
     color: TOKENS.card,
@@ -1258,11 +1251,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.05)",
   },
   uploadAreaTitle: {
     fontSize: 14,
@@ -1316,11 +1305,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(239, 68, 68, 0.9)",
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.1)",
   },
   imgUploadingOverlay: {
     position: "absolute" as const,
@@ -1616,11 +1601,7 @@ const styles = StyleSheet.create({
     borderColor: "#F1F5F9",
     marginBottom: 8,
     gap: 12,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
+    boxShadow: "0px 1px 3px 0px rgba(15, 23, 42, 0.03)",
   },
   logLeftCol: {
     justifyContent: "center",
@@ -1725,11 +1706,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 36,
     paddingTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 16,
+    boxShadow: "0px -4px 16px 0px rgba(0, 0, 0, 0.12)",
   },
   sheetHandle: {
     width: 40,

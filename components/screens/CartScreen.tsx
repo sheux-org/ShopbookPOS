@@ -788,11 +788,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 5,
+    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
   },
   toastText: {
     color: TOKENS.card,
@@ -994,11 +990,7 @@ const styles = StyleSheet.create({
   },
   discountTypeToggleBtnActive: {
     backgroundColor: TOKENS.card,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
+    boxShadow: "0px 1px 1px 0px rgba(0, 0, 0, 0.1)",
   },
   discountTypeToggleText: {
     fontSize: 11,
@@ -1062,11 +1054,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     gap: 10,
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    boxShadow: `0px 4px 6px 0px ${TOKENS.primary}4D`,
   },
   bottomStickyContainer: {
     backgroundColor: TOKENS.background,
@@ -1132,11 +1120,7 @@ const styles = StyleSheet.create({
   },
   activeTabItem: {
     backgroundColor: TOKENS.card,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    boxShadow: "0px 1px 2px 0px rgba(0, 0, 0, 0.05)",
   },
   tabText: {
     fontSize: 12,

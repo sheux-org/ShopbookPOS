@@ -221,7 +221,7 @@ export default function PaymentSelectRoute() {
                 <View style={styles.stepCircle}>
                   <Text style={styles.stepCircleText}>3</Text>
                 </View>
-                <Text style={styles.stepText}>We'll confirm and activate your Premium features promptly.</Text>
+                <Text style={styles.stepText}>We&apos;ll confirm and activate your Premium features promptly.</Text>
               </View>
             </View>
 
@@ -383,11 +383,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1.5,
     borderColor: "#D97706",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
+    boxShadow: "0px 6px 10px 0px rgba(15, 23, 42, 0.2)",
   },
   summaryHeader: {
     flexDirection: "row",
@@ -447,11 +443,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     gap: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    elevation: 1,
+    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.02)",
   },
   methodCardActive: {
     borderColor: TOKENS.primary,
@@ -504,11 +496,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: TOKENS.border,
     gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 2,
+    boxShadow: "0px 4px 8px 0px rgba(0, 0, 0, 0.02)",
   },
   detailSectionTitle: {
     fontSize: 15,
@@ -528,11 +516,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
+    boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
     marginTop: 8,
   },
   payButtonText: {
@@ -589,11 +573,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     padding: 16,
     gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.01,
-    shadowRadius: 6,
-    elevation: 1,
+    boxShadow: "0px 4px 6px 0px rgba(0, 0, 0, 0.01)",
   },
   bankCardHeaderTitle: {
     fontSize: 15,
@@ -672,11 +652,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    boxShadow: `0px 4px 6px 0px ${TOKENS.primary}26`,
     marginTop: 4,
   },
   confirmWhatsAppButtonText: {

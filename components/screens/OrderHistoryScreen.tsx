@@ -840,11 +840,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     gap: 8,
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    boxShadow: `0px 4px 6px 0px ${TOKENS.primary}4D`,
   },
   actionBtnDisabled: {
     opacity: 0.45,

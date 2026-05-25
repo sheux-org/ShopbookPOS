@@ -453,11 +453,7 @@ const localStyles = StyleSheet.create({
     backgroundColor: TOKENS.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
+    boxShadow: `0px 4px 8px 0px ${TOKENS.primary}26`,
   },
   confirmBtnText: {
     fontSize: 13,

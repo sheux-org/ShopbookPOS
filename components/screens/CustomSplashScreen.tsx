@@ -141,11 +141,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 24,
     // Premium soft shadow
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
+    boxShadow: "0px 6px 12px 0px rgba(0, 0, 0, 0.12)",
   },
   logo: {
     width: "100%",

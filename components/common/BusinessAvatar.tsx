@@ -78,11 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.accentBlue,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    boxShadow: `0px 4px 6px 0px ${TOKENS.primary}26`,
   },
   avatarInitials: {
     fontWeight: 'bold',

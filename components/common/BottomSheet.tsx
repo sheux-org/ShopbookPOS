@@ -206,11 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 24,
+    boxShadow: "0px -4px 10px 0px rgba(0, 0, 0, 0.08)",
   },
   dragHandle: {
     width: 40,
