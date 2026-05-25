@@ -2,22 +2,23 @@ import { Feather } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Text,
   View,
-  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cartState } from "../../../components/data/cartState";
 import { TOKENS } from "../../../constants/tokens";
-import { useVerifyOtp, useRegisterUser } from "../../../hooks/useAuth";
+import { useRegisterUser, useVerifyOtp } from "../../../hooks/useAuth";
 
-import { PhoneInputPanel } from "../../../components/auth/PhoneInputPanel";
 import { OtpVerifyPanel } from "../../../components/auth/OtpVerifyPanel";
+import { PhoneInputPanel } from "../../../components/auth/PhoneInputPanel";
 import { RegisterBusinessPanel } from "../../../components/auth/RegisterBusinessPanel";
 import { styles } from "../../../components/auth/styles";
+import { PoweredBy } from "../../../components/common/PoweredBy";
 
 export default function NumberInputRoute() {
   const insets = useSafeAreaInsets();
@@ -169,75 +170,82 @@ export default function NumberInputRoute() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}
-        keyboardShouldPersistTaps="handled"
+    <View style={{ flex: 1, backgroundColor: TOKENS.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
       >
-        {/* Toast popup */}
-        {toastMessage && (
-          <View style={styles.toastContainer}>
-            <Feather name="info" size={16} color={TOKENS.card} />
-            <Text style={styles.toastText}>{toastMessage}</Text>
-          </View>
-        )}
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 64 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Toast popup */}
+          {toastMessage && (
+            <View style={styles.toastContainer}>
+              <Feather name="info" size={16} color={TOKENS.card} />
+              <Text style={styles.toastText}>{toastMessage}</Text>
+            </View>
+          )}
 
-        {/* Branding header */}
-        <View style={styles.brandingWrapper}>
-          <View style={styles.logoSquare}>
-            <Image
-              source={require("../../../assets/images/icon.png")}
-              style={styles.logoImage}
-              resizeMode="contain"
+          {/* Branding header */}
+          <View style={styles.brandingWrapper}>
+            <View style={styles.logoSquare}>
+              <Image
+                source={require("../../../assets/images/icon.png")}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.appName}>Mini POS</Text>
+            <Text style={styles.appTagline}>Sleek & Modular Retail Terminal</Text>
+          </View>
+
+          {/* Dynamic Step Panels */}
+          {step === "phone" && (
+            <PhoneInputPanel
+              phone={phone}
+              setPhone={setPhone}
+              isLoading={isLoading}
+              handleSendOtp={handleSendOtp}
             />
-          </View>
-          <Text style={styles.appName}>Mini POS</Text>
-          <Text style={styles.appTagline}>Sleek & Modular Retail Terminal</Text>
-        </View>
+          )}
 
-        {/* Dynamic Step Panels */}
-        {step === "phone" && (
-          <PhoneInputPanel
-            phone={phone}
-            setPhone={setPhone}
-            isLoading={isLoading}
-            handleSendOtp={handleSendOtp}
-          />
-        )}
+          {step === "otp" && (
+            <OtpVerifyPanel
+              phone={phone}
+              otp={otp}
+              setOtp={setOtp}
+              otpError={otpError}
+              setOtpError={setOtpError}
+              isLoading={isLoading}
+              handleVerifyOtp={handleVerifyOtp}
+              setStep={setStep}
+            />
+          )}
 
-        {step === "otp" && (
-          <OtpVerifyPanel
-            phone={phone}
-            otp={otp}
-            setOtp={setOtp}
-            otpError={otpError}
-            setOtpError={setOtpError}
-            isLoading={isLoading}
-            handleVerifyOtp={handleVerifyOtp}
-            setStep={setStep}
-          />
-        )}
+          {step === "register" && (
+            <RegisterBusinessPanel
+              phone={phone}
+              businessName={businessName}
+              setBusinessName={setBusinessName}
+              newCategory={newCategory}
+              setNewCategory={setNewCategory}
+              businessAddress={businessAddress}
+              setBusinessAddress={setBusinessAddress}
+              registerStep={registerStep}
+              setRegisterStep={setRegisterStep}
+              isLoading={isLoading}
+              handleRegister={handleRegister}
+              setStep={setStep}
+            />
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-        {step === "register" && (
-          <RegisterBusinessPanel
-            phone={phone}
-            businessName={businessName}
-            setBusinessName={setBusinessName}
-            newCategory={newCategory}
-            setNewCategory={setNewCategory}
-            businessAddress={businessAddress}
-            setBusinessAddress={setBusinessAddress}
-            registerStep={registerStep}
-            setRegisterStep={setRegisterStep}
-            isLoading={isLoading}
-            handleRegister={handleRegister}
-            setStep={setStep}
-          />
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {/* PoweredBy placed at the absolute bottom, outside KeyboardAvoidingView so it does NOT push up with the keyboard */}
+      <View style={{ position: "absolute", bottom: insets.bottom + 16, left: 0, right: 0 }}>
+        <PoweredBy showPro={false} />
+      </View>
+    </View>
   );
 }

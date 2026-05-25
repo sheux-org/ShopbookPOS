@@ -156,6 +156,12 @@ export function useActiveDeviceTracker() {
           Constants.modelName ||
           (Platform.OS === "ios" ? "iOS Device" : "Android Device");
 
+        // If the device is offline, skip Supabase tracking to prevent error logging
+        if (!isOnline) {
+          console.log("Device is offline, active device database tracking skipped.");
+          return;
+        }
+
         // 6. Update database record on Supabase
         const recordId = `${activeBusinessId}_${
           activeEmployeeId || "admin"
@@ -183,7 +189,7 @@ export function useActiveDeviceTracker() {
           .upsert(payload);
 
         if (upsertError) {
-          console.error("Failed to upsert active device status:", upsertError);
+          console.warn("Failed to upsert active device status:", upsertError);
         }
 
         // 7. Remote session termination check
@@ -200,7 +206,7 @@ export function useActiveDeviceTracker() {
           useAuthStore.getState().logout();
         }
       } catch (err) {
-        console.error("Active device tracker error:", err);
+        console.warn("Active device tracker error:", err);
       }
     };
 

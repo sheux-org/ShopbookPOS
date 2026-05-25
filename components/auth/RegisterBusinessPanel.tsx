@@ -101,9 +101,13 @@ export function RegisterBusinessPanel({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.premiumNextBtn, !businessName.trim() && styles.premiumNextBtnDisabled]}
+            style={[
+              styles.premiumNextBtn,
+              businessName.trim() !== "" && styles.premiumNextBtnShadow,
+              businessName.trim() === "" && styles.premiumNextBtnDisabled,
+            ]}
             onPress={() => setRegisterStep(2)}
-            disabled={!businessName.trim()}
+            disabled={businessName.trim() === ""}
             activeOpacity={0.8}
           >
             <Text style={styles.premiumNextBtnText}>Next</Text>
@@ -141,9 +145,13 @@ export function RegisterBusinessPanel({
           </View>
 
           <TouchableOpacity
-            style={[styles.premiumNextBtn, !newCategory && styles.premiumNextBtnDisabled]}
+            style={[
+              styles.premiumNextBtn,
+              newCategory !== "" && styles.premiumNextBtnShadow,
+              newCategory === "" && styles.premiumNextBtnDisabled,
+            ]}
             onPress={() => setRegisterStep(3)}
-            disabled={!newCategory}
+            disabled={newCategory === ""}
             activeOpacity={0.8}
           >
             <Text style={styles.premiumNextBtnText}>Next</Text>
@@ -179,9 +187,13 @@ export function RegisterBusinessPanel({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.premiumNextBtn, !businessAddress.trim() && styles.premiumNextBtnDisabled]}
+            style={[
+              styles.premiumNextBtn,
+              businessAddress.trim() !== "" && !isLoading && styles.premiumNextBtnShadow,
+              businessAddress.trim() === "" && styles.premiumNextBtnDisabled,
+            ]}
             onPress={handleRegister}
-            disabled={!businessAddress.trim() || isLoading}
+            disabled={businessAddress.trim() === "" || isLoading}
             activeOpacity={0.8}
           >
             {isLoading ? (

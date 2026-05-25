@@ -140,7 +140,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
-    // Premium soft shadow
     boxShadow: "0px 6px 12px 0px rgba(0, 0, 0, 0.12)",
   },
   logo: {
@@ -152,7 +151,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: "800",
+    fontWeight: "600",
     color: "#FFFFFF", // High-contrast white
     letterSpacing: 0.5,
     textAlign: "center",
@@ -173,7 +172,7 @@ const styles = StyleSheet.create({
   },
   footerBrand: {
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: "600",
     color: "#FFFFFF", // High-contrast white
     letterSpacing: 0.5,
   },

@@ -195,12 +195,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+  },
+  submitButtonShadow: {
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
   },
   submitButtonDisabled: {
     backgroundColor: "#E5E7EB",
-    shadowOpacity: 0,
-    elevation: 0,
   },
   submitButtonText: {
     fontSize: 15,
@@ -349,12 +349,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+  },
+  premiumNextBtnShadow: {
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
   },
   premiumNextBtnDisabled: {
     backgroundColor: "#E5E7EB",
-    shadowOpacity: 0,
-    elevation: 0,
   },
   premiumNextBtnText: {
     fontSize: 15,

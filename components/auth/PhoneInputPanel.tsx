@@ -17,7 +17,8 @@ export function PhoneInputPanel({
   isLoading,
   handleSendOtp,
 }: PhoneInputPanelProps) {
-  const isSubmitDisabled = phone.replace(/\D/g, "").length < 9 || isLoading;
+  const isInputValid = phone.replace(/\D/g, "").length >= 9;
+  const isSubmitDisabled = !isInputValid || isLoading;
 
   return (
     <View style={styles.card}>
@@ -44,7 +45,11 @@ export function PhoneInputPanel({
       </View>
 
       <TouchableOpacity
-        style={[styles.submitButton, isSubmitDisabled && styles.submitButtonDisabled]}
+        style={[
+          styles.submitButton,
+          isInputValid && !isLoading && (styles as any).submitButtonShadow,
+          !isInputValid && styles.submitButtonDisabled,
+        ]}
         activeOpacity={0.8}
         onPress={handleSendOtp}
         disabled={isSubmitDisabled}

@@ -25,7 +25,8 @@ export function OtpVerifyPanel({
   handleVerifyOtp,
   setStep,
 }: OtpVerifyPanelProps) {
-  const isSubmitDisabled = otp.length < 5 || isLoading;
+  const isOtpValid = otp.length >= 5;
+  const isSubmitDisabled = !isOtpValid || isLoading;
 
   return (
     <View style={styles.card}>
@@ -87,7 +88,11 @@ export function OtpVerifyPanel({
       </View>
 
       <TouchableOpacity
-        style={[styles.submitButton, isSubmitDisabled && styles.submitButtonDisabled]}
+        style={[
+          styles.submitButton,
+          isOtpValid && !isLoading && styles.submitButtonShadow,
+          !isOtpValid && styles.submitButtonDisabled,
+        ]}
         activeOpacity={0.8}
         onPress={() => handleVerifyOtp()}
         disabled={isSubmitDisabled}
