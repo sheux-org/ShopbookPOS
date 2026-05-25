@@ -7,11 +7,11 @@ import { useBusinessStore } from '../stores/businessStore';
 import database from '../db/database';
 import { Q } from '@nozbe/watermelondb';
 import { 
-  Search, Camera, Plus, Trash2, PlusCircle, MinusCircle, 
+  Search, Plus, Trash2, PlusCircle, MinusCircle, 
   Percent, DollarSign, ArrowRight, CheckCircle, CreditCard, 
-  Wallet, Sparkles, Printer, UserPlus, ShoppingBag, X
+  Wallet, Sparkles, Printer, UserPlus, ShoppingBag, X, Barcode
 } from 'lucide-react';
-import { Scanner, useHardwareScanner } from '../components/Scanner';
+import { useHardwareScanner } from '../components/Scanner';
 
 interface DBProduct {
   id: string;
@@ -44,7 +44,8 @@ export default function PosBillingPage() {
   const [products, setProducts] = useState<DBProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [cameraActive, setCameraActive] = useState(false);
+  const [manualBarcode, setManualBarcode] = useState('');
+  const [activeTab, setActiveTab] = useState<'catalog' | 'cart'>('catalog');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Customer sheet state
@@ -77,6 +78,7 @@ export default function PosBillingPage() {
   const [newProdStock, setNewProdStock] = useState('20');
   const [newProdQuickCode, setNewProdQuickCode] = useState('');
   const [newProdBarcode, setNewProdBarcode] = useState('');
+
 
   // Load products from IndexedDB
   const loadProducts = async () => {
@@ -154,7 +156,6 @@ export default function PosBillingPage() {
       }
       addCartItem(matched.name, matched.price, matched.icon, matched.barcode || matched.id, matched.stockCount);
       triggerToast(`Added ${matched.name} 🛒`);
-      setCameraActive(false);
     } else {
       triggerToast(`Barcode ${barcode} not in catalog ⚠️`);
     }
@@ -359,40 +360,63 @@ export default function PosBillingPage() {
         </div>
       )}
 
-      {/* Camera scan module */}
-      {cameraActive && (
-        <Scanner
-          onScan={handleScanCode}
-          onClose={() => setCameraActive(false)}
-        />
-      )}
+      {/* Mobile Tab Switcher */}
+      <div className="mobile-pos-tabs">
+        <button 
+          onClick={() => setActiveTab('catalog')} 
+          className={`mobile-pos-tab ${activeTab === 'catalog' ? 'active' : ''}`}
+        >
+          Products
+        </button>
+        <button 
+          onClick={() => setActiveTab('cart')} 
+          className={`mobile-pos-tab ${activeTab === 'cart' ? 'active font-bold' : ''}`}
+        >
+          Cart ({cart.reduce((sum, i) => sum + i.quantity, 0)})
+        </button>
+      </div>
 
       {/* Split pane POS workspace */}
       <div style={styles.gridContainer}>
         
         {/* Left Side: Product Catalog Grid */}
-        <div style={styles.catalogPane}>
+        <div style={styles.catalogPane} className={`pos-catalog-pane ${activeTab === 'catalog' ? 'show' : 'hide'}`}>
           {/* Header query panel */}
-          <div style={styles.searchRow}>
+          <div style={styles.searchRow} className="pos-search-row">
             <div style={styles.searchBox}>
               <Search size={18} color="var(--muted)" />
               <input
                 type="text"
-                placeholder="Search products by name, code (e.g. 2001), or scan barcode..."
+                placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={styles.searchInput}
               />
             </div>
             
-            <button 
-              onClick={() => setCameraActive(true)}
-              style={styles.cameraBtn}
-              title="Open camera viewfinder scanner"
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (manualBarcode.trim()) {
+                  handleScanCode(manualBarcode.trim());
+                  setManualBarcode('');
+                }
+              }}
+              style={styles.manualBarcodeForm}
+              className="pos-manual-barcode-form"
             >
-              <Camera size={18} />
-              <span>Camera Scan</span>
-            </button>
+              <Barcode size={16} color="var(--muted)" />
+              <input
+                type="text"
+                placeholder="Manual Barcode..."
+                value={manualBarcode}
+                onChange={(e) => setManualBarcode(e.target.value)}
+                style={styles.manualBarcodeInput}
+              />
+              <button type="submit" style={styles.manualBarcodeBtn}>
+                Add
+              </button>
+            </form>
 
             <button 
               onClick={() => setShowAddProdModal(true)}
@@ -400,7 +424,7 @@ export default function PosBillingPage() {
               title="Add new product to the catalog database"
             >
               <Plus size={18} />
-              <span>Add Product</span>
+              <span className="hide-mobile">Add Product</span>
             </button>
           </div>
 
@@ -479,7 +503,7 @@ export default function PosBillingPage() {
         </div>
 
         {/* Right Side: Invoice Billing Panel */}
-        <div style={styles.invoicePane}>
+        <div style={styles.invoicePane} className={`pos-invoice-pane ${activeTab === 'cart' ? 'show' : 'hide'}`}>
           {/* Metadata */}
           <div style={styles.invoiceHeader}>
             <div>
@@ -1618,5 +1642,34 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '14px',
     outline: 'none',
     backgroundColor: 'var(--background)',
+  },
+  manualBarcodeForm: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: '#ffffff',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    padding: '4px 8px',
+    boxShadow: 'var(--shadow)',
+    width: '220px',
+  },
+  manualBarcodeInput: {
+    flex: 1,
+    border: 'none',
+    outline: 'none',
+    fontSize: '12px',
+    color: 'var(--dark)',
+    backgroundColor: 'transparent',
+  },
+  manualBarcodeBtn: {
+    padding: '4px 10px',
+    borderRadius: '6px',
+    border: 'none',
+    backgroundColor: 'var(--primary)',
+    color: '#ffffff',
+    fontSize: '10px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
   },
 };

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, BarChart3, Package, User, LogOut, Cloud, RefreshCw } from 'lucide-react';
+import { ShoppingBag, BarChart3, Package, User, LogOut, Cloud, RefreshCw, Menu, X, Receipt, Tag } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useBusinessStore } from '../stores/businessStore';
 import { syncDatabase } from '../services/sync';
@@ -25,6 +25,7 @@ export default function RootLayout({
 
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Initialize DB and load profiles on startup
   useEffect(() => {
@@ -63,6 +64,8 @@ export default function RootLayout({
 
   const navItems = [
     { name: 'POS Billing', path: '/', icon: ShoppingBag },
+    { name: 'Catalog Manager', path: '/catalog', icon: Tag },
+    { name: 'Sales History', path: '/history', icon: Receipt },
     { name: 'Insights', path: '/insights', icon: BarChart3 },
     { name: 'Stocks', path: '/stocks', icon: Package },
     { name: 'Profile', path: '/profile', icon: User },
@@ -78,94 +81,135 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body>
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
           {showSidebar && (
-            <aside style={styles.sidebar}>
-              {/* Brand Title */}
-              <div style={styles.brandWrapper}>
-                <div style={styles.brandLogo}>S</div>
-                <div>
-                  <h1 style={styles.brandTitle}>Shopbook</h1>
-                  <span style={styles.brandSubtitle}>Web Mini POS Pro</span>
-                </div>
-              </div>
-
-              {/* Active Business Info Card */}
-              <div style={styles.businessCard}>
-                <div style={styles.avatar}>
-                  {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <h3 style={styles.bizName}>{activeBusiness?.name || 'Partner Store'}</h3>
-                  <p style={styles.employeeName}>{employeeName}</p>
-                  <span style={styles.roleBadge}>{userRole.toUpperCase()}</span>
-                </div>
-              </div>
-
-              {/* Navigation Menu */}
-              <nav style={styles.navMenu}>
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.path;
-                  return (
-                    <button
-                      key={item.name}
-                      onClick={() => router.push(item.path)}
-                      style={{
-                        ...styles.navBtn,
-                        ...(isActive ? styles.navBtnActive : {}),
-                      }}
-                    >
-                      <Icon size={18} />
-                      <span>{item.name}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-
-              {/* Action Buttons */}
-              <div style={styles.bottomActions}>
-                {/* Cloud Sync Status */}
+            <>
+              {/* Mobile top navigation header */}
+              <header className="mobile-navbar">
                 <button 
-                  onClick={handleSync} 
-                  disabled={syncing}
-                  style={styles.syncBtn}
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="hamburger-btn"
+                  aria-label="Toggle Navigation Sidebar"
                 >
-                  <RefreshCw size={16} className={syncing ? 'spin-anim' : ''} style={{
-                    animation: syncing ? 'spin 1.5s linear infinite' : 'none'
-                  }} />
-                  <span>
-                    {syncing ? 'Backing up...' : syncSuccess === true ? 'Sync Complete!' : syncSuccess === false ? 'Sync Failed' : 'Backup to Cloud'}
-                  </span>
+                  <Menu size={22} />
                 </button>
-                <style jsx global>{`
-                  @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                  }
-                `}</style>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="mobile-brand-logo">S</div>
+                  <span className="mobile-brand-title">Shopbook</span>
+                </div>
+                <div className="mobile-sync-dot" onClick={handleSync} title="Click to backup now">
+                  <div className={`sync-dot-inner ${syncing ? 'syncing' : ''}`} />
+                </div>
+              </header>
 
-                {/* Log out */}
-                <button
-                  onClick={() => {
-                    if (confirm('Are you sure you want to sign out?')) {
-                      logout();
-                      router.push('/auth');
-                    }
-                  }}
-                  style={styles.logoutBtn}
-                >
-                  <LogOut size={16} />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </aside>
+              {/* Sidebar drawer overlay */}
+              {sidebarOpen && (
+                <div 
+                  className="sidebar-backdrop" 
+                  onClick={() => setSidebarOpen(false)} 
+                />
+              )}
+            </>
           )}
 
-          {/* Main workspace contents */}
-          <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            {children}
-          </main>
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            {showSidebar && (
+              <aside className={`pos-sidebar ${sidebarOpen ? 'open' : ''}`}>
+                {/* Brand Title */}
+                <div style={styles.brandWrapper}>
+                  <div style={styles.brandLogo}>S</div>
+                  <div style={{ flex: 1 }}>
+                    <h1 style={styles.brandTitle}>Shopbook</h1>
+                    <span style={styles.brandSubtitle}>Web Mini POS Pro</span>
+                  </div>
+                  <button 
+                    onClick={() => setSidebarOpen(false)} 
+                    className="sidebar-close-btn"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Active Business Info Card */}
+                <div style={styles.businessCard}>
+                  <div style={styles.avatar}>
+                    {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={styles.bizName}>{activeBusiness?.name || 'Partner Store'}</h3>
+                    <p style={styles.employeeName}>{employeeName}</p>
+                    <span style={styles.roleBadge}>{userRole.toUpperCase()}</span>
+                  </div>
+                </div>
+
+                {/* Navigation Menu */}
+                <nav style={styles.navMenu}>
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.path;
+                    return (
+                      <button
+                        key={item.name}
+                        onClick={() => {
+                          router.push(item.path);
+                          setSidebarOpen(false);
+                        }}
+                        style={{
+                          ...styles.navBtn,
+                          ...(isActive ? styles.navBtnActive : {}),
+                        }}
+                      >
+                        <Icon size={18} />
+                        <span>{item.name}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
+
+                {/* Action Buttons */}
+                <div style={styles.bottomActions}>
+                  {/* Cloud Sync Status */}
+                  <button 
+                    onClick={handleSync} 
+                    disabled={syncing}
+                    style={styles.syncBtn}
+                  >
+                    <RefreshCw size={16} className={syncing ? 'spin-anim' : ''} style={{
+                      animation: syncing ? 'spin 1.5s linear infinite' : 'none'
+                    }} />
+                    <span>
+                      {syncing ? 'Backing up...' : syncSuccess === true ? 'Sync Complete!' : syncSuccess === false ? 'Sync Failed' : 'Backup to Cloud'}
+                    </span>
+                  </button>
+                  <style jsx global>{`
+                    @keyframes spin {
+                      from { transform: rotate(0deg); }
+                      to { transform: rotate(360deg); }
+                    }
+                  `}</style>
+
+                  {/* Log out */}
+                  <button
+                    onClick={() => {
+                      if (confirm('Are you sure you want to sign out?')) {
+                        logout();
+                        router.push('/auth');
+                      }
+                    }}
+                    style={styles.logoutBtn}
+                  >
+                    <LogOut size={16} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </aside>
+            )}
+
+            {/* Main workspace contents */}
+            <main className="main-content">
+              {children}
+            </main>
+          </div>
         </div>
       </body>
     </html>

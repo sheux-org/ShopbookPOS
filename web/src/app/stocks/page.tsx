@@ -197,7 +197,7 @@ export default function StocksPage() {
         </div>
       </div>
 
-      <div style={styles.workspace}>
+      <div style={styles.workspace} className="stocks-workspace">
         {/* Left Side: Search & Table list */}
         <div style={styles.tablePane}>
           {/* Query bar */}

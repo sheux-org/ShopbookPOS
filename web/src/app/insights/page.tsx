@@ -152,11 +152,11 @@ export default function InsightsPage() {
         </div>
       </div>
 
-      <div style={styles.workspace}>
+      <div style={styles.workspace} className="insights-workspace">
         {/* Left Side: KPIs and Chart */}
         <div style={styles.metricsPane}>
           {/* KPI grid */}
-          <div style={styles.kpiGrid}>
+          <div style={styles.kpiGrid} className="insights-kpi-grid">
             <div style={styles.kpiCard}>
               <div style={{ ...styles.kpiIconBox, backgroundColor: '#EFF6FF', color: 'var(--primary)' }}>
                 <DollarSign size={20} />
