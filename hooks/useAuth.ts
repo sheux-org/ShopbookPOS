@@ -10,8 +10,8 @@ export function useVerifyOtp() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { phone: string; otp: string }) => {
-      const { phone, otp } = params;
+    mutationFn: async (params: { phone: string; otp: string; token: string }) => {
+      const { phone, otp, token } = params;
 
       const normalizePhone = (phoneStr: string): string => {
         let cleaned = phoneStr.replace(/\D/g, "");
@@ -22,8 +22,31 @@ export function useVerifyOtp() {
 
       const cleanPhone = normalizePhone(phone);
 
-      if (otp !== "1111") {
-        throw new Error("Invalid OTP. Hint: Use 1111");
+      // Call real verification API
+      try {
+        const response = await fetch("https://mini-pos-sync-server.vercel.app/api/v1/auth/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            code: otp,
+            phone_number: cleanPhone,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || "Invalid OTP code!");
+        }
+
+        const data = await response.json();
+        if (data.message !== "Success") {
+          throw new Error(data.message || "Invalid OTP code!");
+        }
+      } catch (err: any) {
+        throw new Error(err.message || "Verification failed. Please try again.");
       }
 
       const allEmployees: any[] = await database
@@ -123,7 +146,7 @@ export function useVerifyOtp() {
         phone: cleanPhone,
       };
     },
-    onSuccess: async (data) => {
+    onSuccess: async (data, variables) => {
       if (data.status === "success") {
         useAuthStore
           .getState()
@@ -133,6 +156,7 @@ export function useVerifyOtp() {
             data.name!,
             data.businessId!,
             data.employeeId!,
+            variables.token,
           );
         await useBusinessStore.getState().loadBusinessesFromDb();
         useBusinessStore.getState().setActiveBusiness(data.businessId!);

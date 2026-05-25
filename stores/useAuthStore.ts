@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
 import { useCart } from './useCart';
 
 export type UserRole = 'admin' | 'manager' | 'cashier';
@@ -19,10 +20,9 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setActiveBusinessId: (id: string | null) => void;
   setActiveEmployeeId: (id: string | null) => void;
-  loginWithEmployee: (phone: string, role: UserRole, employeeName: string, businessId: string, employeeId: string) => void;
+  loginWithEmployee: (phone: string, role: UserRole, employeeName: string, businessId: string, employeeId: string, token?: string) => void;
   login: (phone: string, otp: string) => boolean;
   logout: () => void;
-  signOut: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -40,7 +40,7 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
       setActiveBusinessId: (activeBusinessId) => set({ activeBusinessId }),
       setActiveEmployeeId: (activeEmployeeId) => set({ activeEmployeeId }),
-      loginWithEmployee: (phone, role, employeeName, businessId, employeeId) => {
+      loginWithEmployee: (phone, role, employeeName, businessId, employeeId, token) => {
         const cleanPhone = phone.replace(/\s+/g, "");
         set({
           isLoggedIn: true,
@@ -50,10 +50,15 @@ export const useAuthStore = create<AuthState>()(
           activeBusinessId: businessId,
           activeEmployeeId: employeeId
         });
+        if (token) {
+          SecureStore.setItemAsync("auth_token", token).catch((err) => {
+            console.error("Failed to store token in SecureStore:", err);
+          });
+        }
       },
       login: (phone, otp) => {
         const cleanPhone = phone.replace(/\s+/g, "");
-        if (otp === "1111") {
+        if (otp === "11111") {
           set({ 
             isLoggedIn: true, 
             userPhone: cleanPhone,
@@ -75,18 +80,8 @@ export const useAuthStore = create<AuthState>()(
           activeBusinessId: null,
           activeEmployeeId: null
         });
-        useCart.getState().clearCart();
-      },
-      signOut: () => {
-        set({ 
-          session: null, 
-          user: null, 
-          activeBusinessId: null, 
-          activeEmployeeId: null, 
-          isLoggedIn: false, 
-          userPhone: null,
-          userRole: 'admin',
-          employeeName: 'Owner / Admin'
+        SecureStore.deleteItemAsync("auth_token").catch((err) => {
+          console.error("Failed to delete token from SecureStore:", err);
         });
         useCart.getState().clearCart();
       },
