@@ -9,6 +9,8 @@ import {
   Package, Search, Plus, Minus, AlertTriangle, 
   History, ArrowUpRight, ArrowDownLeft, X, Save
 } from 'lucide-react';
+import './stocks.css';
+
 
 interface DBProduct {
   id: string;
@@ -443,7 +445,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    height: '100vh',
+    height: '100%',
     overflow: 'hidden',
   },
   toast: {

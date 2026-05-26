@@ -1,30 +1,34 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import { Store, Shield, ArrowRight, MessageSquare, CheckCircle } from 'lucide-react';
+import { useSettingsStore } from '../../stores/settingsStore';
+import database from '../../db/database';
+import { supabase, syncDatabase } from '../../services/sync';
+import { ArrowRight, MessageSquare, CheckCircle } from 'lucide-react';
 
 export default function AuthPage() {
   const router = useRouter();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
-  const login = useAuthStore((s) => s.login);
-  const userPhone = useAuthStore((s) => s.userPhone);
-  const registerBusiness = useBusinessStore((s) => s.registerBusiness);
+  const loginWithEmployee = useAuthStore((s) => s.loginWithEmployee);
   const loadBusinesses = useBusinessStore((s) => s.loadBusinessesFromDb);
-  const businesses = useBusinessStore((s) => s.businesses);
 
-  const [step, setStep] = useState<'phone' | 'otp' | 'register'>('phone');
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpError, setOtpError] = useState('');
+  const [verificationToken, setVerificationToken] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Register Business fields
-  const [bizName, setBizName] = useState('');
-  const [bizCategory, setBizCategory] = useState('General Retail');
-  const [bizAddress, setBizAddress] = useState('');
-  const [registering, setRegistering] = useState(false);
+  // Separate inputs for 5-digit OTP
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '']);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(30);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -35,49 +39,325 @@ export default function AuthPage() {
         if (list.length > 0 && active && active.id !== '0') {
           router.push('/');
         } else {
-          setStep('register');
+          triggerToast("Account onboarding is incomplete. Please register using the mobile app.");
+          useAuthStore.getState().logout();
         }
       });
     }
   }, [isLoggedIn, loadBusinesses, router]);
 
-  const handlePhoneSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (phone.length < 8) return;
-    setStep('otp');
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setOtpError('');
-    const success = login(phone, otp);
-    if (!success) {
-      setOtpError('Invalid verification code. Try "11111" for testing.');
+  // Countdown timer for Resend OTP
+  useEffect(() => {
+    if (step === 'otp' && resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [step, resendCooldown]);
+
+  // Focus the first input automatically when entering OTP step
+  useEffect(() => {
+    if (step === 'otp') {
+      setTimeout(() => {
+        otpRefs.current[0]?.focus();
+      }, 50);
+    }
+  }, [step]);
+
+  const handleOtpDigitChange = (index: number, value: string) => {
+    const cleanVal = value.replace(/\D/g, '').slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = cleanVal;
+    setOtpDigits(newDigits);
+    const fullOtp = newDigits.join('');
+    setOtp(fullOtp);
+
+    // Auto-focus next input
+    if (cleanVal && index < 4) {
+      otpRefs.current[index + 1]?.focus();
+    }
+
+    // Auto verify when 5 digits are entered
+    if (fullOtp.length === 5) {
+      handleOtpSubmit(undefined, fullOtp);
     }
   };
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (!otpDigits[index] && index > 0) {
+        const newDigits = [...otpDigits];
+        newDigits[index - 1] = '';
+        setOtpDigits(newDigits);
+        setOtp(newDigits.join(''));
+        otpRefs.current[index - 1]?.focus();
+      } else {
+        const newDigits = [...otpDigits];
+        newDigits[index] = '';
+        setOtpDigits(newDigits);
+        setOtp(newDigits.join(''));
+      }
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    if (!bizName || !bizAddress) return;
-    setRegistering(true);
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 5);
+    if (pastedData.length > 0) {
+      const newDigits = [...otpDigits];
+      for (let i = 0; i < 5; i++) {
+        if (pastedData[i]) {
+          newDigits[i] = pastedData[i];
+        }
+      }
+      setOtpDigits(newDigits);
+      const fullOtp = newDigits.join('');
+      setOtp(fullOtp);
+
+      const nextFocusIndex = Math.min(pastedData.length, 4);
+      otpRefs.current[nextFocusIndex]?.focus();
+
+      if (fullOtp.length === 5) {
+        handleOtpSubmit(undefined, fullOtp);
+      }
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || loading) return;
+    setLoading(true);
+    const cleanPhone = normalizePhone(phone);
     try {
-      await registerBusiness(bizName, bizAddress, phone, bizCategory);
-      // Wait for store profiles to load
-      await loadBusinesses();
-      router.push('/');
-    } catch (err) {
-      console.error(err);
+      const response = await fetch("/api/auth/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ phone_number: cleanPhone }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to resend code. Please try again.");
+      }
+
+      const data = await response.json();
+      setVerificationToken(data.token || "");
+      setOtp('');
+      setOtpDigits(['', '', '', '', '']);
+      setResendCooldown(30);
+      triggerToast("Verification code resent to +94 " + phone);
+
+      setTimeout(() => {
+        otpRefs.current[0]?.focus();
+      }, 50);
+    } catch (err: any) {
+      triggerToast(err.message || "Network error. Please try again.");
     } finally {
-      setRegistering(false);
+      setLoading(false);
+    }
+  };
+
+  const normalizePhone = (phoneStr: string): string => {
+    let cleaned = phoneStr.replace(/\D/g, "");
+    if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
+    if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+    return cleaned;
+  };
+
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPhone = normalizePhone(phone);
+    if (cleanPhone.length !== 9) {
+      triggerToast("Please enter a valid mobile number!");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch("/api/auth/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ phone_number: cleanPhone }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to check phone number. Please try again.");
+      }
+
+      const data = await response.json();
+      setVerificationToken(data.token || "");
+      setStep('otp');
+      setOtp('');
+      setOtpDigits(['', '', '', '', '']);
+      setResendCooldown(30);
+      triggerToast("Verification code sent to +94 " + phone);
+    } catch (err: any) {
+      triggerToast(err.message || "Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e?: React.FormEvent, codeOverride?: string) => {
+    if (e) e.preventDefault();
+    if (loading) return;
+    setOtpError('');
+    const codeToVerify = codeOverride || otp;
+    if (codeToVerify.length < 5) {
+      triggerToast("Please enter a 5-digit code!");
+      return;
+    }
+    setLoading(true);
+
+    try {
+      const cleanPhone = normalizePhone(phone);
+
+      // Call verify API
+      const response = await fetch("/api/auth/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${verificationToken}`,
+        },
+        body: JSON.stringify({
+          code: codeToVerify,
+          phone_number: cleanPhone,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Invalid OTP code!");
+      }
+
+      const verifyData = await response.json();
+      if (verifyData.message !== "Success") {
+        throw new Error(verifyData.message || "Invalid OTP code!");
+      }
+
+      // Check local database for matched employee or business owner
+      const allEmployees = await database.get("employees").query().fetch();
+      const matchedEmployee = allEmployees.find((emp: any) => {
+        return normalizePhone(emp.phone || "") === cleanPhone;
+      }) as any;
+
+      if (matchedEmployee) {
+        const activeBiz = await matchedEmployee.business.fetch();
+        if (activeBiz) {
+          loginWithEmployee(
+            cleanPhone,
+            matchedEmployee.role || "cashier",
+            matchedEmployee.name || "Staff Member",
+            activeBiz.id,
+            matchedEmployee.id,
+            verificationToken
+          );
+          await loadBusinesses();
+          useBusinessStore.getState().setActiveBusiness(activeBiz.id);
+          triggerToast("Welcome back to Mini POS!");
+          router.push('/');
+          return;
+        }
+      }
+
+      const allBusinesses = await database.get("businesses").query().fetch();
+      const matchedBiz = allBusinesses.find((biz: any) => {
+        return normalizePhone(biz.phoneNumber || "") === cleanPhone;
+      });
+
+      if (matchedBiz) {
+        loginWithEmployee(
+          cleanPhone,
+          "admin",
+          "Owner / Admin",
+          matchedBiz.id,
+          "owner",
+          verificationToken
+        );
+        await loadBusinesses();
+        useBusinessStore.getState().setActiveBusiness(matchedBiz.id);
+        triggerToast("Welcome back to Mini POS!");
+        router.push('/');
+        return;
+      }
+
+      // If not found locally, check if there is a synced account in the Supabase database
+      try {
+        const { data: remoteData, error: remoteError } = await supabase.rpc(
+          "check_synced_account",
+          {
+            input_phone: cleanPhone,
+          },
+        );
+
+        if (remoteError) {
+          console.error("Failed to query remote synced account from Supabase:", remoteError);
+        } else if (remoteData && remoteData.exists) {
+          useSettingsStore.getState().setBackupEnabled(true);
+
+          triggerToast("Syncing account from cloud... 🔄");
+          const syncSuccess = await syncDatabase();
+          console.log("Database sync finished with status:", syncSuccess);
+
+          // After sync, reload businesses
+          await loadBusinesses();
+
+          // Set the active business in store
+          useBusinessStore.getState().setActiveBusiness(remoteData.business_id);
+
+          loginWithEmployee(
+            cleanPhone,
+            remoteData.role || "admin",
+            remoteData.name || "Owner / Admin",
+            remoteData.business_id,
+            remoteData.employee_id || "owner",
+            verificationToken
+          );
+
+          triggerToast("Welcome back to Mini POS!");
+          router.push('/');
+          return;
+        }
+      } catch (supabaseErr) {
+        console.error("Error checking remote synced account on Supabase:", supabaseErr);
+      }
+
+      // If no local or remote account found, block login and show alert
+      triggerToast("Account not found. Please use the mobile app to create an account. Web terminal registration is not supported.");
+      setOtp('');
+    } catch (err: any) {
+      setOtpError(err.message || "Invalid OTP. Hint: Use 11111");
+      setOtp('');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div style={styles.container} className="fade-in">
+      {/* Toast popup */}
+      {toastMessage && (
+        <div style={styles.toast}>
+          <CheckCircle size={16} color="#FFFFFF" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       <div style={styles.card}>
         {/* Brand Icon/Header */}
         <div style={styles.header}>
-          <div style={styles.logo}>S</div>
+          <div style={styles.logoWrapper}>
+            <img
+              src="/logo.png"
+              alt="Shopbook Logo"
+              style={styles.logoImage}
+            />
+          </div>
           <h2 style={styles.title}>Shopbook Mini POS</h2>
           <p style={styles.subtitle}>Premium Web Billing Terminal</p>
         </div>
@@ -88,22 +368,23 @@ export default function AuthPage() {
               <label style={styles.label}>Phone Number</label>
               <input
                 type="tel"
-                placeholder="e.g. +94 77 123 4567"
+                placeholder="eg: 07X XXX XXXX"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
+                disabled={loading}
                 style={styles.input}
               />
             </div>
             <button
               type="submit"
-              disabled={phone.length < 8}
+              disabled={normalizePhone(phone).length !== 9 || loading}
               style={{
                 ...styles.button,
-                ...(phone.length < 8 ? styles.buttonDisabled : {}),
+                ...(normalizePhone(phone).length !== 9 || loading ? styles.buttonDisabled : {}),
               }}
             >
-              <span>Send OTP Verification</span>
+              <span>{loading ? 'Sending Code...' : 'Send OTP Verification'}</span>
               <ArrowRight size={16} />
             </button>
           </form>
@@ -118,106 +399,75 @@ export default function AuthPage() {
 
             <div style={styles.inputGroup}>
               <label style={styles.label}>5-Digit Verification Code</label>
-              <input
-                type="text"
-                maxLength={5}
-                placeholder="Enter 11111 to bypass"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-                style={styles.input}
-              />
+              <div style={styles.otpInputContainer}>
+                {otpDigits.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    type="text"
+                    maxLength={1}
+                    value={digit}
+                    ref={(el) => { otpRefs.current[idx] = el; }}
+                    onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                    onPaste={handleOtpPaste}
+                    onFocus={() => setFocusedIndex(idx)}
+                    onBlur={() => setFocusedIndex(null)}
+                    required
+                    disabled={loading}
+                    style={{
+                      ...styles.otpDigitInput,
+                      ...(focusedIndex === idx ? styles.otpDigitInputFocus : {})
+                    }}
+                  />
+                ))}
+              </div>
               {otpError && <p style={styles.errorText}>{otpError}</p>}
+            </div>
+
+            {/* Resend OTP Cooldown Section */}
+            <div style={styles.resendContainer}>
+              <span style={styles.resendText}>Didn't receive the code?</span>
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0 || loading}
+                style={{
+                  ...styles.resendBtn,
+                  ...(resendCooldown > 0 || loading ? styles.resendBtnDisabled : {})
+                }}
+              >
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+              </button>
             </div>
 
             <div style={styles.otpBtnGroup}>
               <button
                 type="button"
                 onClick={() => setStep('phone')}
+                disabled={loading}
                 style={styles.backBtn}
               >
                 Back
               </button>
               <button
                 type="submit"
-                disabled={otp.length !== 5}
+                disabled={otp.length !== 5 || loading}
                 style={{
                   ...styles.button,
                   flex: 1,
-                  ...(otp.length !== 5 ? styles.buttonDisabled : {}),
+                  ...(otp.length !== 5 || loading ? styles.buttonDisabled : {}),
                 }}
               >
-                Verify & Log In
+                <span>{loading ? 'Verifying...' : 'Verify & Log In'}</span>
               </button>
             </div>
           </form>
         )}
 
-        {step === 'register' && (
-          <form onSubmit={handleRegisterSubmit} style={styles.form}>
-            <div style={styles.registerHeader}>
-              <Store size={22} color="var(--primary)" />
-              <h3 style={styles.registerTitle}>Onboard Your Shop</h3>
-            </div>
-            <p style={styles.registerSub}>Let's configure your basic store details to build your invoice catalog.</p>
-
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Business / Store Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Royal Bakery"
-                value={bizName}
-                onChange={(e) => setBizName(e.target.value)}
-                required
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Business Category</label>
-              <select
-                value={bizCategory}
-                onChange={(e) => setBizCategory(e.target.value)}
-                style={styles.select}
-              >
-                <option value="General Retail">General Retail</option>
-                <option value="Grocery Store">Grocery Store</option>
-                <option value="Boutique / Apparel">Boutique / Apparel</option>
-                <option value="Restaurant / Cafe">Restaurant / Cafe</option>
-                <option value="Pharmacy">Pharmacy</option>
-              </select>
-            </div>
-
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Physical Address</label>
-              <input
-                type="text"
-                placeholder="e.g. 102 Galle Road, Colombo 03"
-                value={bizAddress}
-                onChange={(e) => setBizAddress(e.target.value)}
-                required
-                style={styles.input}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={registering || !bizName || !bizAddress}
-              style={{
-                ...styles.button,
-                ...(registering || !bizName || !bizAddress ? styles.buttonDisabled : {}),
-              }}
-            >
-              <span>{registering ? 'Creating Store Profiles...' : 'Initialize Billing Workspace'}</span>
-              <CheckCircle size={16} />
-            </button>
-          </form>
-        )}
-
-        {/* Security badge footer */}
-        <div style={styles.footer}>
-          <Shield size={14} color="var(--muted)" />
-          <span>Secured Terminal · Sri Lanka</span>
+        {/* Powered by Shopbook */}
+        <div style={styles.poweredByContainer}>
+          <span style={styles.poweredByText}>powered by</span>
+          <span style={styles.poweredByBrand}>Shopbook</span>
         </div>
       </div>
     </div>
@@ -241,7 +491,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 'var(--radius-lg)',
     boxShadow: 'var(--shadow-lg)',
     border: '1px solid var(--border)',
-    padding: '36px',
+    padding: '28px 24px 20px 24px',
     display: 'flex',
     flexDirection: 'column',
   },
@@ -250,21 +500,25 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     textAlign: 'center',
-    marginBottom: '28px',
+    marginBottom: '20px',
   },
-  logo: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '12px',
-    backgroundColor: 'var(--primary)',
-    color: '#ffffff',
+  logoWrapper: {
+    width: '80px',
+    height: '80px',
+    borderRadius: '20px',
+    backgroundColor: '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontWeight: '800',
-    fontSize: '26px',
-    marginBottom: '16px',
-    boxShadow: '0 8px 16px rgba(37, 99, 235, 0.25)',
+    marginBottom: '12px',
+    boxShadow: '0 8px 16px rgba(0, 0, 0, 0.08)',
+    border: '1px solid var(--border)',
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '130%',
+    height: '130%',
+    objectFit: 'contain',
   },
   title: {
     fontSize: '20px',
@@ -280,7 +534,7 @@ const styles: Record<string, React.CSSProperties> = {
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '18px',
+    gap: '16px',
   },
   inputGroup: {
     display: 'flex',
@@ -390,14 +644,92 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: '1.5',
     marginBottom: '8px',
   },
-  footer: {
+  poweredByContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    marginTop: '24px',
+  },
+  poweredByText: {
+    fontSize: '12px',
+    color: 'var(--muted)',
+  },
+  poweredByBrand: {
+    fontSize: '13px',
+    fontWeight: 'bold',
+    color: 'var(--primary)',
+    letterSpacing: '0.5px',
+  },
+  toast: {
+    position: 'fixed',
+    top: '24px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'var(--primary)',
+    color: '#ffffff',
+    padding: '12px 24px',
+    borderRadius: '30px',
+    fontWeight: 'bold',
+    fontSize: '13px',
+    zIndex: 99999,
+    boxShadow: '0 10px 20px rgba(37, 99, 235, 0.25)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  otpInputContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '10px',
+    marginTop: '8px',
+  },
+  otpDigitInput: {
+    width: '46px',
+    height: '46px',
+    borderRadius: 'var(--radius)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--border)',
+    fontSize: '20px',
+    fontWeight: '800',
+    textAlign: 'center',
+    color: 'var(--dark)',
+    backgroundColor: 'var(--background)',
+    outline: 'none',
+    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+  otpDigitInputFocus: {
+    borderColor: 'var(--primary)',
+    boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.15)',
+    backgroundColor: '#ffffff',
+  },
+  resendContainer: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '6px',
-    marginTop: '32px',
-    fontSize: '11px',
+    gap: '8px',
+    marginTop: '6px',
+    fontSize: '13px',
+  },
+  resendText: {
     color: 'var(--muted)',
-    fontWeight: '500',
+  },
+  resendBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--primary)',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    padding: 0,
+    fontSize: '13px',
+    textDecoration: 'underline',
+    outline: 'none',
+  },
+  resendBtnDisabled: {
+    color: 'var(--muted)',
+    cursor: 'not-allowed',
+    textDecoration: 'none',
   },
 };

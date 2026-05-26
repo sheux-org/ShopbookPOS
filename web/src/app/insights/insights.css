@@ -1,0 +1,19 @@
+/* Responsive Workspaces */
+@media (max-width: 1023px) {
+  .insights-workspace {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+
+  .insights-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Small devices (phones < 768px) */
+@media (max-width: 767px) {
+  .insights-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

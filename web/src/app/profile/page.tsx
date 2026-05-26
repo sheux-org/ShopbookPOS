@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
-import { useBusinessStore, Business } from '../../stores/businessStore';
+import { useBusinessStore } from '../../stores/businessStore';
 import database from '../../db/database';
 import { Q } from '@nozbe/watermelondb';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -11,7 +11,7 @@ import { syncDatabase } from '../../services/sync';
 import { 
   User, Store, Users, Cloud, RefreshCw, LogOut, 
   HelpCircle, CheckCircle, ChevronRight, X, UserPlus, MapPin, Save,
-  PlusCircle
+  PlusCircle, Shield, Phone, Database, HardDrive
 } from 'lucide-react';
 
 interface DBEmployee {
@@ -70,17 +70,14 @@ export default function ProfilePage() {
     try {
       const activeBiz = useBusinessStore.getState().activeBusiness;
       if (!activeBiz || activeBiz.id === '0') return;
-      const bizRecords = await database.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
-      if (bizRecords.length > 0) {
-        const emps = await database.get('employees').query(Q.where('business_id', bizRecords[0].id)).fetch() as any[];
-        setEmployees(emps.map(e => ({
-          id: e.id,
-          name: e.name,
-          role: e.role,
-          phone: e.phone,
-          email: e.email
-        })));
-      }
+      const emps = await database.get('employees').query(Q.where('business_id', activeBiz.id)).fetch() as any[];
+      setEmployees(emps.map(e => ({
+        id: e.id,
+        name: e.name,
+        role: e.role,
+        phone: e.phone,
+        email: e.email
+      })));
     } catch (err) {
       console.error("Failed to load staff list:", err);
     }
@@ -88,12 +85,18 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (isLoggedIn) {
-      loadEmployees();
-      // Initialize edit forms
-      setEditName(activeBusiness?.name || '');
-      setEditCategory(activeBusiness?.category || '');
-      setEditAddress(activeBusiness?.address || '');
-      setEditPhone(activeBusiness?.phone || '');
+      loadBusinesses().then(() => {
+        loadEmployees();
+      });
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn && activeBusiness) {
+      setEditName(activeBusiness.name || '');
+      setEditCategory(activeBusiness.category || '');
+      setEditAddress(activeBusiness.address || '');
+      setEditPhone(activeBusiness.phone || '');
     }
   }, [isLoggedIn, activeBusiness]);
 
@@ -126,15 +129,13 @@ export default function ProfilePage() {
     try {
       const activeBiz = useBusinessStore.getState().activeBusiness;
       await database.write(async () => {
-        const bizs = await database.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
-        if (bizs.length > 0) {
-          await database.get('employees').create((emp: any) => {
-            emp.business.set(bizs[0]);
-            emp.name = newStaffName;
-            emp.role = newStaffRole;
-            emp.phone = newStaffPhone;
-          });
-        }
+        const biz = await database.get('businesses').find(activeBiz.id);
+        await database.get('employees').create((emp: any) => {
+          emp.business.set(biz);
+          emp.name = newStaffName;
+          emp.role = newStaffRole;
+          emp.phone = newStaffPhone;
+        });
       });
 
       triggerToast(`Staff ${newStaffName} registered successfully! 👥`);
@@ -183,129 +184,185 @@ export default function ProfilePage() {
       {/* Toast popup */}
       {toastMsg && (
         <div style={styles.toast}>
+          <CheckCircle size={16} color="#FFFFFF" />
           <span>{toastMsg}</span>
         </div>
       )}
 
-
-      {/* Workspace Settings Content */}
-      <div style={styles.body}>
-        {/* Profile Card Summary */}
-        <div style={styles.profileSummary}>
-          <div style={styles.avatar}>
-            {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'}
+      {/* Two-Column SaaS Dashboard Layout */}
+      <div style={styles.dashboardGrid}>
+        
+        {/* Left Column: Premium Summary & Status Card */}
+        <div style={styles.leftColumn}>
+          <div style={styles.profileCard}>
+            <div style={styles.avatar}>
+              {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'}
+            </div>
+            <h3 style={styles.bizName}>{activeBusiness?.name || 'Partner Store'}</h3>
+            <span style={{
+              ...styles.roleBadge,
+              backgroundColor: userRole === 'admin' ? '#FEE2E2' : userRole === 'manager' ? '#FFEDD5' : '#E6F4EA',
+              color: userRole === 'admin' ? '#DC2626' : userRole === 'manager' ? '#D97706' : '#137333',
+            }}>
+              {userRole.toUpperCase()}
+            </span>
+            <p style={styles.categoryPill}>{activeBusiness?.category || 'General POS Retail'}</p>
           </div>
-          <h3 style={styles.bizName}>{activeBusiness?.name || 'Partner Store'}</h3>
-          <span style={styles.tagline}>🛡️ {userRole.toUpperCase()} · TERMINAL POS ACTIVE</span>
+
+          {/* System status metadata */}
+          <div style={styles.metaCard}>
+            <h4 style={styles.metaCardTitle}>Terminal System Details</h4>
+            
+            <div style={styles.metaItem}>
+              <User size={14} color="var(--muted)" />
+              <div style={styles.metaInfo}>
+                <span style={styles.metaLabel}>Operator Name</span>
+                <span style={styles.metaVal}>{employeeName}</span>
+              </div>
+            </div>
+
+            <div style={styles.metaItem}>
+              <Phone size={14} color="var(--muted)" />
+              <div style={styles.metaInfo}>
+                <span style={styles.metaLabel}>Phone Credentials</span>
+                <span style={styles.metaVal}>{userPhone || 'Not Configured'}</span>
+              </div>
+            </div>
+
+            <div style={styles.metaItem}>
+              <Database size={14} color="var(--muted)" />
+              <div style={styles.metaInfo}>
+                <span style={styles.metaLabel}>Local Database</span>
+                <span style={styles.metaVal}>WatermelonDB (Active)</span>
+              </div>
+            </div>
+
+            <div style={styles.metaItem}>
+              <Cloud size={14} color="var(--muted)" />
+              <div style={styles.metaInfo}>
+                <span style={styles.metaLabel}>Supabase Sync</span>
+                <span style={{
+                  ...styles.metaVal,
+                  color: isBackupEnabled ? 'var(--success)' : 'var(--muted)'
+                }}>
+                  {isBackupEnabled ? 'Enabled (Online)' : 'Disabled'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Option rows list */}
-        <div style={styles.optionsList}>
-          {/* Option: Store details */}
-          <div style={styles.optionRow} onClick={() => setActiveModal('details')}>
-            <div style={{ ...styles.iconBox, backgroundColor: '#EFF6FF', color: 'var(--primary)' }}>
-              <Store size={18} />
-            </div>
-            <div style={styles.optionDetails}>
-              <h4 style={styles.optionTitle}>Store Details</h4>
-              <p style={styles.optionSub}>Manage receipt addresses, branch phone details, categories</p>
-            </div>
-            <ChevronRight size={16} color="var(--muted)" />
-          </div>
+        {/* Right Column: SaaS Profile Options list */}
+        <div style={styles.rightColumn}>
+          <h3 style={styles.sectionHeader}>Terminal Operations Settings</h3>
 
-          {/* Option: Switch branches */}
-          <div style={styles.optionRow} onClick={() => setActiveModal('branches')}>
-            <div style={{ ...styles.iconBox, backgroundColor: '#FEF7E0', color: '#B06000' }}>
-              <MapPin size={18} />
-            </div>
-            <div style={styles.optionDetails}>
-              <h4 style={styles.optionTitle}>Branches Management</h4>
-              <p style={styles.optionSub}>Registered locations: {businesses.length} · Create & switch branches</p>
-            </div>
-            <ChevronRight size={16} color="var(--muted)" />
-          </div>
-
-          {/* Option: Staff Management */}
-          {userRole === 'admin' && (
-            <div style={styles.optionRow} onClick={() => setActiveModal('staff')}>
-              <div style={{ ...styles.iconBox, backgroundColor: '#E6F4EA', color: '#137333' }}>
-                <Users size={18} />
+          <div style={styles.optionsGrid}>
+            {/* Option: Store details */}
+            <div style={styles.optionCard} onClick={() => setActiveModal('details')}>
+              <div style={{ ...styles.iconBox, backgroundColor: '#eff6ff', color: 'var(--primary)' }}>
+                <Store size={20} />
               </div>
               <div style={styles.optionDetails}>
-                <h4 style={styles.optionTitle}>Staff Accounts Management</h4>
-                <p style={styles.optionSub}>Onboard cashier terminals, manage admins and managers</p>
+                <h4 style={styles.optionTitle}>Store Profile Details</h4>
+                <p style={styles.optionSub}>Manage receipt layouts, address, phone details and categories.</p>
               </div>
-              <ChevronRight size={16} color="var(--muted)" />
+              <ChevronRight size={18} color="var(--muted)" />
             </div>
-          )}
 
-          {/* Option: Auto cloud backup toggle */}
-          <div style={styles.optionRow}>
-            <div style={{ ...styles.iconBox, backgroundColor: '#EFF6FF', color: 'var(--primary)' }}>
-              <Cloud size={18} />
+            {/* Option: Switch branches */}
+            <div style={styles.optionCard} onClick={() => setActiveModal('branches')}>
+              <div style={{ ...styles.iconBox, backgroundColor: '#fef7e0', color: '#b06000' }}>
+                <MapPin size={20} />
+              </div>
+              <div style={styles.optionDetails}>
+                <h4 style={styles.optionTitle}>Locations & Branches</h4>
+                <p style={styles.optionSub}>Registered locations: {businesses.length} · Initialize and swap active terminals.</p>
+              </div>
+              <ChevronRight size={18} color="var(--muted)" />
             </div>
-            <div style={styles.optionDetails}>
-              <h4 style={styles.optionTitle}>Auto Backup to Cloud</h4>
-              <p style={styles.optionSub}>{isBackupEnabled ? 'Real-time IndexedDB sync to Supabase is active' : 'Enable backup parameters'}</p>
+
+            {/* Option: Staff Management */}
+            {userRole === 'admin' && (
+              <div style={styles.optionCard} onClick={() => setActiveModal('staff')}>
+                <div style={{ ...styles.iconBox, backgroundColor: '#e6f4ea', color: '#137333' }}>
+                  <Users size={20} />
+                </div>
+                <div style={styles.optionDetails}>
+                  <h4 style={styles.optionTitle}>Staff Accounts Management</h4>
+                  <p style={styles.optionSub}>Onboard cashmere cashiers, managers, and administrative access ranks.</p>
+                </div>
+                <ChevronRight size={18} color="var(--muted)" />
+              </div>
+            )}
+
+            {/* Option: Auto cloud backup toggle */}
+            <div style={styles.optionCard}>
+              <div style={{ ...styles.iconBox, backgroundColor: '#eff6ff', color: 'var(--primary)' }}>
+                <Cloud size={20} />
+              </div>
+              <div style={styles.optionDetails}>
+                <h4 style={styles.optionTitle}>Real-time Cloud Backups</h4>
+                <p style={styles.optionSub}>Continuously replicate transaction logs and ledger data to cloud databases.</p>
+              </div>
+              <button 
+                onClick={toggleBackup}
+                style={{
+                  ...styles.switchBtn,
+                  backgroundColor: isBackupEnabled ? 'var(--primary)' : '#d1d5db',
+                }}
+              >
+                <div style={{
+                  ...styles.switchThumb,
+                  transform: isBackupEnabled ? 'translateX(20px)' : 'translateX(0)',
+                }} />
+              </button>
             </div>
-            <button 
-              onClick={toggleBackup}
-              style={{
-                ...styles.switchBtn,
-                backgroundColor: isBackupEnabled ? 'var(--primary)' : '#d1d5db',
+
+            {/* Option: Manual Sync */}
+            {isBackupEnabled && (
+              <div style={styles.optionCard} onClick={handleManualSync}>
+                <div style={{ ...styles.iconBox, backgroundColor: '#e6f4ea', color: '#137333' }}>
+                  <RefreshCw size={20} className={syncing ? 'spin-anim' : ''} />
+                </div>
+                <div style={styles.optionDetails}>
+                  <h4 style={styles.optionTitle}>Force Database Sync</h4>
+                  <p style={styles.optionSub}>Manually push latest offline transaction queue to remote clusters.</p>
+                </div>
+                <ChevronRight size={18} color="var(--muted)" />
+              </div>
+            )}
+
+            {/* Option: Support FAQs */}
+            <div style={styles.optionCard} onClick={() => setActiveModal('faq')}>
+              <div style={{ ...styles.iconBox, backgroundColor: '#f3f4f6', color: 'var(--dark)' }}>
+                <HelpCircle size={20} />
+              </div>
+              <div style={styles.optionDetails}>
+                <h4 style={styles.optionTitle}>Help FAQ & Printing Manual</h4>
+                <p style={styles.optionSub}>Audit guidelines, print configuration, and offline-first database setup.</p>
+              </div>
+              <ChevronRight size={18} color="var(--muted)" />
+            </div>
+
+            {/* Option: Log out */}
+            <div 
+              style={styles.optionCard}
+              onClick={() => {
+                if (confirm('Disconnect POS terminal session?')) {
+                  logout();
+                  router.push('/auth');
+                }
               }}
             >
-              <div style={{
-                ...styles.switchThumb,
-                transform: isBackupEnabled ? 'translateX(20px)' : 'translateX(0)',
-              }} />
-            </button>
-          </div>
-
-          {/* Option: Manual Sync */}
-          {isBackupEnabled && (
-            <div style={styles.optionRow} onClick={handleManualSync}>
-              <div style={{ ...styles.iconBox, backgroundColor: '#E6F4EA', color: '#137333' }}>
-                <RefreshCw size={18} />
+              <div style={{ ...styles.iconBox, backgroundColor: '#fff1f2', color: 'var(--error)' }}>
+                <LogOut size={20} />
               </div>
               <div style={styles.optionDetails}>
-                <h4 style={styles.optionTitle}>Sync Database Now</h4>
-                <p style={styles.optionSub}>Manually synchronize offline sales ledger to Supabase database</p>
+                <h4 style={{ ...styles.optionTitle, color: 'var(--error)' }}>Sign Out Session</h4>
+                <p style={styles.optionSub}>Safely commit local storage states and disconnect current terminal access.</p>
               </div>
-              <ChevronRight size={16} color="var(--muted)" />
+              <ChevronRight size={18} color="var(--muted)" />
             </div>
-          )}
-
-          {/* Option: Support FAQs */}
-          <div style={styles.optionRow} onClick={() => setActiveModal('faq')}>
-            <div style={{ ...styles.iconBox, backgroundColor: '#f3f4f6', color: 'var(--dark)' }}>
-              <HelpCircle size={18} />
-            </div>
-            <div style={styles.optionDetails}>
-              <h4 style={styles.optionTitle}>Help FAQ & Support Details</h4>
-              <p style={styles.optionSub}>Terminals onboarding queries, printer connectivity guidelines</p>
-            </div>
-            <ChevronRight size={16} color="var(--muted)" />
-          </div>
-
-          {/* Option: Log out */}
-          <div 
-            style={{ ...styles.optionRow, borderBottom: 'none' }}
-            onClick={() => {
-              if (confirm('Disconnect POS terminal?')) {
-                logout();
-                router.push('/auth');
-              }
-            }}
-          >
-            <div style={{ ...styles.iconBox, backgroundColor: '#FFF1F2', color: 'var(--error)' }}>
-              <LogOut size={18} />
-            </div>
-            <div style={styles.optionDetails}>
-              <h4 style={{ ...styles.optionTitle, color: 'var(--error)' }}>Sign Out Session</h4>
-              <p style={styles.optionSub}>Saves and disconnects terminal session profile</p>
-            </div>
-            <ChevronRight size={16} color="var(--muted)" />
           </div>
         </div>
       </div>
@@ -317,12 +374,12 @@ export default function ProfilePage() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
             <div style={styles.modalHeader}>
-              <h3>Update Store Details</h3>
+              <h3>Update Store details</h3>
               <button onClick={() => setActiveModal(null)} style={styles.modalCloseBtn}><X size={16} /></button>
             </div>
             <form onSubmit={handleStoreDetailsSubmit} style={styles.modalBody}>
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Business / Brand Name</label>
+                <label style={styles.modalLabel}>Business Brand Name</label>
                 <input 
                   type="text" 
                   value={editName}
@@ -383,7 +440,6 @@ export default function ProfilePage() {
               <button onClick={() => setActiveModal(null)} style={styles.modalCloseBtn}><X size={16} /></button>
             </div>
             <div style={{ ...styles.modalBody, flexDirection: 'row', gap: '24px' }}>
-              {/* Form Add Staff */}
               <form onSubmit={handleAddStaffSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <h4 style={styles.formTitle}>Onboard Staff Member</h4>
                 
@@ -430,7 +486,6 @@ export default function ProfilePage() {
                 </button>
               </form>
 
-              {/* Staff logs list */}
               <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <h4 style={styles.formTitle}>Active Store Personnel ({employees.length})</h4>
                 <div style={styles.staffScroller}>
@@ -444,6 +499,7 @@ export default function ProfilePage() {
                         ...styles.roleBadge,
                         backgroundColor: emp.role === 'admin' ? '#FEE2E2' : emp.role === 'manager' ? '#FFEDD5' : '#E6F4EA',
                         color: emp.role === 'admin' ? '#DC2626' : emp.role === 'manager' ? '#D97706' : '#137333',
+                        marginTop: 0
                       }}>
                         {emp.role.toUpperCase()}
                       </span>
@@ -465,7 +521,6 @@ export default function ProfilePage() {
               <button onClick={() => setActiveModal(null)} style={styles.modalCloseBtn}><X size={16} /></button>
             </div>
             <div style={{ ...styles.modalBody, flexDirection: 'row', gap: '24px' }}>
-              {/* Form Add Branch */}
               <form onSubmit={handleAddBranchSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <h4 style={styles.formTitle}>Initialize New Branch Location</h4>
                 
@@ -473,7 +528,7 @@ export default function ProfilePage() {
                   <label style={styles.modalLabel}>Branch Name</label>
                   <input 
                     type="text" 
-                    placeholder="e.g. Shopbook POS - Kandy Branch" 
+                    placeholder="e.g. Shopbook Kandy Branch" 
                     value={newBranchName}
                     onChange={(e) => setNewBranchName(e.target.value)}
                     required
@@ -512,7 +567,6 @@ export default function ProfilePage() {
                 </button>
               </form>
 
-              {/* Branch switcher list */}
               <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <h4 style={styles.formTitle}>Registered branches ({businesses.length})</h4>
                 <div style={styles.branchScroller}>
@@ -584,7 +638,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    height: '100vh',
+    height: '100%',
     overflow: 'hidden',
   },
   toast: {
@@ -600,39 +654,41 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '13px',
     zIndex: 99999,
     boxShadow: '0 10px 20px rgba(22, 163, 74, 0.25)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   },
-  header: {
-    padding: '24px',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid var(--border)',
-    flexShrink: 0,
-  },
-  headerTitle: {
-    fontSize: '18px',
-    fontWeight: '800',
-    color: 'var(--dark)',
-  },
-  headerSubtitle: {
-    fontSize: '12px',
-    color: 'var(--muted)',
-    marginTop: '2px',
-  },
-  body: {
+  dashboardGrid: {
     flex: 1,
-    overflowY: 'auto',
-    padding: '28px 24px',
+    display: 'grid',
+    gridTemplateColumns: '320px 1fr',
+    gap: '32px',
+    padding: '32px',
+    overflow: 'hidden',
+    height: '100%',
+  },
+  leftColumn: {
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
     gap: '24px',
+    overflowY: 'auto',
   },
-  profileSummary: {
-    width: '100%',
-    maxWidth: '560px',
+  rightColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    overflowY: 'auto',
     backgroundColor: '#ffffff',
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-lg)',
-    padding: '24px',
+    padding: '32px',
+    boxShadow: 'var(--shadow)',
+  },
+  profileCard: {
+    backgroundColor: '#ffffff',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '32px 24px',
     textAlign: 'center',
     display: 'flex',
     flexDirection: 'column',
@@ -641,60 +697,114 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: 'var(--shadow)',
   },
   avatar: {
-    width: '64px',
-    height: '64px',
-    borderRadius: '32px',
+    width: '72px',
+    height: '72px',
+    borderRadius: '36px',
     backgroundColor: 'var(--primary)',
     color: '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: '800',
-    fontSize: '20px',
+    fontSize: '22px',
     boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
+    marginBottom: '6px',
   },
   bizName: {
-    fontSize: '16px',
-    fontWeight: 'bold',
+    fontSize: '17px',
+    fontWeight: '800',
     color: 'var(--dark)',
   },
-  tagline: {
-    fontSize: '11px',
+  roleBadge: {
+    display: 'inline-block',
+    fontSize: '10px',
     fontWeight: '800',
-    color: '#137333',
-    backgroundColor: '#e6f4ea',
-    padding: '3px 8px',
-    borderRadius: '12px',
+    padding: '3px 10px',
+    borderRadius: '20px',
+    letterSpacing: '0.5px',
+    marginTop: '2px',
   },
-  optionsList: {
-    width: '100%',
-    maxWidth: '560px',
+  categoryPill: {
+    fontSize: '11px',
+    color: 'var(--muted)',
+  },
+  metaCard: {
     backgroundColor: '#ffffff',
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius-lg)',
-    boxShadow: 'var(--shadow)',
+    padding: '24px',
     display: 'flex',
     flexDirection: 'column',
+    gap: '16px',
+    boxShadow: 'var(--shadow)',
   },
-  optionRow: {
+  metaCardTitle: {
+    fontSize: '12px',
+    fontWeight: '800',
+    color: 'var(--dark)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    borderBottom: '1px solid var(--border)',
+    paddingBottom: '8px',
+    marginBottom: '4px',
+  },
+  metaItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  metaInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  metaLabel: {
+    fontSize: '10px',
+    color: 'var(--muted)',
+    fontWeight: 'bold',
+  },
+  metaVal: {
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: 'var(--dark)',
+  },
+  sectionHeader: {
+    fontSize: '16px',
+    fontWeight: '800',
+    color: 'var(--dark)',
+    borderBottom: '1px solid var(--border)',
+    paddingBottom: '12px',
+    marginBottom: '8px',
+  },
+  optionsGrid: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  optionCard: {
     display: 'flex',
     alignItems: 'center',
     padding: '16px 20px',
-    borderBottom: '1px solid var(--border)',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: '#ffffff',
     cursor: 'pointer',
-    transition: 'background-color 0.15s ease',
+    transition: 'all 0.2s ease',
+    boxShadow: 'var(--shadow)',
   },
   iconBox: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '10px',
+    width: '40px',
+    height: '40px',
+    borderRadius: '12px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
+    flexShrink: 0,
   },
   optionDetails: {
     flex: 1,
+    paddingRight: '12px',
   },
   optionTitle: {
     fontSize: '13px',
@@ -705,6 +815,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '11px',
     color: 'var(--muted)',
     marginTop: '3px',
+    lineHeight: '1.4',
   },
   switchBtn: {
     width: '42px',
@@ -716,6 +827,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     transition: 'background-color 0.2s ease',
+    flexShrink: 0,
   },
   switchThumb: {
     width: '18px',
@@ -725,46 +837,59 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
     transition: 'transform 0.2s ease',
   },
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999,
-    backdropFilter: 'blur(3px)',
+  formTitle: {
+    fontSize: '13px',
+    fontWeight: '800',
+    color: 'var(--dark)',
+    marginBottom: '4px',
   },
-  modalContent: {
-    width: '100%',
-    maxWidth: '440px',
-    backgroundColor: '#ffffff',
-    borderRadius: 'var(--radius-lg)',
-    boxShadow: 'var(--shadow-lg)',
-    border: '1px solid var(--border)',
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    padding: '16px 20px',
-    borderBottom: '1px solid var(--border)',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalCloseBtn: {
-    border: 'none',
-    backgroundColor: 'transparent',
-    color: 'var(--muted)',
-    cursor: 'pointer',
-  },
-  modalBody: {
-    padding: '24px',
+  staffScroller: {
+    maxHeight: '260px',
+    overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '8px',
+  },
+  staffCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 14px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--background)',
+  },
+  branchScroller: {
+    maxHeight: '260px',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  branchCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 14px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    transition: 'all 0.15s ease',
+  },
+  activeLabel: {
+    fontSize: '9px',
+    fontWeight: '800',
+    backgroundColor: 'var(--primary)',
+    color: '#ffffff',
+    padding: '2px 6px',
+    borderRadius: '4px',
+  },
+  faqBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    paddingBottom: '16px',
+    borderBottom: '1px solid var(--border)',
+    marginBottom: '16px',
   },
   modalInputGroup: {
     display: 'flex',
@@ -787,6 +912,16 @@ const styles: Record<string, React.CSSProperties> = {
     outline: 'none',
     backgroundColor: 'var(--background)',
   },
+  select: {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    fontSize: '14px',
+    outline: 'none',
+    backgroundColor: 'var(--background)',
+    cursor: 'pointer',
+  },
   modalSubmitBtn: {
     width: '100%',
     padding: '12px',
@@ -801,81 +936,5 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    marginTop: '6px',
-  },
-  formTitle: {
-    fontSize: '13px',
-    fontWeight: '800',
-    color: 'var(--muted)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.3px',
-    borderBottom: '1px solid var(--border)',
-    paddingBottom: '6px',
-  },
-  select: {
-    width: '100%',
-    padding: '10px 12px',
-    borderRadius: 'var(--radius)',
-    border: '1px solid var(--border)',
-    fontSize: '14px',
-    outline: 'none',
-    backgroundColor: 'var(--background)',
-    cursor: 'pointer',
-  },
-  staffScroller: {
-    maxHeight: '260px',
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  staffCard: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '10px 12px',
-    border: '1px solid var(--border)',
-    borderRadius: 'var(--radius)',
-    backgroundColor: 'var(--background)',
-  },
-  roleBadge: {
-    fontSize: '9px',
-    fontWeight: '800',
-    padding: '2px 8px',
-    borderRadius: '12px',
-  },
-  branchScroller: {
-    maxHeight: '260px',
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  branchCard: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px',
-    border: '1px solid var(--border)',
-    borderRadius: 'var(--radius)',
-    transition: 'all 0.2s ease',
-  },
-  activeLabel: {
-    fontSize: '8px',
-    fontWeight: '800',
-    backgroundColor: 'var(--success)',
-    color: '#ffffff',
-    padding: '2px 6px',
-    borderRadius: '4px',
-  },
-  faqBlock: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-    paddingBottom: '12px',
-    borderBottom: '1px dashed var(--border)',
-  },
-  PlusCircle: {
-    cursor: 'pointer',
   },
 };

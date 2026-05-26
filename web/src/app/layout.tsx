@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, BarChart3, Package, User, LogOut, Cloud, RefreshCw, Menu, X, Receipt, Tag, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ShoppingBag, BarChart3, Package, User, LogOut, Cloud, RefreshCw, Menu, X, Receipt, Tag, ChevronLeft, ChevronRight, Plus, Home, ShoppingCart } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useBusinessStore } from '../stores/businessStore';
+import { useCart } from '../stores/cartStore';
 import { syncDatabase } from '../services/sync';
 import './globals.css';
 
@@ -22,6 +23,8 @@ export default function RootLayout({
   const logout = useAuthStore((s) => s.logout);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const loadBusinessesFromDb = useBusinessStore((s) => s.loadBusinessesFromDb);
+  const cart = useCart((s) => s.cart);
+  const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
@@ -78,7 +81,8 @@ export default function RootLayout({
   };
 
   const navItems = [
-    { name: 'POS Billing', path: '/', icon: ShoppingBag },
+    { name: 'Home', path: '/', icon: Home },
+    { name: 'POS Billing', path: '/pos', icon: ShoppingCart },
     { name: 'Catalog Manager', path: '/catalog', icon: Tag },
     { name: 'Sales History', path: '/history', icon: Receipt },
     { name: 'Insights', path: '/insights', icon: BarChart3 },
@@ -88,6 +92,11 @@ export default function RootLayout({
 
   const getHeaderInfo = () => {
     switch (pathname) {
+      case '/pos':
+        return {
+          title: 'POS Billing Terminal',
+          subtitle: 'Active sales invoice billing settlement tender details',
+        };
       case '/catalog':
         return {
           title: 'Catalog Management',
@@ -163,64 +172,42 @@ export default function RootLayout({
           <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
             {showSidebar && (
               <aside className={`pos-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${sidebarOpen ? 'open' : ''}`}>
-                {/* Brand Title */}
-                <div style={styles.brandWrapper}>
-                  <div style={styles.brandLogo}>S</div>
-                  {!sidebarCollapsed && (
-                    <div style={{ flex: 1 }}>
-                      <h1 style={styles.brandTitle}>Shopbook</h1>
-                      <span style={styles.brandSubtitle}>Web Mini POS Pro</span>
+                {/* Floating SaaS Edge Toggle Button (desktop only) */}
+                <button 
+                  onClick={toggleSidebarCollapsed}
+                  className="sidebar-collapse-edge-btn hide-mobile"
+                  title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                >
+                  {sidebarCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+                </button>
+
+                {/* Unified Store & Profile Header */}
+                <div className="sidebar-header-profile" title={`${activeBusiness?.name || 'Partner Store'} - ${employeeName}`}>
+                  <div className="sidebar-store-avatar">
+                    {activeBusiness?.logoUri ? (
+                      <img 
+                        src={activeBusiness.logoUri} 
+                        alt="Store Logo" 
+                        className="sidebar-store-logo-img" 
+                      />
+                    ) : (
+                      activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'
+                    )}
+                  </div>
+                  <div className="sidebar-store-meta">
+                    <h3 className="sidebar-store-name">{activeBusiness?.name || 'Partner Store'}</h3>
+                    <div className="sidebar-employee-row">
+                      <span className="sidebar-employee-name">{employeeName}</span>
+                      <span className="sidebar-role-badge">{userRole.toUpperCase()}</span>
                     </div>
-                  )}
+                  </div>
+                  {/* Close button for mobile screen drawer */}
                   <button 
                     onClick={() => setSidebarOpen(false)} 
                     className="sidebar-close-btn"
                   >
                     <X size={18} />
                   </button>
-                  <button 
-                    onClick={toggleSidebarCollapsed}
-                    className="sidebar-collapse-toggle-btn hide-mobile"
-                    style={{
-                      border: 'none',
-                      background: '#f3f4f6',
-                      borderRadius: '50%',
-                      width: '24px',
-                      height: '24px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      color: 'var(--muted)',
-                      marginLeft: sidebarCollapsed ? '0' : 'auto',
-                    }}
-                    title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-                  >
-                    {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-                  </button>
-                </div>
-
-                {/* Active Business Info Card */}
-                <div 
-                  style={{ 
-                    ...styles.businessCard, 
-                    padding: sidebarCollapsed ? '8px' : '12px',
-                    justifyContent: 'center'
-                  }}
-                  title={`${activeBusiness?.name || 'Partner Store'} - ${employeeName}`}
-                >
-                  <div style={styles.avatar}>
-                    {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'}
-                  </div>
-                  {!sidebarCollapsed && (
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 style={styles.bizName}>{activeBusiness?.name || 'Partner Store'}</h3>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
-                        <p style={styles.employeeName}>{employeeName}</p>
-                        <span style={styles.roleBadge}>{userRole.toUpperCase()}</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Navigation Menu */}
@@ -235,16 +222,16 @@ export default function RootLayout({
                           router.push(item.path);
                           setSidebarOpen(false);
                         }}
-                        style={{
-                          ...styles.navBtn,
-                          ...(isActive ? styles.navBtnActive : {}),
-                          justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                          padding: sidebarCollapsed ? '12px 0' : '12px',
-                        }}
+                        className={`sidebar-nav-btn ${isActive ? 'active' : ''}`}
                         title={sidebarCollapsed ? item.name : undefined}
                       >
-                        <Icon size={18} />
-                        {!sidebarCollapsed && <span>{item.name}</span>}
+                        <span className="nav-icon"><Icon size={18} /></span>
+                        <span className="nav-label">{item.name}</span>
+                        {item.path === '/pos' && cartItemsCount > 0 && (
+                          <span className="cart-badge">
+                            {cartItemsCount}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -256,22 +243,17 @@ export default function RootLayout({
                   <button 
                     onClick={handleSync} 
                     disabled={syncing}
-                    style={{
-                      ...styles.syncBtn,
-                      justifyContent: sidebarCollapsed ? 'center' : 'center',
-                      padding: sidebarCollapsed ? '10px 0' : '10px',
-                    }}
+                    className="sidebar-sync-btn"
                     title={sidebarCollapsed ? (syncing ? 'Backing up...' : 'Backup to Cloud') : undefined}
                   >
-                    <RefreshCw size={16} className={syncing ? 'spin-anim' : ''} style={{
-                      animation: syncing ? 'spin 1.5s linear infinite' : 'none',
-                      marginRight: sidebarCollapsed ? '0' : '8px'
-                    }} />
-                    {!sidebarCollapsed && (
-                      <span>
-                        {syncing ? 'Backing up...' : syncSuccess === true ? 'Sync Complete!' : syncSuccess === false ? 'Sync Failed' : 'Backup to Cloud'}
-                      </span>
-                    )}
+                    <span className="btn-icon">
+                      <RefreshCw size={16} className={syncing ? 'spin-anim' : ''} style={{
+                        animation: syncing ? 'spin 1.5s linear infinite' : 'none'
+                      }} />
+                    </span>
+                    <span className="btn-label">
+                      {syncing ? 'Backing up...' : syncSuccess === true ? 'Sync Complete!' : syncSuccess === false ? 'Sync Failed' : 'Backup to Cloud'}
+                    </span>
                   </button>
                   <style jsx global>{`
                     @keyframes spin {
@@ -288,15 +270,11 @@ export default function RootLayout({
                         router.push('/auth');
                       }
                     }}
-                    style={{
-                      ...styles.logoutBtn,
-                      justifyContent: sidebarCollapsed ? 'center' : 'center',
-                      padding: sidebarCollapsed ? '10px 0' : '10px',
-                    }}
+                    className="sidebar-logout-btn"
                     title={sidebarCollapsed ? 'Sign Out' : undefined}
                   >
-                    <LogOut size={16} style={{ marginRight: sidebarCollapsed ? '0' : '8px' }} />
-                    {!sidebarCollapsed && <span>Sign Out</span>}
+                    <span className="btn-icon"><LogOut size={16} /></span>
+                    <span className="btn-label">Sign Out</span>
                   </button>
                 </div>
               </aside>
@@ -442,6 +420,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'left',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
+    position: 'relative',
   },
   navBtnActive: {
     backgroundColor: 'var(--light-blue)',

@@ -500,7 +500,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius)',
     padding: '12px 16px',
-    boxShadow: 'var(--shadow)',
+    boxShadow: 'none',
   },
   searchInput: {
     flex: 1,
@@ -513,7 +513,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#ffffff',
     borderRadius: 'var(--radius-lg)',
     border: '1px solid var(--border)',
-    boxShadow: 'var(--shadow)',
+    boxShadow: 'none',
     overflow: 'hidden',
   },
   tableWrapper: {

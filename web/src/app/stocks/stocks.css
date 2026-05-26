@@ -1,0 +1,8 @@
+/* Responsive Workspaces */
+@media (max-width: 1023px) {
+  .stocks-workspace {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+}

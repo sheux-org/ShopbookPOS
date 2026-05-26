@@ -9,6 +9,8 @@ import {
   TrendingUp, ShoppingCart, DollarSign, AlertTriangle, 
   FileText, Download, Calendar, ArrowRight, Eye, Sparkles, X, Printer
 } from 'lucide-react';
+import './insights.css';
+
 
 interface OrderRecord {
   id: string;
@@ -376,7 +378,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    height: '100vh',
+    height: '100%',
     overflow: 'hidden',
   },
   header: {

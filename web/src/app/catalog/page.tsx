@@ -6,10 +6,9 @@ import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import database from '../../db/database';
 import { Q } from '@nozbe/watermelondb';
-import { 
-  Search, Plus, Trash2, Edit2, Star, CheckCircle, X, Package, 
-  ArrowLeft, ArrowUpDown, ChevronLeft, ChevronRight, Sparkles 
-} from 'lucide-react';
+import { Search, Trash2, Edit2, Star, CheckCircle, X, Package} from 'lucide-react';
+import './catalog.css';
+
 
 interface DBProduct {
   id: string;
@@ -312,102 +311,91 @@ export default function CatalogManagerPage() {
         </div>
       </div>
 
-      {/* Catalog items Table */}
-      <div style={styles.tableCard}>
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.trHead}>
-                <th style={{ ...styles.th, width: '40px' }}>Fav</th>
-                <th style={styles.th}>Item Name</th>
-                <th style={styles.th}>Category</th>
-                <th style={styles.th}>Quick Code</th>
-                <th style={styles.th}>Barcode</th>
-                <th style={styles.th}>Retail Price</th>
-                <th style={styles.th}>Cost Price</th>
-                <th style={styles.th}>Stock Status</th>
-                <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map((p) => {
-                const isOut = p.stockCount <= 0;
-                const isLow = p.lowStockAlert && p.stockCount <= p.lowStockAlert;
-                return (
-                  <tr key={p.id} style={styles.trRow}>
-                    <td style={styles.td}>
-                      <button 
-                        onClick={() => toggleFavorite(p.id, p.isFavorite)}
-                        style={styles.favBtn}
-                      >
-                        <Star size={18} fill={p.isFavorite ? 'var(--yellow)' : 'transparent'} color={p.isFavorite ? 'var(--yellow)' : 'var(--muted)'} />
-                      </button>
-                    </td>
-                    <td style={styles.td}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={styles.itemEmoji}>{p.icon}</span>
-                        <div>
-                          <div style={styles.itemName}>{p.name}</div>
-                          <span style={styles.itemUnitType}>{p.unitType || 'Pieces'}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{
-                        ...styles.catBadge,
-                        backgroundColor: p.category === 'household' ? '#f3e8ff' : p.category === 'snacks' ? '#fef3c7' : '#eff6ff',
-                        color: p.category === 'household' ? '#7e22ce' : p.category === 'snacks' ? '#b45309' : 'var(--primary)',
-                      }}>
-                        {p.category.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      {p.quickCode ? <code style={styles.code}>#{p.quickCode}</code> : <span style={{ color: 'var(--muted)' }}>—</span>}
-                    </td>
-                    <td style={styles.td}>
-                      {p.barcode ? <span style={{ fontFamily: 'monospace' }}>{p.barcode}</span> : <span style={{ color: 'var(--muted)' }}>—</span>}
-                    </td>
-                    <td style={styles.td}>
-                      <strong>Rs. {p.price.toLocaleString()}</strong>
-                    </td>
-                    <td style={styles.td}>
-                      Rs. {p.costPrice ? p.costPrice.toLocaleString() : (p.price * 0.8).toLocaleString()}
-                    </td>
-                    <td style={styles.td}>
-                      <span style={{
-                        ...styles.stockStatusBadge,
+      {/* Catalog items Stack List */}
+      <div className="catalog-list-container">
+        {filteredProducts.map((p) => {
+          const isOut = p.stockCount <= 0;
+          const isLow = p.lowStockAlert && p.stockCount <= p.lowStockAlert;
+          return (
+            <div key={p.id} className="catalog-item-card">
+              <div className="catalog-item-left">
+                {/* Star Favorite Button */}
+                <button 
+                  onClick={() => toggleFavorite(p.id, p.isFavorite)}
+                  style={styles.favBtn}
+                >
+                  <Star size={18} fill={p.isFavorite ? 'var(--yellow)' : 'transparent'} color={p.isFavorite ? 'var(--yellow)' : 'var(--muted)'} />
+                </button>
+
+                {/* Avatar / Image */}
+                <div className="catalog-item-image">
+                  {p.icon.startsWith('http') ? (
+                    <img src={p.icon} alt={p.name} className="catalog-item-img-tag" />
+                  ) : (
+                    <span className="catalog-item-emoji">{p.icon}</span>
+                  )}
+                </div>
+
+                {/* Metadata Column */}
+                <div className="catalog-item-meta">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 className="catalog-item-name">{p.name}</h3>
+                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>({p.unitType || 'Pieces'})</span>
+                  </div>
+
+                  <div className="catalog-item-badges">
+                    <span className="catalog-item-price">Rs. {p.price.toLocaleString()}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}> (Cost: Rs. {p.costPrice ? p.costPrice.toLocaleString() : (p.price * 0.8).toLocaleString()})</span>
+                    <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--border)' }} />
+                    <span 
+                      className="catalog-item-stock-badge"
+                      style={{
                         backgroundColor: isOut ? '#fee2e2' : isLow ? '#ffedd5' : '#dcfce7',
                         color: isOut ? '#dc2626' : isLow ? '#d97706' : '#15803d',
-                      }}>
-                        {isOut ? 'Out of stock' : isLow ? `Low Alert (${p.stockCount})` : `${p.stockCount} in stock`}
-                      </span>
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'right' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        <button onClick={() => openEditModal(p)} style={styles.editBtn} title="Edit product details">
-                          <Edit2 size={15} />
-                        </button>
-                        <button onClick={() => handleDeleteProduct(p.id, p.name)} style={styles.deleteBtn} title="Delete product">
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      }}
+                    >
+                      {isOut ? 'Out of stock' : isLow ? `Low Alert (${p.stockCount})` : `${p.stockCount} in stock`}
+                    </span>
+                  </div>
 
-              {filteredProducts.length === 0 && (
-                <tr>
-                  <td colSpan={9} style={styles.emptyRow}>
-                    <Package size={36} color="var(--muted)" style={{ marginBottom: '8px' }} />
-                    <h4>No catalog items found</h4>
-                    <p>Try searching another keyword or register a new product.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  <div className="catalog-item-codes-row">
+                    <span className="catalog-item-pill catalog-item-pill-category">
+                      {p.category.toUpperCase()}
+                    </span>
+                    {p.quickCode && (
+                      <span className="catalog-item-pill catalog-item-pill-code">
+                        Code: #{p.quickCode}
+                      </span>
+                    )}
+                    {p.barcode && (
+                      <span className="catalog-item-pill catalog-item-pill-barcode">
+                        Barcode: {p.barcode}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions row */}
+              <div className="catalog-item-actions">
+                <button onClick={() => openEditModal(p)} style={styles.editBtn} title="Edit product details">
+                  <Edit2 size={15} />
+                </button>
+                <button onClick={() => handleDeleteProduct(p.id, p.name)} style={styles.deleteBtn} title="Delete product">
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredProducts.length === 0 && (
+          <div style={{ ...styles.emptyRow, backgroundColor: '#ffffff', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', padding: '48px 24px' }}>
+            <Package size={36} color="var(--muted)" style={{ marginBottom: '8px', display: 'inline-block' }} />
+            <h4>No catalog items found</h4>
+            <p>Try searching another keyword or register a new product.</p>
+          </div>
+        )}
       </div>
 
       {/* CRUD Product Modal Dialog */}
