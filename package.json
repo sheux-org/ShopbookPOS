@@ -3,16 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev:mobile": "pnpm --filter mobile dev",
+    "dev:mobile": "pnpm --filter shopbook-pos dev",
     "dev:web": "pnpm --filter web dev",
     "build:web": "pnpm --filter web build",
     "start:web": "pnpm --filter web start",
-    "lint:mobile": "pnpm --filter mobile lint",
+    "lint:mobile": "pnpm --filter shopbook-pos lint",
     "lint:web": "pnpm --filter web lint"
   },
   "pnpm": {
     "patchedDependencies": {
       "react-native-bluetooth-classic@1.73.0-rc.17": "mobile/patches/react-native-bluetooth-classic@1.73.0-rc.17.patch"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "react-native-bluetooth-classic"
+    ]
   }
 }
