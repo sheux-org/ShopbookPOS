@@ -256,6 +256,11 @@ Thank you for shopping with us!
             style={styles.searchInput}
           />
         </div>
+        {filteredOrders.length > 0 && (
+          <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: '500' }}>
+            Showing {filteredOrders.length} sales records
+          </span>
+        )}
       </div>
 
       {/* Ledger lists Card */}
@@ -281,7 +286,7 @@ Thank you for shopping with us!
               </thead>
               <tbody>
                 {filteredOrders.map((o) => (
-                  <tr key={o.id} style={styles.trRow}>
+                  <tr key={o.id} style={styles.trRow} className="history-table-row">
                     <td style={styles.td}>
                       <strong>{o.invoiceNumber}</strong>
                     </td>
@@ -295,8 +300,9 @@ Thank you for shopping with us!
                     <td style={styles.td}>
                       <span style={{
                         ...styles.statusBadge,
-                        backgroundColor: o.status === 'voided' ? '#fee2e2' : '#dcfce7',
-                        color: o.status === 'voided' ? '#dc2626' : '#15803d',
+                        backgroundColor: o.status === 'voided' ? '#fff1f2' : '#f0fdf4',
+                        color: o.status === 'voided' ? 'var(--error)' : 'var(--success)',
+                        border: o.status === 'voided' ? '1px solid #fecaca' : '1px solid #bbf7d0',
                       }}>
                         {o.status.toUpperCase()}
                       </span>
@@ -511,9 +517,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tableCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 'var(--radius-lg)',
+    borderRadius: 'var(--radius)',
     border: '1px solid var(--border)',
-    boxShadow: 'none',
+    boxShadow: 'var(--shadow)',
     overflow: 'hidden',
   },
   tableWrapper: {
@@ -527,47 +533,54 @@ const styles: Record<string, React.CSSProperties> = {
   },
   trHead: {
     borderBottom: '1px solid var(--border)',
-    backgroundColor: '#f9fafb',
+    backgroundColor: 'var(--background)',
   },
   th: {
-    padding: '16px 20px',
-    fontWeight: 'bold',
-    color: 'var(--dark)',
+    padding: '10px 16px',
+    fontWeight: '500',
+    color: 'var(--muted)',
+    fontSize: '11px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
   },
   trRow: {
-    borderBottom: '1px solid #f3f4f6',
-    transition: 'background 0.2s',
+    borderBottom: '1px solid var(--border)',
   },
   td: {
-    padding: '16px 20px',
+    padding: '10px 16px',
     verticalAlign: 'middle',
+    color: 'var(--dark)',
   },
   methodBadge: {
     fontSize: '10px',
-    fontWeight: '800',
+    fontWeight: '600',
     backgroundColor: 'var(--light-blue)',
     color: 'var(--primary)',
-    padding: '2px 8px',
+    padding: '2px 6px',
     borderRadius: '4px',
+    border: '1px solid var(--accent-blue)',
   },
   statusBadge: {
     fontSize: '10px',
-    fontWeight: 'bold',
-    padding: '3px 8px',
+    fontWeight: '600',
+    padding: '2px 6px',
     borderRadius: '4px',
+    display: 'inline-flex',
+    alignItems: 'center',
   },
   viewReceiptBtn: {
-    padding: '6px 12px',
-    borderRadius: '8px',
+    padding: '5px 10px',
+    borderRadius: 'var(--radius)',
     border: '1px solid var(--border)',
     backgroundColor: '#ffffff',
     color: 'var(--muted)',
-    fontWeight: 'bold',
-    fontSize: '11px',
+    fontWeight: '500',
+    fontSize: '12px',
     cursor: 'pointer',
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: '4px',
+    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
   },
   emptyRow: {
     padding: '64px',

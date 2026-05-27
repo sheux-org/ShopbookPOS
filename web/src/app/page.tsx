@@ -8,9 +8,10 @@ import { useBusinessStore } from '../stores/businessStore';
 import database from '../db/database';
 import { Q } from '@nozbe/watermelondb';
 import { 
-  Search, Plus, CheckCircle, X, ShoppingBag, Barcode, ShoppingCart
+  Search, Plus, CheckCircle, X, ShoppingBag, ShoppingCart
 } from 'lucide-react';
 import { useHardwareScanner } from '../components/Scanner';
+import { ProductImage } from '../components/ProductImage';
 import './page.css';
 
 
@@ -41,7 +42,7 @@ export default function PosBillingPage() {
   const [products, setProducts] = useState<DBProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [manualBarcode, setManualBarcode] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'catalog'>('grid');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Add Product catalog quick modal
@@ -223,39 +224,30 @@ export default function PosBillingPage() {
               style={styles.searchInput}
             />
           </div>
-          
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (manualBarcode.trim()) {
-                handleScanCode(manualBarcode.trim());
-                setManualBarcode('');
-              }
-            }}
-            style={styles.manualBarcodeForm}
-            className="pos-manual-barcode-form"
-          >
-            <Barcode size={16} color="var(--muted)" />
-            <input
-              type="text"
-              placeholder="Manual Barcode..."
-              value={manualBarcode}
-              onChange={(e) => setManualBarcode(e.target.value)}
-              style={styles.manualBarcodeInput}
-            />
-            <button type="submit" style={styles.manualBarcodeBtn}>
-              Add
-            </button>
-          </form>
 
-          <button 
-            onClick={() => setShowAddProdModal(true)}
-            style={styles.addCatalogBtn}
-            title="Add new product to the catalog database"
-          >
-            <Plus size={18} />
-            <span className="hide-mobile">Add Product</span>
-          </button>
+          {/* View Mode Switcher Option */}
+          <div style={styles.viewToggleGroup}>
+            <button 
+              onClick={() => setViewMode('grid')}
+              style={{
+                ...styles.viewToggleBtn,
+                ...(viewMode === 'grid' ? styles.viewToggleBtnActive : {})
+              }}
+              title="Show standard Grid view"
+            >
+              Grid View
+            </button>
+            <button 
+              onClick={() => setViewMode('catalog')}
+              style={{
+                ...styles.viewToggleBtn,
+                ...(viewMode === 'catalog' ? styles.viewToggleBtnActive : {})
+              }}
+              title="Show POS catalog view"
+            >
+              POS Catalog
+            </button>
+          </div>
 
           {/* Cart Header Button (links to POS page) */}
           <button 
@@ -269,94 +261,186 @@ export default function PosBillingPage() {
           </button>
         </div>
 
-        {/* Category Tabs */}
-        <div style={styles.categoryScroller}>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              style={{
-                ...styles.categoryTab,
-                ...(selectedCategory === cat ? styles.categoryTabActive : {}),
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        {viewMode === 'grid' ? (
+          <>
+            {/* Category Tabs */}
+            <div style={styles.categoryScroller}>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{
+                    ...styles.categoryTab,
+                    ...(selectedCategory === cat ? styles.categoryTabActive : {}),
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
 
-        {/* Catalog grid */}
-        <div style={styles.productsGrid}>
-          {filteredProducts.map((p) => {
-            const isOut = p.stockCount <= 0;
-            const isLow = p.lowStockAlert && p.stockCount <= p.lowStockAlert;
-            return (
-              <div
-                key={p.id}
-                onClick={() => {
-                  if (isOut) {
-                    triggerToast(`Out of stock: ${p.name} ⚠️`);
-                    return;
-                  }
-                  addCartItem(p.name, p.price, p.icon, p.barcode || p.id, p.stockCount);
-                  triggerToast(`Added ${p.name} 🛒`);
-                }}
-                style={{
-                  ...styles.prodCard,
-                  ...(isOut ? styles.prodCardOut : {}),
-                }}
-                className="product-grid-card"
-              >
-                <div style={styles.imageContainer}>
-                  {/* Icon */}
-                  {p.icon.startsWith('http') ? (
-                    <img src={p.icon} alt={p.name} style={styles.prodImg} />
-                  ) : (
-                    <span style={styles.prodEmoji}>{p.icon}</span>
-                  )}
+            {/* Catalog grid */}
+            <div style={styles.productsGrid}>
+              {filteredProducts.map((p) => {
+                const isOut = p.stockCount <= 0;
+                const isLow = p.lowStockAlert && p.stockCount <= p.lowStockAlert;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      if (isOut) {
+                        triggerToast(`Out of stock: ${p.name} ⚠️`);
+                        return;
+                      }
+                      addCartItem(p.name, p.price, p.icon, p.barcode || p.id, p.stockCount);
+                      triggerToast(`Added ${p.name} 🛒`);
+                    }}
+                    style={{
+                      ...styles.prodCard,
+                      ...(isOut ? styles.prodCardOut : {}),
+                    }}
+                    className="product-grid-card"
+                  >
+                    <div style={styles.imageContainer}>
+                      <ProductImage 
+                        icon={p.icon} 
+                        size={200} 
+                        style={{ width: '100%', height: '100%', borderRadius: 0, border: 'none' }} 
+                      />
 
-                  {/* Stock Alert Badge */}
-                  <span style={{
-                    ...styles.stockBadge,
-                    backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
-                    color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
-                  }}>
-                    {isOut ? 'Out of Stock' : `${p.stockCount} left`}
-                  </span>
-                </div>
-
-                <div style={styles.prodCardDetails}>
-                  <h3 style={styles.prodName}>{p.name}</h3>
-                  <div style={styles.priceAddRow}>
-                    <span style={styles.prodPrice}>Rs. {p.price.toLocaleString()}</span>
-                    
-                    <div 
-                      style={{
-                        ...styles.plusIconBadge,
-                        backgroundColor: isOut ? '#E5E7EB' : 'var(--primary)',
-                      }}
-                      className="plus-icon-badge"
-                    >
-                      <Plus size={12} color={isOut ? 'var(--muted)' : '#FFFFFF'} />
+                      {/* Stock Alert Badge */}
                       <span style={{
-                        ...styles.plusIconBadgeText,
-                        color: isOut ? 'var(--muted)' : '#FFFFFF',
-                      }}>Add</span>
+                        ...styles.stockBadge,
+                        backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
+                        color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
+                      }}>
+                        {isOut ? 'Out of Stock' : `${p.stockCount} left`}
+                      </span>
+                    </div>
+
+                    <div style={styles.prodCardDetails}>
+                      <span style={styles.cardCategory}>{p.category || 'General'}</span>
+                      <h3 style={styles.prodName}>{p.name}</h3>
+                      <div style={styles.priceAddRow}>
+                        <span style={styles.prodPrice}>Rs. {p.price.toLocaleString()}</span>
+                        
+                        <div 
+                          style={{
+                            ...styles.plusIconBadge,
+                            backgroundColor: isOut ? '#E5E7EB' : 'var(--primary)',
+                          }}
+                          className="plus-icon-badge"
+                        >
+                          <Plus size={12} color={isOut ? 'var(--muted)' : '#FFFFFF'} />
+                          <span style={{
+                            ...styles.plusIconBadgeText,
+                            color: isOut ? 'var(--muted)' : '#FFFFFF',
+                          }}>Add</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
 
-          {filteredProducts.length === 0 && (
-            <div style={styles.emptyGridState}>
-              <ShoppingBag size={48} color="var(--muted)" />
-              <h3>No products found</h3>
-              <p>Try searching another item or add a new product to the catalog.</p>
+              {filteredProducts.length === 0 && (
+                <div style={styles.emptyGridState}>
+                  <ShoppingBag size={48} color="var(--muted)" />
+                  <h3>No products found</h3>
+                  <p>Try searching another item or add a new product to the catalog.</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          /* POS style catalog layout */
+          <div style={styles.catalogLayout}>
+            {/* Category Sidebar */}
+            <div style={styles.sidebar}>
+              {categories.map((cat) => {
+                const isActive = selectedCategory === cat;
+                const catEmoji = cat === 'All' ? '📦' :
+                                 cat === 'Grocery' ? '🛒' :
+                                 cat === 'Dairy' ? '🥛' :
+                                 cat === 'Drinks' ? '🥤' :
+                                 cat === 'Snacks' ? '🍿' :
+                                 cat === 'Household' ? '🏠' : '📦';
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    style={{
+                      ...styles.sidebarBtn,
+                      ...(isActive ? styles.sidebarBtnActive : {})
+                    }}
+                  >
+                    <span style={{ fontSize: '18px' }}>{catEmoji}</span>
+                    <span>{cat}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Catalog Products Grid */}
+            <div style={styles.gridWrapper}>
+              <div style={styles.productGrid}>
+                {filteredProducts.map((p) => {
+                  const isOut = p.stockCount <= 0;
+                  const isLow = p.stockCount > 0 && p.stockCount <= 5;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        if (isOut) {
+                          triggerToast(`Out of stock: ${p.name} ⚠️`);
+                          return;
+                        }
+                        addCartItem(p.name, p.price, p.icon, p.barcode || p.id, p.stockCount);
+                        triggerToast(`Added ${p.name} 🛒`);
+                      }}
+                      style={{
+                        ...styles.productCard,
+                        opacity: isOut ? 0.6 : 1,
+                      }}
+                      className="pos-catalog-card"
+                    >
+                      <ProductImage icon={p.icon} size={110} style={{ alignSelf: 'center', margin: '0', border: 'none', borderRadius: '10px' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <h4 style={styles.productName} title={p.name}>{p.name}</h4>
+                        <span style={styles.productPrice}>Rs. {p.price}</span>
+                        {isOut ? (
+                          <span style={{ ...styles.productStock, ...styles.productStockOut }}>Out of Stock</span>
+                        ) : isLow ? (
+                          <span style={{ ...styles.productStock, ...styles.productStockLow }}>Low Stock ({p.stockCount})</span>
+                        ) : (
+                          <span style={styles.productStock}>Stock: {p.stockCount}</span>
+                        )}
+                      </div>
+                      <button
+                        disabled={isOut}
+                        className="product-add-btn"
+                        style={{
+                          ...styles.productAddBtn,
+                          ...(isOut ? styles.productAddBtnDisabled : {})
+                        }}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {filteredProducts.length === 0 && (
+                <div style={styles.emptyGridState}>
+                  <ShoppingBag size={48} color="var(--muted)" />
+                  <h3>No products found</h3>
+                  <p>Try searching another item or add a new product to the catalog.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add Product catalog quick modal */}
@@ -585,8 +669,8 @@ const styles: Record<string, React.CSSProperties> = {
   productsGrid: {
     flex: 1,
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+    gap: '24px',
     overflowY: 'auto',
     paddingBottom: '24px',
   },
@@ -598,9 +682,10 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     cursor: 'pointer',
     position: 'relative',
-    boxShadow: 'var(--shadow)',
+    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.04)',
     overflow: 'hidden',
-    height: '210px',
+    height: '295px',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   prodCardOut: {
     opacity: 0.8,
@@ -608,12 +693,13 @@ const styles: Record<string, React.CSSProperties> = {
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: '110px',
+    height: '195px',
     backgroundColor: '#f3f4f6',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     borderBottom: '1px solid var(--border)',
+    overflow: 'hidden',
   },
   prodImg: {
     width: '100%',
@@ -635,18 +721,27 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
   },
   prodCardDetails: {
-    padding: '12px',
+    padding: '8px 12px 12px 12px',
     display: 'flex',
     flexDirection: 'column',
     flex: 1,
     justifyContent: 'space-between',
   },
-  prodName: {
-    fontSize: '13px',
+  cardCategory: {
+    fontSize: '10px',
     fontWeight: '700',
+    color: 'var(--muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    marginBottom: '2px',
+    display: 'block',
+  },
+  prodName: {
+    fontSize: '14px',
+    fontWeight: '600',
     color: 'var(--dark)',
-    lineHeight: '1.4',
-    marginBottom: '8px',
+    lineHeight: '1.3',
+    marginBottom: '4px',
     display: '-webkit-box',
     WebkitLineClamp: 2,
     WebkitBoxOrient: 'vertical',
@@ -660,8 +755,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 'auto',
   },
   prodPrice: {
-    fontSize: '14px',
-    fontWeight: '800',
+    fontSize: '16px',
+    fontWeight: '700',
     color: 'var(--primary)',
   },
   plusIconBadge: {
@@ -669,13 +764,12 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '4px',
     height: '28px',
-    borderRadius: '14px',
-    padding: '0 10px',
-    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.15)',
+    borderRadius: '8px',
+    padding: '0 8px',
     transition: 'all 0.2s',
   },
   plusIconBadgeText: {
-    fontSize: '11px',
+    fontSize: '12px',
     fontWeight: 'bold',
   },
   emptyGridState: {
@@ -777,5 +871,139 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 'bold',
     fontSize: '13px',
     cursor: 'pointer',
+  },
+  viewToggleGroup: {
+    display: 'flex',
+    backgroundColor: '#f3f4f6',
+    padding: '4px',
+    borderRadius: '10px',
+    border: '1px solid var(--border)',
+    gap: '2px',
+  },
+  viewToggleBtn: {
+    padding: '6px 12px',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    color: 'var(--muted)',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  viewToggleBtnActive: {
+    backgroundColor: '#ffffff',
+    color: 'var(--primary)',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+  },
+  catalogLayout: {
+    display: 'flex',
+    flex: 1,
+    gap: '16px',
+    height: '100%',
+    minHeight: 0,
+    marginTop: '16px',
+  },
+  sidebar: {
+    width: '100px',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 'var(--radius)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    padding: '8px',
+    overflowY: 'auto',
+    flexShrink: 0,
+  },
+  sidebarBtn: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '12px 6px',
+    borderRadius: 'var(--radius)',
+    border: 'none',
+    backgroundColor: 'transparent',
+    color: 'var(--muted)',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    gap: '4px',
+    transition: 'all 0.2s',
+  },
+  sidebarBtnActive: {
+    backgroundColor: '#ffffff',
+    color: 'var(--primary)',
+    boxShadow: 'var(--shadow)',
+  },
+  gridWrapper: {
+    flex: 1,
+    overflowY: 'auto',
+    paddingRight: '4px',
+  },
+  productGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))',
+    gap: '16px',
+    paddingBottom: '16px',
+  },
+  productCard: {
+    backgroundColor: '#ffffff',
+    border: '1px solid var(--border)',
+    borderRadius: '16px',
+    padding: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    gap: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease-in-out',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+    boxSizing: 'border-box',
+    position: 'relative',
+    height: '235px',
+  },
+  productName: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: 'var(--dark)',
+    lineHeight: '1.3',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  productPrice: {
+    fontSize: '14px',
+    fontWeight: '800',
+    color: 'var(--primary)',
+  },
+  productStock: {
+    fontSize: '10px',
+    color: 'var(--muted)',
+  },
+  productStockLow: {
+    color: 'var(--warning)',
+    fontWeight: 'bold',
+  },
+  productStockOut: {
+    color: 'var(--error)',
+    fontWeight: 'bold',
+  },
+  productAddBtn: {
+    width: '100%',
+    padding: '8px 0',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: 'var(--primary)',
+    color: '#ffffff',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  productAddBtnDisabled: {
+    backgroundColor: '#e5e7eb',
+    color: '#9ca3af',
+    cursor: 'not-allowed',
   },
 };

@@ -8,12 +8,22 @@ import { useBusinessStore } from '../stores/businessStore';
 import { useCart } from '../stores/cartStore';
 import { syncDatabase } from '../services/sync';
 import './globals.css';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000,
+        refetchOnWindowFocus: false,
+      },
+    },
+  }));
+
   const router = useRouter();
   const pathname = usePathname();
   
@@ -138,7 +148,8 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body>
-        <div style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
+        <QueryClientProvider client={queryClient}>
+          <div style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
           {showSidebar && (
             <>
               {/* Mobile top navigation header */}
@@ -306,6 +317,7 @@ export default function RootLayout({
             </div>
           </div>
         </div>
+        </QueryClientProvider>
       </body>
     </html>
   );

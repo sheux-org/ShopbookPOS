@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
   --primary: #2563eb;
@@ -14,11 +14,11 @@
   --light-blue: #eff6ff;
   --accent-blue: #dbeafe;
   --yellow: #facc15;
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --font-sans: 'Plus Jakarta Sans', 'Outfit', sans-serif;
-  --radius: 12px;
-  --radius-lg: 20px;
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --radius: 6px;
+  --radius-lg: 8px;
 }
 
 * {
@@ -81,31 +81,32 @@ body {
 }
 
 .pos-sidebar {
-  width: 260px;
+  width: 240px;
   background-color: #ffffff;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
+  padding: 16px 12px;
   flex-shrink: 0;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
 
 .pos-sidebar.collapsed {
-  width: 80px;
+  width: 68px;
 }
 
-/* Consolidated Header & Profile Card */
+/* Consolidated Header & Profile Card (Medusa Store Switcher style) */
 .sidebar-header-profile {
   display: flex;
   align-items: center;
-  background-color: var(--light-blue);
-  border: 1px solid var(--accent-blue);
-  border-radius: var(--radius);
-  padding: 12px;
-  margin-bottom: 24px;
-  transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s, border-color 0.3s;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 12px 6px 16px 6px;
+  margin-bottom: 20px;
+  transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 
@@ -113,21 +114,23 @@ body {
   padding: 12px 4px;
   background-color: transparent;
   border-color: transparent;
+  border-bottom-color: transparent;
 }
 
 .sidebar-store-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background-color: var(--primary);
-  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--dark);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 15px;
+  font-weight: 700;
+  font-size: 13px;
   flex-shrink: 0;
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.15);
+  box-shadow: none;
   overflow: hidden;
   transition: transform 0.3s ease;
 }
@@ -141,12 +144,12 @@ body {
 .sidebar-store-meta {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   flex: 1;
   min-width: 0;
   opacity: 1;
-  max-width: 200px;
-  margin-left: 12px;
+  max-width: 180px;
+  margin-left: 10px;
   transition: opacity 0.2s ease, max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.2s;
 }
 
@@ -160,7 +163,7 @@ body {
 
 .sidebar-store-name {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--dark);
   white-space: nowrap;
   overflow: hidden;
@@ -185,10 +188,11 @@ body {
 
 .sidebar-role-badge {
   font-size: 9px;
-  font-weight: 800;
-  background-color: var(--accent-blue);
-  color: var(--primary);
-  padding: 1.5px 5px;
+  font-weight: 600;
+  background-color: #f4f4f5;
+  color: #71717a;
+  border: 1px solid var(--border);
+  padding: 0.5px 4px;
   border-radius: 4px;
   letter-spacing: 0.3px;
   text-transform: uppercase;
@@ -209,7 +213,7 @@ body {
   justify-content: center;
   cursor: pointer;
   color: var(--muted);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 100;
 }
@@ -217,7 +221,7 @@ body {
 .sidebar-collapse-edge-btn:hover {
   background-color: var(--light-blue);
   color: var(--primary);
-  border-color: var(--accent-blue);
+  border-color: var(--border);
   transform: scale(1.05);
 }
 
@@ -229,16 +233,15 @@ body {
 .sidebar-nav-btn {
   display: flex;
   align-items: center;
-  padding: 12px;
-  padding-right: 40px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
   border: none;
   background-color: transparent;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
   position: relative;
   width: 100%;
   text-align: left;
@@ -249,7 +252,7 @@ body {
 }
 
 .sidebar-nav-btn:hover {
-  background-color: #f3f4f6;
+  background-color: #f4f4f5;
   color: var(--dark);
 }
 
@@ -259,23 +262,29 @@ body {
 }
 
 .sidebar-nav-btn .nav-icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.sidebar-nav-btn.active .nav-icon {
+  color: var(--primary);
 }
 
 .sidebar-nav-btn:hover .nav-icon {
-  transform: scale(1.05);
+  transform: scale(1.02);
+  color: var(--dark);
 }
 
 .sidebar-nav-btn .nav-label {
   opacity: 1;
-  max-width: 180px;
-  margin-left: 12px;
+  max-width: 160px;
+  margin-left: 10px;
   transition: opacity 0.2s ease, max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.2s;
   white-space: nowrap;
   overflow: hidden;
@@ -292,18 +301,18 @@ body {
 
 .sidebar-nav-btn .cart-badge {
   position: absolute;
-  right: 16px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   background-color: var(--primary);
   color: #ffffff;
   font-size: 10px;
   font-weight: bold;
-  padding: 2px 6px;
-  border-radius: 10px;
-  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  min-width: 16px;
   text-align: center;
-  border: 1px solid #ffffff;
+  border: none;
   transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1), top 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -317,39 +326,21 @@ body {
 .sidebar-sync-btn, .sidebar-logout-btn {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
   width: 100%;
   border: none;
+  background-color: transparent;
+  color: var(--muted);
 }
 
-.sidebar-sync-btn {
-  border: 1px solid var(--border);
-  background-color: #ffffff;
-  color: var(--success);
-}
-
-.sidebar-sync-btn:hover {
-  background-color: #f0fdf4;
-  border-color: #bbf7d0;
-}
-
-.pos-sidebar.collapsed .sidebar-sync-btn:hover {
-  border-color: transparent;
-}
-
-.sidebar-logout-btn {
-  background-color: #fff1f2;
-  color: var(--error);
-  border: 1px solid transparent;
-}
-
-.sidebar-logout-btn:hover {
-  background-color: #ffe4e6;
+.sidebar-sync-btn:hover, .sidebar-logout-btn:hover {
+  background-color: #f4f4f5;
+  color: var(--dark);
 }
 
 .pos-sidebar.collapsed .sidebar-sync-btn, 
@@ -359,8 +350,8 @@ body {
 }
 
 .sidebar-sync-btn .btn-icon, .sidebar-logout-btn .btn-icon {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -369,8 +360,8 @@ body {
 
 .sidebar-sync-btn .btn-label, .sidebar-logout-btn .btn-label {
   opacity: 1;
-  max-width: 150px;
-  margin-left: 8px;
+  max-width: 130px;
+  margin-left: 10px;
   transition: opacity 0.2s ease, max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.2s;
   white-space: nowrap;
   overflow: hidden;
@@ -388,7 +379,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 14px 24px;
   background-color: #ffffff;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -396,14 +387,14 @@ body {
 }
 
 .common-header-title {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--dark);
   line-height: 1.2;
 }
 
 .common-header-subtitle {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   margin-top: 2px;
 }
@@ -411,17 +402,17 @@ body {
 .common-header-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
+  gap: 6px;
+  padding: 8px 14px;
   border-radius: var(--radius);
   background-color: var(--primary);
   color: #ffffff;
   border: none;
-  font-weight: bold;
-  font-size: 13px;
+  font-weight: 500;
+  font-size: 12px;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
-  transition: background-color 0.2s, transform 0.1s ease;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: background-color 0.15s, transform 0.1s ease;
 }
 
 .common-header-btn:hover {
@@ -579,5 +570,92 @@ body {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* Product Catalog Cards Hover Effects & Premium Look */
+.product-grid-card {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s ease !important;
+}
+
+.product-grid-card:hover {
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.08) !important;
+  border-color: var(--accent-blue) !important;
+}
+
+.product-grid-card img {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.product-grid-card:hover img {
+  transform: scale(1.06);
+}
+
+/* Plus Icon/Add Badge Animation */
+.product-grid-card .plus-icon-badge {
+  transition: all 0.2s ease-in-out !important;
+}
+
+.product-grid-card:hover .plus-icon-badge {
+  transform: scale(1.05);
+  background-color: var(--primary-hover) !important;
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.25);
+}
+
+.product-grid-card:active .plus-icon-badge {
+  transform: scale(0.95);
+}
+
+/* Image Shimmer/Pulse Loading Blur */
+@keyframes shimmerPulse {
+  0% {
+    background-color: #f3f4f6;
+    opacity: 0.6;
+  }
+  50% {
+    background-color: #e5e7eb;
+    opacity: 1;
+  }
+  100% {
+    background-color: #f3f4f6;
+    opacity: 0.6;
+  }
+}
+
+.image-loading-placeholder {
+  animation: shimmerPulse 1.5s infinite ease-in-out;
+}
+
+/* POS Catalog Mode Card Hover Effects */
+.pos-catalog-card {
+  transition: box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out !important;
+}
+
+.pos-catalog-card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06) !important;
+  border-color: var(--accent-blue) !important;
+}
+
+.pos-catalog-card img {
+  transition: transform 0.4s ease !important;
+}
+
+.pos-catalog-card:hover img {
+  transform: scale(1.05);
+}
+
+.pos-catalog-card .product-add-btn {
+  transition: all 0.2s ease-in-out !important;
+}
+
+.pos-catalog-card:hover .product-add-btn {
+  background-color: var(--primary-hover) !important;
+}
+
+.history-table-row {
+  transition: background-color 0.15s ease;
+}
+
+.history-table-row:hover {
+  background-color: var(--light-blue) !important;
 }
 

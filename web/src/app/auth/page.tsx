@@ -4,31 +4,32 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import { useSettingsStore } from '../../stores/settingsStore';
-import database from '../../db/database';
-import { supabase, syncDatabase } from '../../services/sync';
 import { ArrowRight, MessageSquare, CheckCircle } from 'lucide-react';
+import { useSendOtp, useVerifyOtp } from '../../hooks/useAuth';
 
 export default function AuthPage() {
   const router = useRouter();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
-  const loginWithEmployee = useAuthStore((s) => s.loginWithEmployee);
   const loadBusinesses = useBusinessStore((s) => s.loadBusinessesFromDb);
 
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpError, setOtpError] = useState('');
-  const [verificationToken, setVerificationToken] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [phone, setPhone] = useState<string>('');
+  const [otp, setOtp] = useState<string>('');
+  const [otpError, setOtpError] = useState<string>('');
+  const [verificationToken, setVerificationToken] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Separate inputs for 5-digit OTP
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '']);
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '']);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [resendCooldown, setResendCooldown] = useState(30);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Mutations
+  const sendOtpMutation = useSendOtp();
+  const verifyOtpMutation = useVerifyOtp();
+
+  const loading = sendOtpMutation.isPending || verifyOtpMutation.isPending;
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -129,23 +130,10 @@ export default function AuthPage() {
 
   const handleResendOtp = async () => {
     if (resendCooldown > 0 || loading) return;
-    setLoading(true);
     const cleanPhone = normalizePhone(phone);
     try {
-      const response = await fetch("/api/auth/check", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ phone_number: cleanPhone }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to resend code. Please try again.");
-      }
-
-      const data = await response.json();
-      setVerificationToken(data.token || "");
+      const token = await sendOtpMutation.mutateAsync(cleanPhone);
+      setVerificationToken(token || "");
       setOtp('');
       setOtpDigits(['', '', '', '', '']);
       setResendCooldown(30);
@@ -156,8 +144,6 @@ export default function AuthPage() {
       }, 50);
     } catch (err: any) {
       triggerToast(err.message || "Network error. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -175,22 +161,9 @@ export default function AuthPage() {
       triggerToast("Please enter a valid mobile number!");
       return;
     }
-    setLoading(true);
     try {
-      const response = await fetch("/api/auth/check", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ phone_number: cleanPhone }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to check phone number. Please try again.");
-      }
-
-      const data = await response.json();
-      setVerificationToken(data.token || "");
+      const token = await sendOtpMutation.mutateAsync(cleanPhone);
+      setVerificationToken(token || "");
       setStep('otp');
       setOtp('');
       setOtpDigits(['', '', '', '', '']);
@@ -198,8 +171,6 @@ export default function AuthPage() {
       triggerToast("Verification code sent to +94 " + phone);
     } catch (err: any) {
       triggerToast(err.message || "Network error. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -212,131 +183,27 @@ export default function AuthPage() {
       triggerToast("Please enter a 5-digit code!");
       return;
     }
-    setLoading(true);
 
     try {
-      const cleanPhone = normalizePhone(phone);
-
-      // Call verify API
-      const response = await fetch("/api/auth/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${verificationToken}`,
-        },
-        body: JSON.stringify({
-          code: codeToVerify,
-          phone_number: cleanPhone,
-        }),
+      const result = await verifyOtpMutation.mutateAsync({
+        phone,
+        otp: codeToVerify,
+        verificationToken,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Invalid OTP code!");
-      }
-
-      const verifyData = await response.json();
-      if (verifyData.message !== "Success") {
-        throw new Error(verifyData.message || "Invalid OTP code!");
-      }
-
-      // Check local database for matched employee or business owner
-      const allEmployees = await database.get("employees").query().fetch();
-      const matchedEmployee = allEmployees.find((emp: any) => {
-        return normalizePhone(emp.phone || "") === cleanPhone;
-      }) as any;
-
-      if (matchedEmployee) {
-        const activeBiz = await matchedEmployee.business.fetch();
-        if (activeBiz) {
-          loginWithEmployee(
-            cleanPhone,
-            matchedEmployee.role || "cashier",
-            matchedEmployee.name || "Staff Member",
-            activeBiz.id,
-            matchedEmployee.id,
-            verificationToken
-          );
-          await loadBusinesses();
-          useBusinessStore.getState().setActiveBusiness(activeBiz.id);
-          triggerToast("Welcome back to Mini POS!");
-          router.push('/');
-          return;
-        }
-      }
-
-      const allBusinesses = await database.get("businesses").query().fetch();
-      const matchedBiz = allBusinesses.find((biz: any) => {
-        return normalizePhone(biz.phoneNumber || "") === cleanPhone;
-      });
-
-      if (matchedBiz) {
-        loginWithEmployee(
-          cleanPhone,
-          "admin",
-          "Owner / Admin",
-          matchedBiz.id,
-          "owner",
-          verificationToken
-        );
-        await loadBusinesses();
-        useBusinessStore.getState().setActiveBusiness(matchedBiz.id);
+      if (result.status === "success") {
         triggerToast("Welcome back to Mini POS!");
         router.push('/');
-        return;
+      } else {
+        triggerToast("Account not found. Please use the mobile app to create an account. Web terminal registration is not supported.");
+        setOtp('');
       }
-
-      // If not found locally, check if there is a synced account in the Supabase database
-      try {
-        const { data: remoteData, error: remoteError } = await supabase.rpc(
-          "check_synced_account",
-          {
-            input_phone: cleanPhone,
-          },
-        );
-
-        if (remoteError) {
-          console.error("Failed to query remote synced account from Supabase:", remoteError);
-        } else if (remoteData && remoteData.exists) {
-          useSettingsStore.getState().setBackupEnabled(true);
-
-          triggerToast("Syncing account from cloud... 🔄");
-          const syncSuccess = await syncDatabase();
-          console.log("Database sync finished with status:", syncSuccess);
-
-          // After sync, reload businesses
-          await loadBusinesses();
-
-          // Set the active business in store
-          useBusinessStore.getState().setActiveBusiness(remoteData.business_id);
-
-          loginWithEmployee(
-            cleanPhone,
-            remoteData.role || "admin",
-            remoteData.name || "Owner / Admin",
-            remoteData.business_id,
-            remoteData.employee_id || "owner",
-            verificationToken
-          );
-
-          triggerToast("Welcome back to Mini POS!");
-          router.push('/');
-          return;
-        }
-      } catch (supabaseErr) {
-        console.error("Error checking remote synced account on Supabase:", supabaseErr);
-      }
-
-      // If no local or remote account found, block login and show alert
-      triggerToast("Account not found. Please use the mobile app to create an account. Web terminal registration is not supported.");
-      setOtp('');
     } catch (err: any) {
       setOtpError(err.message || "Invalid OTP. Hint: Use 11111");
       setOtp('');
-    } finally {
-      setLoading(false);
     }
   };
+
 
   return (
     <div style={styles.container} className="fade-in">

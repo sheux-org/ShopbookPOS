@@ -13,6 +13,7 @@ import {
   Printer, X, CheckCircle, Barcode, Search, Edit
 } from 'lucide-react';
 import { useHardwareScanner } from '../../components/Scanner';
+import { ProductImage } from '../../components/ProductImage';
 import './pos.css';
 
 
@@ -31,14 +32,45 @@ interface DBProduct {
   isFavorite: boolean;
 }
 
+const CATEGORIES = [
+  { id: 'all', label: 'All', icon: '📦' },
+  { id: 'grocery', label: 'Grocery', icon: '🛒' },
+  { id: 'dairy', label: 'Dairy', icon: '🥛' },
+  { id: 'drinks', label: 'Drinks', icon: '🥤' },
+  { id: 'snacks', label: 'Snacks', icon: '🍿' },
+  { id: 'household', label: 'Household', icon: '🏠' },
+];
+
+const getAvatarColor = (name: string) => {
+  const colors = [
+    '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899',
+    '#14b8a6', '#06b6d4', '#059669', '#4f46e5', '#d97706', '#2563eb', '#db2777'
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+};
+
+const getInitials = (name: string) => {
+  if (!name) return '';
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 export default function PosBillingPage() {
   const router = useRouter();
   const cart = useCart((s) => s.cart);
   const customer = useCart((s) => s.customer);
+  const customCustomers = useCart((s) => s.customCustomers) || [];
   const addCartItem = useCart((s) => s.addCartItem);
   const updateQuantity = useCart((s) => s.updateQuantity);
   const clearCart = useCart((s) => s.clearCart);
   const setCustomer = useCart((s) => s.setCustomer);
+  const addCustomCustomer = useCart((s) => s.addCustomCustomer);
   
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const employeeName = useAuthStore((s) => s.employeeName);
@@ -46,25 +78,28 @@ export default function PosBillingPage() {
 
   // States
   const [products, setProducts] = useState<DBProduct[]>([]);
-  const [activeMode, setActiveMode] = useState<'quick_code' | 'scan' | 'search'>('quick_code');
-  const [quickCode, setQuickCode] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-
-  // Mode matching product
-  const [matchedProduct, setMatchedProduct] = useState<DBProduct | null>(null);
 
   // Customer modal
   const [showCustModal, setShowCustModal] = useState(false);
+  const [custModalTab, setCustModalTab] = useState<'search' | 'create'>('search');
+  const [custSearchQuery, setCustSearchQuery] = useState('');
   const [custName, setCustName] = useState('');
   const [custPhone, setCustPhone] = useState('');
 
   // Discount state
   const [discountType, setDiscountType] = useState<'none' | 'flat' | 'percent'>('none');
   const [discountVal, setDiscountVal] = useState(0);
+  const [isEditingDiscount, setIsEditingDiscount] = useState(false);
+  const [tempDiscount, setTempDiscount] = useState('0');
+  const [tempDiscountType, setTempDiscountType] = useState<'flat' | 'percent'>('flat');
 
-  // Payment Tender Modal state
-  const [showPayModal, setShowPayModal] = useState(false);
+  // Tax/VAT state
+  const [taxRate, setTaxRate] = useState(8); // Default 8%
+  const [isEditingTax, setIsEditingTax] = useState(false);
+  const [tempTaxRate, setTempTaxRate] = useState('8');
+
+  // Payment Tender state (inline)
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'bank'>('cash');
   const [cashReceived, setCashReceived] = useState('');
   const [bankName, setBankName] = useState('');
@@ -74,6 +109,14 @@ export default function PosBillingPage() {
   // Completed Receipt Modal state
   const [showReceipt, setShowReceipt] = useState(false);
   const [latestOrder, setLatestOrder] = useState<any>(null);
+
+  // Focus Refs
+  const discountInputRef = useRef<HTMLInputElement>(null);
+  const taxInputRef = useRef<HTMLInputElement>(null);
+  const cashReceivedRef = useRef<HTMLInputElement>(null);
+  const cardDigitsRef = useRef<HTMLInputElement>(null);
+  const bankNameRef = useRef<HTMLInputElement>(null);
+  const custNameRef = useRef<HTMLInputElement>(null);
 
   // Load products from IndexedDB
   const loadProducts = async () => {
@@ -120,31 +163,7 @@ export default function PosBillingPage() {
     setTimeout(() => setToastMsg(null), 1500);
   };
 
-  // Quick code matching
-  useEffect(() => {
-    if (!quickCode) {
-      setMatchedProduct(null);
-      return;
-    }
-    const match = products.find(p => p.quickCode === quickCode);
-    if (match) {
-      setMatchedProduct(match);
-      // Auto-add product if valid code typed
-      const timer = setTimeout(() => {
-        if (match.stockCount <= 0) {
-          triggerToast(`Out of stock: ${match.name} ⚠️`);
-          setQuickCode('');
-          return;
-        }
-        addCartItem(match.name, match.price, match.icon, match.barcode || match.id, match.stockCount);
-        triggerToast(`Added ${match.name} 🛒`);
-        setQuickCode('');
-      }, 700);
-      return () => clearTimeout(timer);
-    } else {
-      setMatchedProduct(null);
-    }
-  }, [quickCode, products]);
+
 
   // Scan handler
   const handleScanCode = (barcode: string) => {
@@ -176,8 +195,8 @@ export default function PosBillingPage() {
   }, [subtotal, discountType, discountVal]);
 
   const taxAmount = useMemo(() => {
-    return ((subtotal - discountAmount) * 8) / 100;
-  }, [subtotal, discountAmount]);
+    return ((subtotal - discountAmount) * taxRate) / 100;
+  }, [subtotal, discountAmount, taxRate]);
 
   const totalAmount = useMemo(() => {
     return Math.max(0, subtotal - discountAmount + taxAmount);
@@ -221,7 +240,7 @@ export default function PosBillingPage() {
           if (paymentMethod === 'card') ord.cardLastFour = cardDigits.slice(-4);
           ord.discountType = discountType;
           ord.discountValue = discountAmount;
-          ord.taxRate = 8;
+          ord.taxRate = taxRate;
           ord.taxValue = taxAmount;
         });
 
@@ -270,7 +289,6 @@ export default function PosBillingPage() {
       });
 
       triggerToast('Invoice completed successfully! 📑');
-      setShowPayModal(false);
       setShowReceipt(true);
       clearCart();
       setCustomer(null);
@@ -287,26 +305,157 @@ export default function PosBillingPage() {
     }
   };
 
-  // Numpad key helper
-  const handleNumpadPress = (val: string) => {
-    if (val === 'backspace') {
-      setQuickCode(prev => prev.slice(0, -1));
-    } else if (val === '.') {
-      if (!quickCode.includes('.')) {
-        setQuickCode(prev => prev + '.');
+  // Inline Discount/Tax savers
+  const handleSaveDiscount = () => {
+    const val = parseFloat(tempDiscount);
+    if (!isNaN(val) && val >= 0) {
+      if (tempDiscountType === 'percent' && val > 100) {
+        triggerToast('Percentage discount cannot exceed 100% ⚠️');
+        return;
       }
+      setDiscountType(tempDiscountType);
+      setDiscountVal(val);
+      setIsEditingDiscount(false);
+      triggerToast(`Discount set to ${tempDiscountType === 'percent' ? `${val}%` : `Rs. ${val}`} 🏷️`);
     } else {
-      if (quickCode.length < 6) {
-        setQuickCode(prev => prev + val);
-      }
+      triggerToast('Invalid discount value ⚠️');
     }
   };
 
-  // Search filtered products
-  const searchedProductsList = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    return products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.quickCode && p.quickCode.includes(searchQuery)));
-  }, [products, searchQuery]);
+  const handleSaveTax = () => {
+    const val = parseFloat(tempTaxRate);
+    if (!isNaN(val) && val >= 0) {
+      if (val > 100) {
+        triggerToast('Tax rate cannot exceed 100% ⚠️');
+        return;
+      }
+      setTaxRate(val);
+      setIsEditingTax(false);
+      triggerToast(`Tax rate set to ${val}% 📊`);
+    } else {
+      triggerToast('Invalid tax rate ⚠️');
+    }
+  };
+
+  // Filtered customer list for Customer Modal
+  const filteredCustomers = useMemo(() => {
+    const q = custSearchQuery.trim().toLowerCase();
+    if (!q) return customCustomers;
+    return customCustomers.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q));
+  }, [customCustomers, custSearchQuery]);
+
+  // Submit checkout ref to bypass stale closures in useEffect
+  const checkoutSubmitRef = useRef(handleConfirmCheckout);
+  useEffect(() => {
+    checkoutSubmitRef.current = handleConfirmCheckout;
+  }, [handleConfirmCheckout]);
+
+  // Hotkey listener state ref
+  const stateRef = useRef({
+    cart,
+    showCustModal,
+    showReceipt,
+    discountVal,
+    discountType,
+    taxRate,
+    paymentMethod,
+    custModalTab,
+  });
+
+  useEffect(() => {
+    stateRef.current = {
+      cart,
+      showCustModal,
+      showReceipt,
+      discountVal,
+      discountType,
+      taxRate,
+      paymentMethod,
+      custModalTab,
+    };
+  }, [cart, showCustModal, showReceipt, discountVal, discountType, taxRate, paymentMethod, custModalTab]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const state = stateRef.current;
+
+      // Close modals on Escape
+      if (e.key === 'Escape') {
+        setShowCustModal(false);
+        setShowReceipt(false);
+        setIsEditingDiscount(false);
+        setIsEditingTax(false);
+        return;
+      }
+
+      // If receipt is open, Enter closes it and starts new sale
+      if (state.showReceipt && e.key === 'Enter') {
+        e.preventDefault();
+        setShowReceipt(false);
+        return;
+      }
+
+      // If customer modal is open
+      if (state.showCustModal) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          setCustModalTab(prev => prev === 'search' ? 'create' : 'search');
+        }
+        return;
+      }
+
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+
+      // Global F8 / Enter inside payment inputs settles transaction
+      if (e.key === 'F8' || (e.key === 'Enter' && (activeEl === cashReceivedRef.current || activeEl === cardDigitsRef.current || activeEl === bankNameRef.current))) {
+        e.preventDefault();
+        checkoutSubmitRef.current();
+        return;
+      }
+
+      // Switch payment method keys (1, 2, 3) only when not typing inside an input
+      if (!isTyping) {
+        if (e.key === '1') {
+          e.preventDefault();
+          setPaymentMethod('cash');
+          setTimeout(() => cashReceivedRef.current?.focus(), 50);
+        } else if (e.key === '2') {
+          e.preventDefault();
+          setPaymentMethod('card');
+          setTimeout(() => cardDigitsRef.current?.focus(), 50);
+        } else if (e.key === '3') {
+          e.preventDefault();
+          setPaymentMethod('bank');
+          setTimeout(() => bankNameRef.current?.focus(), 50);
+        }
+      }
+
+      // Global page hotkeys
+      if (e.key === 'F2') {
+        e.preventDefault();
+        setIsEditingDiscount(prev => {
+          if (!prev) {
+            setTempDiscount(state.discountVal.toString());
+            setTempDiscountType(state.discountType === 'none' ? 'flat' : state.discountType);
+            setTimeout(() => discountInputRef.current?.focus(), 50);
+          }
+          return !prev;
+        });
+      } else if (e.key === 'F3') {
+        e.preventDefault();
+        setShowCustModal(true);
+      } else if (e.key === 'F4') {
+        e.preventDefault();
+        if (state.paymentMethod === 'cash') cashReceivedRef.current?.focus();
+        else if (state.paymentMethod === 'card') cardDigitsRef.current?.focus();
+        else if (state.paymentMethod === 'bank') bankNameRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div style={styles.workspace} className="fade-in">
@@ -318,23 +467,13 @@ export default function PosBillingPage() {
         </div>
       )}
 
-      {/* POS Screen Header */}
-      <div style={styles.posHeader}>
-        <button onClick={() => router.push('/')} style={styles.backBtn} title="Back to Products Catalog">
-          <ArrowLeft size={18} />
-          <span>Home</span>
-        </button>
-        <div style={styles.headerInfo}>
-          <h2 style={styles.headerTitle}>Active Terminal POS</h2>
-          <p style={styles.headerSubtitle}>{cart.length} unique items in active invoice</p>
-        </div>
-      </div>
-
       <div style={styles.gridContainer}>
-        {/* Left pane: Cart Invoice Item list */}
+        {/* Left pane: Cart Invoice Item list (Invoice Summary) */}
         <div style={styles.invoicePane}>
           <div style={styles.paneTitleBar}>
-            <h3 style={styles.paneTitle}>Invoice Summary</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={styles.paneTitle}>Invoice Summary</h3>
+            </div>
             {cart.length > 0 && (
               <button 
                 onClick={() => {
@@ -353,7 +492,7 @@ export default function PosBillingPage() {
           <div style={styles.cartScroller}>
             {cart.map((item) => (
               <div key={item.id} style={styles.cartItemRow}>
-                <span style={styles.cartItemIcon}>{item.icon}</span>
+                <ProductImage icon={item.icon} size={48} style={{ border: 'none', borderRadius: '10px' }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h4 style={styles.cartItemName}>{item.name}</h4>
                   <span style={styles.cartItemPrice}>Rs. {item.price.toLocaleString()}</span>
@@ -362,17 +501,26 @@ export default function PosBillingPage() {
                 {/* Quantity adjustments */}
                 <div style={styles.qtyContainer}>
                   <button onClick={() => updateQuantity(item.id, -1)} style={styles.qtyBtn}>
-                    <MinusCircle size={16} />
+                    <MinusCircle size={18} color="var(--muted)" />
                   </button>
                   <span style={styles.qtyText}>{item.quantity}</span>
                   <button onClick={() => updateQuantity(item.id, 1)} style={styles.qtyBtn}>
-                    <PlusCircle size={16} />
+                    <PlusCircle size={18} color="var(--primary)" />
                   </button>
                 </div>
 
                 <span style={styles.cartItemSum}>
                   Rs. {(item.price * item.quantity).toLocaleString()}
                 </span>
+                
+                {/* Delete button */}
+                <button 
+                  onClick={() => updateQuantity(item.id, -item.quantity)} 
+                  style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--error)', cursor: 'pointer', marginLeft: '8px' }}
+                  title="Remove item"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             ))}
 
@@ -380,345 +528,253 @@ export default function PosBillingPage() {
               <div style={styles.emptyCartState}>
                 <ShoppingBag size={48} color="var(--muted)" style={{ opacity: 0.5 }} />
                 <h4>No items in invoice</h4>
-                <p>Add items from Home catalog, use quick codes or scan barcodes below to populate the invoice.</p>
+                <p>Add products to the cart from the Home page catalog grid.</p>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Customer Attachment panel */}
-          <div style={styles.customerBar}>
-            {customer ? (
-              <div style={styles.customerSelectedBox}>
-                <div style={{ flex: 1 }}>
-                  <p style={styles.custBoxName}>{customer.name}</p>
-                  <p style={styles.custBoxPhone}>{customer.phone}</p>
+        {/* Right pane: Checkout, Totals & Payment Settlement Panel */}
+        <div style={styles.checkoutSettlePane}>
+          <div style={styles.paneTitleBar}>
+            <h3 style={styles.paneTitle}>Checkout & Payment</h3>
+          </div>
+          
+          <div style={styles.settleFormContainer}>
+            {/* 1. Customer Attachment Block */}
+            <div style={{ ...styles.customerBar, width: '100%', marginBottom: '16px' }}>
+              {customer ? (
+                <div style={styles.customerSelectedBox}>
+                  <div style={{ flex: 1 }}>
+                    <p style={styles.custBoxName}>{customer.name}</p>
+                    <p style={styles.custBoxPhone}>{customer.phone}</p>
+                  </div>
+                  <button onClick={() => setCustomer(null)} style={styles.custBoxRemove}>Detach</button>
                 </div>
-                <button onClick={() => setCustomer(null)} style={styles.custBoxRemove}>Detach</button>
-              </div>
-            ) : (
-              <button onClick={() => setShowCustModal(true)} style={styles.attachCustBtn}>
-                <UserPlus size={16} />
-                <span>Attach Customer Profile</span>
-              </button>
-            )}
-          </div>
+              ) : (
+                <button onClick={() => setShowCustModal(true)} style={styles.attachCustBtn}>
+                  <UserPlus size={16} />
+                  <span>Attach Customer Profile</span>
+                  <span style={styles.hotkeyBadge}>F3</span>
+                </button>
+              )}
+            </div>
 
-          {/* Summary pricing checkout panel */}
-          <div style={styles.summaryBox}>
-            <div style={styles.summaryRow}>
-              <span style={styles.summaryLabel}>Discount Option</span>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button 
-                  onClick={() => { setDiscountType('flat'); setDiscountVal(100); }} 
-                  style={{ ...styles.discOptionBtn, ...(discountType === 'flat' ? styles.discOptionActive : {}) }}
-                >
-                  Flat Rs. 100
-                </button>
-                <button 
-                  onClick={() => { setDiscountType('percent'); setDiscountVal(5); }} 
-                  style={{ ...styles.discOptionBtn, ...(discountType === 'percent' ? styles.discOptionActive : {}) }}
-                >
-                  5% Off
-                </button>
-                {discountType !== 'none' && (
-                  <button onClick={() => { setDiscountType('none'); setDiscountVal(0); }} style={styles.discResetBtn}>Clear</button>
+            {/* 2. Totals Summary */}
+            <div style={{ ...styles.summaryBox, width: '100%', marginBottom: '20px' }}>
+              <div style={styles.summaryRow}>
+                <span style={styles.summaryLabel}>
+                  Discount
+                  <span style={styles.hotkeyBadge}>F2</span>
+                </span>
+                
+                {isEditingDiscount ? (
+                  <div style={styles.inlineEditContainer}>
+                    <div style={{ display: 'flex', gap: '3px', marginRight: '6px' }}>
+                      <button 
+                        onClick={() => setTempDiscountType('flat')} 
+                        style={{ 
+                          padding: '2px 6px', 
+                          fontSize: '10px', 
+                          fontWeight: 'bold', 
+                          border: '1px solid var(--border)', 
+                          backgroundColor: tempDiscountType === 'flat' ? 'var(--primary)' : 'transparent',
+                          color: tempDiscountType === 'flat' ? '#ffffff' : 'var(--muted)',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Rs
+                      </button>
+                      <button 
+                        onClick={() => setTempDiscountType('percent')} 
+                        style={{ 
+                          padding: '2px 6px', 
+                          fontSize: '10px', 
+                          fontWeight: 'bold', 
+                          border: '1px solid var(--border)', 
+                          backgroundColor: tempDiscountType === 'percent' ? 'var(--primary)' : 'transparent',
+                          color: tempDiscountType === 'percent' ? '#ffffff' : 'var(--muted)',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        %
+                      </button>
+                    </div>
+                    <input
+                      ref={discountInputRef}
+                      type="number"
+                      value={tempDiscount}
+                      onChange={(e) => setTempDiscount(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveDiscount(); }}
+                      style={{ width: '60px', padding: '2px 4px', fontSize: '12px', border: '1px solid var(--border)', outline: 'none' }}
+                    />
+                    <button 
+                      onClick={handleSaveDiscount} 
+                      style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--success)', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', padding: '0 4px' }}
+                    >
+                      ✓
+                    </button>
+                    <button 
+                      onClick={() => setIsEditingDiscount(false)} 
+                      style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--error)', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', padding: '0 4px' }}
+                    >
+                      ✗
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {discountAmount > 0 ? (
+                      <span style={{ fontWeight: 'bold', color: 'var(--success)' }}>
+                        - Rs. {discountAmount.toLocaleString()} {discountType === 'percent' ? `(${discountVal}%)` : ''}
+                      </span>
+                    ) : (
+                      <span style={{ color: 'var(--muted)' }}>No Discount</span>
+                    )}
+                    <button 
+                      onClick={() => {
+                        setTempDiscount(discountVal.toString());
+                        setTempDiscountType(discountType === 'none' ? 'flat' : discountType);
+                        setIsEditingDiscount(true);
+                        setTimeout(() => discountInputRef.current?.focus(), 50);
+                      }} 
+                      style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--primary)', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+                    >
+                      Edit
+                    </button>
+                  </div>
                 )}
               </div>
-            </div>
 
-            <div style={styles.summaryDivider} />
-
-            <div style={styles.summaryRow}>
-              <span>Subtotal</span>
-              <span>Rs. {subtotal.toLocaleString()}</span>
-            </div>
-
-            {discountAmount > 0 && (
-              <div style={{ ...styles.summaryRow, color: 'var(--success)' }}>
-                <span>Discount Applied</span>
-                <span>- Rs. {discountAmount.toLocaleString()}</span>
+              <div style={styles.summaryRow}>
+                <span>Subtotal</span>
+                <span>Rs. {subtotal.toLocaleString()}</span>
               </div>
-            )}
 
-            <div style={styles.summaryRow}>
-              <span>VAT / Tax (8%)</span>
-              <span>Rs. {taxAmount.toLocaleString()}</span>
-            </div>
-
-            <div style={styles.summaryDivider} />
-
-            <div style={styles.totalRow}>
-              <span>Total Payable</span>
-              <span>Rs. {totalAmount.toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right pane: Bottom Controls Selector (numpad, scan viewfinder, quick search list) */}
-        <div style={styles.controlsPane}>
-          {/* Segmented controls tab bar */}
-          <div style={styles.segmentedControl}>
-            <button 
-              onClick={() => setActiveMode('quick_code')}
-              style={{ ...styles.segmentBtn, ...(activeMode === 'quick_code' ? styles.segmentBtnActive : {}) }}
-            >
-              <Edit size={16} />
-              <span>Quick Code</span>
-            </button>
-            <button 
-              onClick={() => setActiveMode('scan')}
-              style={{ ...styles.segmentBtn, ...(activeMode === 'scan' ? styles.segmentBtnActive : {}) }}
-            >
-              <Barcode size={16} />
-              <span>Scan View</span>
-            </button>
-            <button 
-              onClick={() => setActiveMode('search')}
-              style={{ ...styles.segmentBtn, ...(activeMode === 'search' ? styles.segmentBtnActive : {}) }}
-            >
-              <Search size={16} />
-              <span>Quick Search</span>
-            </button>
-          </div>
-
-          {/* Mode Area Content */}
-          <div style={styles.modeArea}>
-            {activeMode === 'quick_code' && (
-              <div style={styles.quickCodeContainer}>
-                {/* Input box */}
-                <div style={styles.quickCodeBox}>
-                  <div>
-                    <span style={styles.quickCodeLabel}>Quick Code Typed</span>
-                    <div style={styles.codeTextRow}>
-                      <span style={styles.quickCodeVal}>{quickCode || '—'}</span>
-                      <div className="blink-cursor" />
-                    </div>
-                  </div>
-
-                  <div style={styles.matchArea}>
-                    {matchedProduct ? (
-                      <div style={styles.matchBadge}>
-                        <span>{matchedProduct.name}</span>
-                        <div style={styles.addSmallBadge}><PlusCircle size={14} /></div>
-                      </div>
-                    ) : (
-                      quickCode.length >= 3 && <span style={styles.noMatch}>No Match</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Interactive Numpad */}
-                <div style={styles.numpadContainer}>
-                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'backspace'].map((key) => (
-                    <button
-                      key={key}
-                      onClick={() => handleNumpadPress(key)}
-                      style={{
-                        ...styles.numpadBtn,
-                        ...(key === 'backspace' ? styles.numpadBtnDelete : {})
-                      }}
+              <div style={styles.summaryRow}>
+                <span style={styles.summaryLabel}>
+                  VAT / Tax
+                  {taxRate > 0 && <span style={{ color: 'var(--primary)', marginLeft: '4px' }}>({taxRate}%)</span>}
+                </span>
+                
+                {isEditingTax ? (
+                  <div style={styles.inlineEditContainer}>
+                    <input
+                      ref={taxInputRef}
+                      type="number"
+                      value={tempTaxRate}
+                      onChange={(e) => setTempTaxRate(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTax(); }}
+                      style={{ width: '40px', padding: '2px 4px', fontSize: '12px', border: '1px solid var(--border)', outline: 'none' }}
+                    />
+                    <span style={{ fontSize: '11px', fontWeight: 'bold', margin: '0 2px' }}>%</span>
+                    <button 
+                      onClick={handleSaveTax} 
+                      style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--success)', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', padding: '0 4px' }}
                     >
-                      {key === 'backspace' ? '⌫' : key}
+                      ✓
                     </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeMode === 'scan' && (
-              <div style={styles.scanWrapper}>
-                <span style={styles.scanLabel}>CAMERA VIEWFINDER ACTIVE</span>
-                <div style={styles.mockViewfinder}>
-                  <div style={styles.scannerBeamContainer}>
-                    <div style={styles.laserCornerTopLeft} />
-                    <div style={styles.laserCornerTopRight} />
-                    <div style={styles.laserCornerBottomLeft} />
-                    <div style={styles.laserCornerBottomRight} />
-                    <div className="laser-beam" />
+                    <button 
+                      onClick={() => setIsEditingTax(false)} 
+                      style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--error)', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', padding: '0 4px' }}
+                    >
+                      ✗
+                    </button>
                   </div>
-                  <span style={styles.viewfinderInstructions}>
-                    Position barcode inside the viewfinder.<br/>
-                    (Hardware scanner scans are supported globally)
-                  </span>
-                </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>Rs. {taxAmount.toLocaleString()}</span>
+                    <button 
+                      onClick={() => {
+                        setTempTaxRate(taxRate.toString());
+                        setIsEditingTax(true);
+                        setTimeout(() => taxInputRef.current?.focus(), 50);
+                      }} 
+                      style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--primary)', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
 
-            {activeMode === 'search' && (
-              <div style={styles.quickSearchWrapper}>
-                <div style={styles.searchBoxInput}>
-                  <Search size={16} color="var(--muted)" />
-                  <input
-                    type="text"
-                    placeholder="Search item by name..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={styles.searchBoxInputEl}
-                  />
-                </div>
+              <div style={styles.summaryDivider} />
 
-                <div style={styles.searchListScroller}>
-                  {searchedProductsList.map((p) => {
-                    const isOut = p.stockCount <= 0;
-                    return (
-                      <div 
-                        key={p.id} 
-                        onClick={() => {
-                          if (isOut) {
-                            triggerToast(`Out of stock: ${p.name} ⚠️`);
-                            return;
-                          }
-                          addCartItem(p.name, p.price, p.icon, p.barcode || p.id, p.stockCount);
-                          triggerToast(`Added ${p.name} 🛒`);
-                        }}
-                        style={{ ...styles.searchItemCard, opacity: isOut ? 0.6 : 1 }}
-                      >
-                        <span style={styles.searchItemIcon}>{p.icon}</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <h4 style={styles.searchItemName}>{p.name}</h4>
-                          <span style={styles.searchItemMeta}>Rs. {p.price} · {p.stockCount} left</span>
-                        </div>
-                        <PlusCircle size={18} color="var(--primary)" />
-                      </div>
-                    );
-                  })}
-
-                  {!searchQuery.trim() && (
-                    <div style={styles.searchEmpty}>
-                      <Search size={28} color="var(--muted)" style={{ opacity: 0.5 }} />
-                      <p>Type above to search the catalog</p>
-                    </div>
-                  )}
-
-                  {searchQuery.trim() && searchedProductsList.length === 0 && (
-                    <div style={styles.searchEmpty}>
-                      <ShoppingBag size={28} color="var(--muted)" style={{ opacity: 0.5 }} />
-                      <p>No matches found in catalog</p>
-                    </div>
-                  )}
-                </div>
+              <div style={styles.totalRowLarge}>
+                <span>Total Payable</span>
+                <span>Rs. {totalAmount.toLocaleString()}</span>
               </div>
-            )}
-          </div>
-
-          {/* Settle checkout button */}
-          <button
-            onClick={() => setShowPayModal(true)}
-            disabled={cart.length === 0}
-            style={{
-              ...styles.checkoutBtn,
-              ...(cart.length === 0 ? styles.checkoutBtnDisabled : {}),
-            }}
-          >
-            <span>Proceed to Payment Settlement</span>
-            <ArrowRight size={18} />
-          </button>
-        </div>
-      </div>
-
-      {/* Customer Sheet Attach Modal */}
-      {showCustModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
-            <div style={styles.modalHeader}>
-              <h3>Attach Customer Profile</h3>
-              <button onClick={() => setShowCustModal(false)} style={styles.modalCloseBtn}><X size={16} /></button>
             </div>
-            <div style={styles.modalBody}>
-              <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Customer Name</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Kasun Perera" 
-                  value={custName}
-                  onChange={(e) => setCustName(e.target.value)}
-                  style={styles.modalInput}
-                />
-              </div>
-              <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Phone Number</label>
-                <input 
-                  type="tel" 
-                  placeholder="e.g. +94 77 987 6543" 
-                  value={custPhone}
-                  onChange={(e) => setCustPhone(e.target.value)}
-                  style={styles.modalInput}
-                />
-              </div>
-              <button 
-                onClick={() => {
-                  if (!custName || !custPhone) return;
-                  setCustomer({ name: custName, phone: custPhone });
-                  setShowCustModal(false);
-                  setCustName('');
-                  setCustPhone('');
-                  triggerToast('Customer attached 👤');
-                }}
-                disabled={!custName || !custPhone}
-                style={styles.modalSubmitBtn}
-              >
-                Attach Profile
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Payment Tender Sheet Modal */}
-      {showPayModal && (
-        <div style={styles.modalOverlay}>
-          <div style={{ ...styles.modalContent, maxWidth: '520px' }}>
-            <div style={styles.modalHeader}>
-              <h3>Payment Settlement Tender</h3>
-              <button onClick={() => setShowPayModal(false)} style={styles.modalCloseBtn}><X size={16} /></button>
-            </div>
-            <div style={styles.modalBody}>
-              {/* Payment methods tabs */}
+            {/* 3. Payment Method Grid Selector */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ ...styles.modalLabel, marginBottom: '8px', display: 'block' }}>Payment Method</label>
               <div style={styles.payMethodsGrid}>
                 <button 
-                  onClick={() => setPaymentMethod('cash')}
+                  onClick={() => { setPaymentMethod('cash'); setTimeout(() => cashReceivedRef.current?.focus(), 50); }}
                   style={{ ...styles.payMethodCard, ...(paymentMethod === 'cash' ? styles.payMethodActive : {}) }}
                 >
                   <DollarSign size={20} />
-                  <span>Cash Payment</span>
+                  <span>[1] Cash</span>
                 </button>
                 <button 
-                  onClick={() => setPaymentMethod('card')}
+                  onClick={() => { setPaymentMethod('card'); setTimeout(() => cardDigitsRef.current?.focus(), 50); }}
                   style={{ ...styles.payMethodCard, ...(paymentMethod === 'card' ? styles.payMethodActive : {}) }}
                 >
                   <CreditCard size={20} />
-                  <span>Card Payment</span>
+                  <span>[2] Card</span>
                 </button>
                 <button 
-                  onClick={() => setPaymentMethod('bank')}
+                  onClick={() => { setPaymentMethod('bank'); setTimeout(() => bankNameRef.current?.focus(), 50); }}
                   style={{ ...styles.payMethodCard, ...(paymentMethod === 'bank' ? styles.payMethodActive : {}) }}
                 >
                   <Wallet size={20} />
-                  <span>Bank Transfer</span>
+                  <span>[3] Bank</span>
                 </button>
               </div>
+            </div>
 
-              {/* Total Summary */}
-              <div style={styles.paySummaryBox}>
-                <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--muted)' }}>INVOICE TOTAL DUE</span>
-                <span style={{ fontSize: '28px', fontWeight: '800', color: 'var(--primary)' }}>Rs. {totalAmount.toLocaleString()}</span>
-              </div>
-
-              {/* Tender specific fields */}
+            {/* 4. Payment Tender Inputs */}
+            <div style={{ flex: 1 }}>
               {paymentMethod === 'cash' && (
                 <div style={styles.modalInputGroup}>
                   <label style={styles.modalLabel}>Cash Received</label>
                   <input 
+                    ref={cashReceivedRef}
                     type="number" 
-                    placeholder="Enter cash amount..." 
+                    placeholder="Enter cash amount... [F4]" 
                     value={cashReceived}
                     onChange={(e) => setCashReceived(e.target.value)}
                     style={styles.modalInput}
                   />
+                  
+                  {/* Quick Cash Buttons */}
+                  <div style={styles.quickCashContainer}>
+                    <button 
+                      onClick={() => setCashReceived(Math.ceil(totalAmount).toString())}
+                      style={styles.quickCashChip}
+                    >
+                      Exact (Rs. {Math.ceil(totalAmount)})
+                    </button>
+                    {[100, 200, 500, 1000, 5000].map((note) => {
+                      if (note < totalAmount) return null;
+                      return (
+                        <button 
+                          key={note}
+                          onClick={() => setCashReceived(note.toString())}
+                          style={styles.quickCashChip}
+                        >
+                          Rs. {note}
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   {parseFloat(cashReceived) > 0 && (
-                    <div style={styles.changeDueBox}>
+                    <div style={styles.changeDueBoxLarge}>
                       <span>Change Due:</span>
-                      <span style={{ fontWeight: 'bold', color: 'var(--success)' }}>Rs. {changeDue.toLocaleString()}</span>
+                      <span>Rs. {changeDue.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
@@ -728,6 +784,7 @@ export default function PosBillingPage() {
                 <div style={styles.modalInputGroup}>
                   <label style={styles.modalLabel}>Last 4 Digits of Card</label>
                   <input 
+                    ref={cardDigitsRef}
                     type="text" 
                     maxLength={4} 
                     placeholder="e.g. 5432" 
@@ -742,6 +799,7 @@ export default function PosBillingPage() {
                 <div style={styles.modalInputGroup}>
                   <label style={styles.modalLabel}>Beneficiary Bank Name</label>
                   <input 
+                    ref={bankNameRef}
                     type="text" 
                     placeholder="e.g. HNB / Commercial Bank" 
                     value={bankName}
@@ -750,18 +808,157 @@ export default function PosBillingPage() {
                   />
                 </div>
               )}
+            </div>
+          </div>
 
+          {/* 5. Checkout Submit Button */}
+          <button 
+            onClick={handleConfirmCheckout}
+            disabled={paying || cart.length === 0}
+            style={{
+              ...styles.payCompleteBtn,
+              ...(cart.length === 0 ? styles.payCompleteBtnDisabled : {})
+            }}
+          >
+            {paying ? 'Completing sale...' : 'Confirm Checkout & Settle [F8]'}
+          </button>
+        </div>
+      </div>
+
+      {/* Customer Selector Modal (with tabs Search/Create) */}
+      {showCustModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h3>Attach Customer Profile</h3>
+              <button onClick={() => setShowCustModal(false)} style={styles.modalCloseBtn}><X size={16} /></button>
+            </div>
+            
+            {/* Modal Tabs */}
+            <div style={styles.modalTabHeader}>
               <button 
-                onClick={handleConfirmCheckout}
-                disabled={paying}
-                style={styles.payCompleteBtn}
+                onClick={() => setCustModalTab('search')} 
+                style={{ ...styles.modalTabBtn, ...(custModalTab === 'search' ? styles.modalTabBtnActive : {}) }}
               >
-                {paying ? 'Completing sale...' : 'Confirm Checkout Settlement'}
+                Search Contacts
+              </button>
+              <button 
+                onClick={() => setCustModalTab('create')} 
+                style={{ ...styles.modalTabBtn, ...(custModalTab === 'create' ? styles.modalTabBtnActive : {}) }}
+              >
+                Create Customer
               </button>
             </div>
+
+            {custModalTab === 'search' ? (
+              <div style={styles.modalBody}>
+                <div style={styles.searchBoxInput}>
+                  <Search size={16} color="var(--muted)" />
+                  <input
+                    type="text"
+                    placeholder="Search name or phone..."
+                    value={custSearchQuery}
+                    onChange={(e) => setCustSearchQuery(e.target.value)}
+                    style={styles.searchBoxInputEl}
+                  />
+                </div>
+
+                <div style={styles.customerList}>
+                  {/* Walking Customer Row */}
+                  <div 
+                    onClick={() => {
+                      setCustomer(null);
+                      setShowCustModal(false);
+                      triggerToast('Set as Walking Customer 👤');
+                    }}
+                    style={styles.walkingCustomerRow}
+                  >
+                    <div style={{ ...styles.customerAvatar, backgroundColor: '#f3f4f6', color: 'var(--muted)', fontSize: '18px' }}>
+                      🚶
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '13px', fontWeight: 'bold' }}>Walking Customer</h4>
+                      <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Default non-attached checkout</p>
+                    </div>
+                  </div>
+
+                  {filteredCustomers.map((cust, idx) => {
+                    const avatarColor = getAvatarColor(cust.name);
+                    const initials = getInitials(cust.name);
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => {
+                          setCustomer(cust);
+                          setShowCustModal(false);
+                          triggerToast(`Attached customer: ${cust.name} 👤`);
+                        }}
+                        style={styles.customerRow}
+                      >
+                        <div style={{ ...styles.customerAvatar, backgroundColor: avatarColor }}>
+                          {initials}
+                        </div>
+                        <div>
+                          <h4 style={{ fontSize: '13px', fontWeight: 'bold' }}>{cust.name}</h4>
+                          <p style={{ fontSize: '11px', color: 'var(--muted)' }}>{cust.phone}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {filteredCustomers.length === 0 && custSearchQuery.trim() !== '' && (
+                    <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '12px', padding: '16px' }}>
+                      No customers found
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={styles.modalBody}>
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.modalLabel}>Customer Name *</label>
+                  <input 
+                    ref={custNameRef}
+                    type="text" 
+                    placeholder="e.g. Kasun Perera" 
+                    value={custName}
+                    onChange={(e) => setCustName(e.target.value)}
+                    style={styles.modalInput}
+                  />
+                </div>
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.modalLabel}>Phone Number</label>
+                  <input 
+                    type="tel" 
+                    placeholder="e.g. +94 77 987 6543" 
+                    value={custPhone}
+                    onChange={(e) => setCustPhone(e.target.value)}
+                    style={styles.modalInput}
+                  />
+                </div>
+                <button 
+                  onClick={() => {
+                    if (!custName) return;
+                    const newCust = { name: custName, phone: custPhone || 'Walking Customer' };
+                    addCustomCustomer(newCust);
+                    setCustomer(newCust);
+                    setShowCustModal(false);
+                    setCustName('');
+                    setCustPhone('');
+                    triggerToast('Customer created & attached 👤');
+                  }}
+                  disabled={!custName}
+                  style={styles.modalSubmitBtn}
+                >
+                  Create & Attach Profile
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
+
+
 
       {/* Completed Invoice Receipt Modal */}
       {showReceipt && latestOrder && (
@@ -813,7 +1010,7 @@ export default function PosBillingPage() {
                   </div>
                 )}
                 <div style={styles.receiptTotalsRow}>
-                  <span>VAT / Tax (8%)</span>
+                  <span>VAT / Tax ({latestOrder.taxRate || 8}%)</span>
                   <span>Rs. {latestOrder.taxAmount.toLocaleString()}</span>
                 </div>
                 <div style={{ ...styles.receiptTotalsRow, fontWeight: 'bold', fontSize: '13px' }}>
@@ -848,7 +1045,7 @@ export default function PosBillingPage() {
                 onClick={() => setShowReceipt(false)} 
                 style={styles.receiptDoneBtn}
               >
-                Done / New Sale
+                Done / New Sale [Enter]
               </button>
             </div>
           </div>
@@ -860,48 +1057,223 @@ export default function PosBillingPage() {
 
 const styles: Record<string, React.CSSProperties> = {
   workspace: {
-    padding: '32px',
+    padding: '24px',
     display: 'flex',
     flexDirection: 'column',
-    height: '100%',
+    height: '100vh',
     overflowY: 'hidden',
+    boxSizing: 'border-box',
+    backgroundColor: 'var(--background)',
   },
-  posHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '20px',
-    marginBottom: '24px',
-    flexShrink: 0,
-  },
-  backBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '8px 14px',
-    borderRadius: 'var(--radius)',
-    backgroundColor: '#ffffff',
+  lowProfileBackBtn: {
+    padding: '6px',
+    borderRadius: '6px',
     border: '1px solid var(--border)',
+    backgroundColor: '#ffffff',
     color: 'var(--dark)',
-    fontWeight: 'bold',
-    fontSize: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     cursor: 'pointer',
     boxShadow: 'var(--shadow)',
     transition: 'all 0.2s',
   },
-  headerInfo: {
+  inlineEditContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    backgroundColor: 'var(--background)',
+    padding: '4px 8px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+  },
+  catalogLayout: {
+    display: 'flex',
+    flex: 1,
+    gap: '16px',
+    height: '100%',
+    minHeight: 0,
+  },
+  sidebar: {
+    width: '100px',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 'var(--radius)',
     display: 'flex',
     flexDirection: 'column',
+    gap: '8px',
+    padding: '8px',
+    overflowY: 'auto',
+    flexShrink: 0,
   },
-  headerTitle: {
-    fontSize: '20px',
-    fontWeight: '800',
-    color: 'var(--dark)',
-    lineHeight: '1.2',
-  },
-  headerSubtitle: {
-    fontSize: '12px',
+  sidebarBtn: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '12px 6px',
+    borderRadius: 'var(--radius)',
+    border: 'none',
+    backgroundColor: 'transparent',
     color: 'var(--muted)',
-    marginTop: '2px',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    gap: '4px',
+    transition: 'all 0.2s',
+  },
+  sidebarBtnActive: {
+    backgroundColor: '#ffffff',
+    color: 'var(--primary)',
+    boxShadow: 'var(--shadow)',
+  },
+  gridWrapper: {
+    flex: 1,
+    overflowY: 'auto',
+    paddingRight: '4px',
+  },
+  productGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+    gap: '12px',
+    paddingBottom: '16px',
+  },
+  productCard: {
+    backgroundColor: '#ffffff',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    gap: '8px',
+    cursor: 'pointer',
+    transition: 'transform 0.15s, border-color 0.15s',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+    boxSizing: 'border-box',
+    position: 'relative',
+  },
+  productIcon: {
+    fontSize: '28px',
+    alignSelf: 'center',
+    margin: '8px 0',
+  },
+  productName: {
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: 'var(--dark)',
+    lineHeight: '1.3',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  productPrice: {
+    fontSize: '13px',
+    fontWeight: '800',
+    color: 'var(--primary)',
+  },
+  productStock: {
+    fontSize: '10px',
+    color: 'var(--muted)',
+  },
+  productStockLow: {
+    color: 'var(--warning)',
+    fontWeight: 'bold',
+  },
+  productStockOut: {
+    color: 'var(--error)',
+    fontWeight: 'bold',
+  },
+  productAddBtn: {
+    width: '100%',
+    padding: '6px 0',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: 'var(--primary)',
+    color: '#ffffff',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  productAddBtnDisabled: {
+    backgroundColor: '#e5e7eb',
+    color: '#9ca3af',
+    cursor: 'not-allowed',
+  },
+  modalTabHeader: {
+    display: 'flex',
+    borderBottom: '1px solid var(--border)',
+    backgroundColor: '#f9fafb',
+  },
+  modalTabBtn: {
+    flex: 1,
+    padding: '12px 0',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    backgroundColor: 'transparent',
+    fontSize: '13px',
+    fontWeight: 'bold',
+    color: 'var(--muted)',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  modalTabBtnActive: {
+    borderBottomColor: 'var(--primary)',
+    color: 'var(--primary)',
+    backgroundColor: '#ffffff',
+  },
+  customerList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    maxHeight: '300px',
+    overflowY: 'auto',
+    padding: '8px 0',
+  },
+  customerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '10px 12px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    cursor: 'pointer',
+    transition: 'border-color 0.2s',
+    backgroundColor: '#ffffff',
+  },
+  walkingCustomerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '10px 12px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid #e5e7eb',
+    cursor: 'pointer',
+    backgroundColor: '#f9fafb',
+    transition: 'border-color 0.2s',
+  },
+  customerAvatar: {
+    width: '32px',
+    height: '32px',
+    borderRadius: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: '12px',
+  },
+  hotkeyBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    backgroundColor: '#e5e7eb',
+    color: '#374151',
+    borderRadius: '4px',
+    padding: '2px 6px',
+    fontSize: '10px',
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+    marginLeft: '6px',
   },
   gridContainer: {
     display: 'flex',
@@ -1072,6 +1444,8 @@ const styles: Record<string, React.CSSProperties> = {
   summaryLabel: {
     fontWeight: 'bold',
     color: 'var(--dark)',
+    display: 'flex',
+    alignItems: 'center',
   },
   discOptionBtn: {
     padding: '4px 10px',
@@ -1107,11 +1481,71 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: '800',
     color: 'var(--dark)',
   },
+  checkoutSettlePane: {
+    flex: 4,
+    backgroundColor: '#ffffff',
+    borderRadius: 'var(--radius-lg)',
+    border: '1px solid var(--border)',
+    boxShadow: 'var(--shadow)',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+  },
+  settleFormContainer: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '16px 20px',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  totalRowLarge: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '20px',
+    fontWeight: '800',
+    color: 'var(--dark)',
+  },
+  quickCashContainer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    marginTop: '10px',
+  },
+  quickCashChip: {
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: '1px solid var(--border)',
+    backgroundColor: '#f3f4f6',
+    color: 'var(--dark)',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  changeDueBoxLarge: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: 'var(--success)',
+    backgroundColor: '#f0fdf4',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    border: '1px solid #bbf7d0',
+    marginTop: '12px',
+  },
+  payCompleteBtnDisabled: {
+    backgroundColor: '#e5e7eb',
+    color: '#9ca3af',
+    cursor: 'not-allowed',
+    boxShadow: 'none',
+  },
   controlsPane: {
     flex: 4,
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
+    minHeight: 0,
   },
   segmentedControl: {
     display: 'flex',
@@ -1148,7 +1582,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 'var(--radius-lg)',
     border: '1px solid var(--border)',
     boxShadow: 'var(--shadow)',
-    padding: '20px',
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
     minHeight: 0,

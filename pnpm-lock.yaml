@@ -220,6 +220,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.106.0
         version: 2.106.0
+      '@tanstack/react-query':
+        specifier: ^5.100.10
+        version: 5.100.10(react@19.1.0)
       lokijs:
         specifier: ^1.5.12
         version: 1.5.12
