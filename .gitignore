@@ -12,6 +12,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+.next/
+web/.next/
+
 # Native
 .kotlin/
 *.orig.*
@@ -48,3 +51,9 @@ app-example
 # Cursor MCP config
 .cursor/mcp.json
 
+# VS Code workspace settings
+.vscode/
+
+# Local logs
+*.log
+logs/

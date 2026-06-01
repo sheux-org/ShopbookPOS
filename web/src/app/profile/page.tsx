@@ -1,0 +1,940 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '../../stores/authStore';
+import { useBusinessStore } from '../../stores/businessStore';
+import database from '../../db/database';
+import { Q } from '@nozbe/watermelondb';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { syncDatabase } from '../../services/sync';
+import { 
+  User, Store, Users, Cloud, RefreshCw, LogOut, 
+  HelpCircle, CheckCircle, ChevronRight, X, UserPlus, MapPin, Save,
+  PlusCircle, Shield, Phone, Database, HardDrive
+} from 'lucide-react';
+
+interface DBEmployee {
+  id: string;
+  name: string;
+  role: 'admin' | 'manager' | 'cashier';
+  phone: string;
+  email?: string;
+}
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const employeeName = useAuthStore((s) => s.employeeName);
+  const userRole = useAuthStore((s) => s.userRole);
+  const logout = useAuthStore((s) => s.logout);
+  const userPhone = useAuthStore((s) => s.userPhone);
+  
+  const activeBusiness = useBusinessStore((s) => s.activeBusiness);
+  const businesses = useBusinessStore((s) => s.businesses);
+  const setActiveBusiness = useBusinessStore((s) => s.setActiveBusiness);
+  const loadBusinesses = useBusinessStore((s) => s.loadBusinessesFromDb);
+  const registerBusiness = useBusinessStore((s) => s.registerBusiness);
+  const updateActiveBusinessDetails = useBusinessStore((s) => s.updateActiveBusinessDetails);
+
+  const isBackupEnabled = useSettingsStore((s) => s.isBackupEnabled);
+  const toggleBackup = useSettingsStore((s) => s.toggleBackup);
+
+  // States
+  const [employees, setEmployees] = useState<DBEmployee[]>([]);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  // Modals state
+  const [activeModal, setActiveModal] = useState<'details' | 'staff' | 'branches' | 'faq' | null>(null);
+
+  // Form states - Store details
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+
+  // Form states - Staff add
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffRole, setNewStaffRole] = useState<'admin' | 'manager' | 'cashier'>('cashier');
+  const [newStaffPhone, setNewStaffPhone] = useState('');
+
+  // Form states - Branch add
+  const [newBranchName, setNewBranchName] = useState('');
+  const [newBranchCategory, setNewBranchCategory] = useState('General Retail');
+  const [newBranchAddress, setNewBranchAddress] = useState('');
+
+  // Load Employees list from IndexedDB
+  const loadEmployees = async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const activeBiz = useBusinessStore.getState().activeBusiness;
+      if (!activeBiz || activeBiz.id === '0') return;
+      const emps = await database.get('employees').query(Q.where('business_id', activeBiz.id)).fetch() as any[];
+      setEmployees(emps.map(e => ({
+        id: e.id,
+        name: e.name,
+        role: e.role,
+        phone: e.phone,
+        email: e.email
+      })));
+    } catch (err) {
+      console.error("Failed to load staff list:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadBusinesses().then(() => {
+        loadEmployees();
+      });
+    }
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (isLoggedIn && activeBusiness) {
+      setEditName(activeBusiness.name || '');
+      setEditCategory(activeBusiness.category || '');
+      setEditAddress(activeBusiness.address || '');
+      setEditPhone(activeBusiness.phone || '');
+    }
+  }, [isLoggedIn, activeBusiness]);
+
+  const triggerToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 1500);
+  };
+
+  const handleStoreDetailsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateActiveBusinessDetails({
+        name: editName,
+        category: editCategory,
+        address: editAddress,
+        phone: editPhone
+      });
+      await loadBusinesses();
+      triggerToast('Store details updated! 🏬');
+      setActiveModal(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStaffName || !newStaffPhone) return;
+
+    try {
+      const activeBiz = useBusinessStore.getState().activeBusiness;
+      await database.write(async () => {
+        const biz = await database.get('businesses').find(activeBiz.id);
+        await database.get('employees').create((emp: any) => {
+          emp.business.set(biz);
+          emp.name = newStaffName;
+          emp.role = newStaffRole;
+          emp.phone = newStaffPhone;
+        });
+      });
+
+      triggerToast(`Staff ${newStaffName} registered successfully! 👥`);
+      setNewStaffName('');
+      setNewStaffPhone('');
+      setNewStaffRole('cashier');
+      loadEmployees();
+    } catch (err) {
+      console.error("Failed to register staff:", err);
+    }
+  };
+
+  const handleAddBranchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBranchName || !newBranchAddress) return;
+
+    try {
+      await registerBusiness(newBranchName, newBranchAddress, userPhone || activeBusiness.phone, newBranchCategory);
+      await loadBusinesses();
+      triggerToast(`Branch ${newBranchName} initialized! 🏢`);
+      setNewBranchName('');
+      setNewBranchAddress('');
+      setActiveModal(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleManualSync = async () => {
+    setSyncing(true);
+    try {
+      triggerToast('Syncing database... 🔄');
+      const success = await syncDatabase();
+      if (success) {
+        triggerToast('IndexedDB database synced successfully! ✅');
+      } else {
+        alert('Sync failed. Please ensure the Supabase configuration parameters inside web/.env.local are correct.');
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <div style={styles.container} className="fade-in">
+      {/* Toast popup */}
+      {toastMsg && (
+        <div style={styles.toast}>
+          <CheckCircle size={16} color="#FFFFFF" />
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
+      {/* Two-Column SaaS Dashboard Layout */}
+      <div style={styles.dashboardGrid}>
+        
+        {/* Left Column: Premium Summary & Status Card */}
+        <div style={styles.leftColumn}>
+          <div style={styles.profileCard}>
+            <div style={styles.avatar}>
+              {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'}
+            </div>
+            <h3 style={styles.bizName}>{activeBusiness?.name || 'Partner Store'}</h3>
+            <span style={{
+              ...styles.roleBadge,
+              backgroundColor: userRole === 'admin' ? '#FEE2E2' : userRole === 'manager' ? '#FFEDD5' : '#E6F4EA',
+              color: userRole === 'admin' ? '#DC2626' : userRole === 'manager' ? '#D97706' : '#137333',
+            }}>
+              {userRole.toUpperCase()}
+            </span>
+            <p style={styles.categoryPill}>{activeBusiness?.category || 'General POS Retail'}</p>
+          </div>
+
+          {/* System status metadata */}
+          <div style={styles.metaCard}>
+            <h4 style={styles.metaCardTitle}>Terminal System Details</h4>
+            
+            <div style={styles.metaItem}>
+              <User size={14} color="var(--muted)" />
+              <div style={styles.metaInfo}>
+                <span style={styles.metaLabel}>Operator Name</span>
+                <span style={styles.metaVal}>{employeeName}</span>
+              </div>
+            </div>
+
+            <div style={styles.metaItem}>
+              <Phone size={14} color="var(--muted)" />
+              <div style={styles.metaInfo}>
+                <span style={styles.metaLabel}>Phone Credentials</span>
+                <span style={styles.metaVal}>{userPhone || 'Not Configured'}</span>
+              </div>
+            </div>
+
+            <div style={styles.metaItem}>
+              <Database size={14} color="var(--muted)" />
+              <div style={styles.metaInfo}>
+                <span style={styles.metaLabel}>Local Database</span>
+                <span style={styles.metaVal}>WatermelonDB (Active)</span>
+              </div>
+            </div>
+
+            <div style={styles.metaItem}>
+              <Cloud size={14} color="var(--muted)" />
+              <div style={styles.metaInfo}>
+                <span style={styles.metaLabel}>Supabase Sync</span>
+                <span style={{
+                  ...styles.metaVal,
+                  color: isBackupEnabled ? 'var(--success)' : 'var(--muted)'
+                }}>
+                  {isBackupEnabled ? 'Enabled (Online)' : 'Disabled'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: SaaS Profile Options list */}
+        <div style={styles.rightColumn}>
+          <h3 style={styles.sectionHeader}>Terminal Operations Settings</h3>
+
+          <div style={styles.optionsGrid}>
+            {/* Option: Store details */}
+            <div style={styles.optionCard} onClick={() => setActiveModal('details')}>
+              <div style={{ ...styles.iconBox, backgroundColor: '#eff6ff', color: 'var(--primary)' }}>
+                <Store size={20} />
+              </div>
+              <div style={styles.optionDetails}>
+                <h4 style={styles.optionTitle}>Store Profile Details</h4>
+                <p style={styles.optionSub}>Manage receipt layouts, address, phone details and categories.</p>
+              </div>
+              <ChevronRight size={18} color="var(--muted)" />
+            </div>
+
+            {/* Option: Switch branches */}
+            <div style={styles.optionCard} onClick={() => setActiveModal('branches')}>
+              <div style={{ ...styles.iconBox, backgroundColor: '#fef7e0', color: '#b06000' }}>
+                <MapPin size={20} />
+              </div>
+              <div style={styles.optionDetails}>
+                <h4 style={styles.optionTitle}>Locations & Branches</h4>
+                <p style={styles.optionSub}>Registered locations: {businesses.length} · Initialize and swap active terminals.</p>
+              </div>
+              <ChevronRight size={18} color="var(--muted)" />
+            </div>
+
+            {/* Option: Staff Management */}
+            {userRole === 'admin' && (
+              <div style={styles.optionCard} onClick={() => setActiveModal('staff')}>
+                <div style={{ ...styles.iconBox, backgroundColor: '#e6f4ea', color: '#137333' }}>
+                  <Users size={20} />
+                </div>
+                <div style={styles.optionDetails}>
+                  <h4 style={styles.optionTitle}>Staff Accounts Management</h4>
+                  <p style={styles.optionSub}>Onboard cashmere cashiers, managers, and administrative access ranks.</p>
+                </div>
+                <ChevronRight size={18} color="var(--muted)" />
+              </div>
+            )}
+
+            {/* Option: Auto cloud backup toggle */}
+            <div style={styles.optionCard}>
+              <div style={{ ...styles.iconBox, backgroundColor: '#eff6ff', color: 'var(--primary)' }}>
+                <Cloud size={20} />
+              </div>
+              <div style={styles.optionDetails}>
+                <h4 style={styles.optionTitle}>Real-time Cloud Backups</h4>
+                <p style={styles.optionSub}>Continuously replicate transaction logs and ledger data to cloud databases.</p>
+              </div>
+              <button 
+                onClick={toggleBackup}
+                style={{
+                  ...styles.switchBtn,
+                  backgroundColor: isBackupEnabled ? 'var(--primary)' : '#d1d5db',
+                }}
+              >
+                <div style={{
+                  ...styles.switchThumb,
+                  transform: isBackupEnabled ? 'translateX(20px)' : 'translateX(0)',
+                }} />
+              </button>
+            </div>
+
+            {/* Option: Manual Sync */}
+            {isBackupEnabled && (
+              <div style={styles.optionCard} onClick={handleManualSync}>
+                <div style={{ ...styles.iconBox, backgroundColor: '#e6f4ea', color: '#137333' }}>
+                  <RefreshCw size={20} className={syncing ? 'spin-anim' : ''} />
+                </div>
+                <div style={styles.optionDetails}>
+                  <h4 style={styles.optionTitle}>Force Database Sync</h4>
+                  <p style={styles.optionSub}>Manually push latest offline transaction queue to remote clusters.</p>
+                </div>
+                <ChevronRight size={18} color="var(--muted)" />
+              </div>
+            )}
+
+            {/* Option: Support FAQs */}
+            <div style={styles.optionCard} onClick={() => setActiveModal('faq')}>
+              <div style={{ ...styles.iconBox, backgroundColor: '#f3f4f6', color: 'var(--dark)' }}>
+                <HelpCircle size={20} />
+              </div>
+              <div style={styles.optionDetails}>
+                <h4 style={styles.optionTitle}>Help FAQ & Printing Manual</h4>
+                <p style={styles.optionSub}>Audit guidelines, print configuration, and offline-first database setup.</p>
+              </div>
+              <ChevronRight size={18} color="var(--muted)" />
+            </div>
+
+            {/* Option: Log out */}
+            <div 
+              style={styles.optionCard}
+              onClick={() => {
+                if (confirm('Disconnect POS terminal session?')) {
+                  logout();
+                  router.push('/auth');
+                }
+              }}
+            >
+              <div style={{ ...styles.iconBox, backgroundColor: '#fff1f2', color: 'var(--error)' }}>
+                <LogOut size={20} />
+              </div>
+              <div style={styles.optionDetails}>
+                <h4 style={{ ...styles.optionTitle, color: 'var(--error)' }}>Sign Out Session</h4>
+                <p style={styles.optionSub}>Safely commit local storage states and disconnect current terminal access.</p>
+              </div>
+              <ChevronRight size={18} color="var(--muted)" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal overlays */}
+      
+      {/* 1. Store details modal */}
+      {activeModal === 'details' && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h3>Update Store details</h3>
+              <button onClick={() => setActiveModal(null)} style={styles.modalCloseBtn}><X size={16} /></button>
+            </div>
+            <form onSubmit={handleStoreDetailsSubmit} style={styles.modalBody}>
+              <div style={styles.modalInputGroup}>
+                <label style={styles.modalLabel}>Business Brand Name</label>
+                <input 
+                  type="text" 
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
+                  style={styles.modalInput}
+                />
+              </div>
+
+              <div style={styles.modalInputGroup}>
+                <label style={styles.modalLabel}>Store Category</label>
+                <input 
+                  type="text" 
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  required
+                  style={styles.modalInput}
+                />
+              </div>
+
+              <div style={styles.modalInputGroup}>
+                <label style={styles.modalLabel}>Billing Address</label>
+                <input 
+                  type="text" 
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  required
+                  style={styles.modalInput}
+                />
+              </div>
+
+              <div style={styles.modalInputGroup}>
+                <label style={styles.modalLabel}>Receipt Phone Number</label>
+                <input 
+                  type="text" 
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  required
+                  style={styles.modalInput}
+                />
+              </div>
+
+              <button type="submit" style={styles.modalSubmitBtn}>
+                <Save size={16} />
+                <span>Save receipt details</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Staff Management modal */}
+      {activeModal === 'staff' && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modalContent, maxWidth: '680px' }}>
+            <div style={styles.modalHeader}>
+              <h3>Staff Management Portal</h3>
+              <button onClick={() => setActiveModal(null)} style={styles.modalCloseBtn}><X size={16} /></button>
+            </div>
+            <div style={{ ...styles.modalBody, flexDirection: 'row', gap: '24px' }}>
+              <form onSubmit={handleAddStaffSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <h4 style={styles.formTitle}>Onboard Staff Member</h4>
+                
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.modalLabel}>Full Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Ruwan Silva" 
+                    value={newStaffName}
+                    onChange={(e) => setNewStaffName(e.target.value)}
+                    required
+                    style={styles.modalInput}
+                  />
+                </div>
+
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.modalLabel}>Phone number</label>
+                  <input 
+                    type="tel" 
+                    placeholder="e.g. +94 77 123 4567" 
+                    value={newStaffPhone}
+                    onChange={(e) => setNewStaffPhone(e.target.value)}
+                    required
+                    style={styles.modalInput}
+                  />
+                </div>
+
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.modalLabel}>Role Rank</label>
+                  <select 
+                    value={newStaffRole}
+                    onChange={(e: any) => setNewStaffRole(e.target.value)}
+                    style={styles.select}
+                  >
+                    <option value="cashier">Cashier (Billing ONLY)</option>
+                    <option value="manager">Manager (Stock adjustment)</option>
+                    <option value="admin">Administrator (Full Access)</option>
+                  </select>
+                </div>
+
+                <button type="submit" style={styles.modalSubmitBtn}>
+                  <UserPlus size={16} />
+                  <span>Onboard member</span>
+                </button>
+              </form>
+
+              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h4 style={styles.formTitle}>Active Store Personnel ({employees.length})</h4>
+                <div style={styles.staffScroller}>
+                  {employees.map(emp => (
+                    <div key={emp.id} style={styles.staffCard}>
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{emp.name}</div>
+                        <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>{emp.phone}</div>
+                      </div>
+                      <span style={{
+                        ...styles.roleBadge,
+                        backgroundColor: emp.role === 'admin' ? '#FEE2E2' : emp.role === 'manager' ? '#FFEDD5' : '#E6F4EA',
+                        color: emp.role === 'admin' ? '#DC2626' : emp.role === 'manager' ? '#D97706' : '#137333',
+                        marginTop: 0
+                      }}>
+                        {emp.role.toUpperCase()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Branch Management modal */}
+      {activeModal === 'branches' && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modalContent, maxWidth: '680px' }}>
+            <div style={styles.modalHeader}>
+              <h3>Multi-Branch & Locations Portal</h3>
+              <button onClick={() => setActiveModal(null)} style={styles.modalCloseBtn}><X size={16} /></button>
+            </div>
+            <div style={{ ...styles.modalBody, flexDirection: 'row', gap: '24px' }}>
+              <form onSubmit={handleAddBranchSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <h4 style={styles.formTitle}>Initialize New Branch Location</h4>
+                
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.modalLabel}>Branch Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Shopbook Kandy Branch" 
+                    value={newBranchName}
+                    onChange={(e) => setNewBranchName(e.target.value)}
+                    required
+                    style={styles.modalInput}
+                  />
+                </div>
+
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.modalLabel}>Business Type</label>
+                  <select 
+                    value={newBranchCategory}
+                    onChange={(e) => setNewBranchCategory(e.target.value)}
+                    style={styles.select}
+                  >
+                    <option value="Restaurant / Cafe">Restaurant / Cafe</option>
+                    <option value="General Retail">General Retail</option>
+                    <option value="Grocery Store">Grocery Store</option>
+                  </select>
+                </div>
+
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.modalLabel}>Physical Address</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 50 Temple Road, Kandy" 
+                    value={newBranchAddress}
+                    onChange={(e) => setNewBranchAddress(e.target.value)}
+                    required
+                    style={styles.modalInput}
+                  />
+                </div>
+
+                <button type="submit" style={styles.modalSubmitBtn}>
+                  <PlusCircle size={16} />
+                  <span>Onboard location</span>
+                </button>
+              </form>
+
+              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h4 style={styles.formTitle}>Registered branches ({businesses.length})</h4>
+                <div style={styles.branchScroller}>
+                  {businesses.map(biz => {
+                    const isActive = biz.id === activeBusiness.id;
+                    return (
+                      <div 
+                        key={biz.id} 
+                        onClick={() => {
+                          if (biz.id === '0') return;
+                          setActiveBusiness(biz.id);
+                          triggerToast(`Switched active branch to ${biz.name}! 🏬`);
+                          setActiveModal(null);
+                        }}
+                        style={{
+                          ...styles.branchCard,
+                          borderColor: isActive ? 'var(--primary)' : 'var(--border)',
+                          backgroundColor: isActive ? 'var(--light-blue)' : '#ffffff',
+                          cursor: biz.id === '0' ? 'default' : 'pointer',
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '13px', color: isActive ? 'var(--primary)' : 'var(--dark)' }}>{biz.name}</div>
+                          <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{biz.address}</div>
+                        </div>
+                        {isActive && <span style={styles.activeLabel}>ACTIVE</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Support FAQ modal */}
+      {activeModal === 'faq' && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modalContent, maxWidth: '520px' }}>
+            <div style={styles.modalHeader}>
+              <h3>Help & Support FAQs</h3>
+              <button onClick={() => setActiveModal(null)} style={styles.modalCloseBtn}><X size={16} /></button>
+            </div>
+            <div style={{ ...styles.modalBody, maxHeight: '420px', overflowY: 'auto' }}>
+              <div style={styles.faqBlock}>
+                <h4>🔌 How do I connect to thermal printers?</h4>
+                <p>On the web terminal, printer support is handled via the native browser Print dialog. You can print invoices directly to standard thermal roll printers (58mm/80mm) connected via USB or Wifi. Make sure to adjust margins to 'None' inside the browser print settings.</p>
+              </div>
+              <div style={styles.faqBlock}>
+                <h4>📦 How do I manage low stock alert triggers?</h4>
+                <p>Inside the Stocks Management workspace page, edit any product details to configure the low stock unit alerts. Alerts trigger visual highlights inside both stock lists and billing catalog cards.</p>
+              </div>
+              <div style={styles.faqBlock}>
+                <h4>☁️ How does database backup sync operate?</h4>
+                <p>The Pro web client saves all catalog adjustments, staff settings, and billing logs inside IndexedDB locally. Enabling backup sync syncs offline operations automatically to Supabase. Manual backups can be triggered in Profile settings or the sidebar panel.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    overflow: 'hidden',
+  },
+  toast: {
+    position: 'fixed',
+    top: '24px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    backgroundColor: 'var(--success)',
+    color: '#ffffff',
+    padding: '12px 24px',
+    borderRadius: '30px',
+    fontWeight: 'bold',
+    fontSize: '13px',
+    zIndex: 99999,
+    boxShadow: '0 10px 20px rgba(22, 163, 74, 0.25)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  dashboardGrid: {
+    flex: 1,
+    display: 'grid',
+    gridTemplateColumns: '320px 1fr',
+    gap: '32px',
+    padding: '32px',
+    overflow: 'hidden',
+    height: '100%',
+  },
+  leftColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+    overflowY: 'auto',
+  },
+  rightColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    overflowY: 'auto',
+    backgroundColor: '#ffffff',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '32px',
+    boxShadow: 'var(--shadow)',
+  },
+  profileCard: {
+    backgroundColor: '#ffffff',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '32px 24px',
+    textAlign: 'center',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '12px',
+    boxShadow: 'var(--shadow)',
+  },
+  avatar: {
+    width: '72px',
+    height: '72px',
+    borderRadius: '36px',
+    backgroundColor: 'var(--primary)',
+    color: '#ffffff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: '800',
+    fontSize: '22px',
+    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
+    marginBottom: '6px',
+  },
+  bizName: {
+    fontSize: '17px',
+    fontWeight: '800',
+    color: 'var(--dark)',
+  },
+  roleBadge: {
+    display: 'inline-block',
+    fontSize: '10px',
+    fontWeight: '800',
+    padding: '3px 10px',
+    borderRadius: '20px',
+    letterSpacing: '0.5px',
+    marginTop: '2px',
+  },
+  categoryPill: {
+    fontSize: '11px',
+    color: 'var(--muted)',
+  },
+  metaCard: {
+    backgroundColor: '#ffffff',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--radius-lg)',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    boxShadow: 'var(--shadow)',
+  },
+  metaCardTitle: {
+    fontSize: '12px',
+    fontWeight: '800',
+    color: 'var(--dark)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    borderBottom: '1px solid var(--border)',
+    paddingBottom: '8px',
+    marginBottom: '4px',
+  },
+  metaItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  metaInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+  metaLabel: {
+    fontSize: '10px',
+    color: 'var(--muted)',
+    fontWeight: 'bold',
+  },
+  metaVal: {
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: 'var(--dark)',
+  },
+  sectionHeader: {
+    fontSize: '16px',
+    fontWeight: '800',
+    color: 'var(--dark)',
+    borderBottom: '1px solid var(--border)',
+    paddingBottom: '12px',
+    marginBottom: '8px',
+  },
+  optionsGrid: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  optionCard: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '16px 20px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: '#ffffff',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    boxShadow: 'var(--shadow)',
+  },
+  iconBox: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    flexShrink: 0,
+  },
+  optionDetails: {
+    flex: 1,
+    paddingRight: '12px',
+  },
+  optionTitle: {
+    fontSize: '13px',
+    fontWeight: 'bold',
+    color: 'var(--dark)',
+  },
+  optionSub: {
+    fontSize: '11px',
+    color: 'var(--muted)',
+    marginTop: '3px',
+    lineHeight: '1.4',
+  },
+  switchBtn: {
+    width: '42px',
+    height: '22px',
+    borderRadius: '11px',
+    padding: '2px',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'background-color 0.2s ease',
+    flexShrink: 0,
+  },
+  switchThumb: {
+    width: '18px',
+    height: '18px',
+    borderRadius: '9px',
+    backgroundColor: '#ffffff',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+    transition: 'transform 0.2s ease',
+  },
+  formTitle: {
+    fontSize: '13px',
+    fontWeight: '800',
+    color: 'var(--dark)',
+    marginBottom: '4px',
+  },
+  staffScroller: {
+    maxHeight: '260px',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  staffCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 14px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--background)',
+  },
+  branchScroller: {
+    maxHeight: '260px',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  branchCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 14px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    transition: 'all 0.15s ease',
+  },
+  activeLabel: {
+    fontSize: '9px',
+    fontWeight: '800',
+    backgroundColor: 'var(--primary)',
+    color: '#ffffff',
+    padding: '2px 6px',
+    borderRadius: '4px',
+  },
+  faqBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    paddingBottom: '16px',
+    borderBottom: '1px solid var(--border)',
+    marginBottom: '16px',
+  },
+  modalInputGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  modalLabel: {
+    fontSize: '11px',
+    fontWeight: '700',
+    color: 'var(--dark)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
+  },
+  modalInput: {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    fontSize: '14px',
+    outline: 'none',
+    backgroundColor: 'var(--background)',
+  },
+  select: {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    fontSize: '14px',
+    outline: 'none',
+    backgroundColor: 'var(--background)',
+    cursor: 'pointer',
+  },
+  modalSubmitBtn: {
+    width: '100%',
+    padding: '12px',
+    borderRadius: 'var(--radius)',
+    backgroundColor: 'var(--primary)',
+    color: '#ffffff',
+    border: 'none',
+    fontWeight: 'bold',
+    fontSize: '13px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+  },
+};

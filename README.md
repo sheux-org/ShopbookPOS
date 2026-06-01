@@ -1,189 +1,150 @@
-# Shopbook POS (Point of Sale) 📱🛒
+# Shopbook POS (Point of Sale) Monorepo 📱💻🛒
 
-Welcome to the **Shopbook POS** mobile application. This is a high-fidelity, ultra-premium tablet and mobile Point-of-Sale interface designed for modern retail environments. Built with Expo, React Native, and Expo Router, it features an advanced modular structure, type-safe database mapping, and offline-first database synchronization.
+Welcome to the **Shopbook POS** (also known as **Mini POS**) monorepo. This repository contains a high-fidelity, ultra-premium Point-of-Sale ecosystem designed for modern retail environments. The ecosystem is split into two primary interfaces:
+1. 📱 **Mobile & Tablet POS App**: A native mobile app built with Expo, React Native, and Expo Router.
+2. 💻 **Desktop & Web POS App**: A modern web app built with Next.js App Router and Lucide React.
 
----
-
-## 🌟 Key Features
-
-### 1. 📊 Insights & Real-Time Analytics Dashboard
-* **Dynamic Sales Charts**: Visually stunning bar chart showing weekly sales distributions computed directly from local WatermelonDB database records.
-* **KPI Metrics**: Real-time dashboard counters for **Gross Revenue**, **Transaction Volume**, **Average Basket/Ticket Value**, and **Low-Stock Warnings**.
-* **Best Sellers & Slow Movers**: Ranks inventory dynamically so merchants can monitor hot and cold items instantly.
-* **Export Statements**: Simulate generating and sharing formatted **PDF summaries** or tabular **CSV ledgers**.
-* **Custom Calendar Picker**: Interactive custom date range filtering (pre-configured for May 2026).
-* **Stock Refill/Restocking Utility**: Single-click stock replenishment mechanism integrated with product mutations.
-* **Demo Database Seeder**: Instantly generates 15 dummy orders inside SQLite to visualize dashboard behavior on empty databases.
-
-### 2. 🔐 Multi-Role Staff Authentication
-* **Phone-Based OTP Login**: Fast login using verification code lookup against local registered businesses and employees.
-* **Role-Based Access Control (RBAC)**: Supports three predefined staff roles with modular permissions:
-  * **Admin / Owner**: Unlimited access to settings, staff management, payment setups, sync controls, and branch creation.
-  * **Manager**: Can view records, sync database, and edit products but cannot manage staff or delete businesses.
-  * **Cashier**: Restructured read-only profile access. Restricted from sync actions, staff configurations, and adding new outlets.
-
-### 3. 🏢 Multi-Outlet Management & Isolation
-* **Store Registry**: Register and switch between multiple branches/outlets dynamically.
-* **Product Isolation**: Products and billing transactions are strictly isolated per active business ID.
-* **Real-Time Synchronizers**: Active store updates propagate instantly to all open layouts and cart state controllers.
-
-### 4. 🗄️ Offline-First Sync Architecture (WatermelonDB + Supabase)
-* **WatermelonDB Core**: Fast local SQLite store wrapping React Native models, schemas, and migrations.
-* **Supabase Integration**: Cloud replication to sync local sales entries, items, and inventory state with Supabase backend.
-* **Auto/Manual Backup Control**: Toggle live background synchronization or run manual backups through the cashier settings.
-
-### 5. 🛡️ Centralized Permission Handler
-* **Camera Access Soft Primer**: A custom visual dialog box detailing exactly *why* the camera is required before prompting standard iOS/Android permissions.
-* **Enhanced Privacy Compliance**: Centralizes and invokes camera access on-demand only when initiating the barcode scanner or camera viewport.
-
-### 6. 🛒 Enhanced POS Keyboard & Checkout
-* **Pristine Checkout Flow**: Restructured compact keypads and quick-code search entries that conserve screen height while offering card (Sunmi terminal simulator) and cash billing.
-* **Unified Global Tab Layout**: Beautiful bottom navigation bar with active blue accent indicators and haptic feedback triggers.
-
-### 7. 💬 Help & FAQ Support Drawer
-* **Direct Hotline Support**: Quick dial hotkeys for live assistance.
-* **WhatsApp Chat Launching**: Direct link to open WhatsApp support for instant troubleshooting.
-* **Pre-bundled FAQs**: Help drawers detailing tax computation, print receipts, and backup flows.
+Both applications share a robust, offline-first SQLite/IndexedDB synchronization architecture with a remote **Supabase** backend.
 
 ---
 
-## 🏗️ Project Architecture & Directory Structure
+## 🏗️ Monorepo Architecture
 
-The application's routing is powered by **Expo Router v3**, utilizing a modular group-based file structure:
+This project is configured as a `pnpm` workspace monorepo. Dependencies and commands are managed at the root, while codebases are fully isolated in their respective workspace directories:
 
 ```text
-app/
-├── (tabs)/                      # Core Application Navigation Tabs
-│   ├── _layout.tsx              # Tab layout using custom BottomTabBar
-│   ├── index.tsx                # Session check -> Redirect to home or auth
-│   ├── pos.tsx                  # POS Billing screen
-│   ├── insights.tsx             # Real-time dashboard analytics
-│   ├── stocks.tsx               # Stock Registry / Product directory
-│   └── profile.tsx              # Profile Settings & Support Modal
+shopbook-pos/
+├── mobile/                      # Expo / React Native POS Application
+│   ├── app/                     # File-based router files (Expo Router)
+│   ├── components/              # Native layout & form components
+│   └── constants/tokens.ts      # Mobile design tokens & color systems
 │
-├── (modules)/                   # Dedicated standalone modules (ignored in paths)
-│   ├── auth/
-│   │   └── number-input.tsx     # OTP registration & verification login flow
-│   ├── pos/
-│   │   ├── cart.tsx             # Cart details & item adjustment
-│   │   ├── catalog.tsx          # Scrollable catalog grid
-│   │   ├── payment.tsx          # Payment tender selector
-│   │   ├── payment-tender.tsx   # Card (Sunmi simulator) / Cash processor
-│   │   └── search.tsx           # Quick product finder
-│   ├── stocks/
-│   │   ├── add-item.tsx         # Add products with automated quick codes
-│   │   └── scan.tsx             # Live camera barcode scanner
-│   └── profile/
-│       ├── business-details.tsx # Store name, address, category configuration
-│       ├── manage-businesses.tsx# Switch branches or register new business
-│       └── manage-staff.tsx     # Add/edit staff roles (Admins, Managers, Cashiers)
+├── web/                         # Next.js App Router Web Application
+│   ├── src/app/                 # Page routes & layout configurations
+│   ├── src/components/          # Desktop web layout components
+│   └── src/app/globals.css      # Web utility & design variables
 │
-└── _layout.tsx                  # Root layout nesting Query & Permission Providers
+├── supabase/                    # Remote database configurations
+│   └── migrations/              # Cloud SQL migration schemas
+│
+├── supabase_migration.sql       # Shared database setup & RPC sync procedures
+├── package.json                 # Root monorepo commands and scripts
+└── pnpm-workspace.yaml          # Monorepo workspace routing configuration
 ```
 
-> [!NOTE]
-> Parenthesis groups like `(modules)` and `(tabs)` are automatically ignored in routes. Push commands like `router.push("/cart")` or `router.push("/add-item")` remain fully decoupled from structural folders.
+---
+
+## ⚡ Quick Feature Comparison Matrix
+
+| Feature | 📱 Mobile Client (Expo) | 💻 Web Client (Next.js) | Description |
+| :--- | :---: | :---: | :--- |
+| **Offline-First Storage** | SQLite (WatermelonDB) | IndexedDB (WatermelonDB) | Pure client-side database layer with high-performance querying |
+| **Supabase Cloud Sync** | Auto / Manual RPC Sync | Auto / Manual RPC Sync | Bidirectional changes syncing (orders, products, staff, logs) |
+| **Multi-Role Authentication**| OTP / Verification Code | OTP / Verification Code | Role-Based Access Control (Admin, Manager, Cashier) |
+| **Multi-Outlet Registry** | Outlets Isolation | Outlets Isolation | Segment products and orders strictly by active outlet ID |
+| **Item Scan Integration** | Camera Barcode Scanner | Hardware/Emulated Scanner | Real-time scanner decoding to automatically increment cart |
+| **Receipt Printing** | Native Bluetooth ESC/POS | Virtual Printer Feed | Print physical thermal tickets or view visual emulator previews |
+| **Telemetry & Log Monitor** | Location, Battery & Network | Session Sign Out | Keep track of active staff logins and force invalidations |
 
 ---
 
-## 🛠️ Technology Stack
+## 📱 Shopbook Mobile POS Features
 
-1. **Framework**: [Expo](https://expo.dev/) (React Native) + **Expo Router** (File-based routing)
-2. **Package Manager**: **pnpm** (Fast, disk-efficient, strict resolution)
-3. **Database Layer**: **WatermelonDB** (Local SQLite) with Supabase Cloud backup
-4. **Data Fetching**: **TanStack React Query v5** (Robust cache invalidations & mutation triggers)
-5. **State Management**: **Zustand** (Auth & Business persistence stores)
-6. **Styling & UI**: StyleSheet API using custom design tokens (`constants/tokens.ts`)
-7. **Icons**: Vector Icons (Feather, Ionicons)
+The native mobile application is optimized for tablet layouts and hand-held terminals, providing low-latency checkout and physical hardware integrations:
+
+* **BT ESC/POS Thermal Printing**: Scans, pairs, and commands 58mm/80mm Bluetooth hardware thermal receipt printers. Generates native byte payloads for alignment, bold text, separators, and cuts.
+* **Offline Image upload Queue**: Saves product images locally immediately. When connection states monitor online through NetInfo, uploads them via `@uploadthing/expo` in a background queue.
+* **Device Telemetry Logs**: Automatically logs battery percentage, network state, device model, GPS coordinates, and push tokens. Allows managers to terminate devices remotely.
+* **Mandatory Force Updates**: Synchronizes client versions with remote `app_config` variables and blocks outmoded clients.
+* **Licensing & Payments**: Pro features license checks connected to subscription plan modals (RevenueCat checkout or bank slip WhatsApp submission).
+
+For detailed app routes and files, see the [mobile subdirectory](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/mobile).
 
 ---
 
-## 🚀 Getting Started
+## 💻 Shopbook Web POS Features
 
-Make sure you have [Node.js](https://nodejs.org/) installed. This repository strictly uses **pnpm**.
+The desktop web application provides a responsive console tailored for desktop monitors, laptop screens, or fixed kiosk terminals:
 
-### 1. Install Dependencies
+* **Collapsible Sidebar Layout**: Premium SaaS feel with expandable/collapsible sidebar menu toggles, store profile badges, active role indicators, and real-time network back-up indicators.
+* **Catalog Manager**: Dual representation using category grids or sidebar layout pages. Quick register modals let managers add new items (price, stock, barcode, quick code) with instant state refreshes.
+* **Billing Settlement Terminal**: Dedicated `/pos` workspace to view Active Invoice details, modify quantities, calculate balances, and complete payments.
+* **Invoices Sales Ledger**: A dedicated database auditing list (`/history`) to inspect past receipts, view total revenue aggregates, and void transactions.
+* **IndexedDB Local Engine**: Uses LokiJS and WatermelonDB web adapters to guarantee complete responsiveness even with temporary internet dropouts.
+
+For detailed routes and CSS tokens, see the [web subdirectory](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web).
+
+---
+
+## 🛠️ Monorepo Getting Started
+
+To install, configure, and launch the applications locally, ensure you have [Node.js](https://nodejs.org/) installed. This workspace strictly uses **pnpm**.
+
+### 1. Install Workspace Dependencies
+Execute the install script from the project root:
 ```bash
 pnpm install
 ```
 
-### 2. Start the App
-```bash
-pnpm start
-```
-* Press `i` to launch the **iOS Simulator**.
-* Press `a` to launch the **Android Emulator**.
-* Scan the QR code with **Expo Go** on a physical tablet or phone.
+### 2. Running the Dev Servers
+You can run either application from the root using workspace scripts:
 
-### 3. Verification & Type Checking
-```bash
-pnpm tsc --noEmit
-pnpm lint
-```
+* **Run Web App (Next.js)**:
+  ```bash
+  pnpm dev:web
+  ```
+  Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 4. Expo dependency & project health
+* **Run Mobile App (Expo)**:
+  ```bash
+  pnpm dev:mobile
+  ```
+  Press `i` for iOS Simulator, `a` for Android Emulator, or scan the QR code with Expo Go.
 
-Run these from the project root when upgrading Expo or before a release. They do not start the dev server.
-
-- **`npx expo install --check`** — Compares installed dependency versions with the [Expo SDK compatibility table](https://docs.expo.dev/versions/latest/) and reports mismatches. Use `npx expo install --fix` (or install the packages it names) to align versions.
-
-- **`npx expo-doctor`** — Runs Expo’s project health checks (config, native tooling, peer deps, React Native Directory hints, etc.). The local `expo` CLI does not include `expo doctor`; use **`expo-doctor`** as above, or **`pnpm doctor`** (same command via `package.json`).
-
-```bash
-npx expo install --check
-npx expo-doctor
-```
+### 3. Production Builds
+* **Build Web Bundle**:
+  ```bash
+  pnpm build:web
+  ```
+* **Type-Check and Linting**:
+  ```bash
+  pnpm lint:web
+  pnpm lint:mobile
+  ```
 
 ---
 
-## ☁️ Supabase Integration & Database Migrations
+## ☁️ Supabase Setup & Database Migrations
 
-This project uses **Supabase** for its offline-first backend synchronization. Local database records inside WatermelonDB are synced with a cloud Supabase database through RPC synchronization functions.
+Both apps connect to the same remote Supabase database project for data synchronization. 
 
-### 1. Environment Configuration
+### 1. Environment Configurations
 
-Create a `.env` file in the root directory and add your Supabase credentials:
+Create environment config files in the respective directories:
 
-```env
-# Supabase Configuration
-EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-api-key
-```
+* **Mobile App Config (`mobile/.env`)**:
+  ```env
+  EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+  EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+  ```
 
-> [!IMPORTANT]
-> The environment variables **must** start with `EXPO_PUBLIC_` so they are accessible within the Expo client runtime.
+* **Web App Config (`web/.env.local`)**:
+  ```env
+  NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+  ```
 
-### 2. Database Schema Setup & Migrations
+### 2. Schema Migration
 
-The database tables, triggers, indexes, and synchronization RPC functions are defined in [supabase_migration.sql](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase_migration.sql). You can apply this schema to your Supabase project in three ways:
+Deploy the database schema, including synchronization RPC scripts, from the root file:
+- Apply the SQL statements within [supabase_migration.sql](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase_migration.sql) inside your Supabase project's SQL Editor dashboard, or apply them via the Supabase CLI:
+  ```bash
+  npx supabase db push
+  ```
 
-#### Option A: Using the Supabase MCP Server (Recommended for Model/Agent usage)
-If you are using an agentic assistant with the Supabase MCP Server, the schema can be applied and verified using the following tools:
-1. **Apply Schema**: Run `mcp_supabase_execute_sql` passing the contents of the `supabase_migration.sql` file.
-2. **Verify Tables**: Run `mcp_supabase_list_tables` on the `public` schema to verify that `businesses`, `employees`, `products`, `orders`, `order_items`, and `deleted_records` have been successfully created.
-3. **Verify Connection**: Call the `pull_watermelondb_changes` RPC from an external runner to ensure the API permissions are correct.
+### 3. Row Level Security (RLS)
 
-#### Option B: Using the Supabase Dashboard
-1. Open the [Supabase Dashboard](https://supabase.com/dashboard).
-2. Go to **SQL Editor** -> **New Query**.
-3. Copy and paste the entire contents of the `supabase_migration.sql` file.
-4. Click **Run**.
-
-#### Option C: Using the Supabase CLI
-If you prefer managing migrations locally:
-```bash
-# Link your local CLI to your Supabase project
-npx supabase link --project-ref <your-project-ref>
-
-# Apply the SQL schema to the remote database
-npx supabase db push
-```
-
-### 3. Row Level Security (RLS) Recommendations
-
-By default, the tables created in the public schema are accessible via the Supabase REST API using the client's `anon` key. 
-
-Since the WatermelonDB synchronization mechanism uses `SECURITY DEFINER` RPC functions (`pull_watermelondb_changes` and `push_watermelondb_changes`), they run with owner privileges and bypass RLS. Therefore, it is highly recommended to enable RLS on the tables to block unauthorized direct REST API access:
+Enable Row Level Security on the created public tables to prevent raw REST API manipulation, as the offline synchronization mechanism handles data validation securely through custom `pull_watermelondb_changes` and `push_watermelondb_changes` RPC functions:
 
 ```sql
 ALTER TABLE public.businesses ENABLE ROW LEVEL SECURITY;
@@ -192,15 +153,15 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.deleted_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.active_devices ENABLE ROW LEVEL SECURITY;
 ```
 
 ---
 
-## 🎨 Premium UI Styles & Design System
+## 🎨 Color Palette & Typography
 
-
-Theme variables are configured centrally inside `constants/tokens.ts` for uniform visual styling:
-* **Primary Blue (`#3B82F6`)**: Premium accents for core POS actions and tab navigations.
-* **Alert States**: Bold visual warning badges (`#EF4444`) representing critical notifications (e.g., low-stock indicators).
-* **Glassmorphism**: Translucent backdrops (`rgba(15, 23, 42, 0.6)`) and cards used for overlays.
-* **Typography**: Bold, high-contrast text sizes optimized for cashier lookup speeds on mobile and tablet.
+* **Theme Color**: Premium Blue (`#3B82F6`) highlights all primary click, route, and checkout button accents.
+* **Low-Stock Alerts**: Red (`#EF4444`) warnings reflect critical items needing replenishment.
+* **Glassmorphism Backdrop**: UI layouts on both platforms overlay transclucent containers (`rgba(15, 23, 42, 0.6)`) to preserve modern design aesthetics.
+* **Fonts**: Plotted with modern high-legibility sans-serif typefaces (like *Plus Jakarta Sans* on mobile and *Inter* on desktop layouts) for rapid visual lookup.
