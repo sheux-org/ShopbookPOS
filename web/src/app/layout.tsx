@@ -40,6 +40,7 @@ export default function RootLayout({
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -56,25 +57,31 @@ export default function RootLayout({
     });
   };
 
+  // Zustand Hydration check
+  useEffect(() => {
+    setHydrated(useAuthStore.persist.hasHydrated());
+    const unsubFinish = useAuthStore.persist.onFinishHydration(() => {
+      setHydrated(true);
+    });
+    return () => unsubFinish();
+  }, []);
+
   // Initialize DB and load profiles on startup
   useEffect(() => {
-    if (isLoggedIn) {
+    if (hydrated && isLoggedIn) {
       loadBusinessesFromDb();
     }
-  }, [isLoggedIn, loadBusinessesFromDb]);
+  }, [hydrated, isLoggedIn, loadBusinessesFromDb]);
 
   // Auth Guard
   useEffect(() => {
-    // Wait for hydration
-    const timer = setTimeout(() => {
-      if (!isLoggedIn && pathname !== '/auth') {
-        router.push('/auth');
-      } else if (isLoggedIn && pathname === '/auth') {
-        router.push('/');
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [isLoggedIn, pathname, router]);
+    if (!hydrated) return;
+    if (!isLoggedIn && pathname !== '/auth') {
+      router.push('/auth');
+    } else if (isLoggedIn && pathname === '/auth') {
+      router.push('/');
+    }
+  }, [hydrated, isLoggedIn, pathname, router]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -129,8 +136,103 @@ export default function RootLayout({
     }
   };
 
-  const headerInfo = getHeaderInfo();
-  const showSidebar = isLoggedIn && pathname !== '/auth';
+  const renderContent = () => {
+    if (!hydrated) {
+      return (
+        <div style={{
+          backgroundColor: '#f9fafb',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          fontFamily: 'Inter, system-ui, sans-serif'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #e5e7eb',
+              borderTopColor: '#2563eb',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite'
+            }} />
+            <div style={{ color: '#6b7280', fontSize: '13px', fontWeight: '600', letterSpacing: '0.5px' }}>
+              Initializing POS Terminal...
+            </div>
+          </div>
+          <style>{`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      );
+    }
+
+    if (!isLoggedIn) {
+      if (pathname === '/auth') {
+        return children;
+      }
+      return <div style={{ backgroundColor: '#f9fafb', height: '100vh' }} />;
+    }
+
+    if (pathname === '/auth') {
+      return <div style={{ backgroundColor: '#f9fafb', height: '100vh' }} />;
+    }
+
+    const headerInfo = getHeaderInfo();
+    const showSidebar = sidebarVisible;
+
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
+        <MobileNavbar 
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          syncing={syncing}
+          handleSync={handleSync}
+        />
+
+        {/* Sidebar drawer overlay */}
+        {sidebarOpen && (
+          <div 
+            className="sidebar-backdrop" 
+            onClick={() => setSidebarOpen(false)} 
+          />
+        )}
+
+        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+          {showSidebar && (
+            <Sidebar 
+              sidebarCollapsed={sidebarCollapsed}
+              toggleSidebarCollapsed={toggleSidebarCollapsed}
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+              syncing={syncing}
+              syncSuccess={syncSuccess}
+              handleSync={handleSync}
+            />
+          )}
+
+          <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
+            <Header 
+              headerInfo={headerInfo}
+              pathname={pathname}
+              sidebarVisible={sidebarVisible}
+              setSidebarVisible={setSidebarVisible}
+              posMode={posMode}
+              setPosMode={setPosMode}
+            />
+
+            {/* Main workspace contents */}
+            <main className="main-content">
+              {children}
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <html lang="en">
@@ -141,56 +243,7 @@ export default function RootLayout({
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
-          <div style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
-          {showSidebar && (
-            <>
-              <MobileNavbar 
-                sidebarOpen={sidebarOpen}
-                setSidebarOpen={setSidebarOpen}
-                syncing={syncing}
-                handleSync={handleSync}
-              />
-
-              {/* Sidebar drawer overlay */}
-              {sidebarOpen && (
-                <div 
-                  className="sidebar-backdrop" 
-                  onClick={() => setSidebarOpen(false)} 
-                />
-              )}
-            </>
-          )}
-
-          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-            {showSidebar && sidebarVisible && (
-              <Sidebar 
-                sidebarCollapsed={sidebarCollapsed}
-                toggleSidebarCollapsed={toggleSidebarCollapsed}
-                sidebarOpen={sidebarOpen}
-                setSidebarOpen={setSidebarOpen}
-                syncing={syncing}
-                syncSuccess={syncSuccess}
-                handleSync={handleSync}
-              />
-            )}
-
-            <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
-              <Header 
-                headerInfo={headerInfo}
-                pathname={pathname}
-                sidebarVisible={sidebarVisible}
-                setSidebarVisible={setSidebarVisible}
-                posMode={posMode}
-                setPosMode={setPosMode}
-              />
-
-              {/* Main workspace contents */}
-              <main className="main-content">
-                {children}
-              </main>
-            </div>
-          </div>
-        </div>
+          {renderContent()}
         </QueryClientProvider>
       </body>
     </html>
