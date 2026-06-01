@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import database from '../../db/database';
 import { Q } from '@nozbe/watermelondb';
-import { Search, Trash2, Edit2, Star, CheckCircle, X, Package} from 'lucide-react';
+import { Search, CheckCircle } from 'lucide-react';
 import './catalog.css';
 
+import { CatalogList } from '../../components/catalog/CatalogList';
+import { RegisterProductModal } from '../../components/catalog/RegisterProductModal';
 
 interface DBProduct {
   id: string;
@@ -26,10 +27,8 @@ interface DBProduct {
 }
 
 const CATEGORIES = ['grocery', 'dairy', 'drinks', 'snacks', 'household'];
-const UNIT_TYPES = ['Pieces', 'kg', 'Liters', 'Packets'];
 
 export default function CatalogManagerPage() {
-  const router = useRouter();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
 
@@ -42,19 +41,7 @@ export default function CatalogManagerPage() {
   // CRUD Modals
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
-
-  // Form States
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [costPrice, setCostPrice] = useState('');
-  const [stockCount, setStockCount] = useState('');
-  const [lowStockAlert, setLowStockAlert] = useState('5');
-  const [unitType, setUnitType] = useState('Pieces');
-  const [category, setCategory] = useState('grocery');
-  const [quickCode, setQuickCode] = useState('');
-  const [barcode, setBarcode] = useState('');
-  const [icon, setIcon] = useState('📦');
+  const [selectedProduct, setSelectedProduct] = useState<DBProduct | null>(null);
 
   // Trigger Toast notifications
   const triggerToast = (msg: string) => {
@@ -104,7 +91,9 @@ export default function CatalogManagerPage() {
 
   useEffect(() => {
     const handleOpenModal = () => {
-      openAddModal();
+      setSelectedProduct(null);
+      setModalMode('create');
+      setShowModal(true);
     };
     window.addEventListener('open-register-product-modal', handleOpenModal);
     return () => {
@@ -143,102 +132,69 @@ export default function CatalogManagerPage() {
     }
   };
 
-  // Open Edit Modal
-  const openEditModal = (p: DBProduct) => {
-    setModalMode('edit');
-    setEditingProductId(p.id);
-    setName(p.name);
-    setPrice(p.price.toString());
-    setCostPrice(p.costPrice ? p.costPrice.toString() : '');
-    setStockCount(p.stockCount.toString());
-    setLowStockAlert(p.lowStockAlert ? p.lowStockAlert.toString() : '5');
-    setUnitType(p.unitType || 'Pieces');
-    setCategory(p.category || 'grocery');
-    setQuickCode(p.quickCode || '');
-    setBarcode(p.barcode || '');
-    setIcon(p.icon || '📦');
-    setShowModal(true);
-  };
-
-  // Open Add Modal
-  const openAddModal = () => {
-    setModalMode('create');
-    setEditingProductId(null);
-    setName('');
-    setPrice('');
-    setCostPrice('');
-    setStockCount('');
-    setLowStockAlert('5');
-    setUnitType('Pieces');
-    setCategory('grocery');
-    setQuickCode('');
-    setBarcode('');
-    setIcon('📦');
-    setShowModal(true);
-  };
-
   // Submit Modal form
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !price || !stockCount) {
-      alert('Please fill in Name, Selling Price, and Stock Quantity.');
-      return;
-    }
-
+  const handleFormSubmit = async (formData: {
+    name: string;
+    price: number;
+    costPrice: number;
+    stockCount: number;
+    lowStockAlert: number;
+    unitType: string;
+    category: string;
+    quickCode: string;
+    barcode: string;
+    icon: string;
+  }) => {
     try {
       const activeBiz = useBusinessStore.getState().activeBusiness;
       
       await database.write(async () => {
-        // Fetch active business record
         const bizs = await database.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
         const dbBiz = bizs[0];
 
         if (modalMode === 'create') {
-          // Create product record
           const newProd = await database.get('products').create((p: any) => {
             p.business.set(dbBiz);
-            p.name = name;
-            p.price = parseFloat(price);
-            p.category = category.toLowerCase();
-            p.icon = icon;
-            p.stockCount = parseInt(stockCount) || 0;
-            p.unitType = unitType;
-            p.costPrice = parseFloat(costPrice) || parseFloat(price) * 0.8;
-            if (quickCode) p.quickCode = quickCode;
-            if (barcode) p.barcode = barcode;
-            p.lowStockAlert = parseInt(lowStockAlert) || 5;
+            p.name = formData.name;
+            p.price = formData.price;
+            p.category = formData.category.toLowerCase();
+            p.icon = formData.icon;
+            p.stockCount = formData.stockCount;
+            p.unitType = formData.unitType;
+            p.costPrice = formData.costPrice;
+            if (formData.quickCode) p.quickCode = formData.quickCode;
+            if (formData.barcode) p.barcode = formData.barcode;
+            p.lowStockAlert = formData.lowStockAlert;
             p.isFavorite = false;
           });
 
-          // Log stock input
-          if (parseInt(stockCount) > 0) {
+          if (formData.stockCount > 0) {
             await database.get('inventory_logs').create((log: any) => {
               log.product.set(newProd);
               log.type = 'in';
-              log.quantity = parseInt(stockCount);
+              log.quantity = formData.stockCount;
               log.reason = 'Initial Seed';
             });
           }
           triggerToast('New item added! 📦');
-        } else if (modalMode === 'edit' && editingProductId) {
-          const record: any = await database.get('products').find(editingProductId);
+        } else if (modalMode === 'edit' && selectedProduct) {
+          const record: any = await database.get('products').find(selectedProduct.id);
           const oldStock = record.stockCount;
-          const newStock = parseInt(stockCount) || 0;
+          const newStock = formData.stockCount;
 
           await record.update((p: any) => {
-            p.name = name;
-            p.price = parseFloat(price);
-            p.category = category.toLowerCase();
-            p.icon = icon;
+            p.name = formData.name;
+            p.price = formData.price;
+            p.category = formData.category.toLowerCase();
+            p.icon = formData.icon;
             p.stockCount = newStock;
-            p.unitType = unitType;
-            p.costPrice = parseFloat(costPrice) || parseFloat(price) * 0.8;
-            p.quickCode = quickCode || null;
-            p.barcode = barcode || null;
-            p.lowStockAlert = parseInt(lowStockAlert) || 5;
+            p.unitType = formData.unitType;
+            p.costPrice = formData.costPrice;
+            p.quickCode = formData.quickCode || null;
+            p.barcode = formData.barcode || null;
+            p.lowStockAlert = formData.lowStockAlert;
           });
 
-          // Inventory log adjustments
           if (newStock !== oldStock) {
             await database.get('inventory_logs').create((log: any) => {
               log.product.set(record);
@@ -251,14 +207,13 @@ export default function CatalogManagerPage() {
         }
       });
 
-      setShowModal(false);
       loadProducts();
     } catch (err) {
       console.error('Failed to save product details:', err);
+      throw err;
     }
   };
 
-  // Search filter
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchQuery = 
@@ -272,15 +227,12 @@ export default function CatalogManagerPage() {
 
   return (
     <div style={styles.workspace} className="fade-in">
-      {/* Toast notifications */}
       {toastMsg && (
         <div style={styles.toast}>
           <CheckCircle size={16} />
           <span>{toastMsg}</span>
         </div>
       )}
-
-
 
       {/* Search and Category filters row */}
       <div style={styles.filterRow}>
@@ -311,247 +263,27 @@ export default function CatalogManagerPage() {
         </div>
       </div>
 
-      {/* Catalog items Stack List */}
-      <div className="catalog-list-container">
-        {filteredProducts.map((p) => {
-          const isOut = p.stockCount <= 0;
-          const isLow = p.lowStockAlert && p.stockCount <= p.lowStockAlert;
-          return (
-            <div key={p.id} className="catalog-item-card">
-              <div className="catalog-item-left">
-                {/* Star Favorite Button */}
-                <button 
-                  onClick={() => toggleFavorite(p.id, p.isFavorite)}
-                  style={styles.favBtn}
-                >
-                  <Star size={18} fill={p.isFavorite ? 'var(--yellow)' : 'transparent'} color={p.isFavorite ? 'var(--yellow)' : 'var(--muted)'} />
-                </button>
+      <CatalogList 
+        filteredProducts={filteredProducts}
+        onToggleFavorite={toggleFavorite}
+        onEditProduct={(p) => {
+          setSelectedProduct(p);
+          setModalMode('edit');
+          setShowModal(true);
+        }}
+        onDeleteProduct={handleDeleteProduct}
+      />
 
-                {/* Avatar / Image */}
-                <div className="catalog-item-image">
-                  {p.icon.startsWith('http') ? (
-                    <img src={p.icon} alt={p.name} className="catalog-item-img-tag" />
-                  ) : (
-                    <span className="catalog-item-emoji">{p.icon}</span>
-                  )}
-                </div>
-
-                {/* Metadata Column */}
-                <div className="catalog-item-meta">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h3 className="catalog-item-name">{p.name}</h3>
-                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>({p.unitType || 'Pieces'})</span>
-                  </div>
-
-                  <div className="catalog-item-badges">
-                    <span className="catalog-item-price">Rs. {p.price.toLocaleString()}</span>
-                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}> (Cost: Rs. {p.costPrice ? p.costPrice.toLocaleString() : (p.price * 0.8).toLocaleString()})</span>
-                    <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--border)' }} />
-                    <span 
-                      className="catalog-item-stock-badge"
-                      style={{
-                        backgroundColor: isOut ? '#fee2e2' : isLow ? '#ffedd5' : '#dcfce7',
-                        color: isOut ? '#dc2626' : isLow ? '#d97706' : '#15803d',
-                      }}
-                    >
-                      {isOut ? 'Out of stock' : isLow ? `Low Alert (${p.stockCount})` : `${p.stockCount} in stock`}
-                    </span>
-                  </div>
-
-                  <div className="catalog-item-codes-row">
-                    <span className="catalog-item-pill catalog-item-pill-category">
-                      {p.category.toUpperCase()}
-                    </span>
-                    {p.quickCode && (
-                      <span className="catalog-item-pill catalog-item-pill-code">
-                        Code: #{p.quickCode}
-                      </span>
-                    )}
-                    {p.barcode && (
-                      <span className="catalog-item-pill catalog-item-pill-barcode">
-                        Barcode: {p.barcode}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions row */}
-              <div className="catalog-item-actions">
-                <button onClick={() => openEditModal(p)} style={styles.editBtn} title="Edit product details">
-                  <Edit2 size={15} />
-                </button>
-                <button onClick={() => handleDeleteProduct(p.id, p.name)} style={styles.deleteBtn} title="Delete product">
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-
-        {filteredProducts.length === 0 && (
-          <div style={{ ...styles.emptyRow, backgroundColor: '#ffffff', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', padding: '48px 24px' }}>
-            <Package size={36} color="var(--muted)" style={{ marginBottom: '8px', display: 'inline-block' }} />
-            <h4>No catalog items found</h4>
-            <p>Try searching another keyword or register a new product.</p>
-          </div>
-        )}
-      </div>
-
-      {/* CRUD Product Modal Dialog */}
-      {showModal && (
-        <div style={styles.modalOverlay}>
-          <div style={{ ...styles.modalContent, maxWidth: '580px' }}>
-            <div style={styles.modalHeader}>
-              <h3>{modalMode === 'create' ? 'Register New Product' : 'Edit Catalog Product'}</h3>
-              <button onClick={() => setShowModal(false)} style={styles.modalCloseBtn}><X size={16} /></button>
-            </div>
-            <form onSubmit={handleFormSubmit} style={styles.modalBody}>
-              
-              {/* Product Name */}
-              <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Product Description Name *</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Anchor Milk Powder 400g" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  style={styles.modalInput}
-                  required
-                />
-              </div>
-
-              {/* Grid 2 Columns */}
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ ...styles.modalInputGroup, flex: 1 }}>
-                  <label style={styles.modalLabel}>Category</label>
-                  <select 
-                    value={category} 
-                    onChange={(e) => setCategory(e.target.value)} 
-                    style={styles.select}
-                  >
-                    {CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>
-                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ ...styles.modalInputGroup, flex: 1 }}>
-                  <label style={styles.modalLabel}>Unit Type</label>
-                  <select 
-                    value={unitType} 
-                    onChange={(e) => setUnitType(e.target.value)} 
-                    style={styles.select}
-                  >
-                    {UNIT_TYPES.map(unit => (
-                      <option key={unit} value={unit}>{unit}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Grid 2 Columns Price */}
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ ...styles.modalInputGroup, flex: 1 }}>
-                  <label style={styles.modalLabel}>Selling Price (Rs.) *</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="0.00" 
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    style={styles.modalInput}
-                    required
-                  />
-                </div>
-
-                <div style={{ ...styles.modalInputGroup, flex: 1 }}>
-                  <label style={styles.modalLabel}>Cost Price (Rs.)</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    placeholder="0.00" 
-                    value={costPrice}
-                    onChange={(e) => setCostPrice(e.target.value)}
-                    style={styles.modalInput}
-                  />
-                </div>
-              </div>
-
-              {/* Grid 2 Columns Stock */}
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ ...styles.modalInputGroup, flex: 1 }}>
-                  <label style={styles.modalLabel}>Stock Quantity *</label>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 50" 
-                    value={stockCount}
-                    onChange={(e) => setStockCount(e.target.value)}
-                    style={styles.modalInput}
-                    required
-                  />
-                </div>
-
-                <div style={{ ...styles.modalInputGroup, flex: 1 }}>
-                  <label style={styles.modalLabel}>Low Alert Level</label>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 5" 
-                    value={lowStockAlert}
-                    onChange={(e) => setLowStockAlert(e.target.value)}
-                    style={styles.modalInput}
-                  />
-                </div>
-              </div>
-
-              {/* Identification details */}
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ ...styles.modalInputGroup, flex: 1 }}>
-                  <label style={styles.modalLabel}>Quick Code</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 101" 
-                    value={quickCode}
-                    onChange={(e) => setQuickCode(e.target.value)}
-                    style={styles.modalInput}
-                  />
-                </div>
-
-                <div style={{ ...styles.modalInputGroup, flex: 1 }}>
-                  <label style={styles.modalLabel}>Barcode</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 47900101" 
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    style={styles.modalInput}
-                  />
-                </div>
-              </div>
-
-              {/* Emoji Icon picker */}
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ ...styles.modalInputGroup, flex: 1 }}>
-                  <label style={styles.modalLabel}>Product Icon Emoji</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 📦 / 🥛 / 🍎" 
-                    value={icon}
-                    onChange={(e) => setIcon(e.target.value)}
-                    style={styles.modalInput}
-                  />
-                </div>
-              </div>
-
-              <button type="submit" style={styles.modalSubmitBtn}>
-                {modalMode === 'create' ? 'Save Product' : 'Update Product details'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      <RegisterProductModal 
+        isOpen={showModal}
+        mode={modalMode}
+        product={selectedProduct}
+        onClose={() => {
+          setShowModal(false);
+          setSelectedProduct(null);
+        }}
+        onSubmit={handleFormSubmit}
+      />
     </div>
   );
 }
@@ -564,36 +296,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '24px',
     height: '100%',
     overflowY: 'auto',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: '800',
-    color: 'var(--dark)',
-    lineHeight: '1.2',
-  },
-  subtitle: {
-    fontSize: '13px',
-    color: 'var(--muted)',
-    marginTop: '4px',
-  },
-  addBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px 20px',
-    borderRadius: 'var(--radius)',
-    backgroundColor: 'var(--primary)',
-    color: '#ffffff',
-    border: 'none',
-    fontWeight: 'bold',
-    fontSize: '13px',
-    cursor: 'pointer',
-    boxShadow: '0 4px 10px rgba(37, 99, 235, 0.2)',
   },
   filterRow: {
     display: 'flex',
@@ -641,105 +343,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#ffffff',
     borderColor: 'var(--primary)',
   },
-  tableCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 'var(--radius-lg)',
-    border: '1px solid var(--border)',
-    boxShadow: 'var(--shadow)',
-    overflow: 'hidden',
-  },
-  tableWrapper: {
-    overflowX: 'auto',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    textAlign: 'left',
-    fontSize: '13px',
-  },
-  trHead: {
-    borderBottom: '1px solid var(--border)',
-    backgroundColor: '#f9fafb',
-  },
-  th: {
-    padding: '16px 20px',
-    fontWeight: 'bold',
-    color: 'var(--dark)',
-  },
-  trRow: {
-    borderBottom: '1px solid #f3f4f6',
-    transition: 'background 0.2s',
-  },
-  td: {
-    padding: '16px 20px',
-    verticalAlign: 'middle',
-  },
-  favBtn: {
-    border: 'none',
-    background: 'transparent',
-    cursor: 'pointer',
-    padding: '4px',
-  },
-  itemEmoji: {
-    fontSize: '26px',
-  },
-  itemName: {
-    fontWeight: 'bold',
-    color: 'var(--dark)',
-  },
-  itemUnitType: {
-    fontSize: '11px',
-    color: 'var(--muted)',
-  },
-  catBadge: {
-    fontSize: '10px',
-    fontWeight: '800',
-    padding: '3px 8px',
-    borderRadius: '4px',
-    letterSpacing: '0.3px',
-  },
-  code: {
-    fontFamily: 'monospace',
-    backgroundColor: '#f1f5f9',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    color: '#475569',
-  },
-  stockStatusBadge: {
-    fontSize: '10px',
-    fontWeight: 'bold',
-    padding: '4px 10px',
-    borderRadius: '20px',
-  },
-  editBtn: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '6px',
-    border: '1px solid var(--border)',
-    backgroundColor: '#ffffff',
-    color: 'var(--primary)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-  },
-  deleteBtn: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '6px',
-    border: '1px solid var(--border)',
-    backgroundColor: '#ffffff',
-    color: 'var(--error)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-  },
-  emptyRow: {
-    padding: '48px',
-    textAlign: 'center',
-    color: 'var(--muted)',
-  },
   toast: {
     position: 'fixed',
     top: '24px',
@@ -756,87 +359,5 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '13px',
     zIndex: 99999,
     boxShadow: 'var(--shadow-lg)',
-  },
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999,
-    backdropFilter: 'blur(3px)',
-  },
-  modalContent: {
-    width: '100%',
-    backgroundColor: '#ffffff',
-    borderRadius: 'var(--radius-lg)',
-    boxShadow: 'var(--shadow-lg)',
-    border: '1px solid var(--border)',
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    padding: '16px 20px',
-    borderBottom: '1px solid var(--border)',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalCloseBtn: {
-    border: 'none',
-    backgroundColor: 'transparent',
-    color: 'var(--muted)',
-    cursor: 'pointer',
-  },
-  modalBody: {
-    padding: '24px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  modalInputGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-  },
-  modalLabel: {
-    fontSize: '11px',
-    fontWeight: '700',
-    color: 'var(--dark)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.3px',
-  },
-  modalInput: {
-    width: '100%',
-    padding: '10px 12px',
-    borderRadius: 'var(--radius)',
-    border: '1px solid var(--border)',
-    fontSize: '14px',
-    outline: 'none',
-    backgroundColor: 'var(--background)',
-  },
-  select: {
-    width: '100%',
-    padding: '10px 12px',
-    borderRadius: 'var(--radius)',
-    border: '1px solid var(--border)',
-    fontSize: '14px',
-    outline: 'none',
-    backgroundColor: 'var(--background)',
-  },
-  modalSubmitBtn: {
-    width: '100%',
-    padding: '14px',
-    borderRadius: 'var(--radius)',
-    backgroundColor: 'var(--primary)',
-    color: '#ffffff',
-    border: 'none',
-    fontWeight: 'bold',
-    fontSize: '14px',
-    cursor: 'pointer',
-    marginTop: '8px',
   },
 };

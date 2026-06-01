@@ -67,6 +67,16 @@ export const ProductImage: React.FC<ProductImageProps> = ({ icon, size = 48, sty
     );
   }
 
+  // If the icon is an emoji or a short custom icon (e.g. length <= 4), render it directly
+  if (finalIcon && finalIcon.length <= 4) {
+    const emojiFontSize = Math.max(12, Math.round(size * 0.55));
+    return (
+      <div style={containerStyle}>
+        <span style={{ fontSize: `${emojiFontSize}px`, lineHeight: 1 }}>{finalIcon}</span>
+      </div>
+    );
+  }
+
   // Dynamic font sizing based on container size
   const miniFontSize = size === 48 ? 10 : Math.max(6, Math.round(size * 0.17));
   const posFontSize = size === 48 ? 18 : Math.max(10, Math.round(size * 0.31));
