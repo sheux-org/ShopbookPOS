@@ -144,72 +144,77 @@ export default function InsightsPage() {
     }));
   }, [orders]);
 
-  return (
-    <div style={styles.container} className="fade-in">
+  const receiptSubtotal = useMemo(() => {
+    if (!selectedReceipt || !selectedReceipt.items) return 0;
+    return selectedReceipt.items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+  }, [selectedReceipt]);
 
-      <div style={styles.workspace} className="insights-workspace">
+  return (
+    <div className="insights-container fade-in">
+
+      <div className="insights-workspace">
         {/* Left Side: KPIs and Chart */}
-        <div style={styles.metricsPane}>
+        <div className="metrics-pane">
           {/* KPI grid */}
-          <div style={styles.kpiGrid} className="insights-kpi-grid">
-            <div style={styles.kpiCard}>
-              <div style={{ ...styles.kpiIconBox, backgroundColor: '#EFF6FF', color: 'var(--primary)' }}>
+          <div className="kpi-grid">
+            <div className="kpi-card">
+              <div className="kpi-icon-box" style={{ backgroundColor: 'rgba(16, 185, 129, 0.08)', color: '#10b981' }}>
                 <DollarSign size={20} />
               </div>
               <div>
-                <h4 style={styles.kpiLabel}>GROSS REVENUE</h4>
-                <p style={styles.kpiVal}>Rs. {kpiMetrics.grossRevenue.toLocaleString()}</p>
+                <h4 className="kpi-label">GROSS REVENUE</h4>
+                <p className="kpi-val">Rs. {kpiMetrics.grossRevenue.toLocaleString()}</p>
               </div>
             </div>
 
-            <div style={styles.kpiCard}>
-              <div style={{ ...styles.kpiIconBox, backgroundColor: '#EFF6FF', color: 'var(--primary)' }}>
+            <div className="kpi-card">
+              <div className="kpi-icon-box" style={{ backgroundColor: 'rgba(37, 99, 235, 0.08)', color: '#2563eb' }}>
                 <ShoppingCart size={20} />
               </div>
               <div>
-                <h4 style={styles.kpiLabel}>INVOICES COMPLETED</h4>
-                <p style={styles.kpiVal}>{kpiMetrics.count}</p>
+                <h4 className="kpi-label">INVOICES COMPLETED</h4>
+                <p className="kpi-val">{kpiMetrics.count}</p>
               </div>
             </div>
 
-            <div style={styles.kpiCard}>
-              <div style={{ ...styles.kpiIconBox, backgroundColor: '#EFF6FF', color: 'var(--primary)' }}>
+            <div className="kpi-card">
+              <div className="kpi-icon-box" style={{ backgroundColor: 'rgba(139, 92, 246, 0.08)', color: '#8b5cf6' }}>
                 <TrendingUp size={20} />
               </div>
               <div>
-                <h4 style={styles.kpiLabel}>AVERAGE BASKET</h4>
-                <p style={styles.kpiVal}>Rs. {Math.round(kpiMetrics.avgVal).toLocaleString()}</p>
+                <h4 className="kpi-label">AVERAGE BASKET</h4>
+                <p className="kpi-val">Rs. {Math.round(kpiMetrics.avgVal).toLocaleString()}</p>
               </div>
             </div>
 
-            <div style={styles.kpiCard}>
-              <div style={{ ...styles.kpiIconBox, backgroundColor: '#FFF1F2', color: 'var(--error)' }}>
+            <div className="kpi-card">
+              <div className="kpi-icon-box" style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)', color: '#f59e0b' }}>
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <h4 style={styles.kpiLabel}>LOW STOCK ITEMS</h4>
-                <p style={styles.kpiVal}>{lowStockCount}</p>
+                <h4 className="kpi-label">LOW STOCK ITEMS</h4>
+                <p className="kpi-val">{lowStockCount}</p>
               </div>
             </div>
           </div>
 
           {/* SVG Sales Distribution Chart */}
-          <div style={styles.chartCard}>
-            <h3 style={styles.chartTitle}>Weekly Revenue Distribution</h3>
+          <div className="chart-card">
+            <h3 className="chart-title">Weekly Revenue Distribution</h3>
             
-            <div style={styles.chartWrapper}>
+            <div className="chart-wrapper">
               {/* Bars */}
-              <div style={styles.chartBarsContainer}>
+              <div className="chart-bars-container">
                 {weeklySalesData.map((data, idx) => (
-                  <div key={idx} style={styles.chartCol}>
-                    <div style={styles.chartTooltip}>
+                  <div key={idx} className="chart-col">
+                    <div className="chart-tooltip">
                       Rs. {data.amount.toLocaleString()}
                     </div>
-                    <div style={{
-                      ...styles.chartBar,
-                      height: `${Math.max(4, data.percent)}%`
-                    }} />
-                    <span style={styles.chartDayText}>{data.day}</span>
+                    <div 
+                      className="chart-bar" 
+                      style={{ height: `${Math.max(4, data.percent)}%` }} 
+                    />
+                    <span className="chart-day-text">{data.day}</span>
                   </div>
                 ))}
               </div>
@@ -218,45 +223,45 @@ export default function InsightsPage() {
         </div>
 
         {/* Right Side: Ledger Transactions */}
-        <div style={styles.ledgerPane}>
-          <div style={styles.ledgerHeader}>
+        <div className="ledger-pane">
+          <div className="ledger-header">
             <ShoppingCart size={16} color="var(--primary)" />
-            <h3 style={styles.ledgerTitle}>Transaction Ledger</h3>
+            <h3 className="ledger-title">Transaction Ledger</h3>
           </div>
 
-          <div style={styles.ledgerTableWrapper}>
-            <table style={styles.ledgerTable}>
+          <div className="ledger-table-wrapper">
+            <table className="ledger-table">
               <thead>
-                <tr style={styles.thRow}>
-                  <th style={styles.th}>Invoice</th>
-                  <th style={styles.th}>Date</th>
-                  <th style={styles.th}>Method</th>
-                  <th style={styles.th}>Amount</th>
-                  <th style={{ ...styles.th, textAlign: 'center' }}>Receipt</th>
+                <tr>
+                  <th>Invoice</th>
+                  <th>Date</th>
+                  <th>Method</th>
+                  <th>Amount</th>
+                  <th style={{ textAlign: 'center' }}>Receipt</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((o) => (
-                  <tr key={o.id} style={styles.tr}>
-                    <td style={styles.td}>
+                  <tr key={o.id}>
+                    <td>
                       <div style={{ fontWeight: 'bold' }}>{o.invoiceNumber}</div>
                     </td>
-                    <td style={styles.td}>{o.date}</td>
-                    <td style={styles.td}>
-                      <span style={styles.methodBadge}>
+                    <td>{o.date}</td>
+                    <td>
+                      <span className="ledger-method-badge">
                         {o.paymentMethod.toUpperCase()}
                       </span>
                     </td>
-                    <td style={{ ...styles.td, fontWeight: 'bold', color: 'var(--primary)' }}>
+                    <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>
                       Rs. {o.totalAmount.toLocaleString()}
                     </td>
-                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                    <td style={{ textAlign: 'center' }}>
                       <button 
                         onClick={() => {
                           setSelectedReceipt(o);
                           setShowReceipt(true);
                         }}
-                        style={styles.viewReceiptBtn}
+                        className="ledger-view-btn"
                       >
                         <Eye size={12} />
                         <span>View</span>
@@ -268,10 +273,13 @@ export default function InsightsPage() {
             </table>
 
             {orders.length === 0 && (
-              <div style={styles.emptyLedgerState}>
+              <div className="ledger-empty">
                 <p>No orders invoiced yet.</p>
               </div>
             )}
+            
+            {/* Added spacer to ensure bottom scroll gap */}
+            <div style={{ height: '80px' }} />
           </div>
         </div>
       </div>
@@ -320,17 +328,17 @@ export default function InsightsPage() {
               <div style={styles.receiptTotals}>
                 <div style={styles.receiptTotalsRow}>
                   <span>Subtotal</span>
-                  <span>Rs. {selectedReceipt.subtotal.toLocaleString()}</span>
+                  <span>Rs. {receiptSubtotal.toLocaleString()}</span>
                 </div>
-                {selectedReceipt.discountAmount > 0 && (
+                {selectedReceipt.discountValue > 0 && (
                   <div style={styles.receiptTotalsRow}>
                     <span>Discount</span>
-                    <span>- Rs. {selectedReceipt.discountAmount.toLocaleString()}</span>
+                    <span>- Rs. {selectedReceipt.discountValue.toLocaleString()}</span>
                   </div>
                 )}
                 <div style={styles.receiptTotalsRow}>
                   <span>VAT Tax (8%)</span>
-                  <span>Rs. {selectedReceipt.taxAmount.toLocaleString()}</span>
+                  <span>Rs. {selectedReceipt.taxValue.toLocaleString()}</span>
                 </div>
                 <div style={{ ...styles.receiptTotalsRow, fontWeight: 'bold', fontSize: '15px', marginTop: '6px' }}>
                   <span>Total Amount</span>
@@ -351,7 +359,14 @@ export default function InsightsPage() {
             <div style={styles.receiptActions}>
               <button 
                 onClick={() => {
-                  window.print();
+                  const printContents = document.getElementById('printable-receipt-view')?.innerHTML;
+                  const originalContents = document.body.innerHTML;
+                  if (printContents) {
+                    document.body.innerHTML = printContents;
+                    window.print();
+                    document.body.innerHTML = originalContents;
+                    window.location.reload(); // Refresh to restore JS binders
+                  }
                 }}
                 style={styles.printBtn}
               >
@@ -374,227 +389,6 @@ export default function InsightsPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-    overflow: 'hidden',
-  },
-  header: {
-    padding: '24px',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid var(--border)',
-    flexShrink: 0,
-  },
-  headerTitle: {
-    fontSize: '18px',
-    fontWeight: '800',
-    color: 'var(--dark)',
-  },
-  headerSubtitle: {
-    fontSize: '12px',
-    color: 'var(--muted)',
-    marginTop: '2px',
-  },
-  workspace: {
-    display: 'flex',
-    flex: 1,
-    height: '100%',
-    overflow: 'hidden',
-  },
-  metricsPane: {
-    flex: 5,
-    padding: '24px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-    borderRight: '1px solid var(--border)',
-    overflowY: 'auto',
-  },
-  kpiGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '16px',
-  },
-  kpiCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 'var(--radius)',
-    border: '1px solid var(--border)',
-    padding: '16px 20px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    boxShadow: 'var(--shadow)',
-  },
-  kpiIconBox: {
-    width: '42px',
-    height: '42px',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  kpiLabel: {
-    fontSize: '10px',
-    fontWeight: '800',
-    color: 'var(--muted)',
-    letterSpacing: '0.5px',
-  },
-  kpiVal: {
-    fontSize: '20px',
-    fontWeight: '800',
-    color: 'var(--dark)',
-    marginTop: '4px',
-  },
-  chartCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 'var(--radius-lg)',
-    border: '1px solid var(--border)',
-    padding: '24px',
-    boxShadow: 'var(--shadow-lg)',
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: '280px',
-  },
-  chartTitle: {
-    fontSize: '14px',
-    fontWeight: '800',
-    color: 'var(--dark)',
-    marginBottom: '28px',
-  },
-  chartWrapper: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'flex-end',
-  },
-  chartBarsContainer: {
-    display: 'flex',
-    width: '100%',
-    height: '100%',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingBottom: '20px',
-  },
-  chartCol: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    position: 'relative',
-    height: '100%',
-    justifyContent: 'flex-end',
-    cursor: 'pointer',
-  },
-  chartBar: {
-    width: '32px',
-    backgroundColor: 'var(--primary)',
-    borderRadius: '6px 6px 0 0',
-    transition: 'all 0.3s ease',
-  },
-  chartDayText: {
-    fontSize: '11px',
-    fontWeight: 'bold',
-    color: 'var(--muted)',
-    marginTop: '10px',
-  },
-  chartTooltip: {
-    position: 'absolute',
-    bottom: '105%',
-    backgroundColor: 'var(--dark)',
-    color: '#ffffff',
-    fontSize: '9px',
-    fontWeight: 'bold',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    opacity: 0,
-    transform: 'translateY(4px)',
-    transition: 'all 0.2s ease',
-    pointerEvents: 'none',
-    whiteSpace: 'nowrap',
-  },
-  ledgerPane: {
-    flex: 5,
-    backgroundColor: '#ffffff',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  },
-  ledgerHeader: {
-    padding: '20px 24px',
-    borderBottom: '1px solid var(--border)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    flexShrink: 0,
-  },
-  ledgerTitle: {
-    fontSize: '14px',
-    fontWeight: '800',
-    color: 'var(--dark)',
-  },
-  ledgerTableWrapper: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '0 8px',
-  },
-  ledgerTable: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '12px',
-  },
-  thRow: {
-    borderBottom: '1px solid var(--border)',
-    backgroundColor: 'var(--background)',
-    position: 'sticky',
-    top: 0,
-    zIndex: 1,
-  },
-  th: {
-    padding: '12px 16px',
-    textAlign: 'left',
-    fontWeight: 'bold',
-    color: 'var(--muted)',
-    fontSize: '10px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  },
-  tr: {
-    borderBottom: '1px solid #f3f4f6',
-    transition: 'background-color 0.15s ease',
-  },
-  td: {
-    padding: '12px 16px',
-    verticalAlign: 'middle',
-  },
-  methodBadge: {
-    fontSize: '9px',
-    fontWeight: '800',
-    backgroundColor: '#f3f4f6',
-    color: 'var(--muted)',
-    padding: '2px 6px',
-    borderRadius: '4px',
-  },
-  viewReceiptBtn: {
-    padding: '4px 10px',
-    borderRadius: '10px',
-    border: '1px solid var(--border)',
-    backgroundColor: '#ffffff',
-    color: 'var(--muted)',
-    fontWeight: 'bold',
-    fontSize: '10px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '4px',
-  },
-  emptyLedgerState: {
-    padding: '48px 24px',
-    textAlign: 'center',
-    color: 'var(--muted)',
-  },
   modalOverlay: {
     position: 'fixed',
     top: 0,

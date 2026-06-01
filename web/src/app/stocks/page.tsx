@@ -7,9 +7,10 @@ import database from '../../db/database';
 import { Q } from '@nozbe/watermelondb';
 import { 
   Package, Search, Plus, Minus, AlertTriangle, 
-  History, ArrowUpRight, ArrowDownLeft, X, Save
+  History, ArrowUpRight, ArrowDownLeft, X, Save, CheckCircle
 } from 'lucide-react';
 import './stocks.css';
+import { ProductImage } from '../../components/ProductImage';
 
 
 interface DBProduct {
@@ -45,6 +46,7 @@ export default function StocksPage() {
   const [logs, setLogs] = useState<DBInventoryLog[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'inventory' | 'audit'>('inventory');
 
   // Stock Adjustment Modal
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -187,16 +189,37 @@ export default function StocksPage() {
       {/* Toast notification */}
       {toastMsg && (
         <div style={styles.toast}>
+          <CheckCircle size={16} color="#ffffff" style={{ marginRight: '6px' }} />
           <span>{toastMsg}</span>
         </div>
       )}
 
+      {/* Segmented tab navigation shown only on mobile/tablet viewports (< 1024px) */}
+      <div className="stocks-tab-bar">
+        <button 
+          onClick={() => setActiveTab('inventory')}
+          className={`stocks-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
+        >
+          <Package size={16} />
+          <span>Product Inventory</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('audit')}
+          className={`stocks-tab-btn ${activeTab === 'audit' ? 'active' : ''}`}
+        >
+          <History size={16} />
+          <span>Recent Audit Log</span>
+        </button>
+      </div>
 
       <div style={styles.workspace} className="stocks-workspace">
         {/* Left Side: Search & Table list */}
-        <div style={styles.tablePane}>
+        <div 
+          style={styles.tablePane}
+          className={`stocks-table-pane ${activeTab === 'inventory' ? 'active-pane' : 'hidden-pane'}`}
+        >
           {/* Query bar */}
-          <div style={styles.queryBar}>
+          <div style={styles.queryBar} className="stocks-query-bar">
             <div style={styles.searchBox}>
               <Search size={16} color="var(--muted)" />
               <input
@@ -210,7 +233,7 @@ export default function StocksPage() {
           </div>
 
           {/* Table Container */}
-          <div style={styles.tableWrapper}>
+          <div style={styles.tableWrapper} className="stocks-table-wrapper">
             <table style={styles.table}>
               <thead>
                 <tr style={styles.thRow}>
@@ -230,13 +253,9 @@ export default function StocksPage() {
                   const isOut = p.stockCount <= 0;
                   const isLow = p.lowStockAlert && p.stockCount <= p.lowStockAlert;
                   return (
-                    <tr key={p.id} style={styles.tr}>
+                    <tr key={p.id} style={styles.tr} className="stocks-table-row">
                       <td style={styles.td}>
-                        {p.icon.startsWith('http') ? (
-                          <img src={p.icon} alt={p.name} style={styles.prodImg} />
-                        ) : (
-                          <span style={styles.prodEmoji}>{p.icon}</span>
-                        )}
+                        <ProductImage icon={p.icon} size={32} style={{ border: 'none', borderRadius: '6px' }} />
                       </td>
                       <td style={styles.td}>
                         <div style={{ fontWeight: 'bold', color: 'var(--dark)' }}>{p.name}</div>
@@ -283,19 +302,22 @@ export default function StocksPage() {
         </div>
 
         {/* Right Side: Audit log */}
-        <div style={styles.logPane}>
+        <div 
+          style={styles.logPane}
+          className={`stocks-log-pane ${activeTab === 'audit' ? 'active-pane' : 'hidden-pane'}`}
+        >
           <div style={styles.logHeader}>
             <History size={16} color="var(--primary)" />
             <h3 style={styles.logTitle}>Recent Audit Log</h3>
           </div>
           
-          <div style={styles.logScroller}>
+          <div style={styles.logScroller} className="stocks-log-scroller">
             {logs.map((log) => {
               const isIn = log.type === 'in';
               return (
-                <div key={log.id} style={styles.logCard}>
+                <div key={log.id} style={styles.logCard} className="stocks-log-card">
                   <div style={styles.logCardTop}>
-                    <span style={styles.logCardEmoji}>{log.productIcon}</span>
+                    <ProductImage icon={log.productIcon} size={32} style={{ border: 'none', borderRadius: '6px' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h4 style={styles.logCardName}>{log.productName}</h4>
                       <p style={styles.logCardDate}>{log.date}</p>
@@ -344,10 +366,10 @@ export default function StocksPage() {
             </div>
             <form onSubmit={handleAdjustSubmit} style={styles.modalBody}>
               <div style={styles.modalProductHeader}>
-                <span style={{ fontSize: '32px' }}>{selectedProduct.icon}</span>
-                <div>
-                  <h4 style={{ fontSize: '15px', fontWeight: 'bold' }}>{selectedProduct.name}</h4>
-                  <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
+                <ProductImage icon={selectedProduct.icon} size={48} style={{ border: 'none', borderRadius: '8px' }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 'bold', margin: 0 }}>{selectedProduct.name}</h4>
+                  <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px', marginBlockEnd: 0 }}>
                     Current Count: {selectedProduct.stockCount} {selectedProduct.unitType || 'Units'}
                   </p>
                 </div>

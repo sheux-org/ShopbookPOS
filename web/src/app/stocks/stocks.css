@@ -1,8 +1,136 @@
-/* Responsive Workspaces */
+/* Stocks Page Stylesheet */
+
+.stocks-tab-bar {
+  display: none;
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  gap: 8px;
+}
+
+.stocks-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.stocks-tab-btn.active {
+  background-color: var(--light-blue);
+  color: var(--primary);
+  border-color: var(--accent-blue);
+}
+
+.stocks-tab-btn:hover:not(.active) {
+  background-color: var(--background);
+  color: var(--dark);
+}
+
+.stocks-header-panel {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+}
+
+.stocks-table-wrapper {
+  overflow-x: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+/* Scrollbar customizations */
+.stocks-table-wrapper::-webkit-scrollbar,
+.stocks-log-scroller::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.stocks-table-wrapper::-webkit-scrollbar-track,
+.stocks-log-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stocks-table-wrapper::-webkit-scrollbar-thumb,
+.stocks-log-scroller::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.stocks-table-wrapper::-webkit-scrollbar-thumb:hover,
+.stocks-log-scroller::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Micro-animations and hover effects */
+.stocks-log-card {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stocks-log-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: var(--accent-blue);
+}
+
+.stocks-table-row {
+  transition: background-color 0.15s ease;
+}
+
+.stocks-table-row:hover {
+  background-color: #f8fafc;
+}
+
+/* Responsive Queries */
 @media (max-width: 1023px) {
+  .stocks-tab-bar {
+    display: flex;
+  }
+  
   .stocks-workspace {
     flex-direction: column !important;
-    overflow-y: auto !important;
-    height: auto !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .stocks-table-pane, 
+  .stocks-log-pane {
+    flex: 1 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    padding: 16px !important;
+    overflow: hidden !important;
+    border: none !important;
+  }
+
+  .stocks-table-pane.hidden-pane, 
+  .stocks-log-pane.hidden-pane {
+    display: none !important;
+  }
+
+  .stocks-table-pane.active-pane, 
+  .stocks-log-pane.active-pane {
+    display: flex !important;
+  }
+
+  .stocks-table-wrapper {
+    margin-bottom: 0 !important;
+  }
+
+  .stocks-header-panel {
+    padding: 14px 16px !important;
   }
 }

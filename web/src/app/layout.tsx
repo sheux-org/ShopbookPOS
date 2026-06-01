@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, BarChart3, Package, User, LogOut, Cloud, RefreshCw, Menu, X, Receipt, Tag, ChevronLeft, ChevronRight, Plus, Home, ShoppingCart } from 'lucide-react';
+import { ShoppingBag, BarChart3, Package, User, LogOut, Cloud, RefreshCw, Menu, X, Receipt, Tag, ChevronLeft, ChevronRight, Plus, Home, ShoppingCart, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useBusinessStore } from '../stores/businessStore';
 import { useCart } from '../stores/cartStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { syncDatabase } from '../services/sync';
 import './globals.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -35,6 +36,11 @@ export default function RootLayout({
   const loadBusinessesFromDb = useBusinessStore((s) => s.loadBusinessesFromDb);
   const cart = useCart((s) => s.cart);
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const posMode = useSettingsStore((s) => s.posMode);
+  const setPosMode = useSettingsStore((s) => s.setPosMode);
+  const sidebarVisible = useSettingsStore((s) => s.sidebarVisible);
+  const setSidebarVisible = useSettingsStore((s) => s.setSidebarVisible);
 
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
@@ -91,8 +97,7 @@ export default function RootLayout({
   };
 
   const navItems = [
-    { name: 'Home', path: '/', icon: Home },
-    { name: 'POS Billing', path: '/pos', icon: ShoppingCart },
+    { name: 'POS Terminal', path: '/', icon: ShoppingCart },
     { name: 'Catalog Manager', path: '/catalog', icon: Tag },
     { name: 'Sales History', path: '/history', icon: Receipt },
     { name: 'Insights', path: '/insights', icon: BarChart3 },
@@ -102,6 +107,7 @@ export default function RootLayout({
 
   const getHeaderInfo = () => {
     switch (pathname) {
+      case '/':
       case '/pos':
         return {
           title: 'POS Billing Terminal',
@@ -181,7 +187,7 @@ export default function RootLayout({
           )}
 
           <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-            {showSidebar && (
+            {showSidebar && sidebarVisible && (
               <aside className={`pos-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${sidebarOpen ? 'open' : ''}`}>
                 {/* Floating SaaS Edge Toggle Button (desktop only) */}
                 <button 
@@ -298,6 +304,73 @@ export default function RootLayout({
                     <h2 className="common-header-title">{headerInfo.title}</h2>
                     <p className="common-header-subtitle">{headerInfo.subtitle}</p>
                   </div>
+                  
+                  {(pathname === '/' || pathname === '/pos') && (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {/* Sidebar Toggle Button */}
+                      <button
+                        onClick={() => setSidebarVisible(!sidebarVisible)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '7px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border)',
+                          backgroundColor: '#ffffff',
+                          color: sidebarVisible ? 'var(--primary)' : 'var(--muted)',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                          transition: 'all 0.2s ease'
+                        }}
+                        title={sidebarVisible ? "Hide Sidebar Menu" : "Show Sidebar Menu"}
+                      >
+                        {sidebarVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                        <span>{sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}</span>
+                      </button>
+
+                      {/* View Mode Toggle Group */}
+                      <div style={{ display: 'flex', gap: '4px', border: '1px solid var(--border)', padding: '4px', borderRadius: '8px', backgroundColor: '#f3f4f6', alignItems: 'center' }}>
+                        <button 
+                          onClick={() => setPosMode('tablet')}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            backgroundColor: posMode === 'tablet' ? '#ffffff' : 'transparent',
+                            color: posMode === 'tablet' ? 'var(--primary)' : 'var(--muted)',
+                            boxShadow: posMode === 'tablet' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          Tablet View
+                        </button>
+                        <button 
+                          onClick={() => setPosMode('normal')}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            backgroundColor: posMode === 'normal' ? '#ffffff' : 'transparent',
+                            color: posMode === 'normal' ? 'var(--primary)' : 'var(--muted)',
+                            boxShadow: posMode === 'normal' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          Normal View
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {pathname === '/catalog' && (
                     <button 
                       onClick={() => window.dispatchEvent(new Event('open-register-product-modal'))}
