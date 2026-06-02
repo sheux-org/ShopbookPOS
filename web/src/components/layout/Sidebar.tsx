@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import { useCart } from '../../stores/cartStore';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 
 interface SidebarProps {
   sidebarCollapsed: boolean;
@@ -39,6 +40,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const cart = useCart((s) => s.cart);
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  const { canPerform, role } = useUserPermissions();
+
   const navItems = [
     { name: 'POS Terminal', path: '/', icon: ShoppingCart },
     { name: 'Catalog Manager', path: '/catalog', icon: Tag },
@@ -46,7 +49,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { name: 'Insights', path: '/insights', icon: BarChart3 },
     { name: 'Stocks', path: '/stocks', icon: Package },
     { name: 'Profile', path: '/profile', icon: User },
-  ];
+  ].filter((item) => {
+    if (item.path === '/catalog' && !canPerform('update', 'products')) {
+      return false;
+    }
+    if (item.path === '/stocks' && !canPerform('update', 'products')) {
+      return false;
+    }
+    if (item.path === '/insights' && role === 'cashier') {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <aside className={`pos-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${sidebarOpen ? 'open' : ''}`}>
@@ -118,21 +132,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Action Buttons */}
       <div style={styles.bottomActions}>
         {/* Cloud Sync Status */}
-        <button 
-          onClick={handleSync} 
-          disabled={syncing}
-          className="sidebar-sync-btn"
-          title={sidebarCollapsed ? (syncing ? 'Backing up...' : 'Backup to Cloud') : undefined}
-        >
-          <span className="btn-icon">
-            <RefreshCw size={16} className={syncing ? 'spin-anim' : ''} style={{
-              animation: syncing ? 'spin 1.5s linear infinite' : 'none'
-            }} />
-          </span>
-          <span className="btn-label">
-            {syncing ? 'Backing up...' : syncSuccess === true ? 'Sync Complete!' : syncSuccess === false ? 'Sync Failed' : 'Backup to Cloud'}
-          </span>
-        </button>
+        {canPerform('read', 'sync') && (
+          <button 
+            onClick={handleSync} 
+            disabled={syncing}
+            className="sidebar-sync-btn"
+            title={sidebarCollapsed ? (syncing ? 'Backing up...' : 'Backup to Cloud') : undefined}
+          >
+            <span className="btn-icon">
+              <RefreshCw size={16} className={syncing ? 'spin-anim' : ''} style={{
+                animation: syncing ? 'spin 1.5s linear infinite' : 'none'
+              }} />
+            </span>
+            <span className="btn-label">
+              {syncing ? 'Backing up...' : syncSuccess === true ? 'Sync Complete!' : syncSuccess === false ? 'Sync Failed' : 'Backup to Cloud'}
+            </span>
+          </button>
+        )}
         <style jsx global>{`
           @keyframes spin {
             from { transform: rotate(0deg); }

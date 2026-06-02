@@ -496,7 +496,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
+    gap: '16px',
     height: 'calc(100vh - 73px)',
     overflow: 'hidden',
   },

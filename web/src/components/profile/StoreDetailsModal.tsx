@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, Lock } from 'lucide-react';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 
 interface StoreDetailsModalProps {
   isOpen: boolean;
@@ -30,6 +31,9 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
   setEditPhone,
   onSubmit,
 }) => {
+  const { canPerform } = useUserPermissions();
+  const canUpdate = canPerform('update', 'settings');
+
   if (!isOpen) return null;
 
   return (
@@ -40,6 +44,25 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
           <button onClick={onClose} className="modal-close-btn"><X size={16} /></button>
         </div>
         <form onSubmit={onSubmit} className="modal-body">
+          {!canUpdate && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              backgroundColor: '#fffbeb',
+              border: '1px solid #fef3c7',
+              borderRadius: '8px',
+              color: '#d97706',
+              fontSize: '11px',
+              fontWeight: '500',
+              marginBottom: '14px'
+            }}>
+              <Lock size={14} />
+              <span>Viewing Mode: Only administrators can update store configuration details.</span>
+            </div>
+          )}
+
           <div className="modal-input-group">
             <label className="modal-label">Business Brand Name</label>
             <input 
@@ -47,6 +70,7 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               required
+              disabled={!canUpdate}
               className="modal-input"
             />
           </div>
@@ -58,6 +82,7 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               value={editCategory}
               onChange={(e) => setEditCategory(e.target.value)}
               required
+              disabled={!canUpdate}
               className="modal-input"
             />
           </div>
@@ -69,6 +94,7 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               value={editAddress}
               onChange={(e) => setEditAddress(e.target.value)}
               required
+              disabled={!canUpdate}
               className="modal-input"
             />
           </div>
@@ -80,16 +106,24 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               value={editPhone}
               onChange={(e) => setEditPhone(e.target.value)}
               required
+              disabled={!canUpdate}
               className="modal-input"
             />
           </div>
 
-          <button type="submit" className="modal-submit-btn">
-            <Save size={16} />
-            <span>Save receipt details</span>
-          </button>
+          {canUpdate ? (
+            <button type="submit" className="modal-submit-btn">
+              <Save size={16} />
+              <span>Save receipt details</span>
+            </button>
+          ) : (
+            <button type="button" onClick={onClose} className="modal-submit-btn" style={{ backgroundColor: 'var(--dark)' }}>
+              <span>Close View</span>
+            </button>
+          )}
         </form>
       </div>
     </div>
   );
 };
+

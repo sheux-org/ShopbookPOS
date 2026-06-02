@@ -5,9 +5,10 @@
 .insights-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 58px); /* Match layout header height */
+  height: calc(100vh - 73px); /* Match layout header height */
   overflow: hidden;
   background-color: var(--background);
+  padding: 16px;
 }
 
 .insights-workspace {
@@ -16,18 +17,21 @@
   height: 100%;
   overflow: hidden;
   transition: all 0.3s ease;
+  gap: 16px;
 }
 
 /* Left Pane: KPIs and Charts */
 .metrics-pane {
   flex: 4; /* Compact metrics side, making ledger wider */
-  padding: 24px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  border-right: 1px solid var(--border);
+  gap: 16px;
   overflow-y: auto;
-  background-color: var(--background);
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 /* KPI Card Grid styling */
@@ -189,10 +193,13 @@
   flex-direction: column;
   overflow: hidden;
   transition: all 0.3s ease;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
 .ledger-header {
-  padding: 20px 24px;
+  padding: 16px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
