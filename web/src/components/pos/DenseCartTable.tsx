@@ -123,7 +123,8 @@ export const DenseCartTable: React.FC<DenseCartTableProps> = ({
         <span style={styles.cheatChip}><b>[F4]</b> Pay Method</span>
         <span style={styles.cheatChip}><b>[F6]</b> Discount</span>
         <span style={styles.cheatChip}><b>[F7]</b> Tax Rate</span>
-        <span style={styles.cheatChip}><b>[F8]</b> Tender Val</span>
+        <span style={styles.cheatChip}><b>[F8]</b> Card Brand / Bank / Cash</span>
+        <span style={styles.cheatChip}><b>[F9]</b> Card Number</span>
         <span style={styles.cheatChip}><b>[F10]</b> Print Invoice</span>
         <span style={styles.cheatChip}><b>[F12 / Ctrl+⌫]</b> Clear Cart</span>
       </div>
