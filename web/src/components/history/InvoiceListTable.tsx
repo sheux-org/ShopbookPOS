@@ -15,6 +15,8 @@ interface OrderRecord {
   createdAt: number;
   dateStr: string;
   cashierName: string;
+  bankName?: string;
+  cardLastFour?: string;
 }
 
 interface InvoiceListTableProps {
@@ -58,9 +60,16 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
                   <td style={styles.td}>{o.dateStr}</td>
                   <td style={styles.td}>{o.cashierName}</td>
                   <td style={styles.td}>
-                    <span style={styles.methodBadge}>
-                      {o.paymentMethod.toUpperCase()}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start' }}>
+                      <span style={styles.methodBadge}>
+                        {o.paymentMethod.toUpperCase()}
+                      </span>
+                      {(o.paymentMethod === 'card' || o.paymentMethod === 'bank') && o.bankName && (
+                        <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '500' }}>
+                          {o.bankName} {o.cardLastFour ? `(**** ${o.cardLastFour})` : ''}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td style={styles.td}>
                     <span style={{

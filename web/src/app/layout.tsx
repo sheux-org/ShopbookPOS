@@ -113,7 +113,7 @@ export default function RootLayout({
         };
       case '/history':
         return {
-          title: 'Invoices Sales Ledger',
+          title: 'Invoice Sales Report',
           subtitle: 'Audit history of past sales, print receipts, and void invoices',
         };
       case '/insights':

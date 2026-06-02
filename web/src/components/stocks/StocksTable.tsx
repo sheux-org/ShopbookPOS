@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Package, Search } from 'lucide-react';
+import { Package, Search, Plus } from 'lucide-react';
 import { ProductImage } from '../ProductImage';
 
 interface DBProduct {
@@ -23,6 +23,7 @@ interface StocksTableProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onAdjustStock: (product: DBProduct) => void;
+  onAddItem: () => void;
   activeTab: 'inventory' | 'audit';
 }
 
@@ -31,6 +32,7 @@ export const StocksTable: React.FC<StocksTableProps> = ({
   searchQuery,
   setSearchQuery,
   onAdjustStock,
+  onAddItem,
   activeTab,
 }) => {
   return (
@@ -50,6 +52,10 @@ export const StocksTable: React.FC<StocksTableProps> = ({
             style={styles.searchInput}
           />
         </div>
+        <button onClick={onAddItem} style={styles.addBtn}>
+          <Plus size={14} />
+          <span>Add New Item</span>
+        </button>
       </div>
 
       {/* Table Container */}
@@ -126,27 +132,27 @@ export const StocksTable: React.FC<StocksTableProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   tablePane: {
-    flex: 7,
+    flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    padding: '24px',
+    padding: '12px',
     overflow: 'hidden',
-    borderRight: '1px solid var(--border)',
   },
   queryBar: {
     display: 'flex',
-    gap: '12px',
-    marginBottom: '20px',
+    gap: '8px',
+    marginBottom: '10px',
+    alignItems: 'center',
   },
   searchBox: {
     flex: 1,
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
+    gap: '8px',
     backgroundColor: '#ffffff',
     border: '1px solid var(--border)',
     borderRadius: 'var(--radius)',
-    padding: '10px 14px',
+    padding: '8px 12px',
     boxShadow: 'var(--shadow)',
   },
   searchInput: {
@@ -163,23 +169,26 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 'var(--radius)',
     border: '1px solid var(--border)',
     boxShadow: 'var(--shadow)',
-    marginBottom: '24px',
+    marginBottom: '8px',
   },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: '13px',
+    fontSize: '12px',
   },
   thRow: {
     borderBottom: '1px solid var(--border)',
     backgroundColor: 'var(--background)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 2,
   },
   th: {
-    padding: '12px 16px',
+    padding: '8px 10px',
     textAlign: 'left',
     fontWeight: 'bold',
     color: 'var(--muted)',
-    fontSize: '11px',
+    fontSize: '10px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   },
@@ -188,7 +197,7 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'background-color 0.15s ease',
   },
   td: {
-    padding: '12px 16px',
+    padding: '7px 10px',
     verticalAlign: 'middle',
   },
   stockIndicator: {
@@ -198,14 +207,30 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '20px',
   },
   adjustRowBtn: {
-    padding: '6px 12px',
+    padding: '5px 10px',
     borderRadius: '12px',
     border: '1px solid var(--accent-blue)',
     backgroundColor: 'var(--light-blue)',
     color: 'var(--primary)',
     fontWeight: 'bold',
-    fontSize: '11px',
+    fontSize: '10px',
     cursor: 'pointer',
+  },
+  addBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 14px',
+    borderRadius: 'var(--radius)',
+    border: 'none',
+    background: 'var(--primary)',
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: '12px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    boxShadow: 'var(--shadow)',
+    transition: 'opacity 0.15s',
   },
   emptyTableState: {
     display: 'flex',

@@ -12,6 +12,7 @@ import {
   Shield, Activity, HardDrive, Settings, Info, Building
 } from 'lucide-react';
 import './profile.css';
+import { TerminalDiagnostics } from '../../components/TerminalDiagnostics';
 
 import { StoreDetailsModal } from '../../components/profile/StoreDetailsModal';
 import { StaffModal } from '../../components/profile/StaffModal';
@@ -262,22 +263,7 @@ export default function ProfilePage() {
               <h4 className="profile-card-title">Terminal Diagnostics</h4>
             </div>
             
-            <div className="diagnostics-list">
-              <div className="diag-item">
-                <span className="diag-label">Local DB</span>
-                <span className="diag-value-badge active">Connected</span>
-              </div>
-              <div className="diag-item">
-                <span className="diag-label">Cloud DB</span>
-                <span className={`diag-value-badge ${isBackupEnabled ? 'active' : ''}`}>
-                  {isBackupEnabled ? 'Connected' : 'Disconnected'}
-                </span>
-              </div>
-              <div className="diag-item">
-                <span className="diag-label">Barcode Scanner</span>
-                <span className="diag-value-badge active">Connected (USB HID)</span>
-              </div>
-            </div>
+            <TerminalDiagnostics />
           </div>
         </div>
 
