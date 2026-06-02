@@ -1,0 +1,83 @@
+.diagnosticsCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.badgeGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  white-space: nowrap;
+}
+
+/* Green — fully connected */
+.active {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* Amber — detected but waiting for confirmation */
+.standby {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+/* Red/Gray — not connected */
+.inactive {
+  background: rgba(107, 114, 128, 0.1);
+  color: #9ca3af;
+  border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+.hint {
+  font-size: 0.65rem;
+  color: var(--muted);
+  opacity: 0.75;
+  font-style: italic;
+}
+
+@keyframes glow-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  60% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}

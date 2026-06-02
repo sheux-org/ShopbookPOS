@@ -159,15 +159,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <span>Subtotal</span>
                 <span>Rs. ${subtotal.toLocaleString()}</span>
               </div>
-              ${order.discountValue > 0 ? `
+              ${(order.discountValue ?? 0) > 0 ? `
                 <div class="receipt-totals-row">
                   <span>Discount</span>
-                  <span>- Rs. ${order.discountValue.toLocaleString()}</span>
+                  <span>- Rs. ${(order.discountValue ?? 0).toLocaleString()}</span>
                 </div>
               ` : ''}
               <div class="receipt-totals-row">
-                <span>VAT Tax (${order.taxRate}%)</span>
-                <span>Rs. ${order.taxValue.toLocaleString()}</span>
+                <span>VAT Tax (${order.taxRate ?? 0}%)</span>
+                <span>Rs. ${(order.taxValue ?? 0).toLocaleString()}</span>
               </div>
               <div class="receipt-totals-row" style="font-weight: bold; font-size: 13px; margin-top: 4px;">
                 <span>Total Paid</span>
@@ -246,15 +246,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <span>Subtotal</span>
               <span>Rs. {subtotal.toLocaleString()}</span>
             </div>
-            {order.discountValue > 0 && (
+            {(order.discountValue ?? 0) > 0 && (
               <div style={styles.receiptTotalsRow}>
                 <span>Discount</span>
-                <span>- Rs. {order.discountValue.toLocaleString()}</span>
+                <span>- Rs. {(order.discountValue ?? 0).toLocaleString()}</span>
               </div>
             )}
             <div style={styles.receiptTotalsRow}>
-              <span>VAT Tax ({order.taxRate}%)</span>
-              <span>Rs. {order.taxValue.toLocaleString()}</span>
+              <span>VAT Tax ({order.taxRate ?? 0}%)</span>
+              <span>Rs. {(order.taxValue ?? 0).toLocaleString()}</span>
             </div>
             <div style={{ ...styles.receiptTotalsRow, fontWeight: 'bold', fontSize: '15px', marginTop: '6px' }}>
               <span>Total Paid</span>

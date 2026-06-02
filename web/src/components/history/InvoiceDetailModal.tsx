@@ -15,6 +15,8 @@ interface OrderRecord {
   createdAt: number;
   dateStr: string;
   cashierName: string;
+  bankName?: string;
+  cardLastFour?: string;
 }
 
 interface OrderItemRecord {
@@ -188,7 +190,10 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
             <div class="receipt-divider"></div>
 
             <div class="receipt-footer">
-              <p>Payment Tender: ${order.paymentMethod.toUpperCase()}</p>
+              <p>Payment Tender: \${order.paymentMethod.toUpperCase()}</p>
+              \${(order.paymentMethod === 'card' || order.paymentMethod === 'bank') && order.bankName ? \`
+                <p style="margin: 2px 0; color: #4b5563; font-size: 10px;">\${order.bankName} \${order.cardLastFour ? \`(**** \${order.cardLastFour})\` : ''}</p>
+              \` : ''}
               <p style="font-weight: bold; margin-top: 4px;">THANK YOU FOR YOUR PATRONAGE! 🇱🇰</p>
             </div>
           </body>
@@ -286,8 +291,13 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
 
           <div style={styles.receiptFooter}>
             <p>Payment Tender: {order.paymentMethod.toUpperCase()}</p>
+            {(order.paymentMethod === 'card' || order.paymentMethod === 'bank') && order.bankName && (
+              <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
+                {order.bankName} {order.cardLastFour ? `(**** ${order.cardLastFour})` : ''}
+              </p>
+            )}
             <p style={{ marginTop: '8px', fontWeight: 'bold', letterSpacing: '0.5px' }}>THANK YOU FOR YOUR PATRONAGE! 🇱🇰</p>
-            <p style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '4px' }}>Shopbook POS Cloud Sync Audit</p>
+            <p style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '4px' }}>Shopbook Mini POS Cloud Sync Audit</p>
           </div>
         </div>
 

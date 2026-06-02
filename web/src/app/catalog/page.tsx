@@ -201,7 +201,7 @@ export default function CatalogManagerPage() {
 
 const styles: Record<string, React.CSSProperties> = {
   workspace: {
-    padding: '32px',
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
     gap: '24px',

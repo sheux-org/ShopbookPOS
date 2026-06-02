@@ -3,16 +3,18 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import { Package, History, CheckCircle } from 'lucide-react';
+import { Package, History, CheckCircle, Plus } from 'lucide-react';
 import './stocks.css';
 
 import { StocksTable } from '../../components/stocks/StocksTable';
 import { AuditLogScroller } from '../../components/stocks/AuditLogScroller';
 import { AdjustStockModal } from '../../components/stocks/AdjustStockModal';
+import { RegisterProductModal } from '../../components/catalog/RegisterProductModal';
 import {
   useProducts,
   useGetGlobalStockHistory,
   useAdjustStock,
+  useAddProduct,
 } from '../../hooks/useProducts';
 
 interface DBProduct {
@@ -42,6 +44,9 @@ export default function StocksPage() {
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<DBProduct | null>(null);
 
+  // Add New Item Modal
+  const [showAddModal, setShowAddModal] = useState(false);
+
   // React Query Hooks
   const {
     data: products = [],
@@ -53,10 +58,22 @@ export default function StocksPage() {
 
   const { data: logs = [] } = useGetGlobalStockHistory(activeBusiness?.id || '0');
   const adjustStockMutation = useAdjustStock();
+  const addProductMutation = useAddProduct();
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 1500);
+  };
+
+  const handleAddProductSubmit = async (formData: any) => {
+    try {
+      await addProductMutation.mutateAsync(formData);
+      triggerToast('New item added to catalog! 📦');
+      setShowAddModal(false);
+    } catch (err) {
+      console.error('Failed to add product:', err);
+      throw err;
+    }
   };
 
   const handleAdjustSubmit = async (adjustType: 'in' | 'out', qtyNum: number, adjustReason: string) => {
@@ -120,6 +137,7 @@ export default function StocksPage() {
               setSelectedProduct(p);
               setShowAdjustModal(true);
             }}
+            onAddItem={() => setShowAddModal(true)}
             activeTab={activeTab}
           />
           {activeTab === 'inventory' && hasNextPage && (
@@ -149,6 +167,14 @@ export default function StocksPage() {
           setSelectedProduct(null);
         }}
         onSubmit={handleAdjustSubmit}
+      />
+
+      <RegisterProductModal
+        isOpen={showAddModal}
+        mode="create"
+        product={null}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleAddProductSubmit}
       />
     </div>
   );
@@ -183,7 +209,7 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
   },
   tableSection: {
-    flex: 2,
+    flex: 3,
     display: 'flex',
     flexDirection: 'column',
     height: '100%',

@@ -262,12 +262,12 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'all 0.2s ease',
   },
   toggleBtnInActive: {
-    borderColor: 'var(--success)',
+    border: '1px solid var(--success)',
     backgroundColor: '#effaf3',
     color: 'var(--success)',
   },
   toggleBtnOutActive: {
-    borderColor: 'var(--error)',
+    border: '1px solid var(--error)',
     backgroundColor: '#fff1f2',
     color: 'var(--error)',
   },
