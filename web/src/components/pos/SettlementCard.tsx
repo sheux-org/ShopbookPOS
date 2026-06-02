@@ -21,7 +21,7 @@ interface SettlementCardProps {
   isPaymentValid: boolean;
   handleConfirmCheckout: () => void;
   posMode: 'tablet' | 'normal';
-  
+
   // Refs
   cashReceivedRef: React.RefObject<HTMLInputElement | null>;
   cardBrandSelectRef: React.RefObject<HTMLSelectElement | null>;
@@ -84,31 +84,31 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
         <div>
           <label style={styles.denseFieldLabel}>Payment Mode {posMode === 'normal' ? '[F4]' : ''}</label>
           <div style={styles.payOptionRow}>
-            <button 
+            <button
               onClick={() => handlePaymentMethodChange('cash')}
-              style={{ 
-                ...styles.payOptionBtn, 
-                ...(paymentMethod === 'cash' ? styles.payOptionBtnCashActive : {}) 
+              style={{
+                ...styles.payOptionBtn,
+                ...(paymentMethod === 'cash' ? styles.payOptionBtnCashActive : {})
               }}
             >
               <Banknote size={16} />
               <span>Cash</span>
             </button>
-            <button 
+            <button
               onClick={() => handlePaymentMethodChange('card')}
-              style={{ 
-                ...styles.payOptionBtn, 
-                ...(paymentMethod === 'card' ? styles.payOptionBtnCardActive : {}) 
+              style={{
+                ...styles.payOptionBtn,
+                ...(paymentMethod === 'card' ? styles.payOptionBtnCardActive : {})
               }}
             >
               <CreditCard size={16} />
               <span>Card</span>
             </button>
-            <button 
+            <button
               onClick={() => handlePaymentMethodChange('bank')}
-              style={{ 
-                ...styles.payOptionBtn, 
-                ...(paymentMethod === 'bank' ? styles.payOptionBtnBankActive : {}) 
+              style={{
+                ...styles.payOptionBtn,
+                ...(paymentMethod === 'bank' ? styles.payOptionBtnBankActive : {})
               }}
             >
               <Wallet size={16} />
@@ -278,9 +278,9 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
       )}
 
       {/* Settle confirm checkout payment button */}
-      <button 
+      <button
         ref={settleBtnRef}
-        onClick={handleConfirmCheckout} 
+        onClick={handleConfirmCheckout}
         disabled={paying || cartLength === 0 || !isPaymentValid}
         style={{
           ...styles.settleInvoiceBtn,
