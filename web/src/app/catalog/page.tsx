@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import { Search, CheckCircle } from 'lucide-react';
+import { Search, CheckCircle, Lock } from 'lucide-react';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 import './catalog.css';
 
 import { CatalogList } from '../../components/catalog/CatalogList';
@@ -21,6 +22,7 @@ const CATEGORIES = ['grocery', 'dairy', 'drinks', 'snacks', 'household'];
 export default function CatalogManagerPage() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
+  const { canPerform } = useUserPermissions();
 
   // States
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,6 +120,54 @@ export default function CatalogManagerPage() {
     }
   };
 
+  if (!canPerform('update', 'products')) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        padding: '24px',
+        fontFamily: 'Inter, system-ui, sans-serif'
+      }}>
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-lg)',
+          padding: '48px 32px',
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: '#fee2e2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid #fecaca'
+          }}>
+            <Lock size={28} color="var(--error)" />
+          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--dark)', margin: 0 }}>
+            Inventory Operations Restricted
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: '1.6', margin: 0 }}>
+            Cashier profiles are not authorized to create, update, or edit products in the catalog list.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+
   return (
     <div style={styles.workspace} className="fade-in">
       {toastMsg && (
@@ -156,34 +206,36 @@ export default function CatalogManagerPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div style={styles.loadingState}>Loading catalog products...</div>
-      ) : (
-        <>
-          <CatalogList
-            filteredProducts={products}
-            onToggleFavorite={toggleFavorite}
-            onEditProduct={(p) => {
-              setSelectedProduct(p);
-              setModalMode('edit');
-              setShowModal(true);
-            }}
-            onDeleteProduct={handleDeleteProduct}
-          />
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0, gap: '16px' }}>
+        {isLoading ? (
+          <div style={styles.loadingState}>Loading catalog products...</div>
+        ) : (
+          <>
+            <CatalogList
+              filteredProducts={products}
+              onToggleFavorite={toggleFavorite}
+              onEditProduct={(p) => {
+                setSelectedProduct(p);
+                setModalMode('edit');
+                setShowModal(true);
+              }}
+              onDeleteProduct={handleDeleteProduct}
+            />
 
-          {hasNextPage && (
-            <div style={styles.loadMoreContainer}>
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                style={styles.loadMoreBtn}
-              >
-                {isFetchingNextPage ? 'Loading more...' : 'Load More Products ⬇️'}
-              </button>
-            </div>
-          )}
-        </>
-      )}
+            {hasNextPage && (
+              <div style={styles.loadMoreContainer}>
+                <button
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  style={styles.loadMoreBtn}
+                >
+                  {isFetchingNextPage ? 'Loading more...' : 'Load More Products ⬇️'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <RegisterProductModal
         isOpen={showModal}
@@ -204,9 +256,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px',
-    height: '100%',
-    overflowY: 'auto',
+    gap: '16px',
+    height: 'calc(100vh - 73px)',
+    overflow: 'hidden',
   },
   filterRow: {
     display: 'flex',

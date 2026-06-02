@@ -2,10 +2,19 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  padding: 24px;
+  height: calc(100vh - 73px);
+  overflow: hidden;
+  padding: 16px;
   background-color: var(--background);
+}
+
+.profile-scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 16px;
 }
 
 .profile-toast {
@@ -46,7 +55,7 @@
   background: linear-gradient(135deg, #1e1b4b 0%, #1e40af 50%, #3b82f6 100%);
   border-radius: 12px;
   padding: 28px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   overflow: hidden;
   color: #ffffff;
   box-shadow: 0 4px 20px rgba(37, 99, 235, 0.12);
@@ -168,14 +177,14 @@
 .profile-dashboard-grid {
   display: grid;
   grid-template-columns: 300px 1fr;
-  gap: 24px;
+  gap: 16px;
   align-items: start;
 }
 
 .profile-left-column {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .profile-right-column {
@@ -843,13 +852,13 @@
 
   .profile-dashboard-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 16px;
   }
   
   .profile-left-column {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 16px;
   }
 
   .profile-right-column {
@@ -880,3 +889,37 @@
     align-self: stretch;
   }
 }
+
+/* FAQ Interactive Styles */
+.faq-question-btn:hover {
+  background-color: #f1f5f9 !important;
+  color: var(--primary) !important;
+}
+
+.faq-item-container:last-child {
+  border-bottom: none !important;
+}
+
+.faq-answer-wrapper {
+  animation: faqSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes faqSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.support-contact-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  border-color: var(--primary) !important;
+  background-color: #f8fafc !important;
+}
+
+

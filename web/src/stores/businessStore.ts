@@ -4,6 +4,7 @@ import { Q } from "@nozbe/watermelondb";
 import database from "../db/database";
 import { SEEDING_PRODUCTS } from "../utils/seedProducts";
 import { useAuthStore } from "./authStore";
+import { syncDatabase } from "../services/sync";
 
 export interface Business {
   id: string;
@@ -191,6 +192,7 @@ export const useBusinessStore = create<BusinessState>()(
           }
 
           await get().loadBusinessesFromDb();
+          syncDatabase(); // Trigger real-time background replication
 
           if (newBusinessRecord) {
             const found = get().businesses.find((b) => b.name === name);
@@ -224,6 +226,7 @@ export const useBusinessStore = create<BusinessState>()(
             });
           }
           await get().loadBusinessesFromDb();
+          syncDatabase(); // Trigger real-time background replication
         } catch (err) {
           console.error("Failed to update active business in IndexedDB:", err);
         }
@@ -249,6 +252,7 @@ export const useBusinessStore = create<BusinessState>()(
             });
           }
           await get().loadBusinessesFromDb();
+          syncDatabase(); // Trigger real-time background replication
         } catch (err) {
           console.error("Failed to update business in IndexedDB:", err);
         }
@@ -266,6 +270,7 @@ export const useBusinessStore = create<BusinessState>()(
             });
           }
           await get().loadBusinessesFromDb();
+          syncDatabase(); // Trigger real-time background replication
 
           if (get().activeBusiness.id === id) {
             const remaining = get().businesses;

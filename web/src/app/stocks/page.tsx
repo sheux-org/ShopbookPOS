@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import { Package, History, CheckCircle, Plus } from 'lucide-react';
+import { Package, History, CheckCircle, Lock } from 'lucide-react';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 import './stocks.css';
 
 import { StocksTable } from '../../components/stocks/StocksTable';
@@ -34,9 +35,57 @@ interface DBProduct {
 export default function StocksPage() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
+  const { canPerform } = useUserPermissions();
 
   // States
   const [searchQuery, setSearchQuery] = useState('');
+
+  if (!canPerform('update', 'products')) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        padding: '24px',
+        fontFamily: 'Inter, system-ui, sans-serif'
+      }}>
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-lg)',
+          padding: '48px 32px',
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: '#fee2e2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid #fecaca'
+          }}>
+            <Lock size={28} color="var(--error)" />
+          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--dark)', margin: 0 }}>
+            Inventory Operations Restricted
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: '1.6', margin: 0 }}>
+            Cashier profiles are not authorized to create, update, or edit products in the catalog list.
+          </p>
+        </div>
+      </div>
+    );
+  }
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'inventory' | 'audit'>('inventory');
 
@@ -185,8 +234,11 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    height: '100%',
+    padding: '16px',
+    gap: '16px',
+    height: 'calc(100vh - 73px)',
     overflow: 'hidden',
+    backgroundColor: 'var(--background)',
   },
   toast: {
     position: 'fixed',
@@ -207,6 +259,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     height: '100%',
     overflow: 'hidden',
+    gap: '16px',
   },
   tableSection: {
     flex: 3,

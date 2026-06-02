@@ -18,7 +18,9 @@ import { StoreDetailsModal } from '../../components/profile/StoreDetailsModal';
 import { StaffModal } from '../../components/profile/StaffModal';
 import { BranchModal } from '../../components/profile/BranchModal';
 import { FaqModal } from '../../components/profile/FaqModal';
+import { HelpSupportModal } from '../../components/profile/HelpSupportModal';
 import { useStaff, useCreateStaff } from '../../hooks/useStaff';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 
 interface DBEmployee {
   id: string;
@@ -35,6 +37,7 @@ export default function ProfilePage() {
   const userRole = useAuthStore((s) => s.userRole);
   const logout = useAuthStore((s) => s.logout);
   const userPhone = useAuthStore((s) => s.userPhone);
+  const { canPerform } = useUserPermissions();
   
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const businesses = useBusinessStore((s) => s.businesses);
@@ -54,6 +57,7 @@ export default function ProfilePage() {
   const [activeModal, setActiveModal] = useState<'details' | 'staff' | 'branches' | 'faq' | null>(null);
 
   // Form states - Store details
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editAddress, setEditAddress] = useState('');
@@ -95,6 +99,16 @@ export default function ProfilePage() {
       setEditPhone(activeBusiness.phone || '');
     }
   }, [isLoggedIn, activeBusiness]);
+
+  useEffect(() => {
+    const handleOpenHelp = () => {
+      setIsHelpModalOpen(true);
+    };
+    window.addEventListener('open-help-modal', handleOpenHelp);
+    return () => {
+      window.removeEventListener('open-help-modal', handleOpenHelp);
+    };
+  }, []);
 
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
@@ -186,194 +200,200 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Hero Banner Card */}
-      <div className="profile-hero-banner">
-        <div className="profile-hero-overlay" />
-        <div className="profile-hero-content">
-          <div className="profile-hero-avatar-wrap">
-            <div className="profile-hero-avatar">
-              {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SB'}
-            </div>
-            <div className="profile-status-ring">
-              <span className="profile-status-ping" />
-              <span className="profile-status-dot" />
-            </div>
-          </div>
-          <div className="profile-hero-meta">
-            <span className="profile-hero-badge">Active Terminal</span>
-            <h2 className="profile-hero-title">{activeBusiness?.name || 'Partner Store'}</h2>
-            <div className="profile-hero-tags">
-              <span className="profile-hero-tag">
-                <Building size={12} style={{ marginRight: '4px' }} /> {activeBusiness?.category || 'General POS Retail'}
-              </span>
-              <span className="profile-hero-tag">
-                <MapPin size={12} style={{ marginRight: '4px' }} /> {activeBusiness?.address || 'Sri Lanka'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Two-Column SaaS Dashboard Layout */}
-      <div className="profile-dashboard-grid">
-        
-        {/* Left Column: Premium Summary & Status Card */}
-        <div className="profile-left-column">
-          {/* Operator Card */}
-          <div className="profile-card session-card">
-            <div className="profile-card-header">
-              <Activity size={16} className="profile-card-icon" />
-              <h4 className="profile-card-title">Active Operator Session</h4>
-            </div>
-            
-            <div className="profile-session-user">
-              <div className="profile-session-avatar">
-                <User size={22} />
+      <div className="profile-scrollable-content">
+        {/* Hero Banner Card */}
+        <div className="profile-hero-banner">
+          <div className="profile-hero-overlay" />
+          <div className="profile-hero-content">
+            <div className="profile-hero-avatar-wrap">
+              <div className="profile-hero-avatar">
+                {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SB'}
               </div>
-              <div className="profile-session-meta">
-                <span className="profile-session-name">{employeeName}</span>
-                <span className={`profile-role-badge role-${userRole}`}>
-                  {userRole === 'admin' ? (
-                    <><Shield size={10} style={{ marginRight: '4px' }} /> Admin</>
-                  ) : userRole === 'manager' ? (
-                    <><Settings size={10} style={{ marginRight: '4px' }} /> Manager</>
-                  ) : (
-                    <><User size={10} style={{ marginRight: '4px' }} /> Cashier</>
-                  )}
+              <div className="profile-status-ring">
+                <span className="profile-status-ping" />
+                <span className="profile-status-dot" />
+              </div>
+            </div>
+            <div className="profile-hero-meta">
+              <span className="profile-hero-badge">Active Terminal</span>
+              <h2 className="profile-hero-title">{activeBusiness?.name || 'Partner Store'}</h2>
+              <div className="profile-hero-tags">
+                <span className="profile-hero-tag">
+                  <Building size={12} style={{ marginRight: '4px' }} /> {activeBusiness?.category || 'General POS Retail'}
+                </span>
+                <span className="profile-hero-tag">
+                  <MapPin size={12} style={{ marginRight: '4px' }} /> {activeBusiness?.address || 'Sri Lanka'}
                 </span>
               </div>
             </div>
-
-            <div className="profile-session-details">
-              <div className="session-detail-row">
-                <span className="detail-label">Phone Creds</span>
-                <span className="detail-val">{userPhone || 'Not Configured'}</span>
-              </div>
-              <div className="session-detail-row">
-                <span className="detail-label">Terminal ID</span>
-                <span className="detail-val font-mono">{activeBusiness?.id?.substring(0, 8) || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* System status metadata */}
-          <div className="profile-card status-card">
-            <div className="profile-card-header">
-              <HardDrive size={16} className="profile-card-icon" />
-              <h4 className="profile-card-title">Terminal Diagnostics</h4>
-            </div>
-            
-            <TerminalDiagnostics />
           </div>
         </div>
 
-        {/* Right Column: SaaS Profile Options list */}
-        <div className="profile-right-column">
-          <div className="profile-section-title-wrap">
-            <h3 className="profile-section-header">Terminal Operations Settings</h3>
-            <p className="profile-section-subtitle">Configure receipt layout templates, onboard cashier employees, switch locations, and force replication logs.</p>
+        {/* Two-Column SaaS Dashboard Layout */}
+        <div className="profile-dashboard-grid">
+          
+          {/* Left Column: Premium Summary & Status Card */}
+          <div className="profile-left-column">
+            {/* Operator Card */}
+            <div className="profile-card session-card">
+              <div className="profile-card-header">
+                <Activity size={16} className="profile-card-icon" />
+                <h4 className="profile-card-title">Active Operator Session</h4>
+              </div>
+              
+              <div className="profile-session-user">
+                <div className="profile-session-avatar">
+                  <User size={22} />
+                </div>
+                <div className="profile-session-meta">
+                  <span className="profile-session-name">{employeeName}</span>
+                  <span className={`profile-role-badge role-${userRole}`}>
+                    {userRole === 'admin' ? (
+                      <><Shield size={10} style={{ marginRight: '4px' }} /> Admin</>
+                    ) : userRole === 'manager' ? (
+                      <><Settings size={10} style={{ marginRight: '4px' }} /> Manager</>
+                    ) : (
+                      <><User size={10} style={{ marginRight: '4px' }} /> Cashier</>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div className="profile-session-details">
+                <div className="session-detail-row">
+                  <span className="detail-label">Phone Creds</span>
+                  <span className="detail-val">{userPhone || 'Not Configured'}</span>
+                </div>
+                <div className="session-detail-row">
+                  <span className="detail-label">Terminal ID</span>
+                  <span className="detail-val font-mono">{activeBusiness?.id?.substring(0, 8) || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* System status metadata */}
+            <div className="profile-card status-card">
+              <div className="profile-card-header">
+                <HardDrive size={16} className="profile-card-icon" />
+                <h4 className="profile-card-title">Terminal Diagnostics</h4>
+              </div>
+              
+              <TerminalDiagnostics />
+            </div>
           </div>
 
-          <div className="profile-options-grid">
-            {/* Option: Store details */}
-            <div className="profile-option-card" onClick={() => setActiveModal('details')}>
-              <div className="profile-icon-box card-store-info">
-                <Store size={20} />
-              </div>
-              <div className="profile-option-details">
-                <h4 className="profile-option-title">Store Profile Details</h4>
-                <p className="profile-option-sub">Manage receipt layouts, active address, business contact credentials, and categories.</p>
-              </div>
-              <ChevronRight size={18} className="profile-chevron-arrow" />
+          {/* Right Column: SaaS Profile Options list */}
+          <div className="profile-right-column">
+            <div className="profile-section-title-wrap">
+              <h3 className="profile-section-header">Terminal Operations Settings</h3>
+              <p className="profile-section-subtitle">Configure receipt layout templates, onboard cashier employees, switch locations, and force replication logs.</p>
             </div>
 
-            {/* Option: Switch branches */}
-            <div className="profile-option-card" onClick={() => setActiveModal('branches')}>
-              <div className="profile-icon-box card-locations">
-                <MapPin size={20} />
-              </div>
-              <div className="profile-option-details">
-                <h4 className="profile-option-title">Locations & Branches</h4>
-                <p className="profile-option-sub">Registered branches: {businesses.length} · Initialize and swap active terminal contexts.</p>
-              </div>
-              <ChevronRight size={18} className="profile-chevron-arrow" />
-            </div>
+            <div className="profile-options-grid">
+              {/* Option: Store details */}
+              {canPerform('read', 'settings') && (
+                <div className="profile-option-card" onClick={() => setActiveModal('details')}>
+                  <div className="profile-icon-box card-store-info">
+                    <Store size={20} />
+                  </div>
+                  <div className="profile-option-details">
+                    <h4 className="profile-option-title">Store Profile Details</h4>
+                    <p className="profile-option-sub">Manage receipt layouts, active address, business contact credentials, and categories.</p>
+                  </div>
+                  <ChevronRight size={18} className="profile-chevron-arrow" />
+                </div>
+              )}
 
-            {/* Option: Staff Management */}
-            {userRole === 'admin' && (
-              <div className="profile-option-card" onClick={() => setActiveModal('staff')}>
-                <div className="profile-icon-box card-staff">
-                  <Users size={20} />
+              {/* Option: Switch branches */}
+              <div className="profile-option-card" onClick={() => setActiveModal('branches')}>
+                <div className="profile-icon-box card-locations">
+                  <MapPin size={20} />
                 </div>
                 <div className="profile-option-details">
-                  <h4 className="profile-option-title">Staff Accounts Management</h4>
-                  <p className="profile-option-sub">Onboard and manage cashmere cashiers, store managers, and administration access ranks.</p>
+                  <h4 className="profile-option-title">Locations & Branches</h4>
+                  <p className="profile-option-sub">Registered branches: {businesses.length} · Initialize and swap active terminal contexts.</p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
-            )}
 
-            {/* Option: Auto cloud backup toggle */}
-            <div className="profile-option-card toggle-card">
-              <div className="profile-icon-box card-backup">
-                <Cloud size={20} />
+              {/* Option: Staff Management */}
+              {canPerform('create', 'staff') && (
+                <div className="profile-option-card" onClick={() => setActiveModal('staff')}>
+                  <div className="profile-icon-box card-staff">
+                    <Users size={20} />
+                  </div>
+                  <div className="profile-option-details">
+                    <h4 className="profile-option-title">Staff Accounts Management</h4>
+                    <p className="profile-option-sub">Onboard and manage cashmere cashiers, store managers, and administration access ranks.</p>
+                  </div>
+                  <ChevronRight size={18} className="profile-chevron-arrow" />
+                </div>
+              )}
+
+              {/* Option: Auto cloud backup toggle */}
+              {canPerform('read', 'sync') && (
+                <div className="profile-option-card toggle-card">
+                  <div className="profile-icon-box card-backup">
+                    <Cloud size={20} />
+                  </div>
+                  <div className="profile-option-details">
+                    <h4 className="profile-option-title">Real-time Cloud Backups</h4>
+                    <p className="profile-option-sub">Continuously replicate offline transaction logs and ledger metrics to cloud databases.</p>
+                  </div>
+                  <button 
+                    onClick={toggleBackup}
+                    className={`profile-switch-btn ${isBackupEnabled ? 'active' : ''}`}
+                  >
+                    <div className="profile-switch-thumb" />
+                  </button>
+                </div>
+              )}
+
+              {/* Option: Manual Sync */}
+              {canPerform('read', 'sync') && isBackupEnabled && (
+                <div className="profile-option-card sync-card" onClick={handleManualSync}>
+                  <div className="profile-icon-box card-sync">
+                    <RefreshCw size={20} className={syncing ? 'spin-anim' : ''} />
+                  </div>
+                  <div className="profile-option-details">
+                    <h4 className="profile-option-title">Force Database Sync</h4>
+                    <p className="profile-option-sub">Manually push latest offline transaction queues and adjust stock registers with cloud tables.</p>
+                  </div>
+                  <ChevronRight size={18} className="profile-chevron-arrow" />
+                </div>
+              )}
+
+              {/* Option: Support FAQs */}
+              <div className="profile-option-card" onClick={() => setActiveModal('faq')}>
+                <div className="profile-icon-box card-faq">
+                  <HelpCircle size={20} />
+                </div>
+                <div className="profile-option-details">
+                  <h4 className="profile-option-title">Help FAQ & Printing Manual</h4>
+                  <p className="profile-option-sub">Tax audit guidelines, hardware print configurations, and local offline database setup.</p>
+                </div>
+                <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
-              <div className="profile-option-details">
-                <h4 className="profile-option-title">Real-time Cloud Backups</h4>
-                <p className="profile-option-sub">Continuously replicate offline transaction logs and ledger metrics to cloud databases.</p>
-              </div>
-              <button 
-                onClick={toggleBackup}
-                className={`profile-switch-btn ${isBackupEnabled ? 'active' : ''}`}
+
+              {/* Option: Log out */}
+              <div 
+                className="profile-option-card logout-card"
+                onClick={() => {
+                  if (confirm('Disconnect POS terminal session?')) {
+                    logout();
+                    router.push('/auth');
+                  }
+                }}
               >
-                <div className="profile-switch-thumb" />
-              </button>
-            </div>
-
-            {/* Option: Manual Sync */}
-            {isBackupEnabled && (
-              <div className="profile-option-card sync-card" onClick={handleManualSync}>
-                <div className="profile-icon-box card-sync">
-                  <RefreshCw size={20} className={syncing ? 'spin-anim' : ''} />
+                <div className="profile-icon-box card-logout">
+                  <LogOut size={20} />
                 </div>
                 <div className="profile-option-details">
-                  <h4 className="profile-option-title">Force Database Sync</h4>
-                  <p className="profile-option-sub">Manually push latest offline transaction queues and adjust stock registers with cloud tables.</p>
+                  <h4 className="profile-option-title">Sign Out Session</h4>
+                  <p className="profile-option-sub">Safely commit offline cache states and disconnect this POS device terminal authorization.</p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
-            )}
-
-            {/* Option: Support FAQs */}
-            <div className="profile-option-card" onClick={() => setActiveModal('faq')}>
-              <div className="profile-icon-box card-faq">
-                <HelpCircle size={20} />
-              </div>
-              <div className="profile-option-details">
-                <h4 className="profile-option-title">Help FAQ & Printing Manual</h4>
-                <p className="profile-option-sub">Tax audit guidelines, hardware print configurations, and local offline database setup.</p>
-              </div>
-              <ChevronRight size={18} className="profile-chevron-arrow" />
-            </div>
-
-            {/* Option: Log out */}
-            <div 
-              className="profile-option-card logout-card"
-              onClick={() => {
-                if (confirm('Disconnect POS terminal session?')) {
-                  logout();
-                  router.push('/auth');
-                }
-              }}
-            >
-              <div className="profile-icon-box card-logout">
-                <LogOut size={20} />
-              </div>
-              <div className="profile-option-details">
-                <h4 className="profile-option-title">Sign Out Session</h4>
-                <p className="profile-option-sub">Safely commit offline cache states and disconnect this POS device terminal authorization.</p>
-              </div>
-              <ChevronRight size={18} className="profile-chevron-arrow" />
             </div>
           </div>
         </div>
@@ -426,6 +446,11 @@ export default function ProfilePage() {
       <FaqModal
         isOpen={activeModal === 'faq'}
         onClose={() => setActiveModal(null)}
+      />
+
+      <HelpSupportModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
       />
     </div>
   );

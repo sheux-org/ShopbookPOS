@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Menu } from 'lucide-react';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 
 interface MobileNavbarProps {
   sidebarOpen: boolean;
@@ -16,6 +17,8 @@ export const MobileNavbar: React.FC<MobileNavbarProps> = ({
   syncing,
   handleSync,
 }) => {
+  const { canPerform } = useUserPermissions();
+
   return (
     <header className="mobile-navbar">
       <button 
@@ -29,9 +32,12 @@ export const MobileNavbar: React.FC<MobileNavbarProps> = ({
         <div className="mobile-brand-logo">S</div>
         <span className="mobile-brand-title">Shopbook</span>
       </div>
-      <div className="mobile-sync-dot" onClick={handleSync} title="Click to backup now">
-        <div className={`sync-dot-inner ${syncing ? 'syncing' : ''}`} />
-      </div>
+      {canPerform('read', 'sync') && (
+        <div className="mobile-sync-dot" onClick={handleSync} title="Click to backup now">
+          <div className={`sync-dot-inner ${syncing ? 'syncing' : ''}`} />
+        </div>
+      )}
     </header>
   );
 };
+

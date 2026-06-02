@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Printer, Share2, Ban, Sparkles, X } from 'lucide-react';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 
 interface OrderRecord {
   id: string;
@@ -47,10 +48,12 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   onCopyText,
 }) => {
   const [voiding, setVoiding] = useState(false);
+  const { canPerform } = useUserPermissions();
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [items]);
+
 
   if (!isOpen || !order) return null;
 
@@ -320,7 +323,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
             </button>
           </div>
 
-          {order.status !== 'voided' && (
+          {order.status !== 'voided' && canPerform('delete', 'transactions') && (
             <button 
               onClick={handleVoidClick}
               disabled={voiding}

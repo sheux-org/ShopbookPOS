@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { X, PlusCircle } from 'lucide-react';
+import { X, PlusCircle, Lock } from 'lucide-react';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 
 interface BranchModalProps {
   isOpen: boolean;
@@ -34,6 +35,8 @@ export const BranchModal: React.FC<BranchModalProps> = ({
   onSubmit,
   triggerToast,
 }) => {
+  const { canPerform } = useUserPermissions();
+
   if (!isOpen) return null;
 
   return (
@@ -44,8 +47,10 @@ export const BranchModal: React.FC<BranchModalProps> = ({
           <button onClick={onClose} className="modal-close-btn"><X size={16} /></button>
         </div>
         <div className="modal-body" style={{ flexDirection: 'row', gap: '24px' }}>
-          <form onSubmit={onSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <h4 className="form-title">Initialize New Branch Location</h4>
+          {canPerform('create', 'settings') ? (
+            <form onSubmit={onSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <h4 className="form-title">Initialize New Branch Location</h4>
+
             
             <div className="modal-input-group">
               <label className="modal-label">Branch Name</label>
@@ -89,6 +94,17 @@ export const BranchModal: React.FC<BranchModalProps> = ({
               <span>Onboard location</span>
             </button>
           </form>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', backgroundColor: 'var(--background)', gap: '12px', textAlign: 'center' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Lock size={18} color="var(--error)" />
+            </div>
+            <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--dark)', margin: 0 }}>Registration Restricted</h4>
+            <p style={{ fontSize: '11px', color: 'var(--muted)', lineHeight: '1.5', margin: 0 }}>
+              Only store administrators are authorized to initialize new branches and locations.
+            </p>
+          </div>
+        )}
 
           <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <h4 className="form-title">Registered branches ({businesses.length})</h4>

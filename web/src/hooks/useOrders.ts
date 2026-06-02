@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tansta
 import database from "../db/database";
 import { useBusinessStore } from "../stores/businessStore";
 import { useAuthStore } from "../stores/authStore";
+import { syncDatabase } from "../services/sync";
 
 export interface DBOrder {
   id: string;
@@ -180,7 +181,10 @@ export function useCreateOrder() {
         });
 
         for (const item of cart) {
-          const dbProducts = await database.get("products").query(Q.where("name", item.name)).fetch();
+          const dbProducts = await database.get("products").query(
+            Q.where("name", item.name),
+            Q.where("business_id", businessId)
+          ).fetch();
           let matchedProduct = null;
 
           if (dbProducts.length > 0) {
@@ -219,6 +223,7 @@ export function useCreateOrder() {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["insights"] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }
@@ -229,12 +234,16 @@ export function useVoidOrder() {
   return useMutation({
     mutationFn: async (params: { orderId: string; invoiceNumber: string }) => {
       const { orderId, invoiceNumber } = params;
-      const orderRecord = await database.get("orders").find(orderId);
+      const orderRecord = (await database.get("orders").find(orderId)) as any;
       const dbItems = await database.get("order_items").query(Q.where("order_id", orderId)).fetch();
 
       await database.write(async () => {
+        const businessId = orderRecord.business.id;
         for (const item of dbItems as any[]) {
-          const matchedProducts = await database.get("products").query(Q.where("name", item.name)).fetch();
+          const matchedProducts = await database.get("products").query(
+            Q.where("name", item.name),
+            Q.where("business_id", businessId)
+          ).fetch();
           if (matchedProducts.length > 0) {
             const product: any = matchedProducts[0];
             const currentStock = product.stockCount;
@@ -262,6 +271,7 @@ export function useVoidOrder() {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["insights"] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }

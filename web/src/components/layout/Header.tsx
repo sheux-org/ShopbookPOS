@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Eye, EyeOff, Plus } from 'lucide-react';
+import { Eye, EyeOff, Plus, HelpCircle } from 'lucide-react';
 
 interface HeaderProps {
   headerInfo: { title: string; subtitle: string } | null;
@@ -102,6 +102,32 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Plus size={18} />
           <span>Register Product</span>
+        </button>
+      )}
+
+      {pathname === '/profile' && (
+        <button 
+          onClick={() => window.dispatchEvent(new Event('open-help-modal'))}
+          className="common-header-btn"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '7px 12px',
+            borderRadius: '8px',
+            border: '1px solid var(--border)',
+            backgroundColor: '#ffffff',
+            color: 'var(--primary)',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            transition: 'all 0.2s ease'
+          }}
+          title="Help & Contact Support"
+        >
+          <HelpCircle size={16} />
+          <span>Support Help</span>
         </button>
       )}
     </header>

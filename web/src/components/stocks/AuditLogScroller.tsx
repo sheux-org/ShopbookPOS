@@ -80,15 +80,17 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    borderLeft: '1px solid var(--border)',
+    borderRadius: '12px',
+    border: '1px solid var(--border)',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03)',
   },
   logHeader: {
     display: 'flex',
     alignItems: 'center',
     gap: '7px',
-    padding: '10px 12px',
+    padding: '16px',
     borderBottom: '1px solid var(--border)',
-    backgroundColor: 'var(--background)',
+    backgroundColor: '#ffffff',
     flexShrink: 0,
   },
   logHeaderTitle: {
@@ -101,10 +103,10 @@ const styles: Record<string, React.CSSProperties> = {
   logScroller: {
     flex: 1,
     overflowY: 'auto',
-    padding: '8px 10px',
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '8px',
   },
   logCard: {
     backgroundColor: 'var(--background)',

@@ -4,8 +4,9 @@ import React, { useState, useMemo } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import { 
-  TrendingUp, ShoppingCart, DollarSign, AlertTriangle, Eye, Sparkles, Printer
+  TrendingUp, ShoppingCart, DollarSign, AlertTriangle, Eye, Sparkles, Printer, Lock
 } from 'lucide-react';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 import './insights.css';
 import { useBusinessInsights } from '../../hooks/useInsights';
 
@@ -25,10 +26,58 @@ export default function InsightsPage() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const employeeName = useAuthStore((s) => s.employeeName);
+  const { role } = useUserPermissions();
 
   // Modal receipt states
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
+
+  if (role === 'cashier') {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        padding: '24px',
+        fontFamily: 'Inter, system-ui, sans-serif'
+      }}>
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-lg)',
+          padding: '48px 32px',
+          maxWidth: '480px',
+          width: '100%',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: '#fee2e2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid #fecaca'
+          }}>
+            <Lock size={28} color="var(--error)" />
+          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--dark)', margin: 0 }}>
+            Analytics Insights Restricted
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: '1.6', margin: 0 }}>
+            Cashier profiles are not authorized to view business analytics reports and revenue graphs.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // React Query Hook
   const { data: insights, isLoading } = useBusinessInsights(

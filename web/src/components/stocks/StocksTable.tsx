@@ -135,8 +135,12 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    padding: '12px',
+    padding: '16px',
     overflow: 'hidden',
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    border: '1px solid var(--border)',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03)',
   },
   queryBar: {
     display: 'flex',
