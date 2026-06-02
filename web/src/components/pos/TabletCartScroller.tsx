@@ -74,6 +74,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '8px',
     overflowY: 'auto',
     flex: 1,
+    minHeight: '150px',
+    maxHeight: '260px',
     borderBottom: '1px solid var(--border)',
     paddingBottom: '12px',
     marginBottom: '12px',

@@ -152,12 +152,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
                     <AlertTriangle size={14} />
                     <span>Short by Rs. {(totalAmount - (parseFloat(cashReceived) || 0)).toLocaleString()}</span>
                   </div>
-                ) : (
-                  <div style={styles.tenderSuccessBanner}>
-                    <CheckCircle size={14} />
-                    <span>Change to Return: Rs. {changeDue.toLocaleString()}</span>
-                  </div>
-                )
+                ) : null
               )}
             </div>
           )}
@@ -275,6 +270,13 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
         </div>
       </div>
 
+      {paymentMethod === 'cash' && cashReceived !== '' && parseFloat(cashReceived) >= totalAmount && (
+        <div style={styles.largeBalanceCard}>
+          <span style={styles.largeBalanceLabel}>Change / Balance to Return</span>
+          <span style={styles.largeBalanceValue}>Rs. {changeDue.toLocaleString()}</span>
+        </div>
+      )}
+
       {/* Settle confirm checkout payment button */}
       <button 
         ref={settleBtnRef}
@@ -335,17 +337,17 @@ const styles: Record<string, React.CSSProperties> = {
   },
   payOptionBtnCashActive: {
     backgroundColor: '#eff6ff',
-    borderColor: '#3b82f6',
+    border: '1px solid #3b82f6',
     color: '#2563eb',
   },
   payOptionBtnCardActive: {
     backgroundColor: '#faf5ff',
-    borderColor: '#a855f7',
+    border: '1px solid #a855f7',
     color: '#7e22ce',
   },
   payOptionBtnBankActive: {
     backgroundColor: '#ecfdf5',
-    borderColor: '#10b981',
+    border: '1px solid #10b981',
     color: '#047857',
   },
   tenderTogglesArea: {
@@ -435,5 +437,30 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#94a3b8',
     cursor: 'not-allowed',
     boxShadow: 'none',
+  },
+  largeBalanceCard: {
+    backgroundColor: '#f0fdf4',
+    border: '2px solid #bbf7d0',
+    borderRadius: '8px',
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '12px',
+    boxShadow: '0 2px 8px rgba(22, 163, 74, 0.05)',
+  },
+  largeBalanceLabel: {
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: '#15803D',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    marginBottom: '4px',
+  },
+  largeBalanceValue: {
+    fontSize: '28px',
+    fontWeight: '900',
+    color: '#16A34A',
   },
 };

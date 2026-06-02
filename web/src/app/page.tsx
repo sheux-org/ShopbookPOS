@@ -12,8 +12,10 @@ import { SettlementCard } from '../components/pos/SettlementCard';
 import { CustomerModal } from '../components/pos/CustomerModal';
 import { CatalogView } from '../components/pos/CatalogView';
 import { ReceiptModal } from '../components/pos/ReceiptModal';
+import { SettlementModal } from '../components/pos/SettlementModal';
 
 export default function PosBillingPage() {
+  const [showPaymentModal, setShowPaymentModal] = React.useState(false);
   const {
     cart,
     customer,
@@ -205,31 +207,58 @@ export default function PosBillingPage() {
             </div>
 
             <div className="right-body-fixed-footer">
-              <SettlementCard 
-                paymentMethod={paymentMethod}
-                handlePaymentMethodChange={handlePaymentMethodChange}
-                cashReceived={cashReceived}
-                setCashReceived={setCashReceived}
-                totalAmount={totalAmount}
-                changeDue={changeDue}
-                isCustomBank={isCustomBank}
-                setIsCustomBank={setIsCustomBank}
-                bankName={bankName}
-                setBankName={setBankName}
-                cardDigits={cardDigits}
-                setCardDigits={setCardDigits}
-                paying={paying}
-                cartLength={cart.length}
-                isPaymentValid={isPaymentValid}
-                handleConfirmCheckout={handleConfirmCheckout}
-                posMode={posMode}
-                cashReceivedRef={cashReceivedRef}
-                cardBrandSelectRef={cardBrandSelectRef}
-                cardDigitsRef={cardDigitsRef}
-                bankNameSelectRef={bankNameSelectRef}
-                bankNameRef={bankNameRef}
-                settleBtnRef={settleBtnRef}
-              />
+              {posMode === 'tablet' ? (
+                <button
+                  disabled={cart.length === 0}
+                  onClick={() => setShowPaymentModal(true)}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '8px',
+                    backgroundColor: cart.length === 0 ? '#cbd5e1' : 'var(--primary)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    cursor: cart.length === 0 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: cart.length === 0 ? 'none' : '0 4px 12px rgba(37, 99, 235, 0.25)',
+                    transition: 'all 0.2s',
+                  }}
+                  className="proceed-settlement-btn"
+                >
+                  Proceed to Payment (Rs. {totalAmount.toLocaleString()})
+                </button>
+              ) : (
+                <SettlementCard 
+                  paymentMethod={paymentMethod}
+                  handlePaymentMethodChange={handlePaymentMethodChange}
+                  cashReceived={cashReceived}
+                  setCashReceived={setCashReceived}
+                  totalAmount={totalAmount}
+                  changeDue={changeDue}
+                  isCustomBank={isCustomBank}
+                  setIsCustomBank={setIsCustomBank}
+                  bankName={bankName}
+                  setBankName={setBankName}
+                  cardDigits={cardDigits}
+                  setCardDigits={setCardDigits}
+                  paying={paying}
+                  cartLength={cart.length}
+                  isPaymentValid={isPaymentValid}
+                  handleConfirmCheckout={handleConfirmCheckout}
+                  posMode={posMode}
+                  cashReceivedRef={cashReceivedRef}
+                  cardBrandSelectRef={cardBrandSelectRef}
+                  cardDigitsRef={cardDigitsRef}
+                  bankNameSelectRef={bankNameSelectRef}
+                  bankNameRef={bankNameRef}
+                  settleBtnRef={settleBtnRef}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -243,6 +272,34 @@ export default function PosBillingPage() {
         onRegisterCustomer={handleCreateCustomer}
         posMode={posMode}
         scanInputRef={scanInputRef}
+      />
+
+      <SettlementModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        paymentMethod={paymentMethod}
+        handlePaymentMethodChange={handlePaymentMethodChange}
+        cashReceived={cashReceived}
+        setCashReceived={setCashReceived}
+        totalAmount={totalAmount}
+        changeDue={changeDue}
+        isCustomBank={isCustomBank}
+        setIsCustomBank={setIsCustomBank}
+        bankName={bankName}
+        setBankName={setBankName}
+        cardDigits={cardDigits}
+        setCardDigits={setCardDigits}
+        paying={paying}
+        cartLength={cart.length}
+        isPaymentValid={isPaymentValid}
+        handleConfirmCheckout={handleConfirmCheckout}
+        posMode={posMode}
+        cashReceivedRef={cashReceivedRef}
+        cardBrandSelectRef={cardBrandSelectRef}
+        cardDigitsRef={cardDigitsRef}
+        bankNameSelectRef={bankNameSelectRef}
+        bankNameRef={bankNameRef}
+        settleBtnRef={settleBtnRef}
       />
 
       <ReceiptModal 
