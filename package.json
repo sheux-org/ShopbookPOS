@@ -5,6 +5,8 @@
   "scripts": {
     "dev:mobile": "pnpm --filter shopbook-pos dev",
     "dev:web": "pnpm --filter web dev",
+    "dev:web:clean": "rm -rf web/.next && pnpm --filter web dev",
+    "clean:web": "rm -rf web/.next",
     "build:web": "pnpm --filter web build",
     "start:web": "pnpm --filter web start",
     "lint:mobile": "pnpm --filter shopbook-pos lint",
