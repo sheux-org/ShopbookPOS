@@ -98,11 +98,13 @@ export const DenseCartTable: React.FC<DenseCartTableProps> = ({
             {cart.length === 0 && (
               <tr>
                 <td colSpan={6} style={styles.emptyTableTd}>
-                  <ShoppingBag size={48} color="var(--muted)" style={{ opacity: 0.4, marginBottom: '10px' }} />
-                  <h4 style={{ margin: 0, color: 'var(--muted)' }}>Transaction Empty</h4>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: 'var(--muted)' }}>
-                    Scan product barcode or type a quick-code to begin checkout.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
+                    <ShoppingBag size={80} color="#cbd5e1" style={{ marginBottom: '16px' }} />
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#475569' }}>Transaction Empty</h3>
+                    <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b', textAlign: 'center', maxWidth: '300px', lineHeight: '1.4' }}>
+                      Scan product barcode or type a quick-code to begin checkout.
+                    </p>
+                  </div>
                 </td>
               </tr>
             )}

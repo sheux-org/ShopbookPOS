@@ -59,8 +59,11 @@ export const TabletCartScroller: React.FC<TabletCartScrollerProps> = ({
 
       {cart.length === 0 && (
         <div style={styles.emptyCartState}>
-          <ShoppingBag size={32} color="var(--muted)" style={{ opacity: 0.5, marginBottom: '6px' }} />
-          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>No items in cart</span>
+          <ShoppingBag size={64} color="#cbd5e1" style={{ marginBottom: '12px' }} />
+          <span style={{ fontSize: '15px', fontWeight: '600', color: '#475569' }}>No items in cart</span>
+          <span style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', textAlign: 'center', maxWidth: '280px', lineHeight: '1.4' }}>
+            Scan product barcode or type a quick-code to begin checkout.
+          </span>
         </div>
       )}
     </div>
@@ -135,6 +138,6 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '120px',
+    height: '160px',
   },
 };

@@ -189,9 +189,6 @@ export function useCreateOrder() {
 
           if (dbProducts.length > 0) {
             matchedProduct = dbProducts[0];
-            await matchedProduct.update((p: any) => {
-              p.stockCount = Math.max(0, p.stockCount - item.quantity);
-            });
           }
 
           const newOrderItem = await database.get("order_items").create((oi: any) => {
