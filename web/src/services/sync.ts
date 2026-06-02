@@ -57,10 +57,10 @@ async function prepareSupabaseForSync(): Promise<void> {
   if (session.user) useAuthStore.getState().setUser(session.user);
 }
 
-export async function syncDatabase(): Promise<boolean> {
+export async function syncDatabase(force: boolean = true): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   const isBackupEnabled = useSettingsStore.getState().isBackupEnabled;
-  if (!isBackupEnabled) {
+  if (!isBackupEnabled && !force) {
     return false;
   }
 

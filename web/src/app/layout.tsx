@@ -11,6 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Sidebar } from '../components/layout/Sidebar';
 import { MobileNavbar } from '../components/layout/MobileNavbar';
 import { Header } from '../components/layout/Header';
+import { WifiOff } from 'lucide-react';
 
 export default function RootLayout({
   children,
@@ -41,6 +42,29 @@ export default function RootLayout({
   const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  // Network connection status watcher
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      handleSync(); // Auto sync when connection is restored
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -97,6 +121,28 @@ export default function RootLayout({
       setSyncing(false);
     }
   };
+
+  // Periodic background sync every 30 seconds if online
+  useEffect(() => {
+    if (!hydrated || !isLoggedIn) return;
+
+    const interval = setInterval(() => {
+      if (navigator.onLine) {
+        syncDatabase();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [hydrated, isLoggedIn]);
+
+  // Auto trigger sync on mount, login, or when changing active business
+  const activeBusiness = useBusinessStore((s) => s.activeBusiness);
+  useEffect(() => {
+    if (hydrated && isLoggedIn && activeBusiness?.id && activeBusiness.id !== '0') {
+      useSettingsStore.getState().setBackupEnabled(true); // Always enable sync on session load/refresh
+      handleSync();
+    }
+  }, [hydrated, isLoggedIn, activeBusiness?.id]);
 
   const getHeaderInfo = () => {
     switch (pathname) {
@@ -224,8 +270,30 @@ export default function RootLayout({
               setPosMode={setPosMode}
             />
 
-            {/* Main workspace contents */}
+             {/* Main workspace contents */}
             <main className="main-content">
+              {!isOnline && (
+                <div style={{
+                  backgroundColor: '#fef2f2',
+                  borderBottom: '1px solid #fee2e2',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: '#991b1b',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  flexShrink: 0,
+                  zIndex: 20,
+                  lineHeight: '1.4'
+                }}>
+                  <WifiOff size={16} style={{ color: '#dc2626', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ color: '#b91c1c' }}>Network Connection Unstable / Offline:</strong> Cloud replication is paused. Transactions are stored in the local database, but please restore connection to prevent data loss or sync delays.
+                  </div>
+                </div>
+              )}
               {children}
             </main>
           </div>

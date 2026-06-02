@@ -1,6 +1,7 @@
 import { Q } from "@nozbe/watermelondb";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import database from "../db/database";
+import { syncDatabase } from "../services/sync";
 
 export interface StaffMember {
   id: string;
@@ -83,6 +84,7 @@ export function useCreateStaff(businessId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff", businessId] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }
@@ -131,6 +133,7 @@ export function useUpdateStaff(businessId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff", businessId] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }
@@ -155,6 +158,7 @@ export function useDeleteStaff(businessId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff", businessId] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }

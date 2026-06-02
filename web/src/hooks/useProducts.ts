@@ -2,6 +2,7 @@ import { Q } from "@nozbe/watermelondb";
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import database from "../db/database";
 import { useBusinessStore } from "../stores/businessStore";
+import { syncDatabase } from "../services/sync";
 
 export interface DBProduct {
   id: string;
@@ -255,6 +256,7 @@ export function useAddProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }
@@ -308,6 +310,7 @@ export function useUpdateProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["uploaded-images"] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }
@@ -325,6 +328,7 @@ export function useDeleteProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["uploaded-images"] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }
@@ -343,6 +347,7 @@ export function useToggleFavoriteProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }
@@ -429,6 +434,7 @@ export function useAdjustStock() {
         queryKey: ["stock-history", variables.productId],
       });
       queryClient.invalidateQueries({ queryKey: ["global-stock-history"] });
+      syncDatabase(); // Trigger real-time background replication
     },
   });
 }
