@@ -479,3 +479,36 @@ export function useGetGlobalStockHistory(businessId: string) {
     enabled: !!businessId && businessId !== "0",
   });
 }
+
+export function useFindProduct() {
+  const activeBiz = useBusinessStore((s) => s.activeBusiness);
+
+  const findProductByCodeOrName = async (query: string): Promise<any[]> => {
+    if (!activeBiz || activeBiz.id === '0') return [];
+    return database.get('products').query(
+      Q.where('business_id', activeBiz.id),
+      Q.or(
+        Q.where('barcode', query),
+        Q.where('quick_code', query),
+        Q.where('name', query)
+      )
+    ).fetch();
+  };
+
+  const findProductByBarcode = async (barcode: string): Promise<any[]> => {
+    if (!activeBiz || activeBiz.id === '0') return [];
+    return database.get('products').query(
+      Q.where('business_id', activeBiz.id),
+      Q.or(
+        Q.where('barcode', barcode),
+        Q.where('quick_code', barcode)
+      )
+    ).fetch();
+  };
+
+  return {
+    findProductByCodeOrName,
+    findProductByBarcode,
+  };
+}
+

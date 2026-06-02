@@ -6,11 +6,11 @@ import { useCart } from '../stores/cartStore';
 import { useAuthStore } from '../stores/authStore';
 import { useBusinessStore } from '../../src/stores/businessStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import database from '../db/database';
-import { Q } from '@nozbe/watermelondb';
 import { useHardwareScanner } from '../components/Scanner';
-import { useProducts, mapDBProduct } from './useProducts';
+import { useProducts, mapDBProduct, useFindProduct } from './useProducts';
 import { useCreateOrder } from './useOrders';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCartActions } from './useCartActions';
 
 export interface DBProduct {
   id: string;
@@ -29,14 +29,18 @@ export interface DBProduct {
 
 export function usePosBilling() {
   const router = useRouter();
-  const cart = useCart((s) => s.cart);
+  const {
+    cart,
+    addCartItem: baseAddCartItem,
+    updateQuantity: baseUpdateQuantity,
+    clearCart: baseClearCart,
+  } = useCartActions();
   const customer = useCart((s) => s.customer);
   const customCustomers = useCart((s) => s.customCustomers) || [];
-  const addCartItem = useCart((s) => s.addCartItem);
-  const updateQuantity = useCart((s) => s.updateQuantity);
-  const clearCart = useCart((s) => s.clearCart);
   const setCustomer = useCart((s) => s.setCustomer);
   const addCustomCustomer = useCart((s) => s.addCustomCustomer);
+  const queryClient = useQueryClient();
+  const { findProductByCodeOrName, findProductByBarcode } = useFindProduct();
   
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
@@ -131,6 +135,15 @@ export function usePosBilling() {
     setTimeout(() => setToastMsg(null), 1500);
   };
 
+  const addCartItem = (name: string, price: number, icon?: string, sku?: string, stock?: number) =>
+    baseAddCartItem(name, price, icon, sku, stock, triggerToast);
+
+  const updateQuantity = (id: string, delta: number) =>
+    baseUpdateQuantity(id, delta, triggerToast);
+
+  const clearCart = (restoreStock: boolean = true) =>
+    baseClearCart(restoreStock);
+
   // Scan or search manual submit
   const handleScanSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -154,14 +167,7 @@ export function usePosBilling() {
 
     if (!matched) {
       try {
-        const matches = await database.get('products').query(
-          Q.where('business_id', activeBusiness.id),
-          Q.or(
-            Q.where('barcode', query),
-            Q.where('quick_code', query),
-            Q.where('name', query)
-          )
-        ).fetch();
+        const matches = await findProductByCodeOrName(query);
         if (matches.length > 0) {
           matched = mapDBProduct(matches[0]);
         }
@@ -176,7 +182,7 @@ export function usePosBilling() {
         return;
       }
       for (let i = 0; i < scanQty; i++) {
-        addCartItem(matched.name, matched.price, matched.icon, matched.barcode || matched.id, matched.stockCount);
+        await addCartItem(matched.name, matched.price, matched.icon, matched.barcode || matched.id, matched.stockCount);
       }
       triggerToast(`Added ${scanQty}x ${matched.name} 🛒`);
       setScanQuery('');
@@ -192,13 +198,7 @@ export function usePosBilling() {
 
     if (!matched) {
       try {
-        const matches = await database.get('products').query(
-          Q.where('business_id', activeBusiness.id),
-          Q.or(
-            Q.where('barcode', barcode),
-            Q.where('quick_code', barcode)
-          )
-        ).fetch();
+        const matches = await findProductByBarcode(barcode);
         if (matches.length > 0) {
           matched = mapDBProduct(matches[0]);
         }
@@ -212,7 +212,7 @@ export function usePosBilling() {
         triggerToast(`Out of stock: ${matched.name} ⚠️`);
         return;
       }
-      addCartItem(matched.name, matched.price, matched.icon, matched.barcode || matched.id, matched.stockCount);
+      await addCartItem(matched.name, matched.price, matched.icon, matched.barcode || matched.id, matched.stockCount);
       triggerToast(`Added ${matched.name} 🛒`);
       setSelectedRowIndex(cart.length);
     } else {
@@ -349,6 +349,7 @@ export function usePosBilling() {
 
       triggerToast('Invoice completed successfully! 📑');
       setShowReceipt(true);
+      clearCart(false);
     } catch (err) {
       console.error('Failed to complete sale checkout:', err);
     } finally {
