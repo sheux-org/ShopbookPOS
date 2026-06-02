@@ -4,11 +4,13 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '../stores/cartStore';
 import { useAuthStore } from '../stores/authStore';
-import { useBusinessStore } from '../stores/businessStore';
+import { useBusinessStore } from '../../src/stores/businessStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import database from '../db/database';
 import { Q } from '@nozbe/watermelondb';
 import { useHardwareScanner } from '../components/Scanner';
+import { useProducts, mapDBProduct } from './useProducts';
+import { useCreateOrder } from './useOrders';
 
 export interface DBProduct {
   id: string;
@@ -41,7 +43,6 @@ export function usePosBilling() {
   const posMode = useSettingsStore((s) => s.posMode);
 
   // States
-  const [products, setProducts] = useState<DBProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'catalog'>('grid');
@@ -95,45 +96,19 @@ export function usePosBilling() {
   const bankNameSelectRef = useRef<HTMLSelectElement>(null);
   const settleBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Load products from IndexedDB
-  const loadProducts = async () => {
-    if (typeof window === 'undefined') return;
-    try {
-      const activeBiz = useBusinessStore.getState().activeBusiness;
-      let list: any[] = [];
-      if (activeBiz && activeBiz.id !== '0') {
-        const matchedBiz = await database.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
-        if (matchedBiz.length > 0) {
-          list = await database.get('products').query(Q.where('business_id', matchedBiz[0].id)).fetch();
-        }
-      } else {
-        list = await database.get('products').query().fetch();
-      }
+  // React Query Hook
+  const {
+    data: products = [],
+    isLoading: loadingProducts,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(
+    selectedCategory === 'All' ? undefined : selectedCategory,
+    searchQuery
+  );
 
-      setProducts(list.map(p => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        category: p.category || '',
-        icon: p.icon || '📦',
-        stockCount: p.stockCount || 0,
-        lowStockAlert: p.lowStockAlert,
-        unitType: p.unitType,
-        costPrice: p.costPrice,
-        quickCode: p.quickCode,
-        barcode: p.barcode,
-        isFavorite: p.isFavorite || false
-      })));
-    } catch (err) {
-      console.error('Failed to load products from IndexedDB:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      loadProducts();
-    }
-  }, [isLoggedIn, activeBusiness]);
+  const createOrderMutation = useCreateOrder();
 
   // Keep selectedRowIndex bounded by cart length
   useEffect(() => {
@@ -157,7 +132,7 @@ export function usePosBilling() {
   };
 
   // Scan or search manual submit
-  const handleScanSubmit = (e?: React.FormEvent) => {
+  const handleScanSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     let query = scanQuery.trim();
     if (!query) return;
@@ -172,7 +147,29 @@ export function usePosBilling() {
       }
     }
 
-    const matched = products.find(p => p.barcode === query || p.quickCode === query || p.name.toLowerCase() === query.toLowerCase());
+    const cleanQuery = query.toLowerCase();
+    let matched = products.find(
+      p => p.barcode === query || p.quickCode === query || p.name.toLowerCase() === cleanQuery
+    );
+
+    if (!matched) {
+      try {
+        const matches = await database.get('products').query(
+          Q.where('business_id', activeBusiness.id),
+          Q.or(
+            Q.where('barcode', query),
+            Q.where('quick_code', query),
+            Q.where('name', query)
+          )
+        ).fetch();
+        if (matches.length > 0) {
+          matched = mapDBProduct(matches[0]);
+        }
+      } catch (err) {
+        console.error("Barcode scan database lookup failed:", err);
+      }
+    }
+
     if (matched) {
       if (matched.stockCount <= 0) {
         triggerToast(`Out of stock: ${matched.name} ⚠️`);
@@ -190,8 +187,26 @@ export function usePosBilling() {
   };
 
   // Hardware Scanner Hook capture
-  const handleHardwareScan = (barcode: string) => {
-    const matched = products.find(p => p.barcode === barcode || p.quickCode === barcode);
+  const handleHardwareScan = async (barcode: string) => {
+    let matched = products.find(p => p.barcode === barcode || p.quickCode === barcode);
+
+    if (!matched) {
+      try {
+        const matches = await database.get('products').query(
+          Q.where('business_id', activeBusiness.id),
+          Q.or(
+            Q.where('barcode', barcode),
+            Q.where('quick_code', barcode)
+          )
+        ).fetch();
+        if (matches.length > 0) {
+          matched = mapDBProduct(matches[0]);
+        }
+      } catch (err) {
+        console.error("Hardware scan database lookup failed:", err);
+      }
+    }
+
     if (matched) {
       if (matched.stockCount <= 0) {
         triggerToast(`Out of stock: ${matched.name} ⚠️`);
@@ -207,26 +222,11 @@ export function usePosBilling() {
 
   useHardwareScanner(handleHardwareScan);
 
-  // Extract unique categories
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    products.forEach(p => {
-      if (p.category) set.add(p.category.toLowerCase());
-    });
-    return ['All', ...Array.from(set).map(c => c.charAt(0).toUpperCase() + c.slice(1))];
-  }, [products]);
+  // Categories list
+  const categories = ['All', 'Grocery', 'Dairy', 'Drinks', 'Snacks', 'Household'];
 
-  // Search and Category filters for Tablet catalog grid
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchSearch = 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.quickCode && p.quickCode.includes(searchQuery)) ||
-        (p.barcode && p.barcode.includes(searchQuery));
-      const matchCat = selectedCategory === 'All' || p.category.toLowerCase() === selectedCategory.toLowerCase();
-      return matchSearch && matchCat;
-    });
-  }, [products, searchQuery, selectedCategory]);
+  // Query is already filtered at database level
+  const filteredProducts = products;
 
   // Calculations
   const subtotal = useMemo(() => {
@@ -315,83 +315,36 @@ export function usePosBilling() {
 
     try {
       const activeBiz = useBusinessStore.getState().activeBusiness;
-      let dbBiz: any;
-      
-      await database.write(async () => {
-        const bizs = await database.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
-        if (bizs.length > 0) {
-          dbBiz = bizs[0];
-        } else {
-          dbBiz = await database.get('businesses').create((b: any) => {
-            b.name = activeBiz.name;
-            b.businessType = activeBiz.category;
-            b.address = activeBiz.address;
-            b.phoneNumber = activeBiz.phone;
-          });
-        }
 
-        const invoiceNum = `INV-${Math.floor(100000 + Math.random() * 900000)}`;
-        const newOrder = await database.get('orders').create((ord: any) => {
-          ord.business.set(dbBiz);
-          ord.invoiceNumber = invoiceNum;
-          ord.totalAmount = totalAmount;
-          ord.status = 'paid';
-          ord.paymentMethod = paymentMethod;
-          if (paymentMethod === 'bank') ord.bankName = bankName;
-          if (paymentMethod === 'card') {
-            ord.bankName = bankName;
-            ord.cardLastFour = cardDigits.slice(-4);
-          }
-          ord.discountType = discountType;
-          ord.discountValue = discountAmount;
-          ord.taxRate = taxRate;
-          ord.taxValue = taxAmount;
-        });
+      const res = await createOrderMutation.mutateAsync({
+        totalAmount,
+        businessId: activeBiz.id,
+        paymentMethod,
+        bankName: paymentMethod === 'card' || paymentMethod === 'bank' ? bankName : undefined,
+        cardLastFour: paymentMethod === 'card' ? cardDigits.slice(-4) : undefined,
+        discountType,
+        discountValue: discountAmount,
+        taxRate,
+        taxValue: taxAmount,
+        cart: cart.map(c => ({
+          name: c.name,
+          price: c.price,
+          quantity: c.quantity
+        }))
+      });
 
-        for (const item of cart) {
-          const dbProducts = await database.get('products').query(Q.where('name', item.name)).fetch();
-          let matchedProduct = null;
-          
-          if (dbProducts.length > 0) {
-            matchedProduct = dbProducts[0];
-            await matchedProduct.update((p: any) => {
-              p.stockCount = Math.max(0, p.stockCount - item.quantity);
-            });
-          }
-
-          await database.get('order_items').create((oi: any) => {
-            oi.order.set(newOrder);
-            if (matchedProduct) {
-              oi.product.set(matchedProduct);
-            }
-            oi.name = item.name;
-            oi.quantity = item.quantity;
-            oi.price = item.price;
-          });
-
-          if (matchedProduct) {
-            await database.get('inventory_logs').create((log: any) => {
-              log.product.set(matchedProduct);
-              log.type = 'out';
-              log.quantity = item.quantity;
-              log.reason = `Order Sale ${invoiceNum}`;
-            });
-          }
-        }
-
-        setLatestOrder({
-          invoiceNumber: invoiceNum,
-          totalAmount,
-          paymentMethod,
-          bankName: paymentMethod === 'card' || paymentMethod === 'bank' ? bankName : undefined,
-          cardLastFour: paymentMethod === 'card' ? cardDigits.slice(-4) : undefined,
-          subtotal,
-          discountAmount,
-          taxAmount,
-          customer: customer ? { ...customer } : null,
-          items: [...cart],
-          date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        });
+      setLatestOrder({
+        invoiceNumber: res.invoiceNumber,
+        totalAmount,
+        paymentMethod,
+        bankName: paymentMethod === 'card' || paymentMethod === 'bank' ? bankName : undefined,
+        cardLastFour: paymentMethod === 'card' ? cardDigits.slice(-4) : undefined,
+        subtotal,
+        discountAmount,
+        taxAmount,
+        customer: customer ? { ...customer } : null,
+        items: [...cart],
+        date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
 
       triggerToast('Invoice completed successfully! 📑');
@@ -415,7 +368,6 @@ export function usePosBilling() {
     setIsCustomBank(false);
     setSelectedRowIndex(0);
     setScanQuery('');
-    loadProducts();
     if (posMode === 'normal') {
       setTimeout(() => scanInputRef.current?.focus(), 50);
     }
@@ -770,5 +722,8 @@ export function usePosBilling() {
     addCartItem,
     updateQuantity,
     setCustomer,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   };
 }

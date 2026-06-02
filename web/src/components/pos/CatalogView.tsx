@@ -29,6 +29,9 @@ interface CatalogViewProps {
   filteredProducts: DBProduct[];
   addCartItem: (name: string, price: number, icon: string, sku: string, maxStock: number) => void;
   triggerToast: (msg: string) => void;
+  hasNextPage?: boolean;
+  fetchNextPage?: () => void;
+  isFetchingNextPage?: boolean;
 }
 
 export const CatalogView: React.FC<CatalogViewProps> = ({
@@ -42,6 +45,9 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   filteredProducts,
   addCartItem,
   triggerToast,
+  hasNextPage,
+  fetchNextPage,
+  isFetchingNextPage,
 }) => {
   return (
     <div style={styles.catalogPane}>
@@ -132,7 +138,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                       backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
                       color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
                     }}>
-                      {isOut ? 'Out of Stock' : `${p.stockCount} left`}
+                      {isOut ? 'Out of Stock' : isLow ? `Low Stock (${p.stockCount} left)` : `${p.stockCount} left`}
                     </span>
                   </div>
 
@@ -141,16 +147,19 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     <h3 style={styles.prodName}>{p.name}</h3>
                     <div style={styles.priceAddRow}>
                       <span style={styles.prodPrice}>Rs. {p.price.toLocaleString()}</span>
-                      <div 
-                        style={{
-                          ...styles.plusIconBadge,
-                          backgroundColor: isOut ? '#E5E7EB' : 'var(--primary)',
-                        }}
-                        className="plus-icon-badge"
-                      >
-                        <Plus size={10} color="#FFFFFF" />
-                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#FFFFFF' }}>Add</span>
-                      </div>
+                      {isOut ? (
+                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--muted)' }}>
+                          Out of Stock
+                        </span>
+                      ) : (
+                        <div 
+                          style={styles.plusIconBadge}
+                          className="plus-icon-badge"
+                        >
+                          <Plus size={10} color="#FFFFFF" />
+                          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#FFFFFF' }}>Add</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -165,6 +174,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
               </div>
             )}
           </div>
+          {hasNextPage && fetchNextPage && (
+            <div style={styles.loadMoreContainer}>
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                style={styles.loadMoreBtn}
+              >
+                {isFetchingNextPage ? 'Loading...' : 'Load More Products ⬇️'}
+              </button>
+            </div>
+          )}
         </>
       ) : (
         /* POS Sidebar + Catalog list layout */
@@ -216,32 +236,51 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     }}
                     className="pos-catalog-card"
                   >
-                    <ProductImage icon={p.icon} size={80} style={{ alignSelf: 'center', margin: '0', border: 'none', borderRadius: '8px' }} />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <h4 style={styles.productName} title={p.name}>{p.name}</h4>
-                      <span style={styles.productPrice}>Rs. {p.price}</span>
-                      {isOut ? (
-                        <span style={{ ...styles.productStock, ...styles.productStockOut }}>Out of Stock</span>
-                      ) : isLow ? (
-                        <span style={{ ...styles.productStock, ...styles.productStockLow }}>Low Stock ({p.stockCount})</span>
-                      ) : (
-                        <span style={styles.productStock}>Stock: {p.stockCount}</span>
-                      )}
+                    <div style={styles.catalogImageContainer}>
+                      <ProductImage 
+                        icon={p.icon} 
+                        size={120} 
+                        style={{ width: '100%', height: '100%', borderRadius: 0, border: 'none' }} 
+                      />
                     </div>
-                    <button
-                      disabled={isOut}
-                      className="product-add-btn"
-                      style={{
-                        ...styles.productAddBtn,
-                        ...(isOut ? styles.productAddBtnDisabled : {})
-                      }}
-                    >
-                      + Add
-                    </button>
+                    <div style={styles.catalogCardDetails}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <h4 style={styles.productName} title={p.name}>{p.name}</h4>
+                        <span style={styles.productPrice}>Rs. {p.price}</span>
+                        {isOut ? (
+                          <span style={{ ...styles.productStock, ...styles.productStockOut }}>Out of Stock</span>
+                        ) : isLow ? (
+                          <span style={{ ...styles.productStock, ...styles.productStockLow }}>Low Stock ({p.stockCount})</span>
+                        ) : (
+                          <span style={styles.productStock}>Stock: {p.stockCount}</span>
+                        )}
+                      </div>
+                      <button
+                        disabled={isOut}
+                        className="product-add-btn"
+                        style={{
+                          ...styles.productAddBtn,
+                          ...(isOut ? styles.productAddBtnDisabled : {})
+                        }}
+                      >
+                        + Add
+                      </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
+            {hasNextPage && fetchNextPage && (
+              <div style={styles.loadMoreContainer}>
+                <button
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  style={styles.loadMoreBtn}
+                >
+                  {isFetchingNextPage ? 'Loading...' : 'Load More Products ⬇️'}
+                </button>
+              </div>
+            )}
 
             {filteredProducts.length === 0 && (
               <div style={styles.emptyGridState}>
@@ -346,6 +385,8 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto',
     flex: 1,
     paddingRight: '4px',
+    paddingTop: '8px',
+    paddingBottom: '16px',
   },
   prodCard: {
     backgroundColor: '#ffffff',
@@ -357,6 +398,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     boxShadow: 'var(--shadow)',
+    height: '220px',
   },
   prodCardOut: {
     opacity: 0.5,
@@ -365,6 +407,9 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
     height: '120px',
     backgroundColor: '#f3f4f6',
+    flexShrink: 0,
+    flexGrow: 0,
+    overflow: 'hidden',
   },
   stockBadge: {
     position: 'absolute',
@@ -376,7 +421,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '10px',
   },
   prodCardDetails: {
-    padding: '12px',
+    padding: '10px 12px 12px 12px',
     display: 'flex',
     flexDirection: 'column',
     gap: '4px',
@@ -417,6 +462,9 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '2px',
     padding: '4px 8px',
     borderRadius: '12px',
+    backgroundColor: 'var(--primary)',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease-in-out',
   },
   emptyGridState: {
     gridColumn: '1 / -1',
@@ -477,14 +525,31 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#ffffff',
     border: '1px solid var(--border)',
     borderRadius: '12px',
-    padding: '12px',
+    padding: '0',
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
     cursor: 'pointer',
     position: 'relative',
     transition: 'all 0.15s ease',
     boxShadow: 'var(--shadow)',
+    height: '210px',
+    overflow: 'hidden',
+  },
+  catalogImageContainer: {
+    position: 'relative',
+    height: '100px',
+    backgroundColor: '#f3f4f6',
+    flexShrink: 0,
+    flexGrow: 0,
+    overflow: 'hidden',
+  },
+  catalogCardDetails: {
+    padding: '10px 12px 12px 12px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    flex: 1,
+    minHeight: 0,
   },
   productName: {
     fontSize: '11px',
@@ -528,5 +593,24 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#e2e8f0',
     color: '#94a3b8',
     cursor: 'not-allowed',
+  },
+  loadMoreContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    margin: '12px 0 24px 0',
+    flexShrink: 0,
+    width: '100%',
+  },
+  loadMoreBtn: {
+    padding: '8px 20px',
+    borderRadius: '20px',
+    border: '1px solid var(--border)',
+    backgroundColor: '#ffffff',
+    color: 'var(--primary)',
+    fontWeight: 'bold',
+    fontSize: '12px',
+    cursor: 'pointer',
+    boxShadow: 'var(--shadow)',
+    transition: 'background-color 0.2s',
   },
 };

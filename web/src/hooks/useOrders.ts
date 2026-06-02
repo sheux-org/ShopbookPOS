@@ -1,0 +1,328 @@
+import { Q } from "@nozbe/watermelondb";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import database from "../db/database";
+import { useBusinessStore } from "../stores/businessStore";
+import { useAuthStore } from "../stores/authStore";
+
+export interface DBOrder {
+  id: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  status: string; // paid / voided
+  createdAt: number;
+  paymentMethod: string;
+  bankName?: string;
+  cardLastFour?: string;
+  discountType?: string;
+  discountValue?: number;
+  taxRate?: number;
+  taxValue?: number;
+  cashierName?: string;
+}
+
+export interface DBOrderItem {
+  id: string;
+  orderId: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+const mapDBOrder = (o: any): DBOrder => ({
+  id: o.id,
+  invoiceNumber: o.invoiceNumber,
+  totalAmount: o.totalAmount,
+  status: o.status,
+  createdAt: o.createdAt ? new Date(o.createdAt).getTime() : Date.now(),
+  paymentMethod: o.paymentMethod || "cash",
+  bankName: o.bankName || "",
+  cardLastFour: o.cardLastFour || "",
+  discountType: o.discountType || "none",
+  discountValue: o.discountValue || 0,
+  taxRate: o.taxRate || 0,
+  taxValue: o.taxValue || 0,
+  cashierName: o.invoiceNumber.includes("Staff:")
+    ? o.invoiceNumber.split("Staff:")[1].split("|")[0].trim()
+    : "Cashier",
+});
+
+export function useGetOrders(searchQuery?: string) {
+  const activeBiz = useBusinessStore((s) => s.activeBusiness);
+  const PAGE_SIZE = 30;
+
+  const result = useInfiniteQuery<DBOrder[]>({
+    queryKey: ["orders", activeBiz?.id, searchQuery],
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!activeBiz || activeBiz.id === "0") return [];
+
+      let query = database
+        .get("orders")
+        .query(
+          Q.where("business_id", activeBiz.id),
+          Q.sortBy("created_at", Q.desc)
+        );
+
+      const isSearchActive = searchQuery && searchQuery.trim() !== "";
+
+      if (isSearchActive) {
+        const sanitized = Q.sanitizeLikeString(searchQuery);
+        query = query.extend(
+          Q.or(
+            Q.where("invoice_number", Q.like(`%${sanitized}%`)),
+            Q.where("payment_method", Q.like(`%${sanitized}%`)),
+            Q.where("status", Q.like(`%${sanitized}%`))
+          )
+        );
+
+        const dbOrders = await query.fetch();
+        const offset = (pageParam as number) * PAGE_SIZE;
+        const sliced = dbOrders.slice(offset, offset + PAGE_SIZE);
+
+        return sliced.map(mapDBOrder);
+      } else {
+        const offset = (pageParam as number) * PAGE_SIZE;
+        query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
+
+        const dbOrders = await query.fetch();
+        return dbOrders.map(mapDBOrder);
+      }
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length < PAGE_SIZE ? undefined : allPages.length;
+    },
+  });
+
+  const flattenedData = result.data ? result.data.pages.flat() : [];
+
+  return {
+    ...result,
+    data: flattenedData,
+  };
+}
+
+export function useGetOrderItems(orderId?: string) {
+  return useQuery<DBOrderItem[]>({
+    queryKey: ["order_items", orderId],
+    enabled: !!orderId,
+    queryFn: async () => {
+      if (!orderId) return [];
+      const query = database
+        .get("order_items")
+        .query(Q.where("order_id", orderId));
+
+      const dbOrderItems = await query.fetch();
+      return dbOrderItems.map((oi: any) => ({
+        id: oi.id,
+        orderId: orderId,
+        name: oi.name,
+        quantity: oi.quantity,
+        price: oi.price,
+      }));
+    },
+  });
+}
+
+export function useCreateOrder() {
+  const queryClient = useQueryClient();
+  const employeeName = useAuthStore((s) => s.employeeName);
+
+  return useMutation({
+    mutationFn: async (params: {
+      totalAmount: number;
+      businessId: string;
+      paymentMethod?: string;
+      bankName?: string;
+      cardLastFour?: string;
+      discountType?: string;
+      discountValue?: number;
+      taxRate?: number;
+      taxValue?: number;
+      cart: {
+        name: string;
+        price: number;
+        quantity: number;
+      }[];
+    }) => {
+      const {
+        totalAmount,
+        businessId,
+        paymentMethod,
+        bankName,
+        cardLastFour,
+        discountType,
+        discountValue,
+        taxRate,
+        taxValue,
+        cart,
+      } = params;
+
+      const cashierName = employeeName || "Cashier";
+      const invoiceNum = `INV-${Math.floor(100000 + Math.random() * 900000)} (Staff: ${cashierName})`;
+
+      const result = await database.write(async () => {
+        const bizs = await database.get("businesses").query(Q.where("id", businessId)).fetch();
+        const dbBiz = bizs[0];
+        if (!dbBiz) throw new Error("Business record not found");
+
+        const newOrder = await database.get("orders").create((ord: any) => {
+          ord.business.set(dbBiz);
+          ord.invoiceNumber = invoiceNum;
+          ord.totalAmount = totalAmount;
+          ord.status = "paid";
+          ord.paymentMethod = paymentMethod;
+          ord.bankName = bankName;
+          ord.cardLastFour = cardLastFour;
+          ord.discountType = discountType;
+          ord.discountValue = discountValue;
+          ord.taxRate = taxRate;
+          ord.taxValue = taxValue;
+        });
+
+        for (const item of cart) {
+          const dbProducts = await database.get("products").query(Q.where("name", item.name)).fetch();
+          let matchedProduct = null;
+
+          if (dbProducts.length > 0) {
+            matchedProduct = dbProducts[0];
+            await matchedProduct.update((p: any) => {
+              p.stockCount = Math.max(0, p.stockCount - item.quantity);
+            });
+          }
+
+          const newOrderItem = await database.get("order_items").create((oi: any) => {
+            oi.order.set(newOrder);
+            if (matchedProduct) {
+              oi.product.set(matchedProduct);
+            }
+            oi.name = item.name;
+            oi.quantity = item.quantity;
+            oi.price = item.price;
+          });
+
+          if (matchedProduct) {
+            await database.get("inventory_logs").create((log: any) => {
+              log.product.set(matchedProduct);
+              log.type = "out";
+              log.quantity = item.quantity;
+              log.reason = `Order Sale ${invoiceNum.split(" (")[0]}`;
+            });
+          }
+        }
+
+        return { orderId: newOrder.id, invoiceNumber: invoiceNum };
+      });
+
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["insights"] });
+    },
+  });
+}
+
+export function useVoidOrder() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { orderId: string; invoiceNumber: string }) => {
+      const { orderId, invoiceNumber } = params;
+      const orderRecord = await database.get("orders").find(orderId);
+      const dbItems = await database.get("order_items").query(Q.where("order_id", orderId)).fetch();
+
+      await database.write(async () => {
+        for (const item of dbItems as any[]) {
+          const matchedProducts = await database.get("products").query(Q.where("name", item.name)).fetch();
+          if (matchedProducts.length > 0) {
+            const product: any = matchedProducts[0];
+            const currentStock = product.stockCount;
+            const updatedStock = currentStock + item.quantity;
+
+            await product.update((p: any) => {
+              p.stockCount = updatedStock;
+            });
+
+            await database.get("inventory_logs").create((log: any) => {
+              log.product.set(product);
+              log.type = "in";
+              log.quantity = item.quantity;
+              log.reason = `Voided Invoice Sale ${invoiceNumber}`;
+            });
+          }
+        }
+
+        await orderRecord.update((ord: any) => {
+          ord.status = "voided";
+        });
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["insights"] });
+    },
+  });
+}
+
+export function useGetPeriodOrders(
+  period: "daily" | "monthly" | "yearly" | "custom",
+  startDate: Date | null,
+  endDate: Date | null,
+) {
+  const activeBiz = useBusinessStore((s) => s.activeBusiness);
+  const PAGE_SIZE = 20;
+
+  const result = useInfiniteQuery<DBOrder[]>({
+    queryKey: ["period-orders", activeBiz?.id, period, startDate, endDate],
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!activeBiz || activeBiz.id === "0") return [];
+
+      const offset = (pageParam as number) * PAGE_SIZE;
+      let query = database.get("orders").query(
+        Q.where("business_id", activeBiz.id),
+        Q.where("status", "paid")
+      );
+
+      const today = new Date();
+      let startTs = 0;
+      let endTs = Date.now();
+
+      if (period === "daily") {
+        startTs = new Date().setHours(0, 0, 0, 0);
+        endTs = new Date().setHours(23, 59, 59, 999);
+      } else if (period === "monthly") {
+        startTs = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+        endTs = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      } else if (period === "yearly") {
+        startTs = new Date(today.getFullYear(), 0, 1).getTime();
+        endTs = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
+      } else if (period === "custom" && startDate && endDate) {
+        startTs = new Date(startDate).getTime();
+        endTs = new Date(endDate).getTime();
+      }
+
+      query = query.extend(
+        Q.where("created_at", Q.between(startTs, endTs)),
+        Q.sortBy("created_at", Q.desc),
+        Q.skip(offset),
+        Q.take(PAGE_SIZE)
+      );
+
+      const dbOrders = await query.fetch();
+      return dbOrders.map(mapDBOrder);
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length < PAGE_SIZE ? undefined : allPages.length;
+    },
+  });
+
+  const flattenedData = result.data ? result.data.pages.flat() : [];
+
+  return {
+    ...result,
+    data: flattenedData,
+  };
+}

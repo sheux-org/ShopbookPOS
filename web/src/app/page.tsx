@@ -87,17 +87,13 @@ export default function PosBillingPage() {
     triggerToast,
     updateQuantity,
     setCustomer,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = usePosBilling();
 
   return (
     <div className="unified-pos-workspace fade-in">
-      {toastMsg && (
-        <div className="toast-popup">
-          <CheckCircle size={16} />
-          <span>{toastMsg}</span>
-        </div>
-      )}
-
       <div className="pos-grid-container">
         {/* Left Panel: Catalog OR Dense Scanned Cart Table */}
         <div className="pos-left-pane">
@@ -113,6 +109,9 @@ export default function PosBillingPage() {
               filteredProducts={filteredProducts}
               addCartItem={addCartItem}
               triggerToast={triggerToast}
+              hasNextPage={hasNextPage}
+              fetchNextPage={fetchNextPage}
+              isFetchingNextPage={isFetchingNextPage}
             />
           ) : (
             <DenseCartTable 
@@ -131,7 +130,7 @@ export default function PosBillingPage() {
         <div className="pos-right-pane">
           <div className="pane-title-bar">
             <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <h3 className="pane-title">Invoice Summary</h3>
+              <h3 className="pane-title">Checkout Summary</h3>
               {cart.length > 0 && (
                 <button 
                   onClick={() => {
@@ -149,85 +148,89 @@ export default function PosBillingPage() {
           </div>
 
           <div className="right-body-container">
-            {posMode === 'tablet' && (
-              <TabletCartScroller 
-                cart={cart}
-                updateQuantity={updateQuantity}
-              />
-            )}
-
-            {/* Customer Lookup Profile */}
-            <div style={{ marginBottom: '12px', marginTop: posMode === 'tablet' ? '12px' : 0 }}>
-              {customer ? (
-                <div className="customer-status-card">
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '13px' }}>{customer.name}</h4>
-                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{customer.phone}</span>
-                  </div>
-                  <button 
-                    onClick={() => setCustomer(null)} 
-                    className="remove-customer-btn"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => setShowCustModal(true)} className="attach-cust-btn-compact">
-                  <span>Attach Customer {posMode === 'normal' ? '[F3]' : ''}</span>
-                </button>
+            <div className="right-body-scrollable">
+              {posMode === 'tablet' && (
+                <TabletCartScroller 
+                  cart={cart}
+                  updateQuantity={updateQuantity}
+                />
               )}
+
+              {/* Customer Lookup Profile */}
+              <div style={{ marginBottom: '12px', marginTop: posMode === 'tablet' ? '12px' : 0 }}>
+                {customer ? (
+                  <div className="customer-status-card">
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '13px' }}>{customer.name}</h4>
+                      <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{customer.phone}</span>
+                    </div>
+                    <button 
+                      onClick={() => setCustomer(null)} 
+                      className="remove-customer-btn"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowCustModal(true)} className="attach-cust-btn-compact">
+                    <span>Attach Customer {posMode === 'normal' ? '[F3]' : ''}</span>
+                  </button>
+                )}
+              </div>
+
+              <TotalsSummary 
+                subtotal={subtotal}
+                discountAmount={discountAmount}
+                discountVal={discountVal}
+                discountType={discountType}
+                taxAmount={taxAmount}
+                taxRate={taxRate}
+                totalAmount={totalAmount}
+                isEditingDiscount={isEditingDiscount}
+                setIsEditingDiscount={setIsEditingDiscount}
+                isEditingTax={isEditingTax}
+                setIsEditingTax={setIsEditingTax}
+                tempDiscount={tempDiscount}
+                setTempDiscount={setTempDiscount}
+                tempDiscountType={tempDiscountType}
+                setTempDiscountType={setTempDiscountType}
+                tempTaxRate={tempTaxRate}
+                setTempTaxRate={setTempTaxRate}
+                handleSaveDiscount={handleSaveDiscount}
+                handleSaveTax={handleSaveTax}
+                discountInputRef={discountInputRef}
+                taxInputRef={taxInputRef}
+                posMode={posMode}
+              />
             </div>
 
-            <TotalsSummary 
-              subtotal={subtotal}
-              discountAmount={discountAmount}
-              discountVal={discountVal}
-              discountType={discountType}
-              taxAmount={taxAmount}
-              taxRate={taxRate}
-              totalAmount={totalAmount}
-              isEditingDiscount={isEditingDiscount}
-              setIsEditingDiscount={setIsEditingDiscount}
-              isEditingTax={isEditingTax}
-              setIsEditingTax={setIsEditingTax}
-              tempDiscount={tempDiscount}
-              setTempDiscount={setTempDiscount}
-              tempDiscountType={tempDiscountType}
-              setTempDiscountType={setTempDiscountType}
-              tempTaxRate={tempTaxRate}
-              setTempTaxRate={setTempTaxRate}
-              handleSaveDiscount={handleSaveDiscount}
-              handleSaveTax={handleSaveTax}
-              discountInputRef={discountInputRef}
-              taxInputRef={taxInputRef}
-              posMode={posMode}
-            />
-
-            <SettlementCard 
-              paymentMethod={paymentMethod}
-              handlePaymentMethodChange={handlePaymentMethodChange}
-              cashReceived={cashReceived}
-              setCashReceived={setCashReceived}
-              totalAmount={totalAmount}
-              changeDue={changeDue}
-              isCustomBank={isCustomBank}
-              setIsCustomBank={setIsCustomBank}
-              bankName={bankName}
-              setBankName={setBankName}
-              cardDigits={cardDigits}
-              setCardDigits={setCardDigits}
-              paying={paying}
-              cartLength={cart.length}
-              isPaymentValid={isPaymentValid}
-              handleConfirmCheckout={handleConfirmCheckout}
-              posMode={posMode}
-              cashReceivedRef={cashReceivedRef}
-              cardBrandSelectRef={cardBrandSelectRef}
-              cardDigitsRef={cardDigitsRef}
-              bankNameSelectRef={bankNameSelectRef}
-              bankNameRef={bankNameRef}
-              settleBtnRef={settleBtnRef}
-            />
+            <div className="right-body-fixed-footer">
+              <SettlementCard 
+                paymentMethod={paymentMethod}
+                handlePaymentMethodChange={handlePaymentMethodChange}
+                cashReceived={cashReceived}
+                setCashReceived={setCashReceived}
+                totalAmount={totalAmount}
+                changeDue={changeDue}
+                isCustomBank={isCustomBank}
+                setIsCustomBank={setIsCustomBank}
+                bankName={bankName}
+                setBankName={setBankName}
+                cardDigits={cardDigits}
+                setCardDigits={setCardDigits}
+                paying={paying}
+                cartLength={cart.length}
+                isPaymentValid={isPaymentValid}
+                handleConfirmCheckout={handleConfirmCheckout}
+                posMode={posMode}
+                cashReceivedRef={cashReceivedRef}
+                cardBrandSelectRef={cardBrandSelectRef}
+                cardDigitsRef={cardDigitsRef}
+                bankNameSelectRef={bankNameSelectRef}
+                bankNameRef={bankNameRef}
+                settleBtnRef={settleBtnRef}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -253,6 +256,13 @@ export default function PosBillingPage() {
           resetAllState();
         }}
       />
+
+      {toastMsg && (
+        <div className="toast-popup">
+          <CheckCircle size={16} />
+          <span>{toastMsg}</span>
+        </div>
+      )}
     </div>
   );
 }

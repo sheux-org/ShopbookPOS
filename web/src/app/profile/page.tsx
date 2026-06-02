@@ -4,13 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import database from '../../db/database';
-import { Q } from '@nozbe/watermelondb';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { syncDatabase } from '../../services/sync';
 import { 
   User, Store, Users, Cloud, RefreshCw, LogOut, 
-  HelpCircle, CheckCircle, ChevronRight, MapPin, Phone, Database
+  HelpCircle, CheckCircle, ChevronRight, MapPin, Phone, Database,
+  Shield, Activity, HardDrive, Settings, Info, Building
 } from 'lucide-react';
 import './profile.css';
 
@@ -18,6 +17,7 @@ import { StoreDetailsModal } from '../../components/profile/StoreDetailsModal';
 import { StaffModal } from '../../components/profile/StaffModal';
 import { BranchModal } from '../../components/profile/BranchModal';
 import { FaqModal } from '../../components/profile/FaqModal';
+import { useStaff, useCreateStaff } from '../../hooks/useStaff';
 
 interface DBEmployee {
   id: string;
@@ -46,7 +46,6 @@ export default function ProfilePage() {
   const toggleBackup = useSettingsStore((s) => s.toggleBackup);
 
   // States
-  const [employees, setEmployees] = useState<DBEmployee[]>([]);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -69,30 +68,21 @@ export default function ProfilePage() {
   const [newBranchCategory, setNewBranchCategory] = useState('General Retail');
   const [newBranchAddress, setNewBranchAddress] = useState('');
 
-  // Load Employees list from IndexedDB
-  const loadEmployees = async () => {
-    if (typeof window === 'undefined') return;
-    try {
-      const activeBiz = useBusinessStore.getState().activeBusiness;
-      if (!activeBiz || activeBiz.id === '0') return;
-      const emps = await database.get('employees').query(Q.where('business_id', activeBiz.id)).fetch() as any[];
-      setEmployees(emps.map(e => ({
-        id: e.id,
-        name: e.name,
-        role: e.role,
-        phone: e.phone,
-        email: e.email
-      })));
-    } catch (err) {
-      console.error("Failed to load staff list:", err);
-    }
-  };
+  // React Query Hooks
+  const { data: staffList = [] } = useStaff(activeBusiness?.id || '0');
+  const createStaffMutation = useCreateStaff(activeBusiness?.id || '0');
+
+  const employees: DBEmployee[] = staffList.map((e) => ({
+    id: e.id,
+    name: e.name,
+    role: e.role.toLowerCase() as 'admin' | 'manager' | 'cashier',
+    phone: e.phone,
+    email: e.email,
+  }));
 
   useEffect(() => {
     if (isLoggedIn) {
-      loadBusinesses().then(() => {
-        loadEmployees();
-      });
+      loadBusinesses();
     }
   }, [isLoggedIn]);
 
@@ -131,26 +121,27 @@ export default function ProfilePage() {
     e.preventDefault();
     if (!newStaffName || !newStaffPhone) return;
 
-    try {
-      const activeBiz = useBusinessStore.getState().activeBusiness;
-      await database.write(async () => {
-        const biz = await database.get('businesses').find(activeBiz.id);
-        await database.get('employees').create((emp: any) => {
-          emp.business.set(biz);
-          emp.name = newStaffName;
-          emp.role = newStaffRole;
-          emp.phone = newStaffPhone;
-        });
-      });
+    const displayRole =
+      newStaffRole === 'admin' ? 'Admin' : newStaffRole === 'manager' ? 'Manager' : 'Cashier';
 
-      triggerToast(`Staff ${newStaffName} registered successfully! 👥`);
-      setNewStaffName('');
-      setNewStaffPhone('');
-      setNewStaffRole('cashier');
-      loadEmployees();
-    } catch (err) {
-      console.error("Failed to register staff:", err);
-    }
+    createStaffMutation.mutate(
+      {
+        name: newStaffName,
+        role: displayRole as 'Admin' | 'Manager' | 'Cashier',
+        phone: newStaffPhone,
+      },
+      {
+        onSuccess: () => {
+          triggerToast(`Staff ${newStaffName} registered successfully! 👥`);
+          setNewStaffName('');
+          setNewStaffPhone('');
+          setNewStaffRole('cashier');
+        },
+        onError: (err) => {
+          console.error('Failed to register staff:', err);
+        },
+      }
+    );
   };
 
   const handleAddBranchSubmit = async (e: React.FormEvent) => {
@@ -194,57 +185,97 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Hero Banner Card */}
+      <div className="profile-hero-banner">
+        <div className="profile-hero-overlay" />
+        <div className="profile-hero-content">
+          <div className="profile-hero-avatar-wrap">
+            <div className="profile-hero-avatar">
+              {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SB'}
+            </div>
+            <div className="profile-status-ring">
+              <span className="profile-status-ping" />
+              <span className="profile-status-dot" />
+            </div>
+          </div>
+          <div className="profile-hero-meta">
+            <span className="profile-hero-badge">Active Terminal</span>
+            <h2 className="profile-hero-title">{activeBusiness?.name || 'Partner Store'}</h2>
+            <div className="profile-hero-tags">
+              <span className="profile-hero-tag">
+                <Building size={12} style={{ marginRight: '4px' }} /> {activeBusiness?.category || 'General POS Retail'}
+              </span>
+              <span className="profile-hero-tag">
+                <MapPin size={12} style={{ marginRight: '4px' }} /> {activeBusiness?.address || 'Sri Lanka'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Two-Column SaaS Dashboard Layout */}
       <div className="profile-dashboard-grid">
         
         {/* Left Column: Premium Summary & Status Card */}
         <div className="profile-left-column">
-          <div className="profile-card">
-            <div className="profile-avatar">
-              {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'}
+          {/* Operator Card */}
+          <div className="profile-card session-card">
+            <div className="profile-card-header">
+              <Activity size={16} className="profile-card-icon" />
+              <h4 className="profile-card-title">Active Operator Session</h4>
             </div>
-            <h3 className="profile-biz-name">{activeBusiness?.name || 'Partner Store'}</h3>
-            <span className={`profile-role-badge role-${userRole}`}>
-              {userRole.toUpperCase()}
-            </span>
-            <p className="profile-category-pill">{activeBusiness?.category || 'General POS Retail'}</p>
+            
+            <div className="profile-session-user">
+              <div className="profile-session-avatar">
+                <User size={22} />
+              </div>
+              <div className="profile-session-meta">
+                <span className="profile-session-name">{employeeName}</span>
+                <span className={`profile-role-badge role-${userRole}`}>
+                  {userRole === 'admin' ? (
+                    <><Shield size={10} style={{ marginRight: '4px' }} /> Admin</>
+                  ) : userRole === 'manager' ? (
+                    <><Settings size={10} style={{ marginRight: '4px' }} /> Manager</>
+                  ) : (
+                    <><User size={10} style={{ marginRight: '4px' }} /> Cashier</>
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="profile-session-details">
+              <div className="session-detail-row">
+                <span className="detail-label">Phone Creds</span>
+                <span className="detail-val">{userPhone || 'Not Configured'}</span>
+              </div>
+              <div className="session-detail-row">
+                <span className="detail-label">Terminal ID</span>
+                <span className="detail-val font-mono">{activeBusiness?.id?.substring(0, 8) || 'N/A'}</span>
+              </div>
+            </div>
           </div>
 
           {/* System status metadata */}
-          <div className="profile-meta-card">
-            <h4 className="profile-meta-card-title">Terminal System Details</h4>
+          <div className="profile-card status-card">
+            <div className="profile-card-header">
+              <HardDrive size={16} className="profile-card-icon" />
+              <h4 className="profile-card-title">Terminal Diagnostics</h4>
+            </div>
             
-            <div className="profile-meta-item">
-              <User size={14} color="var(--muted)" />
-              <div className="profile-meta-info">
-                <span className="profile-meta-label">Operator Name</span>
-                <span className="profile-meta-val">{employeeName}</span>
+            <div className="diagnostics-list">
+              <div className="diag-item">
+                <span className="diag-label">Local DB</span>
+                <span className="diag-value-badge active">Connected</span>
               </div>
-            </div>
-
-            <div className="profile-meta-item">
-              <Phone size={14} color="var(--muted)" />
-              <div className="profile-meta-info">
-                <span className="profile-meta-label">Phone Credentials</span>
-                <span className="profile-meta-val">{userPhone || 'Not Configured'}</span>
-              </div>
-            </div>
-
-            <div className="profile-meta-item">
-              <Database size={14} color="var(--muted)" />
-              <div className="profile-meta-info">
-                <span className="profile-meta-label">Local Database</span>
-                <span className="profile-meta-val">WatermelonDB (Active)</span>
-              </div>
-            </div>
-
-            <div className="profile-meta-item">
-              <Cloud size={14} color="var(--muted)" />
-              <div className="profile-meta-info">
-                <span className="profile-meta-label">Supabase Sync</span>
-                <span className="profile-meta-val" style={{ color: isBackupEnabled ? 'var(--success)' : 'var(--muted)' }}>
-                  {isBackupEnabled ? 'Enabled (Online)' : 'Disabled'}
+              <div className="diag-item">
+                <span className="diag-label">Cloud DB</span>
+                <span className={`diag-value-badge ${isBackupEnabled ? 'active' : ''}`}>
+                  {isBackupEnabled ? 'Connected' : 'Disconnected'}
                 </span>
+              </div>
+              <div className="diag-item">
+                <span className="diag-label">Barcode Scanner</span>
+                <span className="diag-value-badge active">Connected (USB HID)</span>
               </div>
             </div>
           </div>
@@ -252,101 +283,96 @@ export default function ProfilePage() {
 
         {/* Right Column: SaaS Profile Options list */}
         <div className="profile-right-column">
-          <h3 className="profile-section-header">Terminal Operations Settings</h3>
+          <div className="profile-section-title-wrap">
+            <h3 className="profile-section-header">Terminal Operations Settings</h3>
+            <p className="profile-section-subtitle">Configure receipt layout templates, onboard cashier employees, switch locations, and force replication logs.</p>
+          </div>
 
           <div className="profile-options-grid">
             {/* Option: Store details */}
             <div className="profile-option-card" onClick={() => setActiveModal('details')}>
-              <div className="profile-icon-box" style={{ backgroundColor: '#eff6ff', color: 'var(--primary)' }}>
+              <div className="profile-icon-box card-store-info">
                 <Store size={20} />
               </div>
               <div className="profile-option-details">
                 <h4 className="profile-option-title">Store Profile Details</h4>
-                <p className="profile-option-sub">Manage receipt layouts, address, phone details and categories.</p>
+                <p className="profile-option-sub">Manage receipt layouts, active address, business contact credentials, and categories.</p>
               </div>
-              <ChevronRight size={18} color="var(--muted)" />
+              <ChevronRight size={18} className="profile-chevron-arrow" />
             </div>
 
             {/* Option: Switch branches */}
             <div className="profile-option-card" onClick={() => setActiveModal('branches')}>
-              <div className="profile-icon-box" style={{ backgroundColor: '#fef7e0', color: '#b06000' }}>
+              <div className="profile-icon-box card-locations">
                 <MapPin size={20} />
               </div>
               <div className="profile-option-details">
                 <h4 className="profile-option-title">Locations & Branches</h4>
-                <p className="profile-option-sub">Registered locations: {businesses.length} · Initialize and swap active terminals.</p>
+                <p className="profile-option-sub">Registered branches: {businesses.length} · Initialize and swap active terminal contexts.</p>
               </div>
-              <ChevronRight size={18} color="var(--muted)" />
+              <ChevronRight size={18} className="profile-chevron-arrow" />
             </div>
 
             {/* Option: Staff Management */}
             {userRole === 'admin' && (
               <div className="profile-option-card" onClick={() => setActiveModal('staff')}>
-                <div className="profile-icon-box" style={{ backgroundColor: '#e6f4ea', color: '#137333' }}>
+                <div className="profile-icon-box card-staff">
                   <Users size={20} />
                 </div>
                 <div className="profile-option-details">
                   <h4 className="profile-option-title">Staff Accounts Management</h4>
-                  <p className="profile-option-sub">Onboard cashmere cashiers, managers, and administrative access ranks.</p>
+                  <p className="profile-option-sub">Onboard and manage cashmere cashiers, store managers, and administration access ranks.</p>
                 </div>
-                <ChevronRight size={18} color="var(--muted)" />
+                <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
             )}
 
             {/* Option: Auto cloud backup toggle */}
-            <div className="profile-option-card">
-              <div className="profile-icon-box" style={{ backgroundColor: '#eff6ff', color: 'var(--primary)' }}>
+            <div className="profile-option-card toggle-card">
+              <div className="profile-icon-box card-backup">
                 <Cloud size={20} />
               </div>
               <div className="profile-option-details">
                 <h4 className="profile-option-title">Real-time Cloud Backups</h4>
-                <p className="profile-option-sub">Continuously replicate transaction logs and ledger data to cloud databases.</p>
+                <p className="profile-option-sub">Continuously replicate offline transaction logs and ledger metrics to cloud databases.</p>
               </div>
               <button 
                 onClick={toggleBackup}
-                className="profile-switch-btn"
-                style={{
-                  backgroundColor: isBackupEnabled ? 'var(--primary)' : '#d1d5db',
-                }}
+                className={`profile-switch-btn ${isBackupEnabled ? 'active' : ''}`}
               >
-                <div 
-                  className="profile-switch-thumb"
-                  style={{
-                    transform: isBackupEnabled ? 'translateX(20px)' : 'translateX(0)',
-                  }} 
-                />
+                <div className="profile-switch-thumb" />
               </button>
             </div>
 
             {/* Option: Manual Sync */}
             {isBackupEnabled && (
-              <div className="profile-option-card" onClick={handleManualSync}>
-                <div className="profile-icon-box" style={{ backgroundColor: '#e6f4ea', color: '#137333' }}>
+              <div className="profile-option-card sync-card" onClick={handleManualSync}>
+                <div className="profile-icon-box card-sync">
                   <RefreshCw size={20} className={syncing ? 'spin-anim' : ''} />
                 </div>
                 <div className="profile-option-details">
                   <h4 className="profile-option-title">Force Database Sync</h4>
-                  <p className="profile-option-sub">Manually push latest offline transaction queue to remote clusters.</p>
+                  <p className="profile-option-sub">Manually push latest offline transaction queues and adjust stock registers with cloud tables.</p>
                 </div>
-                <ChevronRight size={18} color="var(--muted)" />
+                <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
             )}
 
             {/* Option: Support FAQs */}
             <div className="profile-option-card" onClick={() => setActiveModal('faq')}>
-              <div className="profile-icon-box" style={{ backgroundColor: '#f3f4f6', color: 'var(--dark)' }}>
+              <div className="profile-icon-box card-faq">
                 <HelpCircle size={20} />
               </div>
               <div className="profile-option-details">
                 <h4 className="profile-option-title">Help FAQ & Printing Manual</h4>
-                <p className="profile-option-sub">Audit guidelines, print configuration, and offline-first database setup.</p>
+                <p className="profile-option-sub">Tax audit guidelines, hardware print configurations, and local offline database setup.</p>
               </div>
-              <ChevronRight size={18} color="var(--muted)" />
+              <ChevronRight size={18} className="profile-chevron-arrow" />
             </div>
 
             {/* Option: Log out */}
             <div 
-              className="profile-option-card"
+              className="profile-option-card logout-card"
               onClick={() => {
                 if (confirm('Disconnect POS terminal session?')) {
                   logout();
@@ -354,14 +380,14 @@ export default function ProfilePage() {
                 }
               }}
             >
-              <div className="profile-icon-box" style={{ backgroundColor: '#fff1f2', color: 'var(--error)' }}>
+              <div className="profile-icon-box card-logout">
                 <LogOut size={20} />
               </div>
               <div className="profile-option-details">
-                <h4 className="profile-option-title" style={{ color: 'var(--error)' }}>Sign Out Session</h4>
-                <p className="profile-option-sub">Safely commit local storage states and disconnect current terminal access.</p>
+                <h4 className="profile-option-title">Sign Out Session</h4>
+                <p className="profile-option-sub">Safely commit offline cache states and disconnect this POS device terminal authorization.</p>
               </div>
-              <ChevronRight size={18} color="var(--muted)" />
+              <ChevronRight size={18} className="profile-chevron-arrow" />
             </div>
           </div>
         </div>

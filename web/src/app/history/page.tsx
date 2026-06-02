@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import database from '../../db/database';
-import { Q } from '@nozbe/watermelondb';
 import { Search, CheckCircle } from 'lucide-react';
 
 import { InvoiceListTable } from '../../components/history/InvoiceListTable';
 import { InvoiceDetailModal } from '../../components/history/InvoiceDetailModal';
+import { useGetOrders, useGetOrderItems, useVoidOrder } from '../../hooks/useOrders';
 
 interface OrderRecord {
   id: string;
@@ -33,20 +32,44 @@ interface OrderItemRecord {
 }
 
 export default function OrderHistoryPage() {
-  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const employeeName = useAuthStore((s) => s.employeeName);
 
   // States
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Detail Modal States
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderRecord | null>(null);
-  const [selectedItems, setSelectedItems] = useState<OrderItemRecord[]>([]);
+
+  // React Query Hooks
+  const {
+    data: orders = [],
+    isLoading: loading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useGetOrders(searchQuery);
+
+  const mappedOrders: OrderRecord[] = useMemo(() => {
+    return orders.map((o) => ({
+      id: o.id,
+      invoiceNumber: o.invoiceNumber,
+      totalAmount: o.totalAmount,
+      paymentMethod: o.paymentMethod || 'cash',
+      status: o.status || 'paid',
+      discountValue: o.discountValue || 0,
+      taxValue: o.taxValue || 0,
+      taxRate: o.taxRate || 0,
+      createdAt: o.createdAt,
+      dateStr: new Date(o.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
+      cashierName: o.cashierName || employeeName || 'Cashier',
+    }));
+  }, [orders, employeeName]);
+
+  const { data: orderItems = [] } = useGetOrderItems(selectedOrder?.id);
+  const voidOrderMutation = useVoidOrder();
 
   // Trigger Toast notification
   const triggerToast = (msg: string) => {
@@ -54,73 +77,10 @@ export default function OrderHistoryPage() {
     setTimeout(() => setToastMsg(null), 1500);
   };
 
-  // Load orders from IndexedDB
-  const loadOrders = async () => {
-    if (typeof window === 'undefined') return;
-    setLoading(true);
-    try {
-      const activeBiz = useBusinessStore.getState().activeBusiness;
-      let matchedBizId = '';
-      if (activeBiz && activeBiz.id !== '0') {
-        const matchedBiz = await database.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
-        if (matchedBiz.length > 0) {
-          matchedBizId = matchedBiz[0].id;
-        }
-      }
-
-      let list: any[] = [];
-      if (matchedBizId) {
-        list = await database.get('orders').query(Q.where('business_id', matchedBizId)).fetch();
-      } else {
-        list = await database.get('orders').query().fetch();
-      }
-
-      const mapped: OrderRecord[] = list.map(o => ({
-        id: o.id,
-        invoiceNumber: o.invoiceNumber,
-        totalAmount: o.totalAmount,
-        paymentMethod: o.paymentMethod || 'cash',
-        status: o.status || 'paid',
-        discountValue: o.discountValue || 0,
-        taxValue: o.taxValue || 0,
-        taxRate: o.taxRate || 8,
-        createdAt: o.createdAt,
-        dateStr: new Date(o.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
-        cashierName: employeeName || 'Cashier'
-      }));
-
-      setOrders(mapped.sort((a, b) => b.createdAt - a.createdAt));
-    } catch (err) {
-      console.error('Failed to load orders:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      loadOrders();
-    }
-  }, [isLoggedIn, activeBusiness]);
-
   // View Receipt detail click
-  const handleViewReceipt = async (order: OrderRecord) => {
-    try {
-      const dbItems = await database.get('order_items').query(Q.where('order_id', order.id)).fetch();
-      const items: OrderItemRecord[] = dbItems.map((item: any) => ({
-        id: item.id,
-        productId: item.product_id || undefined,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price
-      }));
-
-      setSelectedOrder(order);
-      setSelectedItems(items);
-      setShowReceipt(true);
-    } catch (err) {
-      console.error('Failed to load order items:', err);
-    }
+  const handleViewReceipt = (order: OrderRecord) => {
+    setSelectedOrder(order);
+    setShowReceipt(true);
   };
 
   // Void Invoice
@@ -132,53 +92,33 @@ export default function OrderHistoryPage() {
     }
     if (!confirm(`Are you sure you want to VOID invoice ${selectedOrder.invoiceNumber}? This will revert product stock counts.`)) return;
 
-    try {
-      await database.write(async () => {
-        const orderRecord = await database.get('orders').find(selectedOrder.id);
-        
-        for (const item of selectedItems) {
-          const matchedProducts = await database.get('products').query(Q.where('name', item.name)).fetch();
-          if (matchedProducts.length > 0) {
-            const product: any = matchedProducts[0];
-            const currentStock = product.stockCount;
-            const updatedStock = currentStock + item.quantity;
-            
-            await product.update((p: any) => {
-              p.stockCount = updatedStock;
-            });
-
-            await database.get('inventory_logs').create((log: any) => {
-              log.product.set(product);
-              log.type = 'in';
-              log.quantity = item.quantity;
-              log.reason = `Voided Invoice Sale ${selectedOrder.invoiceNumber}`;
-            });
-          }
-        }
-
-        await orderRecord.update((ord: any) => {
-          ord.status = 'voided';
-        });
-      });
-
-      triggerToast(`Invoice ${selectedOrder.invoiceNumber} voided! 🚫`);
-      setShowReceipt(false);
-      loadOrders();
-    } catch (err) {
-      console.error('Failed to void invoice:', err);
-      alert('Failed to void invoice due to internal storage error.');
-      throw err;
-    }
+    voidOrderMutation.mutate(
+      {
+        orderId: selectedOrder.id,
+        invoiceNumber: selectedOrder.invoiceNumber,
+      },
+      {
+        onSuccess: () => {
+          triggerToast(`Invoice ${selectedOrder.invoiceNumber} voided! 🚫`);
+          setShowReceipt(false);
+          setSelectedOrder(null);
+        },
+        onError: (err) => {
+          console.error('Failed to void invoice:', err);
+          alert('Failed to void invoice due to internal storage error.');
+        },
+      }
+    );
   };
 
   const handleCopyReceiptText = () => {
     if (!selectedOrder) return;
-    
-    const itemsText = selectedItems
-      .map(item => `• ${item.quantity} x ${item.name} - Rs. ${(item.price * item.quantity).toLocaleString()}`)
+
+    const itemsText = orderItems
+      .map((item) => `• ${item.quantity} x ${item.name} - Rs. ${(item.price * item.quantity).toLocaleString()}`)
       .join('\n');
 
-    const subtotal = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     const shareContent = `
 =================================
@@ -207,14 +147,6 @@ Thank you for shopping with us!
     triggerToast('Receipt text copied to clipboard! 📋');
   };
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(o => 
-      o.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.status.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [orders, searchQuery]);
-
   return (
     <div style={styles.workspace} className="fade-in">
       {toastMsg && (
@@ -236,23 +168,35 @@ Thank you for shopping with us!
             style={styles.searchInput}
           />
         </div>
-        {filteredOrders.length > 0 && (
+        {mappedOrders.length > 0 && (
           <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: '500' }}>
-            Showing {filteredOrders.length} sales records
+            Showing {mappedOrders.length} sales records
           </span>
         )}
       </div>
 
       <InvoiceListTable 
         loading={loading}
-        filteredOrders={filteredOrders}
+        filteredOrders={mappedOrders}
         onViewReceipt={handleViewReceipt}
       />
+
+      {hasNextPage && (
+        <div style={styles.loadMoreContainer}>
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            style={styles.loadMoreBtn}
+          >
+            {isFetchingNextPage ? 'Loading more...' : 'Load More Invoices ⬇️'}
+          </button>
+        </div>
+      )}
 
       <InvoiceDetailModal 
         isOpen={showReceipt}
         order={selectedOrder}
-        items={selectedItems}
+        items={orderItems}
         activeBusiness={activeBusiness}
         onClose={() => {
           setShowReceipt(false);
@@ -317,5 +261,22 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '13px',
     zIndex: 99999,
     boxShadow: 'var(--shadow-lg)',
+  },
+  loadMoreContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    margin: '8px 0 16px 0',
+  },
+  loadMoreBtn: {
+    padding: '8px 20px',
+    borderRadius: '20px',
+    border: '1px solid var(--border)',
+    backgroundColor: '#ffffff',
+    color: 'var(--primary)',
+    fontWeight: 'bold',
+    fontSize: '12px',
+    cursor: 'pointer',
+    boxShadow: 'var(--shadow)',
+    transition: 'background-color 0.2s',
   },
 };

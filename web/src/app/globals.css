@@ -592,6 +592,7 @@ body {
 
 /* Plus Icon/Add Badge Animation */
 .product-grid-card .plus-icon-badge {
+  background-color: var(--primary) !important;
   transition: all 0.2s ease-in-out !important;
 }
 

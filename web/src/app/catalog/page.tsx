@@ -1,30 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import database from '../../db/database';
-import { Q } from '@nozbe/watermelondb';
 import { Search, CheckCircle } from 'lucide-react';
 import './catalog.css';
 
 import { CatalogList } from '../../components/catalog/CatalogList';
 import { RegisterProductModal } from '../../components/catalog/RegisterProductModal';
-
-interface DBProduct {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  icon: string;
-  stockCount: number;
-  lowStockAlert?: number;
-  unitType?: string;
-  costPrice?: number;
-  quickCode?: string;
-  barcode?: string;
-  isFavorite: boolean;
-}
+import {
+  useProducts,
+  useAddProduct,
+  useUpdateProduct,
+  useDeleteProduct,
+  useToggleFavoriteProduct,
+} from '../../hooks/useProducts';
 
 const CATEGORIES = ['grocery', 'dairy', 'drinks', 'snacks', 'household'];
 
@@ -33,7 +23,6 @@ export default function CatalogManagerPage() {
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
 
   // States
-  const [products, setProducts] = useState<DBProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('All');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -41,53 +30,27 @@ export default function CatalogManagerPage() {
   // CRUD Modals
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [selectedProduct, setSelectedProduct] = useState<DBProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+
+  // React Query Hooks
+  const {
+    data: products = [],
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(selectedCategoryFilter, searchQuery);
+
+  const addProductMutation = useAddProduct();
+  const updateProductMutation = useUpdateProduct();
+  const deleteProductMutation = useDeleteProduct();
+  const toggleFavoriteMutation = useToggleFavoriteProduct();
 
   // Trigger Toast notifications
   const triggerToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 1500);
   };
-
-  // Load products from IndexedDB
-  const loadProducts = async () => {
-    if (typeof window === 'undefined') return;
-    try {
-      const activeBiz = useBusinessStore.getState().activeBusiness;
-      let list: any[] = [];
-      if (activeBiz && activeBiz.id !== '0') {
-        const matchedBiz = await database.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
-        if (matchedBiz.length > 0) {
-          list = await database.get('products').query(Q.where('business_id', matchedBiz[0].id)).fetch();
-        }
-      } else {
-        list = await database.get('products').query().fetch();
-      }
-
-      setProducts(list.map(p => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        category: p.category || '',
-        icon: p.icon || '📦',
-        stockCount: p.stockCount || 0,
-        lowStockAlert: p.lowStockAlert,
-        unitType: p.unitType,
-        costPrice: p.costPrice,
-        quickCode: p.quickCode,
-        barcode: p.barcode,
-        isFavorite: p.isFavorite || false
-      })));
-    } catch (err) {
-      console.error('Failed to load products:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      loadProducts();
-    }
-  }, [isLoggedIn, activeBusiness]);
 
   useEffect(() => {
     const handleOpenModal = () => {
@@ -102,34 +65,25 @@ export default function CatalogManagerPage() {
   }, []);
 
   // Handle Favorites toggle
-  const toggleFavorite = async (productId: string, currentFav: boolean) => {
-    try {
-      const record = await database.get('products').find(productId);
-      await database.write(async () => {
-        await record.update((p: any) => {
-          p.isFavorite = !currentFav;
-        });
-      });
-      triggerToast(currentFav ? 'Removed from favorites' : 'Marked as favorite ⭐');
-      loadProducts();
-    } catch (err) {
-      console.error('Failed to toggle favorite:', err);
-    }
+  const toggleFavorite = (productId: string, currentFav: boolean) => {
+    toggleFavoriteMutation.mutate(
+      { id: productId, isFavorite: currentFav },
+      {
+        onSuccess: () => {
+          triggerToast(currentFav ? 'Removed from favorites' : 'Marked as favorite ⭐');
+        },
+      }
+    );
   };
 
   // Delete product
-  const handleDeleteProduct = async (productId: string, productName: string) => {
+  const handleDeleteProduct = (productId: string, productName: string) => {
     if (!confirm(`Are you sure you want to permanently delete "${productName}" from the catalog?`)) return;
-    try {
-      const record = await database.get('products').find(productId);
-      await database.write(async () => {
-        await record.destroyPermanently();
-      });
-      triggerToast('Product deleted 🗑️');
-      loadProducts();
-    } catch (err) {
-      console.error('Failed to delete product:', err);
-    }
+    deleteProductMutation.mutate(productId, {
+      onSuccess: () => {
+        triggerToast('Product deleted 🗑️');
+      },
+    });
   };
 
   // Submit Modal form
@@ -146,84 +100,23 @@ export default function CatalogManagerPage() {
     icon: string;
   }) => {
     try {
-      const activeBiz = useBusinessStore.getState().activeBusiness;
-      
-      await database.write(async () => {
-        const bizs = await database.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
-        const dbBiz = bizs[0];
-
-        if (modalMode === 'create') {
-          const newProd = await database.get('products').create((p: any) => {
-            p.business.set(dbBiz);
-            p.name = formData.name;
-            p.price = formData.price;
-            p.category = formData.category.toLowerCase();
-            p.icon = formData.icon;
-            p.stockCount = formData.stockCount;
-            p.unitType = formData.unitType;
-            p.costPrice = formData.costPrice;
-            if (formData.quickCode) p.quickCode = formData.quickCode;
-            if (formData.barcode) p.barcode = formData.barcode;
-            p.lowStockAlert = formData.lowStockAlert;
-            p.isFavorite = false;
-          });
-
-          if (formData.stockCount > 0) {
-            await database.get('inventory_logs').create((log: any) => {
-              log.product.set(newProd);
-              log.type = 'in';
-              log.quantity = formData.stockCount;
-              log.reason = 'Initial Seed';
-            });
-          }
-          triggerToast('New item added! 📦');
-        } else if (modalMode === 'edit' && selectedProduct) {
-          const record: any = await database.get('products').find(selectedProduct.id);
-          const oldStock = record.stockCount;
-          const newStock = formData.stockCount;
-
-          await record.update((p: any) => {
-            p.name = formData.name;
-            p.price = formData.price;
-            p.category = formData.category.toLowerCase();
-            p.icon = formData.icon;
-            p.stockCount = newStock;
-            p.unitType = formData.unitType;
-            p.costPrice = formData.costPrice;
-            p.quickCode = formData.quickCode || null;
-            p.barcode = formData.barcode || null;
-            p.lowStockAlert = formData.lowStockAlert;
-          });
-
-          if (newStock !== oldStock) {
-            await database.get('inventory_logs').create((log: any) => {
-              log.product.set(record);
-              log.type = newStock > oldStock ? 'in' : 'out';
-              log.quantity = Math.abs(newStock - oldStock);
-              log.reason = 'Manual Adjustment';
-            });
-          }
-          triggerToast('Item updated successfully!');
-        }
-      });
-
-      loadProducts();
+      if (modalMode === 'create') {
+        await addProductMutation.mutateAsync(formData);
+        triggerToast('New item added! 📦');
+      } else if (modalMode === 'edit' && selectedProduct) {
+        await updateProductMutation.mutateAsync({
+          id: selectedProduct.id,
+          ...formData,
+        });
+        triggerToast('Item updated successfully!');
+      }
+      setShowModal(false);
+      setSelectedProduct(null);
     } catch (err) {
       console.error('Failed to save product details:', err);
       throw err;
     }
   };
-
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchQuery = 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.quickCode && p.quickCode.includes(searchQuery)) ||
-        (p.barcode && p.barcode.includes(searchQuery));
-      const matchCat = selectedCategoryFilter === 'All' || p.category.toLowerCase() === selectedCategoryFilter.toLowerCase();
-      return matchQuery && matchCat;
-    });
-  }, [products, searchQuery, selectedCategoryFilter]);
 
   return (
     <div style={styles.workspace} className="fade-in">
@@ -263,18 +156,36 @@ export default function CatalogManagerPage() {
         </div>
       </div>
 
-      <CatalogList 
-        filteredProducts={filteredProducts}
-        onToggleFavorite={toggleFavorite}
-        onEditProduct={(p) => {
-          setSelectedProduct(p);
-          setModalMode('edit');
-          setShowModal(true);
-        }}
-        onDeleteProduct={handleDeleteProduct}
-      />
+      {isLoading ? (
+        <div style={styles.loadingState}>Loading catalog products...</div>
+      ) : (
+        <>
+          <CatalogList
+            filteredProducts={products}
+            onToggleFavorite={toggleFavorite}
+            onEditProduct={(p) => {
+              setSelectedProduct(p);
+              setModalMode('edit');
+              setShowModal(true);
+            }}
+            onDeleteProduct={handleDeleteProduct}
+          />
 
-      <RegisterProductModal 
+          {hasNextPage && (
+            <div style={styles.loadMoreContainer}>
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                style={styles.loadMoreBtn}
+              >
+                {isFetchingNextPage ? 'Loading more...' : 'Load More Products ⬇️'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      <RegisterProductModal
         isOpen={showModal}
         mode={modalMode}
         product={selectedProduct}
@@ -359,5 +270,28 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '13px',
     zIndex: 99999,
     boxShadow: 'var(--shadow-lg)',
+  },
+  loadingState: {
+    textAlign: 'center',
+    padding: '48px',
+    color: 'var(--muted)',
+    fontSize: '14px',
+  },
+  loadMoreContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    margin: '16px 0 32px 0',
+  },
+  loadMoreBtn: {
+    padding: '10px 24px',
+    borderRadius: '20px',
+    border: '1px solid var(--border)',
+    backgroundColor: '#ffffff',
+    color: 'var(--primary)',
+    fontWeight: 'bold',
+    fontSize: '13px',
+    cursor: 'pointer',
+    boxShadow: 'var(--shadow)',
+    transition: 'background-color 0.2s',
   },
 };

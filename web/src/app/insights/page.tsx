@@ -1,16 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import database from '../../db/database';
-import { Q } from '@nozbe/watermelondb';
 import { 
-  TrendingUp, ShoppingCart, DollarSign, AlertTriangle, 
-  FileText, Download, Calendar, ArrowRight, Eye, Sparkles, X, Printer
+  TrendingUp, ShoppingCart, DollarSign, AlertTriangle, Eye, Sparkles, Printer
 } from 'lucide-react';
 import './insights.css';
-
+import { useBusinessInsights } from '../../hooks/useInsights';
 
 interface OrderRecord {
   id: string;
@@ -29,83 +26,20 @@ export default function InsightsPage() {
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const employeeName = useAuthStore((s) => s.employeeName);
 
-  // States
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [lowStockCount, setLowStockCount] = useState(0);
-
   // Modal receipt states
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
 
-  // Load orders and count low stock items
-  const loadInsightsData = async () => {
-    if (typeof window === 'undefined') return;
-    try {
-      const activeBiz = useBusinessStore.getState().activeBusiness;
-      let matchedBizId = '';
-      if (activeBiz && activeBiz.id !== '0') {
-        const matchedBiz = await database.get('businesses').query(Q.where('name', activeBiz.name)).fetch();
-        if (matchedBiz.length > 0) {
-          matchedBizId = matchedBiz[0].id;
-        }
-      }
+  // React Query Hook
+  const { data: insights, isLoading } = useBusinessInsights(
+    activeBusiness?.id || '0',
+    'all' as any,
+    null,
+    null
+  );
 
-      // 1. Fetch Orders
-      let ordersList: any[] = [];
-      if (matchedBizId) {
-        ordersList = await database.get('orders').query(Q.where('business_id', matchedBizId)).fetch();
-      } else {
-        ordersList = await database.get('orders').query().fetch();
-      }
-
-      const mappedOrders: OrderRecord[] = [];
-      for (const ord of ordersList) {
-        // Fetch order items
-        const dbItems = await database.get('order_items').query(Q.where('order_id', ord.id)).fetch();
-        
-        mappedOrders.push({
-          id: ord.id,
-          invoiceNumber: ord.invoiceNumber,
-          totalAmount: ord.totalAmount,
-          paymentMethod: ord.paymentMethod || 'cash',
-          discountValue: ord.discountValue || 0,
-          taxValue: ord.taxValue || 0,
-          timestamp: ord.createdAt,
-          date: new Date(ord.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
-          items: dbItems.map((item: any) => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price
-          }))
-        });
-      }
-
-      // Sort orders by timestamp newest first
-      setOrders(mappedOrders.sort((a, b) => b.timestamp - a.timestamp));
-
-      // 2. Count low stock items
-      let productsList: any[] = [];
-      if (matchedBizId) {
-        productsList = await database.get('products').query(Q.where('business_id', matchedBizId)).fetch();
-      } else {
-        productsList = await database.get('products').query().fetch();
-      }
-
-      const lowCount = productsList.filter((p: any) => {
-        return p.lowStockAlert && p.stockCount <= p.lowStockAlert && p.stockCount > 0;
-      }).length;
-      setLowStockCount(lowCount);
-
-    } catch (err) {
-      console.error('Failed to load insights data:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      loadInsightsData();
-    }
-  }, [isLoggedIn, activeBusiness]);
+  const orders = insights?.resolvedOrders || [];
+  const lowStockCount = insights?.lowStockCount || 0;
 
   // Aggregate KPI metrics
   const kpiMetrics = useMemo(() => {
@@ -148,6 +82,14 @@ export default function InsightsPage() {
     if (!selectedReceipt || !selectedReceipt.items) return 0;
     return selectedReceipt.items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
   }, [selectedReceipt]);
+
+  if (isLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)', fontSize: '14px' }}>
+        Loading business analytics insights...
+      </div>
+    );
+  }
 
   return (
     <div className="insights-container fade-in">

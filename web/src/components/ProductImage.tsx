@@ -8,13 +8,15 @@ interface ProductImageProps {
 
 export const ProductImage: React.FC<ProductImageProps> = ({ icon, size = 48, style }) => {
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
   const finalIcon = icon ? icon.trim() : '';
 
   const isRealPhoto =
-    finalIcon.startsWith('http') ||
-    finalIcon.startsWith('file:') ||
-    finalIcon.startsWith('data:') ||
-    finalIcon.startsWith('/');
+    !error &&
+    (finalIcon.startsWith('http') ||
+      finalIcon.startsWith('file:') ||
+      finalIcon.startsWith('data:') ||
+      finalIcon.startsWith('/'));
 
   const containerStyle: React.CSSProperties = {
     width: `${size}px`,
@@ -55,6 +57,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({ icon, size = 48, sty
           src={finalIcon}
           alt="Product"
           onLoad={() => setLoaded(true)}
+          onError={() => setError(true)}
           style={{
             width: '100%',
             height: '100%',
