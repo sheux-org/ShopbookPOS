@@ -1,7 +1,8 @@
-import { createRouteHandler, createUploadthing, UTApi } from 'uploadthing/server';
+import { createRouteHandler, createUploadthing } from 'uploadthing/next';
+import { UTApi } from 'uploadthing/server';
 
 const f = createUploadthing();
-export const utapi = new UTApi();
+const utapi = new UTApi();
 
 const uploadRouter = {
   productImageUploader: f({ image: { maxFileSize: '4MB', maxFileCount: 1 } })
@@ -14,9 +15,7 @@ const uploadRouter = {
 
 export type OurFileRouter = typeof uploadRouter;
 
-const handler = createRouteHandler({ router: uploadRouter });
-export const GET = handler;
-export const POST = handler;
+export const { GET, POST } = createRouteHandler({ router: uploadRouter });
 
 export async function DELETE(request: Request) {
   try {
