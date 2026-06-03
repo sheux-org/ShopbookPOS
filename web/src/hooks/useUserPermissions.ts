@@ -27,7 +27,7 @@ const PERMISSION_MATRIX: Record<
     transactions: ['create', 'read'],       // Cashiers can checkout sales and view current invoice
     staff: [],                              // Cashiers have zero staff panel access
     settings: [],                           // Cashiers have zero store settings access
-    sync: [],                               // Cashiers cannot trigger cloud database syncs
+    sync: ['read'],                         // Cashiers can trigger manual database syncs
   },
 };
 

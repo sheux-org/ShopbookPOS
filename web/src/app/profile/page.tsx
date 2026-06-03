@@ -4,10 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import { useSettingsStore } from '../../stores/settingsStore';
 import { syncDatabase, uploadBusinessLogo } from '../../services/sync';
 import { 
-  User, Store, Users, Cloud, RefreshCw, LogOut, 
+  User, Store, Users, RefreshCw, LogOut, 
   HelpCircle, CheckCircle, ChevronRight, MapPin, Phone, Database,
   Shield, Activity, HardDrive, Settings, Info, Building, Camera
 } from 'lucide-react';
@@ -47,8 +46,7 @@ export default function ProfilePage() {
   const updateActiveBusinessDetails = useBusinessStore((s) => s.updateActiveBusinessDetails);
   const updateBusinessDetails = useBusinessStore((s) => s.updateBusinessDetails);
 
-  const isBackupEnabled = useSettingsStore((s) => s.isBackupEnabled);
-  const toggleBackup = useSettingsStore((s) => s.toggleBackup);
+
 
   // States
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -421,27 +419,8 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Option: Auto cloud backup toggle */}
-              {canPerform('read', 'sync') && (
-                <div className="profile-option-card toggle-card">
-                  <div className="profile-icon-box card-backup">
-                    <Cloud size={20} />
-                  </div>
-                  <div className="profile-option-details">
-                    <h4 className="profile-option-title">Real-time Cloud Backups</h4>
-                    <p className="profile-option-sub">Continuously replicate offline transaction logs and ledger metrics to cloud databases.</p>
-                  </div>
-                  <button 
-                    onClick={toggleBackup}
-                    className={`profile-switch-btn ${isBackupEnabled ? 'active' : ''}`}
-                  >
-                    <div className="profile-switch-thumb" />
-                  </button>
-                </div>
-              )}
-
               {/* Option: Manual Sync */}
-              {canPerform('read', 'sync') && isBackupEnabled && (
+              {canPerform('read', 'sync') && (
                 <div className="profile-option-card sync-card" onClick={handleManualSync}>
                   <div className="profile-icon-box card-sync">
                     <RefreshCw size={20} className={syncing ? 'spin-anim' : ''} />

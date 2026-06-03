@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   phone_number text NOT NULL,
   tax_id text,
   operating_hours text,
+  logo_uri text,
   created_at bigint NOT NULL,
   updated_at bigint NOT NULL,
   server_updated_at bigint NOT NULL
@@ -229,8 +230,8 @@ BEGIN
   SELECT json_build_object(
     'changes', json_build_object(
       'businesses', json_build_object(
-        'created', coalesce((SELECT json_agg(t) FROM (SELECT id, name, business_type, address, phone_number, tax_id, operating_hours, created_at, updated_at FROM businesses WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
-        'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, name, business_type, address, phone_number, tax_id, operating_hours, created_at, updated_at FROM businesses WHERE server_updated_at > last_pulled_at AND created_at <= last_pulled_at) t), '[]'::json),
+        'created', coalesce((SELECT json_agg(t) FROM (SELECT id, name, business_type, address, phone_number, tax_id, operating_hours, logo_uri, created_at, updated_at FROM businesses WHERE server_updated_at > last_pulled_at AND created_at > last_pulled_at) t), '[]'::json),
+        'updated', coalesce((SELECT json_agg(t) FROM (SELECT id, name, business_type, address, phone_number, tax_id, operating_hours, logo_uri, created_at, updated_at FROM businesses WHERE server_updated_at > last_pulled_at AND created_at <= last_pulled_at) t), '[]'::json),
         'deleted', coalesce((SELECT json_agg(record_id) FROM deleted_records WHERE table_name = 'businesses' AND deleted_at > last_pulled_at), '[]'::json)
       ),
       'employees', json_build_object(
@@ -298,7 +299,7 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        INSERT INTO businesses (id, name, business_type, address, phone_number, tax_id, operating_hours, created_at, updated_at)
+        INSERT INTO businesses (id, name, business_type, address, phone_number, tax_id, operating_hours, logo_uri, created_at, updated_at)
         VALUES (
           (r->>'id'),
           (r->>'name'),
@@ -307,6 +308,7 @@ BEGIN
           (r->>'phone_number'),
           (r->>'tax_id'),
           (r->>'operating_hours'),
+          (r->>'logo_uri'),
           (r->>'created_at')::bigint,
           (r->>'updated_at')::bigint
         )
@@ -317,6 +319,7 @@ BEGIN
           phone_number = EXCLUDED.phone_number,
           tax_id = EXCLUDED.tax_id,
           operating_hours = EXCLUDED.operating_hours,
+          logo_uri = EXCLUDED.logo_uri,
           updated_at = EXCLUDED.updated_at;
       END LOOP;
     END IF;
@@ -324,7 +327,7 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        INSERT INTO businesses (id, name, business_type, address, phone_number, tax_id, operating_hours, created_at, updated_at)
+        INSERT INTO businesses (id, name, business_type, address, phone_number, tax_id, operating_hours, logo_uri, created_at, updated_at)
         VALUES (
           (r->>'id'),
           (r->>'name'),
@@ -333,6 +336,7 @@ BEGIN
           (r->>'phone_number'),
           (r->>'tax_id'),
           (r->>'operating_hours'),
+          (r->>'logo_uri'),
           (r->>'created_at')::bigint,
           (r->>'updated_at')::bigint
         )
@@ -343,6 +347,7 @@ BEGIN
           phone_number = EXCLUDED.phone_number,
           tax_id = EXCLUDED.tax_id,
           operating_hours = EXCLUDED.operating_hours,
+          logo_uri = EXCLUDED.logo_uri,
           updated_at = EXCLUDED.updated_at;
       END LOOP;
     END IF;

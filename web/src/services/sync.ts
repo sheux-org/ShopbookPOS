@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import database from '../db/database';
 import { schema } from '../db/schema';
 import { useAuthStore } from '../stores/authStore';
-import { useSettingsStore } from '@/stores/settingsStore';
+
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
@@ -59,10 +59,6 @@ async function prepareSupabaseForSync(): Promise<void> {
 
 export async function syncDatabase(force: boolean = true): Promise<boolean> {
   if (typeof window === 'undefined') return false;
-  const isBackupEnabled = useSettingsStore.getState().isBackupEnabled;
-  if (!isBackupEnabled && !force) {
-    return false;
-  }
 
   await prepareSupabaseForSync();
 
