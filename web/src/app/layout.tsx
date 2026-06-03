@@ -13,6 +13,7 @@ import { Sidebar } from '../components/layout/Sidebar';
 import { MobileNavbar } from '../components/layout/MobileNavbar';
 import { Header } from '../components/layout/Header';
 import { WifiOff } from 'lucide-react';
+import { MobileBlocker } from '../components/layout/MobileBlocker';
 import { useCart } from '../stores/cartStore';
 import { useCartActions } from '../hooks/useCartActions';
 import { useActiveDeviceTracker } from '../hooks/useActiveDeviceTracker';
@@ -39,9 +40,15 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body className="antialiased">
-        <QueryClientProvider client={queryClient}>
-          <RootLayoutContent>{children}</RootLayoutContent>
-        </QueryClientProvider>
+        {/* Mobile viewport blocker screen */}
+        <MobileBlocker />
+
+        {/* Regular Application Layout */}
+        <div className="app-layout-wrapper">
+          <QueryClientProvider client={queryClient}>
+            <RootLayoutContent>{children}</RootLayoutContent>
+          </QueryClientProvider>
+        </div>
       </body>
     </html>
   );
