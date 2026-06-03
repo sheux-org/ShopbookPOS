@@ -22,7 +22,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
 UPLOADTHING_TOKEN=<your-uploadthing-token-for-images-bucket>
 ```
 
-Refer to the local [.env.local](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/.env.local) to see the active staging environment keys.
+Refer to the local [.env.local](../.env.local) to see the active staging environment keys.
 
 ---
 
@@ -60,21 +60,21 @@ pnpm run start
 To debug configurations, authentication schemas, and local DB adapters, the project provides several helper scripts and diagnostics tools:
 
 ### A. Terminal Diagnostics Component
-- **Location**: [TerminalDiagnostics.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/components/TerminalDiagnostics.tsx)
+- **Location**: [TerminalDiagnostics.tsx](../src/components/TerminalDiagnostics.tsx)
 - **Features**: An interactive screen in the web client displaying:
   - **IndexedDB Space Usage**: Live estimation of LokiJS adapter's storage utilization.
   - **Network Latency**: Active ping checks to Supabase endpoints.
   - **Sync Diagnostics**: Detailed logs showing last synced timestamps and replication success flags.
 
 ### B. OTP Backend Authentication Tester
-- **Script**: [test_auth.js](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/test_auth.js)
+- **Script**: [test_auth.js](../src/test_auth.js)
 - **Usage**: Tests the Vercel microservices OTP generation endpoints (`/api/v1/auth/check` and `/api/v1/auth/verify`) directly from the command line:
   ```bash
   node src/test_auth.js
   ```
 
 ### C. Sync RPC Query Tester
-- **Script**: [query_tables.js](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/query_tables.js)
+- **Script**: [query_tables.js](../src/query_tables.js)
 - **Usage**: Simulates a pull replication cycle by invoking the PostgreSQL database RPC function `pull_watermelondb_changes` directly using network fetch:
   ```bash
   node src/query_tables.js

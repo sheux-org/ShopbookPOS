@@ -6,7 +6,7 @@ To support real-time collaboration across multiple terminals, the application re
 
 ## Synchronization Protocol
 
-Replication is handled by the **`syncDatabase`** function inside [sync.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/services/sync.ts#L62-L95) using WatermelonDB’s built-in replication protocol. It executes two main cycles:
+Replication is handled by the **`syncDatabase`** function inside [sync.ts](../src/services/sync.ts#L62-L95) using WatermelonDB’s built-in replication protocol. It executes two main cycles:
 
 1. **Pull Cycle (`pullChanges`)**: Retrieves modified records from the server that have a newer modification timestamp than the client's `lastPulledAt` marker.
 2. **Push Cycle (`pushChanges`)**: Sends a batch of locally created, updated, and deleted records to the server.
@@ -35,7 +35,7 @@ Replication is handled by the **`syncDatabase`** function inside [sync.ts](file:
 
 ## Server RPC Functions
 
-The database uses raw SQL PL/pgSQL Remote Procedure Calls (RPCs) to perform mutations and selections to prevent direct table manipulation via REST endpoints. The schema of these RPCs is defined in [20260603000000_secure_tenant_isolation.sql](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase/migrations/20260603000000_secure_tenant_isolation.sql).
+The database uses raw SQL PL/pgSQL Remote Procedure Calls (RPCs) to perform mutations and selections to prevent direct table manipulation via REST endpoints. The schema of these RPCs is defined in [20260603000000_secure_tenant_isolation.sql](../../supabase/migrations/20260603000000_secure_tenant_isolation.sql).
 
 ### 1. `pull_watermelondb_changes(last_pulled_at, client_business_id)`
 Fetches server updates for all 6 tables.
@@ -74,14 +74,14 @@ The database security model enforces **Zero Trust Direct REST access** to ensure
    -- Without SELECT/INSERT/UPDATE policies defined, all direct REST access is denied by default!
    ```
    Data access is only possible through execution of the `pull_watermelondb_changes` and `push_watermelondb_changes` functions which run with `SECURITY DEFINER` privileges.
-3. **Pinger Table Exceptions**: The `active_devices` table has a permissive public RLS policy ([20260603000000_secure_tenant_isolation.sql:L620-L637](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase/migrations/20260603000000_secure_tenant_isolation.sql#L620-L637)) allowing anonymous terminals to write pings and fetch remote revocation statuses.
+3. **Pinger Table Exceptions**: The `active_devices` table has a permissive public RLS policy ([20260603000000_secure_tenant_isolation.sql:L620-L637](../../supabase/migrations/20260603000000_secure_tenant_isolation.sql#L620-L637)) allowing anonymous terminals to write pings and fetch remote revocation statuses.
 
 ---
 
 ## Deletion Logging
 
 Since deleted records are physically removed from primary tables, client terminals must know which records were deleted to update their local IndexedDB. 
-- A PostgreSQL database trigger function `record_deletion()` ([20260603000000_secure_tenant_isolation.sql:L10-L32](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase/migrations/20260603000000_secure_tenant_isolation.sql#L10-L32)) intercepts `DELETE` events on all core tables.
+- A PostgreSQL database trigger function `record_deletion()` ([20260603000000_secure_tenant_isolation.sql:L10-L32](../../supabase/migrations/20260603000000_secure_tenant_isolation.sql#L10-L32)) intercepts `DELETE` events on all core tables.
 - It extracts the `business_id` and records the deletion event in the `deleted_records` table:
   ```sql
   INSERT INTO deleted_records (table_name, record_id, deleted_at, business_id)
@@ -93,6 +93,6 @@ Since deleted records are physically removed from primary tables, client termina
 ## Image Upload Queue
 
 Product and business logo files are hosted on Supabase Storage within the `business-logos` bucket.
-- **Upload Controller**: [sync.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/services/sync.ts#L97-L117)
-- **Local Upload Queue**: [uploadQueue.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/services/uploadQueue.ts)
+- **Upload Controller**: [sync.ts](../src/services/sync.ts#L97-L117)
+- **Local Upload Queue**: [uploadQueue.ts](../src/services/uploadQueue.ts)
   To ensure offline operation, image uploads are queued locally if the terminal is offline. They are processed sequentially when the browser detects that connection is restored.

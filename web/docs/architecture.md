@@ -90,23 +90,23 @@ The application implements a hybrid state architecture:
 
 ### 1. Local UI & Session State (Zustand)
 Used for fast-changing client settings and ephemeral states:
-- **`useAuthStore`** ([authStore.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/stores/authStore.ts)): Tracks active employee identifiers, phone number, login credentials, and JWT auth tokens in local storage.
-- **`useBusinessStore`** ([businessStore.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/stores/businessStore.ts)): Stores registered branches linked to the owner's phone number, triggers local database queries to refresh the active profile, and controls catalog seedings.
-- **`useCartStore`** ([cartStore.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/stores/cartStore.ts)): Maintains attached customer profiles and client checkout lists.
-- **`useSettingsStore`** ([settingsStore.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/stores/settingsStore.ts)): Remembers preferences such as standard POS workspace mode (`normal` keyboard-optimized vs `tablet` visual grid).
+- **`useAuthStore`** ([authStore.ts](../src/stores/authStore.ts)): Tracks active employee identifiers, phone number, login credentials, and JWT auth tokens in local storage.
+- **`useBusinessStore`** ([businessStore.ts](../src/stores/businessStore.ts)): Stores registered branches linked to the owner's phone number, triggers local database queries to refresh the active profile, and controls catalog seedings.
+- **`useCartStore`** ([cartStore.ts](../src/stores/cartStore.ts)): Maintains attached customer profiles and client checkout lists.
+- **`useSettingsStore`** ([settingsStore.ts](../src/stores/settingsStore.ts)): Remembers preferences such as standard POS workspace mode (`normal` keyboard-optimized vs `tablet` visual grid).
 
 ### 2. Client Database Queries (React Query)
 React Query wraps around local WatermelonDB query fetches to handle caching, reactive layout updates, and smooth infinite scroll paginations:
-- **`useProducts`** ([useProducts.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/hooks/useProducts.ts)): Automatically queries products matching category filters and text queries directly from LokiJS indexed tables, caching matching queries.
-- **`useOrders`** ([useOrders.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/hooks/useOrders.ts)): Fetches sales history ledgers and triggers transaction mutations (e.g. creating new paid receipts).
+- **`useProducts`** ([useProducts.ts](../src/hooks/useProducts.ts)): Automatically queries products matching category filters and text queries directly from LokiJS indexed tables, caching matching queries.
+- **`useOrders`** ([useOrders.ts](../src/hooks/useOrders.ts)): Fetches sales history ledgers and triggers transaction mutations (e.g. creating new paid receipts).
 
 ### 3. Database Layer (WatermelonDB)
-To ensure the web app functions instantly and supports offline checkout, all queries are made against the local WatermelonDB instance ([database.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/database.ts)). Data is written locally, then replicated to Supabase in the background.
+To ensure the web app functions instantly and supports offline checkout, all queries are made against the local WatermelonDB instance ([database.ts](../src/db/database.ts)). Data is written locally, then replicated to Supabase in the background.
 
 ---
 
 ## Workspace Navigation & Global Layout
 
 The shell layout of the application is controlled by:
-- **`layout.tsx`** ([layout.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/app/layout.tsx)): Integrates custom navigation sidebars, alerts banners, and wraps application pages with a query client.
-- **`Header.tsx`** ([Header.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/components/layout/Header.tsx)): Displays connection indicators (Online/Offline), triggers direct database replication triggers, showing last sync time, and hosts shop profile dropdowns.
+- **`layout.tsx`** ([layout.tsx](../src/app/layout.tsx)): Integrates custom navigation sidebars, alerts banners, and wraps application pages with a query client.
+- **`Header.tsx`** ([Header.tsx](../src/components/layout/Header.tsx)): Displays connection indicators (Online/Offline), triggers direct database replication triggers, showing last sync time, and hosts shop profile dropdowns.

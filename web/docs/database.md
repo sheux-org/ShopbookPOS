@@ -7,9 +7,9 @@ The Web POS terminal implements an offline-first storage model. All query operat
 ## WatermelonDB Configuration
 
 The database architecture is defined and loaded inside:
-- **Database Initializer**: [database.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/database.ts)
-- **Database Schema**: [schema.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/schema.ts)
-- **Database Models**: [models.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/models.ts)
+- **Database Initializer**: [database.ts](../src/db/database.ts)
+- **Database Schema**: [schema.ts](../src/db/schema.ts)
+- **Database Models**: [models.ts](../src/db/models.ts)
 
 ### LokiJS Adapter
 For web browsers, WatermelonDB is configured to run on top of a **LokiJS adapter** rather than SQLite. LokiJS stores the database in memory and persists serialized snapshots to IndexedDB.
@@ -103,7 +103,7 @@ Historical audit trail of all manual and automated stock fluctuations.
 
 ## Entity Relationships & Decorators
 
-Model relations are defined in [models.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/models.ts) using Watermelon decorators:
+Model relations are defined in [models.ts](../src/db/models.ts) using Watermelon decorators:
 
 ```mermaid
 erDiagram
@@ -126,8 +126,8 @@ erDiagram
 
 ## Database Migrations
 
-WatermelonDB maintains a strict schema migration history inside `src/db/migrations.ts` ([migrations.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/migrations.ts)). When structural changes (new columns/tables) are required:
-1. Increment the database version in [schema.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/schema.ts#L4).
+WatermelonDB maintains a strict schema migration history inside `src/db/migrations.ts` ([migrations.ts](../src/db/migrations.ts)). When structural changes (new columns/tables) are required:
+1. Increment the database version in [schema.ts](../src/db/schema.ts#L4).
 2. Add a `schemaMigration` block mapping modifications to help existing clients seamlessly transition without losing data:
 ```typescript
 import { schemaMigrations, addColumns } from '@nozbe/watermelondb/Schema/migrations';
@@ -154,5 +154,5 @@ export default schemaMigrations({
 ## Initial Catalog Seeding
 
 When a store registers for the first time, the local database catalog is seeded with standard products (pizzas, salads, wraps) to provide placeholder catalog data for demonstration:
-- **Seed Trigger**: Triggered inside [businessStore.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/stores/businessStore.ts#L173-L194) upon the very first store registration if the local products table is empty.
-- **Seeded Items List**: Configured in [seedProducts.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/utils/seedProducts.ts), mapping item categories, pricing, unit types, cost prices, and quick codes.
+- **Seed Trigger**: Triggered inside [businessStore.ts](../src/stores/businessStore.ts#L173-L194) upon the very first store registration if the local products table is empty.
+- **Seeded Items List**: Configured in [seedProducts.ts](../src/utils/seedProducts.ts), mapping item categories, pricing, unit types, cost prices, and quick codes.

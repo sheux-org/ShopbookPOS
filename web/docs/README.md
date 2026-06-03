@@ -4,27 +4,31 @@ Welcome to the **Shopbook POS Web Terminal** documentation. This directory conta
 
 ## Table of Contents
 
-1. **[Architecture Overview](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/docs/architecture.md)**
+1. **[Architecture Overview](architecture.md)**
    - Technical Stack and folder structure.
    - Global state management (Zustand) and Server State (React Query).
    - Hotkeys and navigation routing.
-2. **[Database Schema & Models](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/docs/database.md)**
+2. **[Database Schema & Models](database.md)**
    - Local offline database: [WatermelonDB](https://watermelondb.dev) with LokiJS adapter.
    - Table schemas, database indexes, and seeding configurations.
-3. **[Synchronization Protocol & Security](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/docs/synchronization.md)**
+3. **[Synchronization Protocol & Security](synchronization.md)**
    - Supabase replication flows (`pull_watermelondb_changes` and `push_watermelondb_changes`).
    - Secure Multi-Tenant Isolation logic and RLS (Row Level Security) structure.
    - File uploads and logo hosting queues.
-4. **[Features Guide](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/docs/features.md)**
+4. **[Features Guide](features.md)**
    - Checkout & Point of Sale modes (Tablet Visual Mode vs. Keyboard-Optimized Normal Mode).
    - Real-time Active Device status and remote terminal session revocation.
    - OTP Authentication verification and Sri Lankan phone number normalization.
    - Analytical Dashboards, bestsellers, slow movers, and Excel/PDF reports exporter.
-5. **[Developer Getting Started Guide](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/docs/getting_started.md)**
+5. **[Developer Getting Started Guide](getting_started.md)**
    - Environment variables setup.
    - Scripts and CLI development commands.
    - Production builds and testing diagnostics.
-6. **[User & Cashier Guide](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/docs/user_guide.md)**
+6. **[Testing Guide](testing.md)**
+   - Testing infrastructure configuration (Vitest, JSDOM, React Testing Library).
+   - Global mocking strategies for WatermelonDB, Supabase clients, and browser APIs.
+   - Unit and integration testing instructions for components, custom hooks, and Zustand stores.
+7. **[User & Cashier Guide](user_guide.md)**
    - Guided walkthroughs for cashiers and store managers.
    - Tablet Touch Mode vs Keyboard-optimized Normal Mode steps.
    - Keyboard Shortcuts cheat sheet, Customer registrations, and Inventory updates.
@@ -37,17 +41,17 @@ Welcome to the **Shopbook POS Web Terminal** documentation. This directory conta
 To examine key entry points in the source code directly, use these absolute workspace links:
 
 - **Database Setup**:
-  - Main DB Instance: [database.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/database.ts)
-  - Tables Schema: [schema.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/schema.ts)
-  - Models Definitions: [models.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/db/models.ts)
+  - Main DB Instance: [database.ts](../src/db/database.ts)
+  - Tables Schema: [schema.ts](../src/db/schema.ts)
+  - Models Definitions: [models.ts](../src/db/models.ts)
 - **Synchronizer & Network**:
-  - Sync Controller: [sync.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/services/sync.ts)
-  - Offline Image Uploads Queue: [uploadQueue.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/services/uploadQueue.ts)
+  - Sync Controller: [sync.ts](../src/services/sync.ts)
+  - Offline Image Uploads Queue: [uploadQueue.ts](../src/services/uploadQueue.ts)
 - **Point of Sale Core Hook & Entry Point**:
-  - POS Controller Hook: [usePosBilling.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/hooks/usePosBilling.ts)
-  - POS Layout Workspace: [page.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/app/page.tsx)
+  - POS Controller Hook: [usePosBilling.ts](../src/hooks/usePosBilling.ts)
+  - POS Layout Workspace: [page.tsx](../src/app/page.tsx)
 - **Active Devices Hook & Component**:
-  - Session Pinger: [useActiveDeviceTracker.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/hooks/useActiveDeviceTracker.ts)
-  - Terminal Revocation Dialog: [ActiveDevicesModal.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/src/components/profile/ActiveDevicesModal.tsx)
+  - Session Pinger: [useActiveDeviceTracker.ts](../src/hooks/useActiveDeviceTracker.ts)
+  - Terminal Revocation Dialog: [ActiveDevicesModal.tsx](../src/components/profile/ActiveDevicesModal.tsx)
 - **Supabase Isolations**:
-  - Security Migration Script: [20260603000000_secure_tenant_isolation.sql](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase/migrations/20260603000000_secure_tenant_isolation.sql)
+  - Security Migration Script: [20260603000000_secure_tenant_isolation.sql](../../supabase/migrations/20260603000000_secure_tenant_isolation.sql)
