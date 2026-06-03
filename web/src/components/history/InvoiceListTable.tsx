@@ -33,7 +33,7 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
   return (
     <div style={styles.tableCard}>
       {loading ? (
-        <div style={styles.emptyRow}>
+        <div style={styles.emptyContainer}>
           <div style={styles.spinner} />
           <p style={{ marginTop: '12px' }}>Loading historical sales logs...</p>
         </div>
@@ -42,13 +42,13 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
           <table style={styles.table}>
             <thead>
               <tr style={styles.trHead}>
-                <th style={styles.th}>Invoice Number</th>
-                <th style={styles.th}>Date & Time</th>
-                <th style={styles.th}>Cashier</th>
-                <th style={styles.th}>Payment Method</th>
-                <th style={styles.th}>Status</th>
-                <th style={styles.th}>Total Value</th>
-                <th style={{ ...styles.th, textAlign: 'right' }}>Audit</th>
+                <th style={{ ...styles.th, width: '18%' }}>Invoice Number</th>
+                <th style={{ ...styles.th, width: '18%' }}>Date & Time</th>
+                <th style={{ ...styles.th, width: '15%' }}>Cashier</th>
+                <th style={{ ...styles.th, width: '17%' }}>Payment Method</th>
+                <th style={{ ...styles.th, width: '11%' }}>Status</th>
+                <th style={{ ...styles.th, width: '11%' }}>Total Value</th>
+                <th style={{ ...styles.th, width: '10%', textAlign: 'right' }}>Audit</th>
               </tr>
             </thead>
             <tbody>
@@ -73,7 +73,7 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
                   </td>
                   <td style={styles.td}>
                     <span style={{
-                      ...styles.statusBadge,
+                       ...styles.statusBadge,
                       backgroundColor: o.status === 'voided' ? '#fff1f2' : '#f0fdf4',
                       color: o.status === 'voided' ? 'var(--error)' : 'var(--success)',
                       border: o.status === 'voided' ? '1px solid #fecaca' : '1px solid #bbf7d0',
@@ -97,10 +97,12 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
 
               {filteredOrders.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={styles.emptyRow}>
-                    <FileText size={36} color="var(--muted)" style={{ marginBottom: '8px' }} />
-                    <h4>No matching transactions found</h4>
-                    <p>Invoiced completed records will populate inside this list.</p>
+                  <td colSpan={7} style={{ padding: 0 }}>
+                    <div style={styles.emptyContainer}>
+                      <FileText size={36} color="var(--muted)" style={{ marginBottom: '8px' }} />
+                      <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600' }}>No matching transactions found</h4>
+                      <p style={{ margin: 0, fontSize: '13px' }}>Invoiced completed records will populate inside this list.</p>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -125,6 +127,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 0,
   },
   tableWrapper: {
+    overflowX: 'auto',
     overflowY: 'auto',
     flex: 1,
   },
@@ -133,6 +136,8 @@ const styles: Record<string, React.CSSProperties> = {
     borderCollapse: 'collapse',
     textAlign: 'left',
     fontSize: '13px',
+    tableLayout: 'fixed',
+    minWidth: '850px',
   },
   trHead: {
     borderBottom: '2px solid var(--border)',
@@ -148,6 +153,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '11px',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   trRow: {
     borderBottom: '1px solid var(--border)',
@@ -188,7 +196,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '4px',
     boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
   },
-  emptyRow: {
+  emptyContainer: {
     padding: '64px',
     textAlign: 'center',
     color: 'var(--muted)',

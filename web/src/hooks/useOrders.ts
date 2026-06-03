@@ -43,7 +43,7 @@ const mapDBOrder = (o: any): DBOrder => ({
   taxRate: o.taxRate || 0,
   taxValue: o.taxValue || 0,
   cashierName: o.invoiceNumber.includes("Staff:")
-    ? o.invoiceNumber.split("Staff:")[1].split("|")[0].trim()
+    ? o.invoiceNumber.split("Staff:")[1].split("|")[0].replace(")", "").trim()
     : "Cashier",
 });
 
