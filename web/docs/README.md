@@ -24,6 +24,11 @@ Welcome to the **Shopbook POS Web Terminal** documentation. This directory conta
    - Environment variables setup.
    - Scripts and CLI development commands.
    - Production builds and testing diagnostics.
+6. **[User & Cashier Guide](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web/docs/user_guide.md)**
+   - Guided walkthroughs for cashiers and store managers.
+   - Tablet Touch Mode vs Keyboard-optimized Normal Mode steps.
+   - Keyboard Shortcuts cheat sheet, Customer registrations, and Inventory updates.
+
 
 ---
 
