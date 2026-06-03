@@ -8,6 +8,7 @@ import { Search, CheckCircle, FileSpreadsheet, FileText } from 'lucide-react';
 import { InvoiceListTable } from '../../components/history/InvoiceListTable';
 import { InvoiceDetailModal } from '../../components/history/InvoiceDetailModal';
 import { useGetOrders, useGetOrderItems, useVoidOrder } from '../../hooks/useOrders';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
 
 interface OrderRecord {
   id: string;
@@ -36,6 +37,8 @@ interface OrderItemRecord {
 export default function OrderHistoryPage() {
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const employeeName = useAuthStore((s) => s.employeeName);
+  const { isRoleAtLeast } = useUserPermissions();
+  const canExport = isRoleAtLeast('manager'); // Only manager & admin can export reports
 
   // States
   const [searchQuery, setSearchQuery] = useState('');
@@ -441,16 +444,20 @@ Thank you for shopping with us!
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button onClick={handleExportExcel} style={styles.actionBtn}>
-            <FileSpreadsheet size={15} />
-            <span>Excel Export</span>
-          </button>
-          <button onClick={handleExportPDF} style={styles.actionBtn}>
-            <FileText size={15} />
-            <span>PDF Report</span>
-          </button>
+          {canExport && (
+            <>
+              <button onClick={handleExportExcel} style={styles.actionBtn}>
+                <FileSpreadsheet size={15} />
+                <span>Excel Export</span>
+              </button>
+              <button onClick={handleExportPDF} style={styles.actionBtn}>
+                <FileText size={15} />
+                <span>PDF Report</span>
+              </button>
+            </>
+          )}
           {mappedOrders.length > 0 && (
-            <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: '500', marginLeft: '8px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: '500', marginLeft: canExport ? '8px' : '0' }}>
               Showing {mappedOrders.length} sales records
             </span>
           )}
