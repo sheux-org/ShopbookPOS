@@ -79,4 +79,39 @@ describe('cartStore', () => {
     useCart.getState().addCustomCustomer({ name: 'Kamal Silva', phone: '0729998888' });
     expect(useCart.getState().customCustomers).toHaveLength(2);
   });
+
+  test('should handle edge cases, multiple items in cart, and fallback properties', () => {
+    // 1. Multiple items in cart for addCartItem and updateQuantity
+    useCart.getState().addCartItem('Bread', 120);
+    useCart.getState().addCartItem('Apple', 60);
+
+    // Increment existing 'Apple' quantity to test ternary branch
+    useCart.getState().addCartItem('Apple', 60);
+    expect(useCart.getState().cart.find((i) => i.name === 'Apple')?.quantity).toBe(2);
+
+    // Update quantity of 'Apple' to test ternary branch in updateQuantity
+    const appleId = useCart.getState().cart.find((i) => i.name === 'Apple')?.id || '';
+    useCart.getState().updateQuantity(appleId, 1);
+    expect(useCart.getState().cart.find((i) => i.name === 'Apple')?.quantity).toBe(3);
+
+    // 2. addCustomCustomer fallback where customCustomers is undefined/null
+    useCart.setState({ customCustomers: null as any });
+    useCart.getState().addCustomCustomer({ name: 'Unique Cust', phone: '0777777777' });
+    expect(useCart.getState().customCustomers).toHaveLength(1);
+    expect(useCart.getState().customCustomers[0].name).toBe('Unique Cust');
+  });
+
+  test('should support SSR environments where window is undefined', async () => {
+    vi.resetModules();
+    const originalWindow = global.window;
+    
+    // @ts-ignore
+    delete global.window;
+    
+    const { useCart: ssrCart } = await import('../../stores/cartStore');
+    expect(ssrCart).toBeDefined();
+    
+    // Restore window
+    global.window = originalWindow;
+  });
 });

@@ -272,6 +272,53 @@ describe('useActiveDeviceTracker Hook', () => {
     // This UA has no 'Linux' text, so Android regex matches
     expect(payload.device_model).toContain('Android');
   });
+
+  test('should clear interval when user logs out dynamically', async () => {
+    useAuthStore.setState({ isLoggedIn: true });
+    useBusinessStore.setState({ activeBusiness: { id: 'biz-123', name: 'Test Shop', category: '', address: '', phone: '' } });
+
+    let intervalCb: any;
+    const originalSetInterval = window.setInterval;
+    window.setInterval = vi.fn().mockImplementation((cb: any) => {
+      intervalCb = cb;
+      return 999;
+    }) as any;
+    const originalClearInterval = window.clearInterval;
+    const clearIntervalSpy = vi.fn();
+    window.clearInterval = clearIntervalSpy as any;
+
+    try {
+      const { rerender } = renderHook(() => useActiveDeviceTracker());
+      expect(window.setInterval).toHaveBeenCalled();
+
+      // Change state to logged out and rerender
+      useAuthStore.setState({ isLoggedIn: false });
+      rerender();
+
+      expect(clearIntervalSpy).toHaveBeenCalledWith(999);
+    } finally {
+      window.setInterval = originalSetInterval;
+      window.clearInterval = originalClearInterval;
+    }
+  });
+
+  test('should catch and warn errors in active device tracker', async () => {
+    useAuthStore.setState({ isLoggedIn: true });
+    useBusinessStore.setState({ activeBusiness: { id: 'biz-123', name: 'Test Shop', category: '', address: '', phone: '' } });
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const originalGetItem = localStorage.getItem;
+    localStorage.getItem = () => { throw new Error('Storage Access Error'); };
+
+    try {
+      renderHook(() => useActiveDeviceTracker());
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(warnSpy).toHaveBeenCalledWith('Web active device tracker error:', expect.any(Error));
+    } finally {
+      localStorage.getItem = originalGetItem;
+      warnSpy.mockRestore();
+    }
+  });
 });
 
 // ─── deleteCurrentDeviceSession ──────────────────────────────────────

@@ -64,4 +64,18 @@ describe('settingsStore', () => {
     useSettingsStore.getState().setSidebarVisible(false);
     expect(useSettingsStore.getState().sidebarVisible).toBe(false);
   });
+
+  test('should support SSR environments where window is undefined', async () => {
+    vi.resetModules();
+    const originalWindow = global.window;
+    
+    // @ts-ignore
+    delete global.window;
+    
+    const { useSettingsStore: ssrStore } = await import('../../stores/settingsStore');
+    expect(ssrStore).toBeDefined();
+    
+    // Restore window
+    global.window = originalWindow;
+  });
 });

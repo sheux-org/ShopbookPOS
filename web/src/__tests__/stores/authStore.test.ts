@@ -137,4 +137,20 @@ describe('authStore', () => {
     useAuthStore.getState().setActiveEmployeeId(null);
     expect(useAuthStore.getState().activeEmployeeId).toBeNull();
   });
+
+  test('should support SSR environments where window is undefined', async () => {
+    vi.resetModules();
+    const originalWindow = global.window;
+    
+    // @ts-ignore
+    delete global.window;
+    
+    const { useAuthStore: ssrStore } = await import('../../stores/authStore');
+    expect(ssrStore).toBeDefined();
+
+    ssrStore.getState().logout();
+    
+    // Restore window
+    global.window = originalWindow;
+  });
 });

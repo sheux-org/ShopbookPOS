@@ -27,9 +27,11 @@ vi.mock('../../hooks/useProducts', () => ({
   }),
 }));
 
+const mockMutateAsync = vi.fn().mockResolvedValue({ invoiceNumber: 'INV-1001' });
+
 vi.mock('../../hooks/useOrders', () => ({
   useCreateOrder: () => ({
-    mutateAsync: vi.fn().mockResolvedValue({ invoiceNumber: 'INV-1001' }),
+    mutateAsync: mockMutateAsync,
   }),
 }));
 
@@ -490,5 +492,268 @@ describe('usePosBilling Hook', () => {
     await act(async () => { await result.current.handleScanSubmit(mockEvent); });
 
     expect(mockEvent.preventDefault).toHaveBeenCalled();
+  });
+
+  test('should validate payment edge cases for card and bank methods', () => {
+    setupCart();
+    const { result } = renderHook(() => usePosBilling());
+
+    // 1. Card validation details
+    act(() => { result.current.handlePaymentMethodChange('card'); });
+    
+    // empty bankName, invalid card digits (empty)
+    act(() => { result.current.setBankName(''); result.current.setCardDigits(''); });
+    expect(result.current.isPaymentValid).toBe(false);
+
+    // valid bankName, invalid card digits (too short)
+    act(() => { result.current.setBankName('Sampath Bank'); result.current.setCardDigits('12'); });
+    expect(result.current.isPaymentValid).toBe(false);
+
+    // valid bankName, invalid card digits (non-numeric)
+    act(() => { result.current.setCardDigits('12ab'); });
+    expect(result.current.isPaymentValid).toBe(false);
+
+    // valid bankName, valid card digits
+    act(() => { result.current.setCardDigits('1234'); });
+    expect(result.current.isPaymentValid).toBe(true);
+
+    // 2. Bank validation details
+    act(() => { result.current.handlePaymentMethodChange('bank'); });
+    
+    // empty bankName
+    act(() => { result.current.setBankName(''); });
+    expect(result.current.isPaymentValid).toBe(false);
+
+    // whitespace bankName
+    act(() => { result.current.setBankName('   '); });
+    expect(result.current.isPaymentValid).toBe(false);
+
+    // valid bankName
+    act(() => { result.current.setBankName('BOC'); });
+    expect(result.current.isPaymentValid).toBe(true);
+  });
+
+  test('should handle F9 and Enter key focus and payment submissions via refs', async () => {
+    const { result } = renderHook(() => usePosBilling());
+
+    // Create mock DOM elements
+    const mockCashInput = document.createElement('input');
+    const mockDigitsInput = document.createElement('input');
+    const mockBankNameInput = document.createElement('input');
+
+    // Attach them to the refs
+    result.current.cashReceivedRef.current = mockCashInput;
+    result.current.cardDigitsRef.current = mockDigitsInput;
+    result.current.bankNameRef.current = mockBankNameInput;
+
+    const spyCashFocus = vi.spyOn(mockCashInput, 'focus');
+    const spyDigitsFocus = vi.spyOn(mockDigitsInput, 'focus');
+    const spyBankNameFocus = vi.spyOn(mockBankNameInput, 'focus');
+
+    // Test F9 - card & isCustomBank = true -> focus bankNameRef
+    act(() => {
+      result.current.handlePaymentMethodChange('card');
+      result.current.setIsCustomBank(true);
+    });
+    act(() => { fireKey('F9'); });
+    expect(spyBankNameFocus).toHaveBeenCalled();
+
+    // Test F9 - card & isCustomBank = false -> focus cardDigitsRef
+    act(() => {
+      result.current.setIsCustomBank(false);
+    });
+    act(() => { fireKey('F9'); });
+    expect(spyDigitsFocus).toHaveBeenCalled();
+
+    // Test F9 - bank & isCustomBank = true -> focus bankNameRef
+    act(() => {
+      result.current.handlePaymentMethodChange('bank');
+      result.current.setIsCustomBank(true);
+    });
+    spyBankNameFocus.mockClear();
+    act(() => { fireKey('F9'); });
+    expect(spyBankNameFocus).toHaveBeenCalled();
+
+    // Test Enter key focus behaviors
+    const originalActiveElement = document.activeElement;
+    Object.defineProperty(document, 'activeElement', {
+      get: () => mockCashInput,
+      configurable: true,
+    });
+
+    // When focused on cashReceivedRef, Enter confirms checkout
+    act(() => { fireKey('Enter'); });
+
+    // When focused on cardDigitsRef, Enter confirms checkout
+    Object.defineProperty(document, 'activeElement', {
+      get: () => mockDigitsInput,
+      configurable: true,
+    });
+    act(() => { fireKey('Enter'); });
+
+    // When focused on bankNameRef and method is card -> focus cardDigitsRef
+    Object.defineProperty(document, 'activeElement', {
+      get: () => mockBankNameInput,
+      configurable: true,
+    });
+    act(() => {
+      result.current.handlePaymentMethodChange('card');
+    });
+    spyDigitsFocus.mockClear();
+    act(() => { fireKey('Enter'); });
+    expect(spyDigitsFocus).toHaveBeenCalled();
+
+    // When focused on bankNameRef and method is not card -> checkoutConfirmRef
+    act(() => {
+      result.current.handlePaymentMethodChange('bank');
+    });
+    act(() => { fireKey('Enter'); });
+
+    // Restore activeElement to original
+    Object.defineProperty(document, 'activeElement', {
+      value: originalActiveElement,
+      configurable: true,
+    });
+  });
+
+  test('should handle F7 and F8 key hotkeys for tax editing and card/bank focus', () => {
+    const { result } = renderHook(() => usePosBilling());
+
+    // F7 when isEditingTax is true
+    act(() => {
+      result.current.setIsEditingTax(true);
+    });
+    act(() => {
+      fireKey('F7');
+    });
+
+    // Create mock DOM elements
+    const mockCardBrandSelect = document.createElement('select');
+    const mockBankNameSelect = document.createElement('select');
+    result.current.cardBrandSelectRef.current = mockCardBrandSelect;
+    result.current.bankNameSelectRef.current = mockBankNameSelect;
+
+    const spyCardBrandFocus = vi.spyOn(mockCardBrandSelect, 'focus');
+    const spyBankNameSelectFocus = vi.spyOn(mockBankNameSelect, 'focus');
+
+    // F8 when paymentMethod is card -> focus cardBrandSelectRef
+    act(() => {
+      result.current.handlePaymentMethodChange('card');
+    });
+    act(() => {
+      fireKey('F8');
+    });
+    expect(spyCardBrandFocus).toHaveBeenCalled();
+
+    // F8 when paymentMethod is bank -> focus bankNameSelectRef
+    act(() => {
+      result.current.handlePaymentMethodChange('bank');
+    });
+    act(() => {
+      fireKey('F8');
+    });
+    expect(spyBankNameSelectFocus).toHaveBeenCalled();
+  });
+
+  test('should successfully complete checkout for cash payment', async () => {
+    setupCart();
+    const { result } = renderHook(() => usePosBilling());
+
+    // Setup valid payment
+    act(() => {
+      result.current.setCashReceived('1000');
+    });
+    expect(result.current.isPaymentValid).toBe(true);
+
+    // Call checkout
+    await act(async () => {
+      await result.current.handleConfirmCheckout();
+    });
+
+    expect(result.current.paying).toBe(false);
+    expect(result.current.showReceipt).toBe(true);
+    expect(result.current.latestOrder).toBeDefined();
+    expect(result.current.latestOrder?.invoiceNumber).toBe('INV-1001');
+    expect(result.current.cart).toHaveLength(0);
+  });
+
+  test('should successfully complete checkout for card payment', async () => {
+    setupCart();
+    const { result } = renderHook(() => usePosBilling());
+
+    act(() => {
+      result.current.handlePaymentMethodChange('card');
+      result.current.setBankName('Commercial Bank');
+      result.current.setCardDigits('4321');
+    });
+    expect(result.current.isPaymentValid).toBe(true);
+
+    await act(async () => {
+      await result.current.handleConfirmCheckout();
+    });
+
+    expect(result.current.showReceipt).toBe(true);
+    expect(result.current.latestOrder?.bankName).toBe('Commercial Bank');
+    expect(result.current.latestOrder?.cardLastFour).toBe('4321');
+  });
+
+  test('should handle checkout error gracefully', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    setupCart();
+    
+    mockMutateAsync.mockRejectedValueOnce(new Error('Checkout mutation failed'));
+
+    const { result } = renderHook(() => usePosBilling());
+
+    act(() => {
+      result.current.setCashReceived('1000');
+    });
+
+    await act(async () => {
+      await result.current.handleConfirmCheckout();
+    });
+
+    expect(errorSpy).toHaveBeenCalledWith('Failed to complete sale checkout:', expect.any(Error));
+    errorSpy.mockRestore();
+  });
+
+  test('should trigger alerts and fail checkout for invalid payment details', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    setupCart();
+    const { result } = renderHook(() => usePosBilling());
+
+    // 1. Card with empty bankName
+    act(() => {
+      result.current.handlePaymentMethodChange('card');
+      result.current.setBankName('');
+    });
+    await act(async () => {
+      await result.current.handleConfirmCheckout();
+    });
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Card Brand/Bank Required'));
+
+    // 2. Card with invalid digits
+    act(() => {
+      result.current.setBankName('Sampath Bank');
+      result.current.setCardDigits('12');
+    });
+    alertSpy.mockClear();
+    await act(async () => {
+      await result.current.handleConfirmCheckout();
+    });
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Card Number Required'));
+
+    // 3. Bank with empty bankName
+    act(() => {
+      result.current.handlePaymentMethodChange('bank');
+      result.current.setBankName('   ');
+    });
+    alertSpy.mockClear();
+    await act(async () => {
+      await result.current.handleConfirmCheckout();
+    });
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Beneficiary Bank Name Required'));
+
+    alertSpy.mockRestore();
   });
 });

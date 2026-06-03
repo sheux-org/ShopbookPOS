@@ -73,22 +73,78 @@ describe('Scanner & useHardwareScanner Component', () => {
     (navigator.mediaDevices.getUserMedia as any).mockResolvedValue(mockStream);
 
     const mockDetect = vi.fn().mockResolvedValue([]);
-    const MockDetector = vi.fn().mockImplementation(() => ({ detect: mockDetect }));
+    const MockDetector = vi.fn().mockImplementation(function (this: any) {
+      this.detect = mockDetect;
+    });
     (window as any).BarcodeDetector = MockDetector;
 
-    render(<Scanner onScan={onScan} onClose={vi.fn()} />);
+    try {
+      render(<Scanner onScan={onScan} onClose={vi.fn()} />);
 
-    // Wait for startCamera to complete
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      // Wait for startCamera to complete
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      // BarcodeDetector should have been constructed with the supported formats
+      expect(MockDetector).toHaveBeenCalledWith({
+        formats: ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'],
+      });
+    } finally {
+      delete (window as any).BarcodeDetector;
+    }
+  });
+
+  test('should call onScan when native BarcodeDetector detects a barcode', async () => {
+    const onScan = vi.fn();
+    const mockStream = { getTracks: () => [{ stop: vi.fn() }] };
+    (navigator.mediaDevices.getUserMedia as any).mockResolvedValue(mockStream);
+
+    const mockDetect = vi.fn().mockResolvedValue([{ rawValue: 'barcode-123' }]);
+    const MockDetector = vi.fn().mockImplementation(function (this: any) {
+      this.detect = mockDetect;
     });
+    (window as any).BarcodeDetector = MockDetector;
 
-    // BarcodeDetector should have been constructed with the supported formats
-    expect(MockDetector).toHaveBeenCalledWith({
-      formats: ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'],
-    });
+    let intervalCb: any;
+    const originalSetInterval = window.setInterval;
+    window.setInterval = vi.fn().mockImplementation((cb: any) => {
+      intervalCb = cb;
+      return 123;
+    }) as any;
+    const originalClearInterval = window.clearInterval;
+    const clearIntervalSpy = vi.fn();
+    window.clearInterval = clearIntervalSpy as any;
 
-    delete (window as any).BarcodeDetector;
+    try {
+      const { unmount } = render(<Scanner onScan={onScan} onClose={vi.fn()} />);
+
+      // Wait for startCamera to complete
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+
+      expect(window.setInterval).toHaveBeenCalled();
+
+      const videoEl = document.querySelector('video');
+      if (videoEl) {
+        Object.defineProperty(videoEl, 'readyState', { value: 2, configurable: true });
+      }
+
+      await act(async () => {
+        await intervalCb();
+      });
+
+      expect(mockDetect).toHaveBeenCalled();
+      expect(onScan).toHaveBeenCalledWith('barcode-123');
+
+      unmount();
+      expect(clearIntervalSpy).toHaveBeenCalledWith(123);
+    } finally {
+      window.setInterval = originalSetInterval;
+      window.clearInterval = originalClearInterval;
+      delete (window as any).BarcodeDetector;
+    }
   });
 
   test('should log warning when BarcodeDetector is unavailable (fallback mode)', async () => {
