@@ -238,6 +238,9 @@ importers:
       react-dom:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
+      uploadthing:
+        specifier: ^7.7.4
+        version: 7.7.4(next@15.5.18(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
       zustand:
         specifier: ^5.0.13
         version: 5.0.13(@types/react@19.1.17)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))

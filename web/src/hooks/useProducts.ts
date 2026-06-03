@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tansta
 import database from "../db/database";
 import { useBusinessStore } from "../stores/businessStore";
 import { syncDatabase } from "../services/sync";
+import { processUploadQueue, deleteUploadThingFile } from "@/services/uploadQueue";
 
 export interface DBProduct {
   id: string;
@@ -235,6 +236,7 @@ export function useAddProduct() {
           p.price = product.price;
           p.category = product.category.toLowerCase();
           p.icon = product.icon;
+          p.iconPendingUpload = product.icon.startsWith("data:") || product.icon.startsWith("blob:");
           p.stockCount = product.stockCount;
           p.unitType = product.unitType || "Pieces";
           p.costPrice = product.costPrice || 0;
@@ -257,6 +259,9 @@ export function useAddProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       syncDatabase(); // Trigger real-time background replication
+      
+      // Trigger upload queue background processing
+      processUploadQueue();
     },
   });
 }
@@ -289,6 +294,7 @@ export function useUpdateProduct() {
           p.price = params.price;
           p.category = params.category.toLowerCase();
           p.icon = params.icon;
+          p.iconPendingUpload = params.icon.startsWith("data:") || params.icon.startsWith("blob:");
           p.stockCount = newStock;
           p.unitType = params.unitType || "Pieces";
           p.costPrice = params.costPrice || 0;
@@ -321,6 +327,18 @@ export function useDeleteProduct() {
   return useMutation({
     mutationFn: async (id: string) => {
       const product = await database.get("products").find(id);
+
+      // Clean up uploaded image if it was a remote URL
+      const currentIcon: string = (product as any).icon ?? "";
+      const isRemoteUrl = currentIcon.startsWith("http");
+      if (isRemoteUrl) {
+        try {
+          await deleteUploadThingFile(currentIcon);
+        } catch (e) {
+          console.error("Failed to delete product file from UploadThing:", e);
+        }
+      }
+
       await database.write(async () => {
         await product.destroyPermanently();
       });

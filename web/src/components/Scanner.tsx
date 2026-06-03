@@ -16,6 +16,11 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
   useEffect(() => {
     // Start camera stream on mount
     async function startCamera() {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setHasPermission(false);
+        setErrorMsg("Camera access is not supported or blocked in this browser context. Please use a secure connection (HTTPS) or localhost.");
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment' }
