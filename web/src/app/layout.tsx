@@ -206,8 +206,8 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
         };
       case '/insights':
         return {
-          title: 'Analytics Insights Dashboard',
-          subtitle: 'Weekly sales graphs, order history and ledger summaries',
+          title: 'Business Analytics & Insights',
+          subtitle: 'Real-time revenue metrics, inventory performance, and transaction audits',
         };
       case '/stocks':
         return {

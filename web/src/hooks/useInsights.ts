@@ -14,6 +14,8 @@ export interface BusinessInsightsData {
   avgTicket: number;
   lowStockCount: number;
   lowStockItems: any[];
+  outOfStockCount: number;
+  outOfStockItems: any[];
   bestSellers: ProductStat[];
   slowMovers: ProductStat[];
   chartData: { label: string; value: number }[];
@@ -22,7 +24,7 @@ export interface BusinessInsightsData {
 
 export function useBusinessInsights(
   businessId: string,
-  period: "daily" | "monthly" | "yearly" | "custom",
+  period: "daily" | "yesterday" | "weekly" | "monthly" | "yearly" | "custom",
   startDate: Date | null,
   endDate: Date | null,
 ) {
@@ -36,6 +38,8 @@ export function useBusinessInsights(
           avgTicket: 0,
           lowStockCount: 0,
           lowStockItems: [],
+          outOfStockCount: 0,
+          outOfStockItems: [],
           bestSellers: [],
           slowMovers: [],
           chartData: [],
@@ -56,6 +60,8 @@ export function useBusinessInsights(
           avgTicket: 0,
           lowStockCount: 0,
           lowStockItems: [],
+          outOfStockCount: 0,
+          outOfStockItems: [],
           bestSellers: [],
           slowMovers: [],
           chartData: [],
@@ -76,6 +82,15 @@ export function useBusinessInsights(
 
         if (period === "daily") {
           return orderDate.toDateString() === today.toDateString();
+        } else if (period === "yesterday") {
+          const yesterday = new Date();
+          yesterday.setDate(today.getDate() - 1);
+          return orderDate.toDateString() === yesterday.toDateString();
+        } else if (period === "weekly") {
+          const sevenDaysAgo = new Date();
+          sevenDaysAgo.setDate(today.getDate() - 7);
+          sevenDaysAgo.setHours(0, 0, 0, 0);
+          return orderDate >= sevenDaysAgo && orderDate <= today;
         } else if (period === "monthly") {
           return (
             orderDate.getMonth() === today.getMonth() &&
@@ -107,6 +122,21 @@ export function useBusinessInsights(
         sku: p.sku || "N/A",
         category: p.category || "General",
         stockCount: p.stockCount,
+        lowStockAlert: p.lowStockAlert ?? 5,
+        icon: p.icon || "package",
+      }));
+
+      const outOfStockProducts = allProducts.filter((p: any) => {
+        const stockCount = p.stockCount ?? 0;
+        return stockCount <= 0;
+      });
+
+      const outOfStockItems = outOfStockProducts.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        sku: p.sku || "N/A",
+        category: p.category || "General",
+        stockCount: p.stockCount ?? 0,
         lowStockAlert: p.lowStockAlert ?? 5,
         icon: p.icon || "package",
       }));
@@ -185,29 +215,125 @@ export function useBusinessInsights(
         .sort((a, b) => a.quantity - b.quantity)
         .slice(0, 5);
 
-      // Generate weekly sales distribution chart data (Sun-Sat)
-      const daySales: Record<string, number> = {
-        Mon: 0,
-        Tue: 0,
-        Wed: 0,
-        Thu: 0,
-        Fri: 0,
-        Sat: 0,
-        Sun: 0,
-      };
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      // Generate dynamic sales distribution chart data based on selected period
+      let chartData: { label: string; value: number }[] = [];
 
-      for (const order of filteredOrders as any[]) {
-        const dStr = days[new Date(order.createdAt).getDay()];
-        if (daySales[dStr] !== undefined) {
-          daySales[dStr] += order.totalAmount ?? 0;
+      if (period === "daily" || period === "yesterday") {
+        // Group by Hourly buckets (3-hour intervals: 06:00, 09:00, 12:00, 15:00, 18:00, 21:00, 00:00)
+        const hourSales: Record<string, number> = {
+          "06:00": 0,
+          "09:00": 0,
+          "12:00": 0,
+          "15:00": 0,
+          "18:00": 0,
+          "21:00": 0,
+          "00:00": 0,
+        };
+        for (const order of filteredOrders as any[]) {
+          const date = new Date(order.createdAt);
+          const hr = date.getHours();
+          if (hr >= 3 && hr < 6) hourSales["06:00"] += order.totalAmount ?? 0;
+          else if (hr >= 6 && hr < 9) hourSales["09:00"] += order.totalAmount ?? 0;
+          else if (hr >= 9 && hr < 12) hourSales["12:00"] += order.totalAmount ?? 0;
+          else if (hr >= 12 && hr < 15) hourSales["15:00"] += order.totalAmount ?? 0;
+          else if (hr >= 15 && hr < 18) hourSales["18:00"] += order.totalAmount ?? 0;
+          else if (hr >= 18 && hr < 21) hourSales["21:00"] += order.totalAmount ?? 0;
+          else hourSales["00:00"] += order.totalAmount ?? 0;
         }
+        chartData = Object.keys(hourSales).map((label) => ({
+          label,
+          value: hourSales[label],
+        }));
+      } else if (period === "weekly") {
+        // Group by Weekdays (Mon-Sun)
+        const daySales: Record<string, number> = {
+          Mon: 0,
+          Tue: 0,
+          Wed: 0,
+          Thu: 0,
+          Fri: 0,
+          Sat: 0,
+          Sun: 0,
+        };
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        for (const order of filteredOrders as any[]) {
+          const date = new Date(order.createdAt);
+          const dStr = days[date.getDay()];
+          if (daySales[dStr] !== undefined) {
+            daySales[dStr] += order.totalAmount ?? 0;
+          }
+        }
+        chartData = Object.keys(daySales).map((label) => ({
+          label,
+          value: daySales[label],
+        }));
+      } else if (period === "monthly") {
+        // Group by Weeks of Month (Wk 1, Wk 2, Wk 3, Wk 4, Wk 5)
+        const weekSales: Record<string, number> = {
+          "Wk 1": 0,
+          "Wk 2": 0,
+          "Wk 3": 0,
+          "Wk 4": 0,
+          "Wk 5": 0,
+        };
+        for (const order of filteredOrders as any[]) {
+          const date = new Date(order.createdAt);
+          const dayOfMonth = date.getDate();
+          if (dayOfMonth <= 7) weekSales["Wk 1"] += order.totalAmount ?? 0;
+          else if (dayOfMonth <= 14) weekSales["Wk 2"] += order.totalAmount ?? 0;
+          else if (dayOfMonth <= 21) weekSales["Wk 3"] += order.totalAmount ?? 0;
+          else if (dayOfMonth <= 28) weekSales["Wk 4"] += order.totalAmount ?? 0;
+          else weekSales["Wk 5"] += order.totalAmount ?? 0;
+        }
+        chartData = Object.keys(weekSales).map((label) => ({
+          label,
+          value: weekSales[label],
+        }));
+      } else if (period === "yearly") {
+        // Group by Months (Jan-Dec)
+        const monthSales: Record<string, number> = {
+          Jan: 0,
+          Feb: 0,
+          Mar: 0,
+          Apr: 0,
+          May: 0,
+          Jun: 0,
+          Jul: 0,
+          Aug: 0,
+          Sep: 0,
+          Oct: 0,
+          Nov: 0,
+          Dec: 0,
+        };
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        for (const order of filteredOrders as any[]) {
+          const date = new Date(order.createdAt);
+          const mStr = months[date.getMonth()];
+          if (monthSales[mStr] !== undefined) {
+            monthSales[mStr] += order.totalAmount ?? 0;
+          }
+        }
+        chartData = Object.keys(monthSales).map((label) => ({
+          label,
+          value: monthSales[label],
+        }));
+      } else {
+        // Custom period: group by date strings
+        const customSales: Record<string, number> = {};
+        for (const order of filteredOrders as any[]) {
+          const date = new Date(order.createdAt);
+          const dateStr = date.toLocaleDateString([], { month: "short", day: "numeric" });
+          if (customSales[dateStr] === undefined) {
+            customSales[dateStr] = 0;
+          }
+          customSales[dateStr] += order.totalAmount ?? 0;
+        }
+        chartData = Object.keys(customSales).map((label) => ({
+          label,
+          value: customSales[label],
+        }));
+        chartData = chartData.slice(0, 15);
       }
-
-      const chartData = Object.keys(daySales).map((day) => ({
-        label: day,
-        value: daySales[day],
-      }));
 
       return {
         grossRevenue: totalRevenue,
@@ -215,6 +341,8 @@ export function useBusinessInsights(
         avgTicket: filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0,
         lowStockCount: lowStockProducts.length,
         lowStockItems,
+        outOfStockCount: outOfStockProducts.length,
+        outOfStockItems,
         bestSellers,
         slowMovers,
         chartData,
@@ -223,4 +351,59 @@ export function useBusinessInsights(
     },
     enabled: !!businessId && businessId !== "0",
   });
+}
+
+export function useInsightsExport(businessId: string) {
+  return {
+    fetchReportData: async () => {
+      // 1. Fetch active business SQLite record
+      const businesses = await database
+        .get("businesses")
+        .query(Q.where("id", businessId))
+        .fetch();
+      const dbBiz = businesses[0];
+      if (!dbBiz) {
+        throw new Error("Active business not found in local database!");
+      }
+
+      // 2. Fetch completed orders for active business (Paid status, all-time)
+      const orders = await database
+        .get("orders")
+        .query(Q.where("business_id", dbBiz.id), Q.where("status", "paid"))
+        .fetch();
+
+      // 3. Gather all order items for these orders
+      let orderItems: any[] = [];
+      if (orders.length > 0) {
+        const orderIds = orders.map((o: any) => o.id);
+        const chunkSize = 100;
+        for (let i = 0; i < orderIds.length; i += chunkSize) {
+          const chunk = orderIds.slice(i, i + chunkSize);
+          const itemsChunk = await database
+            .get("order_items")
+            .query(Q.where("order_id", Q.oneOf(chunk)))
+            .fetch();
+          orderItems = [...orderItems, ...itemsChunk];
+        }
+      }
+
+      // 4. Fetch all active business products
+      const products = await database
+        .get("products")
+        .query(Q.where("business_id", dbBiz.id))
+        .fetch();
+
+      return {
+        business: {
+          name: (dbBiz as any).name || "Store",
+          category: (dbBiz as any).category,
+          address: (dbBiz as any).address,
+          phone: (dbBiz as any).phone,
+        },
+        orders,
+        orderItems,
+        products,
+      };
+    }
+  };
 }
