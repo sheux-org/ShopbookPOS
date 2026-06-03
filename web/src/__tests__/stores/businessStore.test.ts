@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useBusinessStore } from '../../stores/businessStore';
 import { useAuthStore } from '../../stores/authStore';
-import databaseMock, { mockFetch, mockCreate, mockUpdate, mockDestroy } from '../../db/__mocks__/database';
+import databaseMock, { mockCreate } from '../../db/__mocks__/database';
 
 // Mock syncDatabase
 vi.mock('../../services/sync', () => ({
@@ -586,14 +586,108 @@ describe('businessStore', () => {
     vi.resetModules();
     const originalWindow = global.window;
     
-    // @ts-ignore
-    delete global.window;
+    Object.defineProperty(global, 'window', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
     
     const { useBusinessStore: ssrStore } = await import('../../stores/businessStore');
     expect(ssrStore).toBeDefined();
     
     // Restore window
-    global.window = originalWindow;
+    Object.defineProperty(global, 'window', {
+      value: originalWindow,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  test('registerBusiness should skip seeding if multiple businesses already exist', async () => {
+    useAuthStore.setState({ isLoggedIn: true, userPhone: '0771112222' });
+
+    // businesses query returns two existing businesses
+    const bizCollection = databaseMock.get('businesses');
+    bizCollection.query.mockReturnValue({
+      fetch: vi.fn().mockResolvedValue([
+        { id: 'biz-1' },
+        { id: 'biz-2' }
+      ]),
+    });
+
+    const newId = await useBusinessStore.getState().registerBusiness(
+      'Skip Seed Store',
+      'Colombo',
+      '0771112222'
+    );
+    expect(newId).toBeDefined();
+    expect(databaseMock.write).toHaveBeenCalledTimes(1);
+  });
+
+  test('registerBusiness should skip seeding if products already exist in db', async () => {
+    useAuthStore.setState({ isLoggedIn: true, userPhone: '0771112222' });
+
+    // businesses query returns 1 business
+    const bizCollection = databaseMock.get('businesses');
+    bizCollection.query.mockReturnValueOnce({
+      fetch: vi.fn().mockResolvedValue([{ id: 'biz-1' }])
+    });
+    // products query returns an existing product list
+    const prodCollection = databaseMock.get('products');
+    prodCollection.query.mockReturnValueOnce({
+      fetch: vi.fn().mockResolvedValue([{ id: 'prod-1' }])
+    });
+
+    await useBusinessStore.getState().registerBusiness(
+      'Skip Seed Store 2',
+      'Colombo',
+      '0771112222'
+    );
+    expect(databaseMock.write).toHaveBeenCalledTimes(1);
+  });
+
+  test('registerBusiness should return undefined when newBusinessRecord is not created', async () => {
+    useAuthStore.setState({ isLoggedIn: true, userPhone: '0771112222' });
+
+    // Mock create to return undefined
+    const bizCol = databaseMock.get('businesses');
+    bizCol.create.mockResolvedValueOnce(undefined);
+
+    const result = await useBusinessStore.getState().registerBusiness('Fail Biz', 'Addr', '0771');
+    expect(result).toBeUndefined();
+  });
+
+  test('updateActiveBusinessDetails should return early when active business is not found', async () => {
+    const activeBiz = { id: 'biz-none', name: 'Active Shop', category: 'Retail', address: 'Colombo', phone: '0771111111' };
+    useBusinessStore.setState({ activeBusiness: activeBiz });
+
+    const bizCol = databaseMock.get('businesses');
+    bizCol.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) });
+
+    await useBusinessStore.getState().updateActiveBusinessDetails({
+      name: 'X', category: '', address: '', phone: ''
+    });
+    expect(databaseMock.write).not.toHaveBeenCalled();
+  });
+
+  test('updateBusinessDetails should return early when business is not found', async () => {
+    const bizCol = databaseMock.get('businesses');
+    bizCol.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) });
+
+    await useBusinessStore.getState().updateBusinessDetails('biz-none', {
+      name: 'X', category: '', address: '', phone: ''
+    });
+    expect(databaseMock.write).not.toHaveBeenCalled();
+  });
+
+  test('loadBusinessesFromDb should do nothing when user is logged in but has no phone', async () => {
+    useAuthStore.setState({ isLoggedIn: true, userPhone: null });
+    
+    const originalBusinesses = useBusinessStore.getState().businesses;
+
+    await useBusinessStore.getState().loadBusinessesFromDb();
+    
+    expect(useBusinessStore.getState().businesses).toEqual(originalBusinesses);
   });
 });
 

@@ -1,5 +1,6 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useAuthStore } from '../../stores/authStore';
+import type { Session, User } from '@supabase/supabase-js';
 
 describe('authStore', () => {
   beforeEach(() => {
@@ -105,7 +106,7 @@ describe('authStore', () => {
   // ─── Individual setters ──────────────────────────────────────────
 
   test('setSession should update the session field', () => {
-    const fakeSession = { access_token: 'abc', user: null } as any;
+    const fakeSession = { access_token: 'abc', user: null } as unknown as Session;
     useAuthStore.getState().setSession(fakeSession);
     expect(useAuthStore.getState().session).toEqual(fakeSession);
 
@@ -114,7 +115,7 @@ describe('authStore', () => {
   });
 
   test('setUser should update the user field', () => {
-    const fakeUser = { id: 'u-123', email: 'test@shop.com' } as any;
+    const fakeUser = { id: 'u-123', email: 'test@shop.com' } as unknown as User;
     useAuthStore.getState().setUser(fakeUser);
     expect(useAuthStore.getState().user).toEqual(fakeUser);
 
@@ -142,8 +143,11 @@ describe('authStore', () => {
     vi.resetModules();
     const originalWindow = global.window;
     
-    // @ts-ignore
-    delete global.window;
+    Object.defineProperty(global, 'window', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
     
     const { useAuthStore: ssrStore } = await import('../../stores/authStore');
     expect(ssrStore).toBeDefined();
@@ -151,6 +155,10 @@ describe('authStore', () => {
     ssrStore.getState().logout();
     
     // Restore window
-    global.window = originalWindow;
+    Object.defineProperty(global, 'window', {
+      value: originalWindow,
+      writable: true,
+      configurable: true,
+    });
   });
 });

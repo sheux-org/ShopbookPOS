@@ -32,7 +32,7 @@ describe('useActiveDeviceTracker Hook', () => {
 
   test('should not ping if user is not logged in', () => {
     renderHook(() => useActiveDeviceTracker());
-    expect(supabase.from).not.toHaveBeenCalledWith('active_devices');
+    expect(vi.mocked(supabase.from)).not.toHaveBeenCalledWith('active_devices');
   });
 
   test('should not ping when activeBusinessId is "0" (placeholder)', () => {
@@ -42,7 +42,7 @@ describe('useActiveDeviceTracker Hook', () => {
     });
 
     renderHook(() => useActiveDeviceTracker());
-    expect(supabase.from).not.toHaveBeenCalledWith('active_devices');
+    expect(vi.mocked(supabase.from)).not.toHaveBeenCalledWith('active_devices');
   });
 
   // ─── Successful ping ──────────────────────────────────────────────
@@ -59,12 +59,12 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(supabase.from).toHaveBeenCalledWith('active_devices');
+    expect(vi.mocked(supabase.from)).toHaveBeenCalledWith('active_devices');
 
-    const mockFromInstance = supabase.from('active_devices');
+    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
     expect(mockFromInstance.upsert).toHaveBeenCalled();
 
-    const payload = (mockFromInstance.upsert as any).mock.calls[0][0];
+    const payload = mockFromInstance.upsert.mock.calls[0][0];
     expect(payload.device_id).toBe('device-uuid-123');
     expect(payload.business_id).toBe('biz-123');
     expect(payload.employee_id).toBe('emp-cashier');
@@ -99,7 +99,7 @@ describe('useActiveDeviceTracker Hook', () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(logSpy).toHaveBeenCalledWith('Client is offline, skipping active device ping.');
-    expect(supabase.from).not.toHaveBeenCalledWith('active_devices');
+    expect(vi.mocked(supabase.from)).not.toHaveBeenCalledWith('active_devices');
     logSpy.mockRestore();
   });
 
@@ -121,8 +121,8 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices');
-    const payload = (mockFromInstance.upsert as any).mock.calls[0][0];
+    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const payload = mockFromInstance.upsert.mock.calls[0][0];
     expect(payload.location_name).toBe('Location Denied');
   });
 
@@ -138,8 +138,8 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices');
-    const payload = (mockFromInstance.upsert as any).mock.calls[0][0];
+    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const payload = mockFromInstance.upsert.mock.calls[0][0];
     expect(payload.location_name).toBe('Geolocation Unsupported');
   });
 
@@ -149,8 +149,8 @@ describe('useActiveDeviceTracker Hook', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     useAuthStore.setState({ isLoggedIn: true });
 
-    const mockFromInstance = supabase.from('active_devices');
-    (mockFromInstance.upsert as any).mockResolvedValueOnce({ error: { message: 'Network Timeout' } });
+    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    mockFromInstance.upsert.mockResolvedValueOnce({ error: { message: 'Network Timeout' } } as any);
 
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -167,11 +167,14 @@ describe('useActiveDeviceTracker Hook', () => {
 
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    const mockFromInstance = supabase.from('active_devices');
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+      maybeSingle: ReturnType<typeof vi.fn>;
+    };
     // upsert succeeds
-    (mockFromInstance.upsert as any).mockResolvedValueOnce({ error: null });
+    mockFromInstance.upsert.mockResolvedValueOnce({ error: null });
     // select returns null data (session deleted remotely)
-    (mockFromInstance.maybeSingle as any).mockResolvedValueOnce({ data: null, error: null });
+    mockFromInstance.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
 
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -197,7 +200,7 @@ describe('useActiveDeviceTracker Hook', () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Called twice: once on mount, once from manual interval trigger
-    const mockFromInstance = supabase.from('active_devices');
+    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
     expect(mockFromInstance.upsert).toHaveBeenCalledTimes(2);
 
     setIntervalSpy.mockRestore();
@@ -216,8 +219,8 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices');
-    const payload = (mockFromInstance.upsert as any).mock.calls[0][0];
+    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const payload = mockFromInstance.upsert.mock.calls[0][0];
     expect(payload.device_model).toContain('Windows');
     expect(payload.device_model).toContain('Chrome');
   });
@@ -233,8 +236,8 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices');
-    const payload = (mockFromInstance.upsert as any).mock.calls[0][0];
+    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const payload = mockFromInstance.upsert.mock.calls[0][0];
     expect(payload.device_model).toContain('macOS');
   });
 
@@ -249,8 +252,8 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices');
-    const payload = (mockFromInstance.upsert as any).mock.calls[0][0];
+    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const payload = mockFromInstance.upsert.mock.calls[0][0];
     // X11 matches UNIX in the detector
     expect(payload.device_model).toMatch(/UNIX|Linux/);
     expect(payload.device_model).toContain('Firefox');
@@ -267,8 +270,8 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices');
-    const payload = (mockFromInstance.upsert as any).mock.calls[0][0];
+    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const payload = mockFromInstance.upsert.mock.calls[0][0];
     // This UA has no 'Linux' text, so Android regex matches
     expect(payload.device_model).toContain('Android');
   });
@@ -277,19 +280,12 @@ describe('useActiveDeviceTracker Hook', () => {
     useAuthStore.setState({ isLoggedIn: true });
     useBusinessStore.setState({ activeBusiness: { id: 'biz-123', name: 'Test Shop', category: '', address: '', phone: '' } });
 
-    let intervalCb: any;
-    const originalSetInterval = window.setInterval;
-    window.setInterval = vi.fn().mockImplementation((cb: any) => {
-      intervalCb = cb;
-      return 999;
-    }) as any;
-    const originalClearInterval = window.clearInterval;
-    const clearIntervalSpy = vi.fn();
-    window.clearInterval = clearIntervalSpy as any;
+    const setIntervalSpy = vi.spyOn(window, 'setInterval').mockImplementation(() => 999 as any);
+    const clearIntervalSpy = vi.spyOn(window, 'clearInterval').mockImplementation(() => {});
 
     try {
       const { rerender } = renderHook(() => useActiveDeviceTracker());
-      expect(window.setInterval).toHaveBeenCalled();
+      expect(setIntervalSpy).toHaveBeenCalled();
 
       // Change state to logged out and rerender
       useAuthStore.setState({ isLoggedIn: false });
@@ -297,8 +293,8 @@ describe('useActiveDeviceTracker Hook', () => {
 
       expect(clearIntervalSpy).toHaveBeenCalledWith(999);
     } finally {
-      window.setInterval = originalSetInterval;
-      window.clearInterval = originalClearInterval;
+      setIntervalSpy.mockRestore();
+      clearIntervalSpy.mockRestore();
     }
   });
 
@@ -335,7 +331,7 @@ describe('deleteCurrentDeviceSession', () => {
 
     await deleteCurrentDeviceSession();
 
-    expect(supabase.from).toHaveBeenCalledWith('active_devices');
+    expect(vi.mocked(supabase.from)).toHaveBeenCalledWith('active_devices');
   });
 
   test('should do nothing when no device ID in localStorage', async () => {
@@ -351,7 +347,7 @@ describe('deleteCurrentDeviceSession', () => {
 
     await deleteCurrentDeviceSession();
     // supabase.from for active_devices delete should NOT have been called
-    const mockFromInstance = supabase.from('active_devices');
+    const mockFromInstance = supabase.from('active_devices') as unknown as { delete: ReturnType<typeof vi.fn> };
     expect(mockFromInstance.delete).not.toHaveBeenCalled();
   });
 
@@ -360,7 +356,7 @@ describe('deleteCurrentDeviceSession', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     // Make supabase.from throw
-    (supabase.from as any).mockImplementationOnce(() => {
+    vi.mocked(supabase.from).mockImplementationOnce(() => {
       throw new Error('Supabase connection error');
     });
 

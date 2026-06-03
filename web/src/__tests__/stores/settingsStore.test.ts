@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useSettingsStore } from '../../stores/settingsStore';
 
 describe('settingsStore', () => {
@@ -69,13 +69,20 @@ describe('settingsStore', () => {
     vi.resetModules();
     const originalWindow = global.window;
     
-    // @ts-ignore
-    delete global.window;
+    Object.defineProperty(global, 'window', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
     
     const { useSettingsStore: ssrStore } = await import('../../stores/settingsStore');
     expect(ssrStore).toBeDefined();
     
     // Restore window
-    global.window = originalWindow;
+    Object.defineProperty(global, 'window', {
+      value: originalWindow,
+      writable: true,
+      configurable: true,
+    });
   });
 });

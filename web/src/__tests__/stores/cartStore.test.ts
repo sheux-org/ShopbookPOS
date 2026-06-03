@@ -1,5 +1,6 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useCart } from '../../stores/cartStore';
+import type { Customer } from '../../stores/cartStore';
 
 describe('cartStore', () => {
   beforeEach(() => {
@@ -95,7 +96,7 @@ describe('cartStore', () => {
     expect(useCart.getState().cart.find((i) => i.name === 'Apple')?.quantity).toBe(3);
 
     // 2. addCustomCustomer fallback where customCustomers is undefined/null
-    useCart.setState({ customCustomers: null as any });
+    useCart.setState({ customCustomers: null as unknown as Customer[] });
     useCart.getState().addCustomCustomer({ name: 'Unique Cust', phone: '0777777777' });
     expect(useCart.getState().customCustomers).toHaveLength(1);
     expect(useCart.getState().customCustomers[0].name).toBe('Unique Cust');
@@ -105,13 +106,20 @@ describe('cartStore', () => {
     vi.resetModules();
     const originalWindow = global.window;
     
-    // @ts-ignore
-    delete global.window;
+    Object.defineProperty(global, 'window', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
     
     const { useCart: ssrCart } = await import('../../stores/cartStore');
     expect(ssrCart).toBeDefined();
     
     // Restore window
-    global.window = originalWindow;
+    Object.defineProperty(global, 'window', {
+      value: originalWindow,
+      writable: true,
+      configurable: true,
+    });
   });
 });
