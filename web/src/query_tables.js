@@ -16,12 +16,7 @@ async function run() {
     });
     
     const data = await res.json();
-    const orders = data.changes.orders.created.concat(data.changes.orders.updated);
-    console.log('Total Orders in Supabase:', orders.length);
-    console.log('Order Details:');
-    orders.forEach(o => {
-      console.log(`- ${o.invoice_number}: ${o.status} | Total: ${o.total_amount}`);
-    });
+    console.log('Businesses:', JSON.stringify(data.changes.businesses, null, 2));
   } catch (err) {
     console.error('Error calling RPC:', err);
   }
