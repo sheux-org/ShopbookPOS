@@ -58,7 +58,7 @@ The native mobile application is optimized for tablet layouts and hand-held term
 * **Mandatory Force Updates**: Synchronizes client versions with remote `app_config` variables and blocks outmoded clients.
 * **Licensing & Payments**: Pro features license checks connected to subscription plan modals (RevenueCat checkout or bank slip WhatsApp submission).
 
-For detailed app routes and files, see the [mobile subdirectory](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/mobile).
+For detailed app routes and files, see the [mobile subdirectory](shopbook-pos/mobile).
 
 ---
 
@@ -72,7 +72,7 @@ The desktop web application provides a responsive console tailored for desktop m
 * **Invoices Sales Ledger**: A dedicated database auditing list (`/history`) to inspect past receipts, view total revenue aggregates, and void transactions.
 * **IndexedDB Local Engine**: Uses LokiJS and WatermelonDB web adapters to guarantee complete responsiveness even with temporary internet dropouts.
 
-For detailed routes and CSS tokens, see the [web subdirectory](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web).
+For detailed routes and CSS tokens, see the [web subdirectory](shopbook-pos/web).
 
 ---
 
@@ -137,7 +137,7 @@ Create environment config files in the respective directories:
 ### 2. Schema Migration
 
 Deploy the database schema, including synchronization RPC scripts, from the root file:
-- Apply the SQL statements within [supabase_migration.sql](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase_migration.sql) inside your Supabase project's SQL Editor dashboard, or apply them via the Supabase CLI:
+- Apply the SQL statements within [supabase_migration.sql](supabase_migration.sql) inside your Supabase project's SQL Editor dashboard, or apply them via the Supabase CLI:
   ```bash
   npx supabase db push
   ```
