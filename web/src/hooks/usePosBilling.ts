@@ -561,19 +561,23 @@ export function usePosBilling() {
           if (state.paymentMethod === 'cash') {
             cashReceivedRef.current?.focus();
           } else if (state.paymentMethod === 'card') {
+            cardBrandSelectRef.current?.focus();
+          } else if (state.paymentMethod === 'bank') {
+            bankNameSelectRef.current?.focus();
+          }
+          return;
+        }
+
+        if (e.key === 'F9') {
+          e.preventDefault();
+          if (state.paymentMethod === 'card') {
             if (state.isCustomBank) {
               bankNameRef.current?.focus();
-            } else if (!state.bankName) {
-              cardBrandSelectRef.current?.focus();
             } else {
               cardDigitsRef.current?.focus();
             }
-          } else if (state.paymentMethod === 'bank') {
-            if (state.isCustomBank) {
-              bankNameRef.current?.focus();
-            } else {
-              bankNameSelectRef.current?.focus();
-            }
+          } else if (state.paymentMethod === 'bank' && state.isCustomBank) {
+            bankNameRef.current?.focus();
           }
           return;
         }

@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useBusinessStore } from '../stores/businessStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { syncDatabase } from '../services/sync';
+import { startUploadQueueMonitor } from '@/services/uploadQueue';
 import './globals.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Sidebar } from '../components/layout/Sidebar';
@@ -79,6 +80,9 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Initialize background upload queue monitor
+    startUploadQueueMonitor();
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -202,8 +206,8 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
         };
       case '/insights':
         return {
-          title: 'Analytics Insights Dashboard',
-          subtitle: 'Weekly sales graphs, order history and ledger summaries',
+          title: 'Business Analytics & Insights',
+          subtitle: 'Real-time revenue metrics, inventory performance, and transaction audits',
         };
       case '/stocks':
         return {

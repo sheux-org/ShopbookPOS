@@ -1,37 +1,161 @@
 /* ==========================================================================
-   Premium Insights & Analytics Dashboard Layout
-   ========================================================================== */
+   Ultra-Premium Cockpit Layout: Responsive Business Analytics
+   ========================================================================= */
+
+:root {
+  --insights-glass-surface: rgba(255, 255, 255, 0.85);
+  --insights-glass-border: rgba(226, 232, 240, 0.8);
+  --insights-neon-primary: #3b82f6;
+  --insights-neon-primary-glow: rgba(59, 130, 246, 0.12);
+  --insights-neon-success: #10b981;
+  --insights-neon-success-glow: rgba(16, 185, 129, 0.12);
+  --insights-neon-warning: #f59e0b;
+  --insights-neon-warning-glow: rgba(245, 158, 11, 0.12);
+  --insights-neon-danger: #ef4444;
+  --insights-neon-danger-glow: rgba(239, 68, 68, 0.12);
+  --card-radius: 18px;
+}
 
 .insights-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 73px); /* Match layout header height */
+  height: calc(100vh - 73px);
   overflow: hidden;
-  background-color: var(--background);
-  padding: 16px;
+  background-color: #f8fafc;
+  padding: 24px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  gap: 20px;
 }
 
-.insights-workspace {
+/* Header bar styling */
+.insights-header-bar {
   display: flex;
-  flex: 1;
-  height: 100%;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
 }
 
-/* Left Pane: KPIs and Charts */
+.insights-title-section h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.8px;
+  margin: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.insights-title-section p {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+  margin-bottom: 0;
+  font-weight: 500;
+}
+
+/* Main Dashboard Workspace */
+.insights-workspace {
+  display: grid;
+  grid-template-columns: 1.12fr 0.88fr;
+  gap: 16px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left Pane: KPIs, Charts, List Tables */
 .metrics-pane {
-  flex: 4; /* Compact metrics side, making ledger wider */
-  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
+  gap: 20px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Segmented Control Filter Tabs */
+.period-tabs-bar {
+  display: flex;
+  background-color: #e2e8f0;
+  padding: 4px;
+  border-radius: 14px;
+  align-self: flex-start;
+  gap: 2px;
+  border: 1px solid rgba(203, 213, 225, 0.5);
+}
+
+.period-tab-btn {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  background: none;
+  border: none;
+  border-radius: 11px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.period-tab-btn:hover {
+  color: #0f172a;
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.period-tab-btn.active {
   background-color: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+}
+
+/* Custom Date Range Card */
+.custom-date-card {
+  background-color: var(--insights-glass-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--insights-glass-border);
+  border-radius: var(--card-radius);
+  padding: 20px 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+  animation: slideDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.date-input-group label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.date-picker-field {
+  padding: 10px 14px;
+  border: 1.5px solid var(--insights-glass-border);
   border-radius: 12px;
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03);
+  font-size: 13px;
+  outline: none;
+  background-color: #ffffff;
+  color: #0f172a;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.date-picker-field:focus {
+  border-color: var(--insights-neon-primary);
+  box-shadow: 0 0 0 3px var(--insights-neon-primary-glow);
 }
 
 /* KPI Card Grid styling */
@@ -42,78 +166,222 @@
 }
 
 .kpi-card {
-  background-color: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
+  background: var(--insights-glass-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--insights-glass-border);
+  border-radius: var(--card-radius);
+  padding: 20px 24px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.015);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 20px;
+  box-shadow: 0 4px 18px -4px rgba(15, 23, 42, 0.03);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
 }
 
 .kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-  border-color: rgba(37, 99, 235, 0.2);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 16px 28px -10px rgba(15, 23, 42, 0.08);
 }
 
-.kpi-icon-box {
-  width: 44px;
-  height: 44px;
+/* Card specific gradient backgrounds for a sleek, modern visual appeal */
+.kpi-card.revenue-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(209, 250, 229, 0.45) 100%);
+}
+.kpi-card.invoices-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(219, 234, 254, 0.45) 100%);
+}
+.kpi-card.basket-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(243, 232, 255, 0.45) 100%);
+}
+.kpi-card.alerts-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(254, 226, 226, 0.45) 100%);
+}
+
+/* Layered glowing theme colored background overlay */
+.kpi-card-glow {
+  position: absolute;
+  bottom: -20px;
+  right: -20px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  filter: blur(36px);
+  opacity: 0.16;
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+}
+
+.revenue-card .kpi-card-glow { background: radial-gradient(circle, #10b981 0%, transparent 70%); }
+.invoices-card .kpi-card-glow { background: radial-gradient(circle, #3b82f6 0%, transparent 70%); }
+.basket-card .kpi-card-glow { background: radial-gradient(circle, #8b5cf6 0%, transparent 70%); }
+.alerts-card .kpi-card-glow { background: radial-gradient(circle, #ef4444 0%, transparent 70%); }
+
+/* Interactive floating bubble elements (parallax layout) */
+.kpi-card-bubble {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+}
+
+/* Bubble 1: Semi-translucent Frosted Glass Sphere */
+.kpi-card-bubble.bubble-1 {
+  top: -15px;
+  right: 15px;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* Bubble 2: Smaller Semi-translucent Frosted Glass Sphere */
+.kpi-card-bubble.bubble-2 {
+  bottom: 12px;
+  right: 55px;
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+}
+
+/* Parallax micro-movements on hover */
+.kpi-card:hover .kpi-card-glow {
+  transform: translate(-10px, -10px) scale(1.15);
+  opacity: 0.22;
+}
+
+.kpi-card:hover .kpi-card-bubble.bubble-1 {
+  transform: translate(-12px, 8px) scale(1.15);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.1) 100%);
+}
+
+.kpi-card:hover .kpi-card-bubble.bubble-2 {
+  transform: translate(14px, -6px) scale(1.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 100%);
+}
+
+/* Ensure card content floats perfectly above shapes */
+.kpi-card-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+/* Left indicator highlights */
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: transparent;
+  transition: background 0.3s;
+  z-index: 3;
+}
+
+.kpi-card:nth-child(1)::before { background: var(--insights-neon-success); }
+.kpi-card:nth-child(2)::before { background: var(--insights-neon-primary); }
+.kpi-card:nth-child(3)::before { background: #8b5cf6; }
+.kpi-card:nth-child(4)::before { background: var(--insights-neon-danger); }
+
+.kpi-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid currentColor;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.revenue-card .kpi-icon-box {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+.invoices-card .kpi-icon-box {
+  background-color: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+.basket-card .kpi-icon-box {
+  background-color: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+.alerts-card .kpi-icon-box {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 .kpi-card:hover .kpi-icon-box {
-  transform: scale(1.08);
+  transform: scale(1.15) rotate(6deg);
 }
 
 .kpi-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
-  color: var(--muted);
-  letter-spacing: 0.5px;
+  color: #64748b;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
+  margin: 0;
 }
 
 .kpi-val {
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 800;
-  color: var(--dark);
-  marginTop: 4px;
-  letter-spacing: -0.2px;
+  color: #0f172a;
+  margin-top: 6px;
+  margin-bottom: 0;
+  letter-spacing: -0.6px;
+}
+
+.kpi-sub-label {
+  margin: 2px 0 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
 }
 
 /* Revenue Chart Card */
 .chart-card {
-  background-color: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--insights-glass-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--insights-glass-border);
+  border-radius: var(--card-radius);
   padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.015);
-  flex: 1;
+  box-shadow: 0 4px 18px -4px rgba(15, 23, 42, 0.03);
   display: flex;
   flex-direction: column;
-  min-height: 300px;
-  transition: border-color 0.25s ease;
+  min-height: 280px;
+  transition: border-color 0.3s;
 }
 
 .chart-card:hover {
-  border-color: rgba(37, 99, 235, 0.15);
+  border-color: rgba(203, 213, 225, 0.8);
 }
 
 .chart-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
-  color: var(--dark);
-  margin-bottom: 28px;
+  color: #0f172a;
+  margin-bottom: 24px;
+  margin-top: 0;
+  letter-spacing: -0.2px;
 }
 
 .chart-wrapper {
@@ -128,8 +396,8 @@
   height: 100%;
   align-items: flex-end;
   justify-content: space-between;
-  padding-bottom: 20px;
-  border-bottom: 1.5px solid var(--border);
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f1f5f9;
 }
 
 .chart-col {
@@ -141,42 +409,48 @@
   height: 100%;
   justify-content: flex-end;
   cursor: pointer;
+  margin: 0 6px;
 }
 
 .chart-bar {
-  width: 28px;
-  background: linear-gradient(180deg, var(--primary) 0%, rgba(37, 99, 235, 0.6) 100%);
-  border-radius: 4px 4px 0 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  max-width: 32px;
+  background: linear-gradient(180deg, #3b82f6 0%, rgba(59, 130, 246, 0.4) 100%);
+  border-radius: 8px 8px 0 0;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .chart-col:hover .chart-bar {
-  background: linear-gradient(180deg, var(--primary-hover) 0%, var(--primary) 100%);
+  background: linear-gradient(180deg, #2563eb 0%, #60a5fa 100%);
   transform: scaleX(1.05);
+  filter: drop-shadow(0 6px 12px var(--insights-neon-primary-glow));
 }
 
 .chart-day-text {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  margin-top: 10px;
+  font-weight: 700;
+  color: #64748b;
+  margin-top: 12px;
 }
 
+/* Glassmorphism Floating Tooltip */
 .chart-tooltip {
   position: absolute;
   bottom: 105%;
-  background-color: var(--dark);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #ffffff;
-  font-size: 10px;
-  font-weight: bold;
-  padding: 6px 10px;
-  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 8px;
   opacity: 0;
-  transform: translateY(4px);
-  transition: all 0.2s ease;
+  transform: translateY(6px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
   white-space: nowrap;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   z-index: 10;
 }
 
@@ -185,55 +459,250 @@
   transform: translateY(0);
 }
 
-/* Right Pane: Transaction Ledger */
+/* Double-column section (Best sellers & Slow movers) */
+.lists-grid-row {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.list-panel-card {
+  background: var(--insights-glass-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--insights-glass-border);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 4px 18px -4px rgba(15, 23, 42, 0.03);
+}
+
+.list-panel-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 20px;
+  margin-top: 0;
+  letter-spacing: -0.2px;
+}
+
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mini-table th {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 10px 12px;
+  border-bottom: 2px solid #f1f5f9;
+  text-align: left;
+}
+
+.mini-table td {
+  padding: 12px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.mini-table tr:hover td {
+  background-color: rgba(248, 250, 252, 0.6);
+}
+
+.mini-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Gold/Silver/Bronze Glowing Rank Badges */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.rank-badge.gold {
+  background: linear-gradient(135deg, #fbbf24 0%, #ea580c 100%);
+  box-shadow: 0 3px 8px rgba(234, 88, 12, 0.25);
+}
+.rank-badge.silver {
+  background: linear-gradient(135deg, #94a3b8 0%, #475569 100%);
+  box-shadow: 0 3px 8px rgba(71, 85, 105, 0.20);
+}
+.rank-badge.bronze {
+  background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
+  box-shadow: 0 3px 8px rgba(180, 83, 9, 0.25);
+}
+.rank-badge.gray {
+  background-color: #f1f5f9;
+  color: #64748b;
+  box-shadow: none;
+}
+
+/* Right Pane: Transaction Ledger & Exporter */
 .ledger-pane {
-  flex: 6; /* Expand the transaction ledger part to make it larger */
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+}
+
+/* Export Control Card */
+.export-card {
+  background: var(--insights-glass-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--insights-glass-border);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 4px 18px -4px rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.export-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.export-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.export-select-wrapper {
+  flex: 1;
+}
+
+.export-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--insights-glass-border);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
   background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.export-select:focus {
+  border-color: var(--insights-neon-primary);
+  box-shadow: 0 0 0 3px var(--insights-neon-primary-glow);
+}
+
+.export-buttons-group {
+  display: flex;
+  gap: 8px;
+}
+
+.export-btn {
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid transparent;
+  transition: all 0.2s ease-in-out;
+}
+
+.export-btn.pdf {
+  background-color: #fef2f2;
+  color: #ef4444;
+  border-color: #fee2e2;
+}
+
+.export-btn.pdf:hover {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+  transform: translateY(-2px);
+}
+
+.export-btn.excel {
+  background-color: #f0fdf4;
+  color: #10b981;
+  border-color: #dcfce7;
+}
+
+.export-btn.excel:hover {
+  background-color: #dcfce7;
+  border-color: #86efac;
+  transform: translateY(-2px);
+}
+
+/* Ledger List Container Card */
+.ledger-list-card {
+  background: var(--insights-glass-surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--insights-glass-border);
+  border-radius: var(--card-radius);
+  padding: 24px;
+  box-shadow: 0 4px 18px -4px rgba(15, 23, 42, 0.03);
+  flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: all 0.3s ease;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03);
+  position: relative;
 }
 
 .ledger-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 20px;
   flex-shrink: 0;
 }
 
 .ledger-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
-  color: var(--dark);
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.2px;
 }
 
 .ledger-table-wrapper {
   flex: 1;
   overflow-y: auto;
+  margin: 0 -24px;
   padding: 0 24px;
 }
 
 .ledger-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .ledger-table th {
-  padding: 14px 16px;
+  padding: 12px 14px;
   text-align: left;
-  font-weight: 700;
-  color: var(--muted);
+  font-weight: 800;
+  color: #64748b;
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1.5px solid var(--border);
+  letter-spacing: 0.8px;
+  border-bottom: 2px solid #f1f5f9;
   background-color: #ffffff;
   position: sticky;
   top: 0;
@@ -241,79 +710,137 @@
 }
 
 .ledger-table tbody tr {
-  border-bottom: 1px solid #f3f4f6;
-  transition: all 0.15s ease;
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
 }
 
 .ledger-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: rgba(248, 250, 252, 0.7);
 }
 
 .ledger-table td {
-  padding: 14px 16px;
+  padding: 14px 14px;
   vertical-align: middle;
 }
 
 .ledger-method-badge {
   font-size: 9px;
   font-weight: 800;
-  background-color: #f1f5f9;
-  color: var(--muted);
-  padding: 3px 8px;
-  border-radius: 6px;
-  letter-spacing: 0.2px;
+  background-color: #e2e8f0;
+  color: #475569;
+  padding: 4px 8px;
+  border-radius: 7px;
+  letter-spacing: 0.4px;
 }
 
 .ledger-view-btn {
   padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  border-radius: 9px;
+  border: 1.5px solid var(--insights-glass-border);
   background-color: #ffffff;
-  color: var(--muted);
+  color: #64748b;
   font-weight: 700;
-  font-size: 10px;
+  font-size: 11px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   transition: all 0.2s ease;
 }
 
 .ledger-view-btn:hover {
-  background-color: var(--light-blue);
-  color: var(--primary);
-  border-color: var(--accent-blue);
+  background-color: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+  transform: translateY(-1px);
 }
 
 .ledger-empty {
   padding: 64px 24px;
   text-align: center;
-  color: var(--muted);
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Glassmorphism Loading Overlay */
+.pane-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  border-radius: inherit;
+  animation: fadeInOverlay 0.2s ease-in-out;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.pane-loading-spinner {
+  animation: spin 1s linear infinite;
+  color: #2563eb;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Critical Stock Alert banner */
+.critical-alerts-card {
+  border: 1.5px dashed rgba(239, 68, 68, 0.3) !important;
+  background: linear-gradient(135deg, #fffcfc 0%, #fef2f2 100%) !important;
+}
+
+.alert-pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulseAlarm 1.5s infinite;
+}
+
+@keyframes pulseAlarm {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 /* ==========================================================================
-   Responsive Styles for Mobile & Tablet
+   Comprehensive Responsive Layout for Tablets & Small Laptops (768px - 1024px)
    ========================================================================== */
 
-@media (max-width: 1023px) {
+@media (max-width: 1024px) {
   .insights-container {
     height: auto;
-    overflow: visible;
+    overflow-y: auto;
+    padding: 16px;
+    gap: 16px;
   }
 
   .insights-workspace {
-    flex-direction: column !important;
+    grid-template-columns: 1fr !important;
+    gap: 20px;
     height: auto !important;
     overflow: visible !important;
   }
 
   .metrics-pane {
     flex: none !important;
-    border-right: none !important;
-    border-bottom: 1.5px solid var(--border);
-    padding: 20px !important;
-    overflow-y: visible !important;
+    overflow: visible !important;
+    height: auto !important;
   }
 
   .ledger-pane {
@@ -322,37 +849,59 @@
     overflow: visible !important;
   }
 
-  .ledger-table-wrapper {
-    overflow-y: visible !important;
-    padding: 0 20px 32px 20px !important;
+  .ledger-list-card {
+    height: 500px !important;
   }
 
-  .chart-card {
-    min-height: 260px;
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* Perfect 2x2 grid for tablet */
+    gap: 14px;
+  }
+
+}
+
+@media (max-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: 1fr !important; /* Stack KPIs on smaller devices */
+  }
+
+
+
+  .export-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-buttons-group {
+    justify-content: flex-end;
+    margin-top: 8px;
   }
 }
 
-@media (max-width: 767px) {
-  .kpi-grid {
-    grid-template-columns: 1fr !important;
-    gap: 12px;
-  }
+/* Modernized Date Picker Wrapper Styling */
+.date-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
 
-  .metrics-pane {
-    padding: 16px !important;
-  }
+.date-input-icon {
+  position: absolute;
+  left: 14px;
+  color: #64748b;
+  pointer-events: none;
+  z-index: 2;
+  transition: color 0.2s ease;
+}
 
-  .ledger-header {
-    padding: 16px !important;
-  }
+.date-picker-field {
+  padding: 10px 14px 10px 42px !important;
+  width: 100%;
+  cursor: pointer;
+  background-color: #f8fafc;
+}
 
-  .ledger-table-wrapper {
-    padding: 0 16px 24px 16px !important;
-  }
-
-  .ledger-table th, 
-  .ledger-table td {
-    padding: 10px 8px !important;
-    font-size: 11px !important;
-  }
+.date-input-wrapper:focus-within .date-input-icon {
+  color: var(--insights-neon-primary);
 }

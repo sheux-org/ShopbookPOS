@@ -35,21 +35,41 @@ const CARD_BRANDS_AND_BANKS = [
   'Visa - Commercial Bank',
   'Visa - Sampath Bank',
   'Visa - HNB',
+  'Visa - BOC',
+  'Visa - People\'s Bank',
+  'Visa - Seylan Bank',
+  'Visa - NTB',
+  'Visa - DFCC Bank',
+  'Visa - NDB Bank',
   'MasterCard - Commercial Bank',
   'MasterCard - Sampath Bank',
-  'Amex - Nations Trust Bank',
-  'JCB - HNB'
+  'MasterCard - HNB',
+  'MasterCard - BOC',
+  'MasterCard - People\'s Bank',
+  'MasterCard - Seylan Bank',
+  'Amex - Nations Trust Bank (NTB)',
+  'JCB - HNB',
+  'UnionPay - BOC',
+  'Visa - Union Bank',
+  'Visa - Pan Asia Bank',
 ];
 
 const SRI_LANKAN_BANKS = [
-  'Commercial Bank of Ceylon',
-  'Sampath Bank',
-  'Hatton National Bank (HNB)',
   'Bank of Ceylon (BOC)',
   'People\'s Bank',
+  'Commercial Bank of Ceylon',
+  'Hatton National Bank (HNB)',
+  'Sampath Bank',
   'Nations Trust Bank (NTB)',
+  'Seylan Bank',
   'DFCC Bank',
-  'NDB Bank'
+  'NDB Bank',
+  'Union Bank',
+  'Pan Asia Bank (PABC)',
+  'Cargills Bank',
+  'Amana Bank',
+  'Sanasa Development Bank (SDB)',
+  'Regional Development Bank (RDB)',
 ];
 
 export const SettlementCard: React.FC<SettlementCardProps> = ({
@@ -160,7 +180,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
           {paymentMethod === 'card' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div>
-                <label style={styles.denseFieldLabel}>Card Brand / Bank *</label>
+                <label style={styles.denseFieldLabel}>Card Brand / Bank * {posMode === 'normal' ? '[F8]' : ''}</label>
                 <select
                   ref={cardBrandSelectRef}
                   value={isCustomBank ? 'Other' : bankName}
@@ -204,7 +224,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
                 )}
               </div>
               <div>
-                <label style={styles.denseFieldLabel}>Card Number (Last 4 Digits) * {posMode === 'normal' ? '[F8]' : ''}</label>
+                <label style={styles.denseFieldLabel}>Card Number (Last 4 Digits) * {posMode === 'normal' ? '[F9]' : ''}</label>
                 <input
                   ref={cardDigitsRef}
                   type="text"
