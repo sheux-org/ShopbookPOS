@@ -12,11 +12,14 @@ async function run() {
     const res = await fetch(`${supabaseUrl}/rest/v1/rpc/pull_watermelondb_changes`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ last_pulled_at: 0 })
+      body: JSON.stringify({ 
+        last_pulled_at: 0,
+        client_business_id: 'G4QpR6rjJvzuKDKj'
+      })
     });
     
     const data = await res.json();
-    console.log('Businesses:', JSON.stringify(data.changes.businesses, null, 2));
+    console.log('RPC Response:', JSON.stringify(data, null, 2));
   } catch (err) {
     console.error('Error calling RPC:', err);
   }

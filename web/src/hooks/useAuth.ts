@@ -130,6 +130,11 @@ export function useVerifyOtp() {
         } else if (remoteData && remoteData.exists) {
           useSettingsStore.getState().setBackupEnabled(true);
 
+          // Store the auth_token BEFORE syncing so prepareSupabaseForSync can find it and authenticate
+          if (typeof window !== 'undefined') {
+            localStorage.setItem("auth_token", verificationToken);
+          }
+
           // Force sync to pull all tables
           const syncSuccess = await syncDatabase();
           console.log("Database sync finished with status:", syncSuccess);

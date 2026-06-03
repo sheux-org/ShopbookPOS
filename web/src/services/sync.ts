@@ -8,7 +8,13 @@ import { useAuthStore } from '../stores/authStore';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+});
 
 const PUSH_TABLE_ORDER = [
   'businesses',
@@ -36,25 +42,21 @@ function tableHasChanges(slice: TableChanges | undefined): boolean {
   );
 }
 
-async function pushChangesInOrder(changes: SyncChanges): Promise<void> {
+async function pushChangesInOrder(changes: SyncChanges, clientBusinessId: string): Promise<void> {
   for (const table of PUSH_TABLE_ORDER) {
     const slice = changes[table];
     if (!tableHasChanges(slice)) continue;
 
     const { error } = await supabase.rpc('push_watermelondb_changes', {
       changes: { [table]: slice },
+      client_business_id: clientBusinessId,
     });
     if (error) throw new Error(`${table}: ${error.message}`);
   }
 }
 
 async function prepareSupabaseForSync(): Promise<void> {
-  if (typeof window === 'undefined') return;
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return;
-
-  useAuthStore.getState().setSession(session);
-  if (session.user) useAuthStore.getState().setUser(session.user);
+  // Client runs anonymously with anon key. Authentication is enforced at the RPC layer by passing client_business_id.
 }
 
 export async function syncDatabase(force: boolean = true): Promise<boolean> {
@@ -62,18 +64,25 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
 
   await prepareSupabaseForSync();
 
+  const activeBusinessId = useAuthStore.getState().activeBusinessId;
+  if (!activeBusinessId) {
+    console.warn('Sync skipped: No active business ID selected.');
+    return false;
+  }
+
   try {
     await synchronize({
       database,
       pullChanges: async ({ lastPulledAt }) => {
         const { data, error } = await supabase.rpc('pull_watermelondb_changes', {
           last_pulled_at: lastPulledAt ?? 0,
+          client_business_id: activeBusinessId,
         });
         if (error) throw new Error(error.message);
         return { changes: data.changes, timestamp: data.timestamp };
       },
       pushChanges: async ({ changes }) => {
-        await pushChangesInOrder(changes as SyncChanges);
+        await pushChangesInOrder(changes as SyncChanges, activeBusinessId);
       },
       migrationsEnabledAtVersion: schema.version,
     });
