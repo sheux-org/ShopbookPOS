@@ -15,6 +15,7 @@ import { Header } from '../components/layout/Header';
 import { WifiOff } from 'lucide-react';
 import { useCart } from '../stores/cartStore';
 import { useCartActions } from '../hooks/useCartActions';
+import { useActiveDeviceTracker } from '../hooks/useActiveDeviceTracker';
 
 export default function RootLayout({
   children,
@@ -47,6 +48,7 @@ export default function RootLayout({
 }
 
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
+  useActiveDeviceTracker();
   const router = useRouter();
   const pathname = usePathname();
   const { releaseReservedStocks } = useCartActions();

@@ -10,6 +10,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import { useCart } from '../../stores/cartStore';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
 
 interface SidebarProps {
   sidebarCollapsed: boolean;
@@ -156,8 +157,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => {
             if (confirm('Are you sure you want to sign out?')) {
-              logout();
-              router.push('/auth');
+              deleteCurrentDeviceSession().then(() => {
+                logout();
+                router.push('/auth');
+              });
             }
           }}
           className="sidebar-logout-btn"

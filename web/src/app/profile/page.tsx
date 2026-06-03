@@ -8,7 +8,7 @@ import { syncDatabase, uploadBusinessLogo } from '../../services/sync';
 import { 
   User, Store, Users, RefreshCw, LogOut, 
   HelpCircle, CheckCircle, ChevronRight, MapPin, Phone, Database,
-  Shield, Activity, HardDrive, Settings, Info, Building, Camera
+  Shield, Activity, HardDrive, Settings, Info, Building, Camera, Smartphone
 } from 'lucide-react';
 import './profile.css';
 import { TerminalDiagnostics } from '../../components/TerminalDiagnostics';
@@ -18,8 +18,10 @@ import { StaffModal } from '../../components/profile/StaffModal';
 import { BranchModal } from '../../components/profile/BranchModal';
 import { FaqModal } from '../../components/profile/FaqModal';
 import { HelpSupportModal } from '../../components/profile/HelpSupportModal';
+import { ActiveDevicesModal } from '../../components/profile/ActiveDevicesModal';
 import { useStaff, useCreateStaff } from '../../hooks/useStaff';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
 
 interface DBEmployee {
   id: string;
@@ -53,7 +55,7 @@ export default function ProfilePage() {
   const [syncing, setSyncing] = useState(false);
 
   // Modals state
-  const [activeModal, setActiveModal] = useState<'details' | 'staff' | 'branches' | 'faq' | null>(null);
+  const [activeModal, setActiveModal] = useState<'details' | 'staff' | 'branches' | 'faq' | 'devices' | null>(null);
 
   // Form states - Store details
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -433,6 +435,18 @@ export default function ProfilePage() {
                 </div>
               )}
 
+               {/* Option: Active Devices & Sessions */}
+              <div className="profile-option-card devices-card" onClick={() => setActiveModal('devices')}>
+                <div className="profile-icon-box card-devices">
+                  <Smartphone size={20} />
+                </div>
+                <div className="profile-option-details">
+                  <h4 className="profile-option-title">Active Devices & Sessions</h4>
+                  <p className="profile-option-sub">Monitor, inspect, and remotely log out active terminal sessions on Android, iOS, or web client instances.</p>
+                </div>
+                <ChevronRight size={18} className="profile-chevron-arrow" />
+              </div>
+
               {/* Option: Support FAQs */}
               <div className="profile-option-card" onClick={() => setActiveModal('faq')}>
                 <div className="profile-icon-box card-faq">
@@ -450,8 +464,10 @@ export default function ProfilePage() {
                 className="profile-option-card logout-card"
                 onClick={() => {
                   if (confirm('Disconnect POS terminal session?')) {
-                    logout();
-                    router.push('/auth');
+                    deleteCurrentDeviceSession().then(() => {
+                      logout();
+                      router.push('/auth');
+                    });
                   }
                 }}
               >
@@ -520,6 +536,12 @@ export default function ProfilePage() {
       <FaqModal
         isOpen={activeModal === 'faq'}
         onClose={() => setActiveModal(null)}
+      />
+
+      <ActiveDevicesModal
+        isOpen={activeModal === 'devices'}
+        onClose={() => setActiveModal(null)}
+        activeBusinessId={activeBusiness?.id || '0'}
       />
 
       <HelpSupportModal
