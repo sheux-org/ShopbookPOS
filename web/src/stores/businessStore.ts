@@ -24,8 +24,9 @@ interface BusinessState {
     name: string,
     address: string,
     phone: string,
-    category?: string
-  ) => Promise<void>;
+    category?: string,
+    logoUri?: string
+  ) => Promise<string | undefined>;
   updateActiveBusinessDetails: (details: {
     name: string;
     category: string;
@@ -149,7 +150,7 @@ export const useBusinessStore = create<BusinessState>()(
           console.error("Failed to load businesses from IndexedDB:", err);
         }
       },
-      registerBusiness: async (name, address, phone, category = "General Retail") => {
+      registerBusiness: async (name, address, phone, category = "General Retail", logoUri = "") => {
         try {
           let newBusinessRecord: any;
           await database.write(async () => {
@@ -158,6 +159,7 @@ export const useBusinessStore = create<BusinessState>()(
               biz.businessType = category;
               biz.address = address;
               biz.phoneNumber = phone;
+              biz.logoUri = logoUri;
             });
 
             await database.get("employees").create((emp: any) => {
@@ -200,8 +202,10 @@ export const useBusinessStore = create<BusinessState>()(
               set({ activeBusiness: found });
             }
           }
+          return newBusinessRecord?.id;
         } catch (err) {
           console.error("Failed to register business to IndexedDB:", err);
+          return undefined;
         }
       },
       updateActiveBusinessDetails: async (details) => {

@@ -921,4 +921,138 @@
   background-color: #f8fafc !important;
 }
 
+/* ==========================================================================
+   Supabase Store Logo Upload Styles
+   ========================================================================== */
+.profile-hero-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.profile-hero-avatar-wrap.clickable {
+  cursor: pointer;
+}
+
+.profile-hero-avatar-wrap.clickable:hover .profile-hero-avatar {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+.profile-hero-avatar-camera {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  border: 2px solid #1e40af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 3;
+}
+
+.profile-hero-avatar-wrap.clickable:hover .profile-hero-avatar-camera {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Modal Logo styles */
+.modal-logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.modal-logo-container {
+  width: 88px;
+  height: 88px;
+  border-radius: 20px;
+  background-color: #f8fafc;
+  border: 2px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.modal-logo-container.clickable {
+  cursor: pointer;
+}
+
+.modal-logo-container.clickable:hover {
+  border-color: var(--primary);
+  background-color: #eff6ff;
+}
+
+.modal-logo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-logo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.modal-logo-camera-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background-color: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.modal-logo-container.clickable:hover .modal-logo-camera-overlay {
+  opacity: 1;
+}
+
+.modal-remove-logo-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background-color: transparent;
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.modal-remove-logo-btn:hover {
+  background-color: #fef2f2;
+}
+
 

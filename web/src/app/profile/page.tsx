@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { syncDatabase } from '../../services/sync';
+import { syncDatabase, uploadBusinessLogo } from '../../services/sync';
 import { 
   User, Store, Users, Cloud, RefreshCw, LogOut, 
   HelpCircle, CheckCircle, ChevronRight, MapPin, Phone, Database,
-  Shield, Activity, HardDrive, Settings, Info, Building
+  Shield, Activity, HardDrive, Settings, Info, Building, Camera
 } from 'lucide-react';
 import './profile.css';
 import { TerminalDiagnostics } from '../../components/TerminalDiagnostics';
@@ -45,6 +45,7 @@ export default function ProfilePage() {
   const loadBusinesses = useBusinessStore((s) => s.loadBusinessesFromDb);
   const registerBusiness = useBusinessStore((s) => s.registerBusiness);
   const updateActiveBusinessDetails = useBusinessStore((s) => s.updateActiveBusinessDetails);
+  const updateBusinessDetails = useBusinessStore((s) => s.updateBusinessDetails);
 
   const isBackupEnabled = useSettingsStore((s) => s.isBackupEnabled);
   const toggleBackup = useSettingsStore((s) => s.toggleBackup);
@@ -62,6 +63,10 @@ export default function ProfilePage() {
   const [editCategory, setEditCategory] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editLogoUri, setEditLogoUri] = useState('');
+  const [newBranchLogo, setNewBranchLogo] = useState<File | null>(null);
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Form states - Staff add
   const [newStaffName, setNewStaffName] = useState('');
@@ -97,6 +102,7 @@ export default function ProfilePage() {
       setEditCategory(activeBusiness.category || '');
       setEditAddress(activeBusiness.address || '');
       setEditPhone(activeBusiness.phone || '');
+      setEditLogoUri(activeBusiness.logoUri || '');
     }
   }, [isLoggedIn, activeBusiness]);
 
@@ -115,6 +121,46 @@ export default function ProfilePage() {
     setTimeout(() => setToastMsg(null), 1500);
   };
 
+  const handleMainAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeBusiness) return;
+    try {
+      setSyncing(true);
+      triggerToast('Uploading logo... ⏳');
+      const publicUrl = await uploadBusinessLogo(file, activeBusiness.id);
+      await updateActiveBusinessDetails({
+        name: activeBusiness.name,
+        category: activeBusiness.category,
+        address: activeBusiness.address,
+        phone: activeBusiness.phone,
+        logoUri: publicUrl
+      });
+      await loadBusinesses();
+      triggerToast('Logo updated successfully! 🚀');
+    } catch (err: any) {
+      console.error(err);
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDetailsLogoUpload = async (file: File) => {
+    if (!activeBusiness) return;
+    try {
+      setSyncing(true);
+      triggerToast('Uploading logo... ⏳');
+      const publicUrl = await uploadBusinessLogo(file, activeBusiness.id);
+      setEditLogoUri(publicUrl);
+      triggerToast('Logo uploaded! Click save to update details.');
+    } catch (err: any) {
+      console.error(err);
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleStoreDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -122,7 +168,8 @@ export default function ProfilePage() {
         name: editName,
         category: editCategory,
         address: editAddress,
-        phone: editPhone
+        phone: editPhone,
+        logoUri: editLogoUri
       });
       await loadBusinesses();
       triggerToast('Store details updated! 🏬');
@@ -164,14 +211,38 @@ export default function ProfilePage() {
     if (!newBranchName || !newBranchAddress) return;
 
     try {
-      await registerBusiness(newBranchName, newBranchAddress, userPhone || activeBusiness.phone, newBranchCategory);
+      setSyncing(true);
+      triggerToast('Initializing branch... 🏢');
+      const businessId = await registerBusiness(
+        newBranchName, 
+        newBranchAddress, 
+        userPhone || activeBusiness.phone, 
+        newBranchCategory
+      );
+      
+      if (businessId && newBranchLogo) {
+        triggerToast('Uploading branch logo... ⏳');
+        const publicUrl = await uploadBusinessLogo(newBranchLogo, businessId);
+        await updateBusinessDetails(businessId, {
+          name: newBranchName,
+          category: newBranchCategory,
+          address: newBranchAddress,
+          phone: userPhone || activeBusiness.phone,
+          logoUri: publicUrl
+        });
+      }
+      
       await loadBusinesses();
       triggerToast(`Branch ${newBranchName} initialized! 🏢`);
       setNewBranchName('');
       setNewBranchAddress('');
+      setNewBranchLogo(null);
       setActiveModal(null);
     } catch (err) {
       console.error(err);
+      alert('Failed to register branch: ' + err);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -205,10 +276,30 @@ export default function ProfilePage() {
         <div className="profile-hero-banner">
           <div className="profile-hero-overlay" />
           <div className="profile-hero-content">
-            <div className="profile-hero-avatar-wrap">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              accept="image/*" 
+              style={{ display: 'none' }} 
+              onChange={handleMainAvatarUpload} 
+            />
+            <div 
+              className={`profile-hero-avatar-wrap ${canPerform('update', 'settings') ? 'clickable' : ''}`}
+              onClick={() => canPerform('update', 'settings') && fileInputRef.current?.click()}
+              title={canPerform('update', 'settings') ? 'Click to change store logo' : undefined}
+            >
               <div className="profile-hero-avatar">
-                {activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SB'}
+                {activeBusiness?.logoUri ? (
+                  <img src={activeBusiness.logoUri} alt="Logo" className="profile-hero-logo" />
+                ) : (
+                  activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SB'
+                )}
               </div>
+              {canPerform('update', 'settings') && (
+                <div className="profile-hero-avatar-camera">
+                  <Camera size={14} />
+                </div>
+              )}
               <div className="profile-status-ring">
                 <span className="profile-status-ping" />
                 <span className="profile-status-dot" />
@@ -411,6 +502,9 @@ export default function ProfilePage() {
         setEditAddress={setEditAddress}
         editPhone={editPhone}
         setEditPhone={setEditPhone}
+        editLogoUri={editLogoUri}
+        setEditLogoUri={setEditLogoUri}
+        onLogoUpload={handleDetailsLogoUpload}
         onSubmit={handleStoreDetailsSubmit}
       />
 
@@ -439,6 +533,7 @@ export default function ProfilePage() {
         setNewBranchCategory={setNewBranchCategory}
         newBranchAddress={newBranchAddress}
         setNewBranchAddress={setNewBranchAddress}
+        onLogoFileChange={setNewBranchLogo}
         onSubmit={handleAddBranchSubmit}
         triggerToast={triggerToast}
       />

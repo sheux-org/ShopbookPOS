@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Save, Lock } from 'lucide-react';
+import { X, Save, Lock, Store, Camera, Trash2 } from 'lucide-react';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 
 interface StoreDetailsModalProps {
@@ -15,6 +15,9 @@ interface StoreDetailsModalProps {
   setEditAddress: (val: string) => void;
   editPhone: string;
   setEditPhone: (val: string) => void;
+  editLogoUri: string;
+  setEditLogoUri: (val: string) => void;
+  onLogoUpload: (file: File) => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -29,10 +32,27 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
   setEditAddress,
   editPhone,
   setEditPhone,
+  editLogoUri,
+  setEditLogoUri,
+  onLogoUpload,
   onSubmit,
 }) => {
   const { canPerform } = useUserPermissions();
   const canUpdate = canPerform('update', 'settings');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleLogoClick = () => {
+    if (canUpdate) {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onLogoUpload(file);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -62,6 +82,46 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               <span>Viewing Mode: Only administrators can update store configuration details.</span>
             </div>
           )}
+
+          {/* Logo Section */}
+          <div className="modal-logo-section">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              accept="image/*" 
+              style={{ display: 'none' }} 
+              onChange={handleFileChange}
+            />
+            <div 
+              className={`modal-logo-container ${canUpdate ? 'clickable' : ''}`} 
+              onClick={handleLogoClick}
+              title={canUpdate ? 'Click to change store logo' : undefined}
+            >
+              {editLogoUri ? (
+                <img src={editLogoUri} alt="Store Logo" className="modal-logo-preview" />
+              ) : (
+                <div className="modal-logo-placeholder">
+                  <Store size={24} />
+                  <span>Upload Logo</span>
+                </div>
+              )}
+              {canUpdate && (
+                <div className="modal-logo-camera-overlay">
+                  <Camera size={14} />
+                </div>
+              )}
+            </div>
+            {editLogoUri && canUpdate && (
+              <button 
+                type="button" 
+                onClick={() => setEditLogoUri('')} 
+                className="modal-remove-logo-btn"
+              >
+                <Trash2 size={12} />
+                <span>Remove logo</span>
+              </button>
+            )}
+          </div>
 
           <div className="modal-input-group">
             <label className="modal-label">Business Brand Name</label>

@@ -88,3 +88,25 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
     return false;
   }
 }
+
+export async function uploadBusinessLogo(file: File, businessId: string): Promise<string> {
+  const fileExt = file.name.split('.').pop() || 'jpg';
+  const fileName = `${businessId}/logo_${Date.now()}.${fileExt}`;
+  
+  const { error } = await supabase.storage
+    .from('business-logos')
+    .upload(fileName, file, {
+      contentType: file.type,
+      upsert: true,
+    });
+    
+  if (error) {
+    throw error;
+  }
+  
+  const { data: { publicUrl } } = supabase.storage
+    .from('business-logos')
+    .getPublicUrl(fileName);
+    
+  return publicUrl;
+}

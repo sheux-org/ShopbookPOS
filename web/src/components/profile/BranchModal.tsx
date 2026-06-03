@@ -16,6 +16,7 @@ interface BranchModalProps {
   setNewBranchCategory: (val: string) => void;
   newBranchAddress: string;
   setNewBranchAddress: (val: string) => void;
+  onLogoFileChange: (file: File | null) => void;
   onSubmit: (e: React.FormEvent) => void;
   triggerToast: (msg: string) => void;
 }
@@ -32,10 +33,29 @@ export const BranchModal: React.FC<BranchModalProps> = ({
   setNewBranchCategory,
   newBranchAddress,
   setNewBranchAddress,
+  onLogoFileChange,
   onSubmit,
   triggerToast,
 }) => {
   const { canPerform } = useUserPermissions();
+  const [logoPreview, setLogoPreview] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setLogoPreview(null);
+    }
+  }, [isOpen]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      setLogoPreview(URL.createObjectURL(file));
+      onLogoFileChange(file);
+    } else {
+      setLogoPreview(null);
+      onLogoFileChange(null);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -87,6 +107,26 @@ export const BranchModal: React.FC<BranchModalProps> = ({
                 required
                 className="modal-input"
               />
+            </div>
+
+            <div className="modal-input-group">
+              <label className="modal-label">Store Logo Image (Optional)</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleFileChange}
+                  className="modal-input"
+                  style={{ flex: 1 }}
+                />
+                {logoPreview && (
+                  <img 
+                    src={logoPreview} 
+                    alt="Preview" 
+                    style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)' }} 
+                  />
+                )}
+              </div>
             </div>
 
             <button type="submit" className="modal-submit-btn">
