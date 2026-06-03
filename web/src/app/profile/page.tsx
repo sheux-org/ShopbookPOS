@@ -483,6 +483,12 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Powered by Shopbook */}
+        <div className="powered-by-container" style={{ marginTop: '36px', marginBottom: '24px' }}>
+          <span className="powered-by-text">powered by</span>
+          <span className="powered-by-brand">Shopbook</span>
+        </div>
       </div>
 
       {/* Modal overlays */}

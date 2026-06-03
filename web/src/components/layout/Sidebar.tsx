@@ -169,6 +169,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="btn-icon"><LogOut size={16} /></span>
           <span className="btn-label">Sign Out</span>
         </button>
+
+        {/* Powered by Shopbook */}
+        {!sidebarCollapsed && (
+          <div className="powered-by-container" style={{ marginTop: '16px' }}>
+            <span className="powered-by-text" style={{ fontSize: '10px' }}>powered by</span>
+            <span className="powered-by-brand" style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 'bold' }}>Shopbook</span>
+          </div>
+        )}
       </div>
     </aside>
   );
