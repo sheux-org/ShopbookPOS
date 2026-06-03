@@ -365,7 +365,9 @@ const styles: Record<string, React.CSSProperties> = {
   categoryTab: {
     padding: '8px 16px',
     borderRadius: '20px',
-    border: '1px solid var(--border)',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'var(--border)',
     backgroundColor: '#ffffff',
     color: 'var(--muted)',
     fontSize: '12px',

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Package, Search, Plus } from 'lucide-react';
 import { ProductImage } from '../ProductImage';
 
@@ -35,6 +36,8 @@ export const StocksTable: React.FC<StocksTableProps> = ({
   onAddItem,
   activeTab,
 }) => {
+  const router = useRouter();
+
   return (
     <div 
       style={styles.tablePane}
@@ -79,7 +82,12 @@ export const StocksTable: React.FC<StocksTableProps> = ({
               const isOut = p.stockCount <= 0;
               const isLow = p.lowStockAlert && p.stockCount <= p.lowStockAlert;
               return (
-                <tr key={p.id} style={styles.tr} className="stocks-table-row">
+                <tr 
+                  key={p.id} 
+                  style={{ ...styles.tr, cursor: 'pointer' }} 
+                  className="stocks-table-row"
+                  onClick={() => router.push(`/stocks/${p.id}`)}
+                >
                   <td style={styles.td}>
                     <ProductImage icon={p.icon} size={32} style={{ border: 'none', borderRadius: '6px' }} />
                   </td>
@@ -107,7 +115,10 @@ export const StocksTable: React.FC<StocksTableProps> = ({
                   <td style={styles.td}>{p.lowStockAlert ? `${p.lowStockAlert} Units` : '-'}</td>
                   <td style={{ ...styles.td, textAlign: 'center' }}>
                     <button 
-                      onClick={() => onAdjustStock(p)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAdjustStock(p);
+                      }}
                       style={styles.adjustRowBtn}
                     >
                       Adjust Stock

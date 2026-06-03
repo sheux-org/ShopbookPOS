@@ -187,6 +187,12 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   }, [hydrated, isLoggedIn, activeBusiness?.id]);
 
   const getHeaderInfo = () => {
+    if (pathname.startsWith('/stocks')) {
+      return {
+        title: 'Stocks & Inventory Log',
+        subtitle: 'Real-time stock alerts and audit tracking ledger',
+      };
+    }
     switch (pathname) {
       case '/':
       case '/pos':
@@ -194,11 +200,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
           title: 'POS Billing Terminal',
           subtitle: 'Active sales invoice billing settlement tender details',
         };
-      case '/catalog':
-        return {
-          title: 'Catalog Management',
-          subtitle: 'Configure products, prices, categories, and inventory alerts',
-        };
+
       case '/history':
         return {
           title: 'Invoice Sales Report',
@@ -208,11 +210,6 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
         return {
           title: 'Business Analytics & Insights',
           subtitle: 'Real-time revenue metrics, inventory performance, and transaction audits',
-        };
-      case '/stocks':
-        return {
-          title: 'Stocks & Inventory Log',
-          subtitle: 'Real-time stock alerts and audit tracking ledger',
         };
       case '/profile':
         return {

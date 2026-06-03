@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Eye, EyeOff, Plus, HelpCircle } from 'lucide-react';
+import { Eye, EyeOff, HelpCircle } from 'lucide-react';
 
 interface HeaderProps {
   headerInfo: { title: string; subtitle: string } | null;
@@ -93,16 +93,6 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         </div>
-      )}
-
-      {pathname === '/catalog' && (
-        <button 
-          onClick={() => window.dispatchEvent(new Event('open-register-product-modal'))}
-          className="common-header-btn"
-        >
-          <Plus size={18} />
-          <span>Register Product</span>
-        </button>
       )}
 
       {pathname === '/profile' && (

@@ -133,4 +133,9 @@
   .stocks-header-panel {
     padding: 14px 16px !important;
   }
+
+  .stocks-detail-grid {
+    grid-template-columns: 1fr !important;
+    overflow-y: auto !important;
+  }
 }

@@ -3,8 +3,8 @@
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
-  ShoppingBag, BarChart3, Package, User, LogOut, 
-  RefreshCw, X, ChevronLeft, ChevronRight, ShoppingCart, Tag, Receipt, History
+  BarChart3, Package, User, LogOut, 
+  RefreshCw, X, ChevronLeft, ChevronRight, ShoppingCart, History
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
@@ -44,15 +44,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { name: 'POS Terminal', path: '/', icon: ShoppingCart },
-    { name: 'Catalog Manager', path: '/catalog', icon: Tag },
     { name: 'Sales History', path: '/history', icon: History },
     { name: 'Insights', path: '/insights', icon: BarChart3 },
     { name: 'Stocks', path: '/stocks', icon: Package },
     { name: 'Profile', path: '/profile', icon: User },
   ].filter((item) => {
-    if (item.path === '/catalog' && !canPerform('update', 'products')) {
-      return false;
-    }
     if (item.path === '/stocks' && !canPerform('update', 'products')) {
       return false;
     }
