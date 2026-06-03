@@ -34,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Sidebar Toggle Button */}
           <button
             onClick={() => setSidebarVisible(!sidebarVisible)}
+            className="hide-mobile"
             style={{
               display: 'flex',
               alignItems: 'center',
