@@ -102,3 +102,16 @@ Product and business logo files are hosted on Supabase Storage within the `busin
 - **Upload Controller**: [sync.ts](../src/services/sync.ts#L97-L117)
 - **Local Upload Queue**: [uploadQueue.ts](../src/services/uploadQueue.ts)
   To ensure offline operation, image uploads are queued locally if the terminal is offline. They are processed sequentially when the browser detects that connection is restored.
+
+---
+
+## Offline Resiliency & Graceful Network Error Handling
+
+To support seamless sales checkouts during unstable network connections:
+
+1. **Graceful Connection-Loss Handling**:
+   - Network connectivity errors (e.g., `TypeError: Failed to fetch` or browser `NetworkError`) are intercepted within `pullChanges` and `pushChanges` inside [sync.ts](../src/services/sync.ts).
+   - Caught network errors are raised with a custom `.isNetworkError = true` property.
+   - The sync engine logs these events as warnings (`console.warn`) instead of errors (`console.error`). This prevents Next.js runtime error boundaries and development overlay boxes from interrupting the checkout flow.
+2. **Instant Online Reconnection Sync**:
+   - A global browser `online` event listener in [layout.tsx](../src/app/layout.tsx) triggers a database synchronization (`handleSync()`) immediately when connection is restored, in addition to the 30-second background sync interval. This guarantees changes made offline are uploaded to Supabase as soon as possible.

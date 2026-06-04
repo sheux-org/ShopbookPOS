@@ -141,6 +141,28 @@ test('should calculate summary totals correctly', async () => {
 });
 ```
 
+### D. Service & Synchronization Testing
+
+Test network sync functions by mocking remote RPC responses and asserting database sync execution status or console log interceptors:
+
+```typescript
+import { describe, test, expect, vi } from 'vitest';
+import { syncDatabase, supabase } from '../../services/sync';
+
+test('should handle network/offline errors gracefully with console.warn', async () => {
+  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+  // Simulate network fetch failure
+  supabase.rpc = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+  const success = await syncDatabase();
+  expect(success).toBe(false);
+  expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('network connectivity issues'));
+
+  warnSpy.mockRestore();
+});
+```
+
 ---
 
 ## 6. Maintenance Guidelines for Future Developers

@@ -33,29 +33,47 @@ web/src/
 │   ├── stocks/           # Inventory stock tracking table and logs page
 │   ├── globals.css       # Core design tokens, CSS variables, and layout resets
 │   ├── layout.tsx        # Next.js global provider configuration (Header, Sidebar)
+│   ├── page.css          # Desktop workspace styles
 │   └── page.tsx          # Main POS Billing workspace entry point
 ├── components/           # Reusable UI component modules (nested by domain)
 │   ├── auth/             # OTP verification UI phases
 │   ├── catalog/          # Products creation forms
+│   ├── history/          # Invoice list and detail modals
+│   ├── insights/         # Charts, date range pickers, ledger components
 │   ├── layout/           # Sidebar navigation, Header controllers
 │   ├── pos/              # Dense checkout tables, modal bills, customer selectors
 │   ├── profile/          # Active devices pingers, staff permissions modals
-│   └── insights/         # Charts, date range pickers, ledger components
+│   ├── stocks/           # Stocks tables and adjustment modals
+│   ├── ProductImage.tsx  # Product image fallbacks
+│   ├── Scanner.tsx       # Embedded camera scanner component
+│   └── TerminalDiagnostics.tsx # Database diagnostic inspector
 ├── db/                   # WatermelonDB connection, LokiJS adapters and Models
 │   ├── database.ts       # Database database init (Client and SSR wrapper)
+│   ├── migrations.ts     # Schema migrations history
 │   ├── models.ts         # Watermelon schema models (Product, Order, Employee)
 │   └── schema.ts         # Local Watermelon schema version definitions
 ├── hooks/                # Custom React controller hooks (separating layout from business logic)
 │   ├── usePosBilling.ts  # Centralized POS Billing action state machine
 │   ├── useAuth.ts        # Mutators for logging in and Normalizing numbers
-│   └── useActiveDeviceTracker.ts # Web terminal status background pinger
+│   ├── useActiveDeviceTracker.ts # Web terminal status background pinger
+│   ├── useCartActions.ts # Cart actions and temporary local stock reservations
+│   ├── useInsights.ts    # Revenue metrics calculators
+│   ├── useOrders.ts      # Orders fetch and void mutations
+│   ├── useProducts.ts    # Product listings queries with database-level paginations
+│   ├── useStaff.ts       # Employee registry modifiers
+│   └── useUserPermissions.ts # Role-based action guard helpers
 ├── services/             # Networking interfaces
 │   ├── sync.ts           # Supabase push/pull Watermelon replication RPCs
 │   └── uploadQueue.ts    # Offline image upload synchronization manager
 ├── stores/               # Zustand local storage state stores
 │   ├── authStore.ts      # Active logged-in Employee states
-│   └── businessStore.ts  # Current store selection and seeding triggers
+│   ├── businessStore.ts  # Current store selection and seeding triggers
+│   ├── cartStore.ts      # Ephemeral checkout cart lists
+│   └── settingsStore.ts  # Keyboard POS workspace configuration preferences
 └── utils/                # Standard helper functions and static product seeds
+    ├── reportTemplates.ts # CSV/PDF reports formatting templates
+    ├── seedProducts.ts   # Demo inventory mock records
+    └── uploadthing.ts    # File uploader configurations
 ```
 
 ---
@@ -101,8 +119,8 @@ Used for fast-changing client settings and ephemeral states:
 
 React Query wraps around local WatermelonDB query fetches to handle caching, reactive layout updates, and smooth infinite scroll paginations:
 
-- **`useProducts`** ([useProducts.ts](../src/hooks/useProducts.ts)): Automatically queries products matching category filters and text queries directly from LokiJS indexed tables, caching matching queries.
-- **`useOrders`** ([useOrders.ts](../src/hooks/useOrders.ts)): Fetches sales history ledgers and triggers transaction mutations (e.g. creating new paid receipts).
+- **`useProducts`** ([useProducts.ts](../src/hooks/useProducts.ts)): Queries products matching category filters and text queries. To handle scaling to 10M+ records without UI freezing, it paginates results at the database level (`Q.skip` and `Q.take`) even for search queries.
+- **`useOrders`** ([useOrders.ts](../src/hooks/useOrders.ts)): Fetches sales history ledgers and triggers transaction mutations (e.g. creating new paid receipts). It also utilizes database-level pagination for searches to guarantee zero latency on large sales logs.
 
 ### 3. Database Layer (WatermelonDB)
 
