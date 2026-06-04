@@ -433,12 +433,18 @@ export function usePosBilling() {
   const resetAllStateRef = useRef(resetAllState);
   const handleSaveTaxRef = useRef(handleSaveTax);
   const handleSaveDiscountRef = useRef(handleSaveDiscount);
+  const updateQuantityRef = useRef(updateQuantity);
+  const handlePaymentMethodChangeRef = useRef(handlePaymentMethodChange);
+  const triggerToastRef = useRef(triggerToast);
 
   useEffect(() => {
     checkoutConfirmRef.current = handleConfirmCheckout;
     resetAllStateRef.current = resetAllState;
     handleSaveTaxRef.current = handleSaveTax;
     handleSaveDiscountRef.current = handleSaveDiscount;
+    updateQuantityRef.current = updateQuantity;
+    handlePaymentMethodChangeRef.current = handlePaymentMethodChange;
+    triggerToastRef.current = triggerToast;
   });
 
   const stateRef = useRef({
@@ -547,7 +553,7 @@ export function usePosBilling() {
               : state.paymentMethod === 'card'
                 ? 'bank'
                 : 'cash';
-          handlePaymentMethodChange(next);
+          handlePaymentMethodChangeRef.current(next);
           return;
         }
 
@@ -650,20 +656,20 @@ export function usePosBilling() {
           } else if ((e.key === '+' || e.key === '=') && (!isTyping || isFocusOnScanner)) {
             e.preventDefault();
             if (item) {
-              updateQuantity(item.id, 1);
-              triggerToast(`Increased ${item.name} quantity 🛒`);
+              updateQuantityRef.current(item.id, 1);
+              triggerToastRef.current(`Increased ${item.name} quantity 🛒`);
             }
           } else if (e.key === '-' && (!isTyping || isFocusOnScanner)) {
             e.preventDefault();
             if (item) {
-              updateQuantity(item.id, -1);
-              triggerToast(`Decreased ${item.name} quantity 🛒`);
+              updateQuantityRef.current(item.id, -1);
+              triggerToastRef.current(`Decreased ${item.name} quantity 🛒`);
             }
           } else if ((e.key === 'Delete' || e.key === 'Backspace') && !isTyping) {
             e.preventDefault();
             if (item) {
-              updateQuantity(item.id, -item.quantity);
-              triggerToast(`Removed ${item.name} from cart`);
+              updateQuantityRef.current(item.id, -item.quantity);
+              triggerToastRef.current(`Removed ${item.name} from cart`);
             }
           }
         }

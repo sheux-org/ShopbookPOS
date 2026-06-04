@@ -13,6 +13,22 @@ export function useCartActions() {
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const queryClient = useQueryClient();
 
+  const updateProductStockInCache = (productName: string, newStock: number) => {
+    const queryCache = queryClient.getQueryCache();
+    const queries = queryCache.findAll({ queryKey: ['products'] });
+    queries.forEach((query) => {
+      queryClient.setQueryData(query.queryKey, (oldData: any) => {
+        if (!oldData || !oldData.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any[]) =>
+            page.map((p) => (p.name === productName ? { ...p, stockCount: newStock } : p))
+          ),
+        };
+      });
+    });
+  };
+
   const addCartItem = async (
     name: string,
     price: number,
@@ -43,7 +59,7 @@ export function useCartActions() {
         });
 
         storeAddCartItem(name, price, icon, sku, product.stockCount);
-        queryClient.invalidateQueries({ queryKey: ['products'] });
+        updateProductStockInCache(name, product.stockCount);
         syncDatabase();
       }
     } catch (err) {
@@ -90,7 +106,7 @@ export function useCartActions() {
         }
 
         storeUpdateQuantity(id, delta);
-        queryClient.invalidateQueries({ queryKey: ['products'] });
+        updateProductStockInCache(product.name, product.stockCount);
         syncDatabase();
       }
     } catch (err) {
@@ -118,10 +134,10 @@ export function useCartActions() {
               await product.update((p: any) => {
                 p.stockCount = p.stockCount + item.quantity;
               });
+              updateProductStockInCache(product.name, product.stockCount);
             }
           }
         });
-        queryClient.invalidateQueries({ queryKey: ['products'] });
         syncDatabase();
       }
     } catch (err) {
@@ -149,11 +165,11 @@ export function useCartActions() {
             await product.update((p: any) => {
               p.stockCount = p.stockCount + item.quantity;
             });
+            updateProductStockInCache(product.name, product.stockCount);
           }
         }
       });
       storeClearCart();
-      queryClient.invalidateQueries({ queryKey: ['products'] });
       syncDatabase();
     } catch (err) {
       console.error('Release reserved stocks failed:', err);
