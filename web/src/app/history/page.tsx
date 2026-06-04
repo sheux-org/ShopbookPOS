@@ -469,6 +469,18 @@ Thank you for shopping with us!
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {mappedOrders.length > 0 && (
+            <span
+              style={{
+                fontSize: '12px',
+                color: 'var(--muted)',
+                fontWeight: '500',
+                marginRight: canExport ? '8px' : '0',
+              }}
+            >
+              Showing {mappedOrders.length} sales records
+            </span>
+          )}
           {canExport && (
             <>
               <button onClick={handleExportExcel} style={styles.actionBtn}>
@@ -480,18 +492,6 @@ Thank you for shopping with us!
                 <span>PDF Report</span>
               </button>
             </>
-          )}
-          {mappedOrders.length > 0 && (
-            <span
-              style={{
-                fontSize: '12px',
-                color: 'var(--muted)',
-                fontWeight: '500',
-                marginLeft: canExport ? '8px' : '0',
-              }}
-            >
-              Showing {mappedOrders.length} sales records
-            </span>
           )}
         </div>
       </div>

@@ -39,7 +39,7 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
         disabled={isInvalidPhone || loading}
         className={`auth-button ${isInvalidPhone || loading ? 'disabled' : ''}`}
       >
-        <span>{loading ? 'Sending Code...' : 'Send OTP Verification'}</span>
+        <span>{loading ? 'Sending OTP...' : 'Send OTP Verification'}</span>
         <ArrowRight size={16} />
       </button>
     </form>

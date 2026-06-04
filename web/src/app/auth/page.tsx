@@ -126,7 +126,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="auth-container fade-in">
+    <div className="auth-container">
       {/* Toast popup */}
       {toastMessage && (
         <div className="auth-toast">
@@ -139,7 +139,12 @@ export default function AuthPage() {
         {/* Brand Icon/Header */}
         <div className="auth-header">
           <div className="auth-logo-wrapper">
-            <img src="/logo.png" alt="Shopbook Logo" className="auth-logo-image" />
+            <img
+              src="/logo.png"
+              alt="Shopbook Logo"
+              className="auth-logo-image"
+              fetchPriority="high"
+            />
           </div>
           <h2 className="auth-title">Shopbook Mini POS</h2>
           <p className="auth-subtitle">Premium Web Billing Terminal</p>
@@ -165,14 +170,14 @@ export default function AuthPage() {
           />
         )}
 
-        {/* Powered by Shopbook */}
-        <div className="powered-by-container">
-          <span className="powered-by-text">powered by</span>
+        {/* Powered by Shopbook (positioned inside the card at the bottom) */}
+        <div className="auth-powered-by">
+          <span className="auth-powered-by-text">powered by</span>
           <a
             href="https://shopbook.lk"
             target="_blank"
             rel="noopener noreferrer"
-            className="powered-by-brand"
+            className="auth-powered-by-brand"
           >
             Shopbook
           </a>
