@@ -1013,3 +1013,79 @@ body.mobile-blocked .app-layout-wrapper {
   color: var(--primary-hover);
   text-decoration: underline;
 }
+
+/* Premium Detail View Back Button & Header Actions */
+.back-btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--dark) !important;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+}
+
+.back-btn-pill:hover {
+  background-color: #f3f4f6;
+  color: var(--primary) !important;
+  border-color: var(--border);
+}
+
+.back-btn-pill svg {
+  transition: transform 0.2s ease;
+}
+
+.back-btn-pill:hover svg {
+  transform: translateX(-2px);
+}
+
+.action-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  color: var(--dark);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: all 0.2s ease;
+}
+
+.action-btn-secondary:hover {
+  background-color: #f3f4f6;
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.action-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  color: var(--error);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: all 0.2s ease;
+}
+
+.action-btn-danger:hover {
+  background-color: #fee2e2;
+  border-color: #fecaca;
+  transform: translateY(-1px);
+}

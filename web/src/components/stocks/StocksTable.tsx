@@ -87,6 +87,7 @@ export const StocksTable: React.FC<StocksTableProps> = ({
                   key={p.id}
                   style={{ ...styles.tr, cursor: 'pointer' }}
                   className="stocks-table-row"
+                  onMouseEnter={() => router.prefetch(`/stocks/${p.id}`)}
                   onClick={() => router.push(`/stocks/${p.id}`)}
                 >
                   <td style={styles.td}>

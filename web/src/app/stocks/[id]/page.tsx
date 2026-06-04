@@ -221,203 +221,231 @@ export default function StockDetailPage() {
         </div>
       )}
 
-      {/* Top Breadcrumb Bar */}
-      <div style={styles.topBar}>
-        <button onClick={() => router.push('/stocks')} style={styles.backLink}>
-          <ArrowLeft size={16} />
-          <span>Back to Product Inventory</span>
-        </button>
-      </div>
-
       <div style={styles.mainGrid} className="stocks-detail-grid">
-        {/* Left Side: Product Metadata & Image */}
-        <div style={styles.detailsCard}>
-          {/* Card Top Right Edit/Delete buttons */}
-          <div style={styles.topCardActions}>
-            <button
-              onClick={() => setShowEditModal(true)}
-              style={styles.cardBtnSecondary}
-              title="Edit Product"
-            >
-              <Edit2 size={12} />
-              <span>Edit Details</span>
-            </button>
-            <button onClick={handleDelete} style={styles.cardBtnDanger} title="Delete Product">
-              <Trash2 size={12} />
-              <span>Delete Product</span>
+        {/* Left Column: Back button + Product Details */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            height: '100%',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={styles.topBar}>
+            <button onClick={() => router.push('/stocks')} className="back-btn-pill">
+              <ArrowLeft size={16} />
+              <span>Back to Product Inventory</span>
             </button>
           </div>
 
-          {/* Top Info Section: Image & Badges on left, Metadata on right */}
-          <div style={styles.topInfoSection}>
-            <div style={styles.leftAvatarCol}>
-              <ProductImage
-                icon={product.icon}
-                size={145}
+          {/* Product Metadata & Image Card */}
+          <div style={styles.detailsCard}>
+            {/* Card Top Right Edit/Delete buttons (parallel to the product name) */}
+            <div style={styles.topCardActions}>
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="action-btn-secondary"
                 style={{
-                  border: 'none',
-                  borderRadius: '16px',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.05)',
-                }}
-              />
-
-              <div style={styles.badgeColumn}>
-                <span
-                  style={{
-                    ...styles.stockIndicator,
-                    backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
-                    color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
-                    textAlign: 'center',
-                  }}
-                >
-                  {product.stockCount} {product.unitType || 'Units'}
-                  <div
-                    style={{ fontSize: '8px', opacity: 0.8, marginTop: '2px', fontWeight: '500' }}
-                  >
-                    {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
-                  </div>
-                </span>
-                <span style={{ ...styles.categoryBadge, textAlign: 'center' }}>
-                  {product.category.toUpperCase()}
-                </span>
-              </div>
-            </div>
-
-            <div style={styles.metaCol}>
-              <h2 style={styles.productName}>{product.name}</h2>
-
-              {/* Compact metadata fields with space-between */}
-              <div style={styles.metaRowCompact}>
-                <span style={styles.metaLabelCompact}>Quick Code:</span>
-                <div style={styles.codeWrapper}>
-                  <span style={styles.codeTextCompact}>
-                    {product.quickCode ? `#${product.quickCode}` : 'None'}
-                  </span>
-                  {product.quickCode && (
-                    <button
-                      onClick={() => handleCopy(product.quickCode || '', 'quickcode')}
-                      style={styles.copyBtnCompact}
-                    >
-                      {copiedCode === 'quickcode' ? (
-                        <Check size={10} color="var(--success)" />
-                      ) : (
-                        <Copy size={10} />
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div style={styles.metaRowCompact}>
-                <span style={styles.metaLabelCompact}>Barcode:</span>
-                <div style={styles.codeWrapper}>
-                  <span style={styles.codeTextCompact}>{product.barcode || 'None'}</span>
-                  {product.barcode && (
-                    <button
-                      onClick={() => handleCopy(product.barcode || '', 'barcode')}
-                      style={styles.copyBtnCompact}
-                    >
-                      {copiedCode === 'barcode' ? (
-                        <Check size={10} color="var(--success)" />
-                      ) : (
-                        <Copy size={10} />
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div style={styles.metaRowCompact}>
-                <span style={styles.metaLabelCompact}>SKU / ID:</span>
-                <span style={styles.metaValCompact}>{product.sku || 'None'}</span>
-              </div>
-
-              <div style={styles.metaRowCompact}>
-                <span style={styles.metaLabelCompact}>Alert Level:</span>
-                <span style={styles.metaValCompact}>
-                  {product.lowStockAlert ? `${product.lowStockAlert} Units` : 'None'}
-                </span>
-              </div>
-
-              <div style={styles.metaRowCompact}>
-                <span style={styles.metaLabelCompact}>Unit Type:</span>
-                <span style={styles.metaValCompact}>{product.unitType || 'Pieces'}</span>
-              </div>
-
-              <div style={styles.metaRowCompact}>
-                <span style={styles.metaLabelCompact}>Registered:</span>
-                <span style={styles.metaValCompact}>
-                  {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : 'Unknown'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.divider} />
-
-          {/* Details Table */}
-          <div style={styles.infoGrid}>
-            <div style={styles.infoRow}>
-              <span style={styles.infoLabel}>Retail Price</span>
-              <span style={styles.infoValue}>
-                Rs. {product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-
-            <div style={styles.infoRow}>
-              <span style={styles.infoLabel}>Cost Price</span>
-              <span style={styles.infoValue}>
-                Rs.{' '}
-                {product.costPrice
-                  ? product.costPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })
-                  : '0.00'}
-              </span>
-            </div>
-
-            <div
-              style={{
-                ...styles.infoRow,
-                backgroundColor: '#f0fdf4',
-                borderRadius: '8px',
-                padding: '10px 12px',
-                marginTop: '4px',
-              }}
-            >
-              <span style={{ ...styles.infoLabel, color: 'var(--success)' }}>Profit Margin</span>
-              <span
-                style={{
-                  ...styles.infoValue,
-                  color: 'var(--success)',
-                  display: 'flex',
-                  alignItems: 'center',
+                  padding: '4px 8px',
+                  fontSize: '10px',
+                  borderRadius: '6px',
+                  height: '26px',
                   gap: '4px',
                 }}
               >
-                <TrendingUp size={14} />
-                <span>
-                  Rs. {profitAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} (
-                  {profitMarginPercentage.toFixed(1)}%)
-                </span>
-              </span>
+                <Edit2 size={11} />
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={handleDelete}
+                className="action-btn-danger"
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '10px',
+                  borderRadius: '6px',
+                  height: '26px',
+                  gap: '4px',
+                }}
+              >
+                <Trash2 size={11} />
+                <span>Delete</span>
+              </button>
             </div>
-          </div>
 
-          <div style={styles.divider} />
+            {/* Top Info Section: Image & Badges on left, Metadata on right */}
+            <div style={styles.topInfoSection}>
+              <div style={styles.leftAvatarCol}>
+                <ProductImage
+                  icon={product.icon}
+                  size={145}
+                  style={{
+                    border: 'none',
+                    borderRadius: '16px',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.05)',
+                  }}
+                />
 
-          {/* Action Row */}
-          <div style={styles.actionsRow}>
-            <button onClick={() => setShowAdjustModal(true)} style={styles.actionBtnPrimary}>
-              <Plus size={16} />
-              <span>Adjust Stock</span>
-            </button>
+                <div style={styles.badgeColumn}>
+                  <span
+                    style={{
+                      ...styles.stockIndicator,
+                      backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
+                      color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {product.stockCount} {product.unitType || 'Units'}
+                    <div
+                      style={{ fontSize: '8px', opacity: 0.8, marginTop: '2px', fontWeight: '500' }}
+                    >
+                      {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
+                    </div>
+                  </span>
+                  <span style={{ ...styles.categoryBadge, textAlign: 'center' }}>
+                    {product.category.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              <div style={styles.metaCol}>
+                <h2 style={styles.productName}>{product.name}</h2>
+
+                {/* Compact metadata fields with space-between */}
+                <div style={styles.metaRowCompact}>
+                  <span style={styles.metaLabelCompact}>Quick Code:</span>
+                  <div style={styles.codeWrapper}>
+                    <span style={styles.codeTextCompact}>
+                      {product.quickCode ? `#${product.quickCode}` : 'None'}
+                    </span>
+                    {product.quickCode && (
+                      <button
+                        onClick={() => handleCopy(product.quickCode || '', 'quickcode')}
+                        style={styles.copyBtnCompact}
+                      >
+                        {copiedCode === 'quickcode' ? (
+                          <Check size={10} color="var(--success)" />
+                        ) : (
+                          <Copy size={10} />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div style={styles.metaRowCompact}>
+                  <span style={styles.metaLabelCompact}>Barcode:</span>
+                  <div style={styles.codeWrapper}>
+                    <span style={styles.codeTextCompact}>{product.barcode || 'None'}</span>
+                    {product.barcode && (
+                      <button
+                        onClick={() => handleCopy(product.barcode || '', 'barcode')}
+                        style={styles.copyBtnCompact}
+                      >
+                        {copiedCode === 'barcode' ? (
+                          <Check size={10} color="var(--success)" />
+                        ) : (
+                          <Copy size={10} />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div style={styles.metaRowCompact}>
+                  <span style={styles.metaLabelCompact}>SKU / ID:</span>
+                  <span style={styles.metaValCompact}>{product.sku || 'None'}</span>
+                </div>
+
+                <div style={styles.metaRowCompact}>
+                  <span style={styles.metaLabelCompact}>Alert Level:</span>
+                  <span style={styles.metaValCompact}>
+                    {product.lowStockAlert ? `${product.lowStockAlert} Units` : 'None'}
+                  </span>
+                </div>
+
+                <div style={styles.metaRowCompact}>
+                  <span style={styles.metaLabelCompact}>Unit Type:</span>
+                  <span style={styles.metaValCompact}>{product.unitType || 'Pieces'}</span>
+                </div>
+
+                <div style={styles.metaRowCompact}>
+                  <span style={styles.metaLabelCompact}>Registered:</span>
+                  <span style={styles.metaValCompact}>
+                    {product.createdAt
+                      ? new Date(product.createdAt).toLocaleDateString()
+                      : 'Unknown'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.divider} />
+
+            {/* Details Table */}
+            <div style={styles.infoGrid}>
+              <div style={styles.infoRow}>
+                <span style={styles.infoLabel}>Retail Price</span>
+                <span style={styles.infoValue}>
+                  Rs. {product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div style={styles.infoRow}>
+                <span style={styles.infoLabel}>Cost Price</span>
+                <span style={styles.infoValue}>
+                  Rs.{' '}
+                  {product.costPrice
+                    ? product.costPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })
+                    : '0.00'}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  ...styles.infoRow,
+                  backgroundColor: '#f0fdf4',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  marginTop: '4px',
+                }}
+              >
+                <span style={{ ...styles.infoLabel, color: 'var(--success)' }}>Profit Margin</span>
+                <span
+                  style={{
+                    ...styles.infoValue,
+                    color: 'var(--success)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <TrendingUp size={14} />
+                  <span>
+                    Rs. {profitAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} (
+                    {profitMarginPercentage.toFixed(1)}%)
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <div style={styles.divider} />
+
+            {/* Action Row */}
+            <div style={styles.actionsRow}>
+              <button onClick={() => setShowAdjustModal(true)} style={styles.actionBtnPrimary}>
+                <Plus size={16} />
+                <span>Adjust Stock</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Right Side: Log Ledger Scroll View */}
+        {/* Right Column: Log Ledger Scroll View */}
         <div style={styles.logsCard}>
           <div style={styles.logsHeader}>
             <History size={16} color="var(--primary)" />
-            <h3 style={styles.logsTitle}>Inventory Transaction Ledger</h3>
+            <h3 style={styles.logsTitle}>Product Inventory Log</h3>
           </div>
 
           <div style={styles.logsScroller}>
@@ -600,18 +628,18 @@ const styles: Record<string, React.CSSProperties> = {
   topBar: {
     display: 'flex',
     alignItems: 'center',
+    width: '100%',
   },
   backLink: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-    background: 'none',
-    border: 'none',
-    color: 'var(--primary)',
-    fontWeight: '700',
-    fontSize: '13px',
-    cursor: 'pointer',
-    padding: '4px 0',
+    // Deprecated in favor of .back-btn-pill
+  },
+  topCardActions: {
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    display: 'flex',
+    gap: '6px',
+    zIndex: 10,
   },
   mainGrid: {
     display: 'grid',
@@ -646,6 +674,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--dark)',
     margin: 0,
     lineHeight: '1.3',
+    paddingRight: '140px' /* Prevent overlapping with edit/delete buttons */,
   },
   badgeRow: {
     display: 'flex',
@@ -740,14 +769,6 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     boxShadow: 'var(--shadow)',
   },
-  topCardActions: {
-    position: 'absolute',
-    top: '16px',
-    right: '16px',
-    display: 'flex',
-    gap: '6px',
-    zIndex: 10,
-  },
   cardBtnSecondary: {
     display: 'flex',
     alignItems: 'center',
@@ -806,7 +827,6 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: '6px',
     minWidth: 0,
-    marginRight: '120px',
   },
   metaRowCompact: {
     display: 'flex',
