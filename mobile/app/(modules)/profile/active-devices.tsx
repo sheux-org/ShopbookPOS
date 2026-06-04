@@ -227,6 +227,14 @@ export default function ActiveDevicesRoute() {
               const isCurrent = device.device_id === currentDeviceId;
               const badge = getRoleBadgeStyle(device.role);
 
+              const isOnline = (() => {
+                if (!device.is_online) return false;
+                if (!device.last_active_at) return false;
+                const lastActive = new Date(device.last_active_at);
+                const diffMs = Date.now() - lastActive.getTime();
+                return diffMs < 5 * 60 * 1000; // 5 minutes threshold
+              })();
+
               return (
                 <View key={device.id} style={[styles.deviceCard, isCurrent && styles.deviceCardCurrent]}>
                   <View style={styles.deviceCardLeft}>
@@ -251,18 +259,18 @@ export default function ActiveDevicesRoute() {
                           </View>
                         )}
                       </View>
-
+ 
                       <Text style={styles.deviceModel}>{device.device_model}</Text>
-
+ 
                       <View style={styles.statsRow}>
-                        <View style={styles.statItem}>
-                          <View style={[styles.statusDot, { backgroundColor: device.is_online ? TOKENS.success : TOKENS.error }]} />
+                         <View style={styles.statItem}>
+                          <View style={[styles.statusDot, { backgroundColor: isOnline ? TOKENS.success : TOKENS.muted }]} />
                           <Text style={styles.statText}>
-                            {device.is_online ? "Online" : "Offline"}
+                            {isOnline ? "Online" : "Offline"}
                           </Text>
                         </View>
 
-                        {device.battery_level !== null && (
+                        {isOnline && device.battery_level !== null && device.battery_level >= 0 && (
                           <View style={styles.statItem}>
                             <Feather name="battery" size={12} color={TOKENS.muted} />
                             <Text style={styles.statText}>{device.battery_level}%</Text>

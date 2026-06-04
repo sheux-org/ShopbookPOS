@@ -214,6 +214,14 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
             <div className="devices-list-wrapper">
               {devices.map((device) => {
                 const isCurrent = device.device_id === currentDeviceId;
+                const isOnline = (() => {
+                  if (!device.is_online) return false;
+                  if (!device.last_active_at) return false;
+                  const lastActive = new Date(device.last_active_at);
+                  const diffMs = Date.now() - lastActive.getTime();
+                  return diffMs < 5 * 60 * 1000; // 5 minutes threshold
+                })();
+
                 return (
                   <div key={device.id} className={`device-item-card ${isCurrent ? 'current' : ''}`}>
                     <div className="device-item-icon-box">
@@ -234,11 +242,11 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
 
                       <div className="device-meta-row">
                         <span className="device-meta-item">
-                          <span className={`device-status-indicator ${device.is_online ? 'online' : 'offline'}`} />
-                          {device.is_online ? 'Online' : 'Offline'}
+                          <span className={`device-status-indicator ${isOnline ? 'online' : 'offline'}`} />
+                          {isOnline ? 'Online' : 'Offline'}
                         </span>
 
-                        {device.battery_level !== null && (
+                        {isOnline && device.battery_level !== null && device.battery_level >= 0 && (
                           <span className="device-meta-item">
                             <Battery size={12} style={{ marginRight: '2px' }} />
                             {device.battery_level}%
