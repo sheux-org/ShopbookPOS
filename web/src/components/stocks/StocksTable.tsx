@@ -135,15 +135,26 @@ export const StocksTable: React.FC<StocksTableProps> = ({
                 </tr>
               );
             })}
+
+            {filteredProducts.length === 0 && (
+              <tr>
+                <td colSpan={9} style={{ padding: 0 }}>
+                  <div style={styles.emptyContainer}>
+                    <Package size={36} color="var(--muted)" style={{ marginBottom: '8px' }} />
+                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600' }}>
+                      No matching products found
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '13px' }}>
+                      {searchQuery
+                        ? 'No inventory items match your search query.'
+                        : 'Add your first product to start tracking inventory.'}{' '}
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
-
-        {filteredProducts.length === 0 && (
-          <div style={styles.emptyTableState}>
-            <Package size={36} color="var(--muted)" />
-            <p>No inventory matching query</p>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -253,14 +264,14 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: 'var(--shadow)',
     transition: 'opacity 0.15s',
   },
-  emptyTableState: {
+  emptyContainer: {
+    padding: '64px',
+    textAlign: 'center',
+    color: 'var(--muted)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '64px 24px',
-    textAlign: 'center',
     gap: '8px',
-    color: 'var(--muted)',
   },
 };

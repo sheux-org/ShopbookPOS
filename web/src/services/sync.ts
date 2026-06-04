@@ -58,37 +58,70 @@ async function prepareSupabaseForSync(): Promise<void> {
   // Client runs anonymously with anon key. Authentication is enforced at the RPC layer by passing client_business_id.
 }
 
+let isSyncInProgress = false;
+let hasPendingSyncRequest = false;
+
 export async function syncDatabase(force: boolean = true): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
-  await prepareSupabaseForSync();
-
-  const activeBusinessId = useAuthStore.getState().activeBusinessId;
-  if (!activeBusinessId) {
-    console.warn('Sync skipped: No active business ID selected.');
+  if (isSyncInProgress) {
+    hasPendingSyncRequest = true;
+    console.warn('Sync deferred: Another synchronization is already in progress.');
     return false;
   }
 
+  isSyncInProgress = true;
+  hasPendingSyncRequest = false;
+
+  const runSync = async (): Promise<boolean> => {
+    try {
+      await prepareSupabaseForSync();
+
+      const activeBusinessId = useAuthStore.getState().activeBusinessId;
+      if (!activeBusinessId) {
+        console.warn('Sync skipped: No active business ID selected.');
+        return false;
+      }
+
+      await synchronize({
+        database,
+        pullChanges: async ({ lastPulledAt }) => {
+          const { data, error } = await supabase.rpc('pull_watermelondb_changes', {
+            last_pulled_at: lastPulledAt ?? 0,
+            client_business_id: activeBusinessId,
+          });
+          if (error) throw new Error(error.message);
+          return { changes: data.changes, timestamp: data.timestamp };
+        },
+        pushChanges: async ({ changes }) => {
+          await pushChangesInOrder(changes as SyncChanges, activeBusinessId);
+        },
+        migrationsEnabledAtVersion: schema.version,
+      });
+      console.log('Database synced successfully');
+      return true;
+    } catch (error) {
+      console.error('Failed to sync database:', error);
+      return false;
+    }
+  };
+
   try {
-    await synchronize({
-      database,
-      pullChanges: async ({ lastPulledAt }) => {
-        const { data, error } = await supabase.rpc('pull_watermelondb_changes', {
-          last_pulled_at: lastPulledAt ?? 0,
-          client_business_id: activeBusinessId,
-        });
-        if (error) throw new Error(error.message);
-        return { changes: data.changes, timestamp: data.timestamp };
-      },
-      pushChanges: async ({ changes }) => {
-        await pushChangesInOrder(changes as SyncChanges, activeBusinessId);
-      },
-      migrationsEnabledAtVersion: schema.version,
-    });
-    console.log('Database synced successfully');
-    return true;
-  } catch (error) {
-    console.error('Failed to sync database:', error);
+    const success = await runSync();
+    isSyncInProgress = false;
+
+    if (hasPendingSyncRequest) {
+      hasPendingSyncRequest = false;
+      console.log('Running deferred synchronization request...');
+      setTimeout(() => {
+        syncDatabase(force);
+      }, 50);
+    }
+
+    return success;
+  } catch (err) {
+    isSyncInProgress = false;
+    hasPendingSyncRequest = false;
     return false;
   }
 }

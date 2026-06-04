@@ -195,14 +195,12 @@ export const useBusinessStore = create<BusinessState>()(
           }
 
           await get().loadBusinessesFromDb();
-          syncDatabase(); // Trigger real-time background replication
 
           if (newBusinessRecord) {
-            const found = get().businesses.find((b) => b.name === name);
-            if (found) {
-              set({ activeBusiness: found });
-            }
+            get().setActiveBusiness(newBusinessRecord.id);
           }
+
+          syncDatabase(); // Trigger real-time background replication
           return newBusinessRecord?.id;
         } catch (err) {
           console.error('Failed to register business to IndexedDB:', err);
