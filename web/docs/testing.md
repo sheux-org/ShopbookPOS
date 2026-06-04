@@ -72,10 +72,10 @@ All test cases are located inside the `web/src/__tests__/` directory. The test f
 web/src/__tests__/
 ├── api/             # API connection tests (e.g., authApi.test.ts)
 ├── components/      # UI components tests (e.g., Scanner.test.tsx, TotalsSummary.test.tsx)
-├── db/              # Database mock test coverages
-├── hooks/           # Custom React hook tests (e.g., usePosBilling.test.ts)
-├── services/        # Offline queue & synchronization logic tests
-├── stores/          # Zustand state store tests (e.g., cartStore.test.ts, authStore.test.ts)
+├── db/              # Database mock tests (e.g., databaseMock.test.ts)
+├── hooks/           # Custom React hook tests (e.g., usePosBilling.test.ts, useActiveDeviceTracker.test.ts)
+├── services/        # Sync service tests (e.g., sync.test.ts)
+├── stores/          # Zustand state store tests (e.g., cartStore.test.ts, authStore.test.ts, settingsStore.test.ts, businessStore.test.ts)
 └── setup.ts         # Global test environment setups & mocks
 ```
 
@@ -172,3 +172,20 @@ To keep the application stable as features grow:
 - **Run Tests Locally**: Always run `npm run test` before creating a pull request or pushing updates.
 - **Continuous Integration**: Ensure all mock responses inside [setup.ts](../src/__tests__/setup.ts) match your model interface upgrades.
 - **Act Wrappers**: Wrap any state changes inside test utilities with `act(() => { ... })` helper functions to avoid React DOM update warning alerts in test outputs.
+
+---
+
+## 7. Git Pre-commit Quality Guard (Husky)
+
+To ensure the repository is kept clean and free from syntax errors, compilation bugs, and bad formatting, a **Husky** quality gate runs automatically on every local commit:
+
+- **Hook File**: [.husky/pre-commit](../../.husky/pre-commit)
+- **Automatic Steps**:
+  1. **Prettier Formatting Check (`lint-staged`)**: Formats staged `.js`, `.ts`, `.tsx`, and `.css` files automatically to maintain a unified code style.
+  2. **TypeScript Type-check (`tsc --noEmit`)**: Runs type validation on the Next.js source code. Commits will fail if there are any outstanding TypeScript compiler errors.
+  3. **Build Verification (`pnpm build:web`)**: Compiles the web application to guarantee that Next.js production builds build successfully without failures.
+- **Overriding (Emergency only)**:
+  If you must temporarily bypass the pre-commit hook (e.g. for WIP commits), append the `--no-verify` flag to your command:
+  ```bash
+  git commit -m "WIP changes" --no-verify
+  ```
