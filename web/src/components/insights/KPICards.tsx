@@ -77,12 +77,16 @@ export default function KPICards({
           </div>
           <div>
             <h4 className="kpi-label">Stock Alerts</h4>
-            <p className="kpi-val" style={{ color: (outOfStockCount > 0 || lowStockCount > 0) ? '#ef4444' : 'inherit', fontSize: '18px' }}>
+            <p
+              className="kpi-val"
+              style={{
+                color: outOfStockCount > 0 || lowStockCount > 0 ? '#ef4444' : 'inherit',
+                fontSize: '18px',
+              }}
+            >
               {outOfStockCount} Out of Stock
             </p>
-            <p className="kpi-sub-label">
-              {lowStockCount} Low Stock Items
-            </p>
+            <p className="kpi-sub-label">{lowStockCount} Low Stock Items</p>
           </div>
         </div>
       </div>

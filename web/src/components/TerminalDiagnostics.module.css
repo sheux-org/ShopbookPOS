@@ -37,7 +37,9 @@
   padding: 3px 10px;
   border-radius: 20px;
   letter-spacing: 0.02em;
-  transition: background-color 0.4s ease, color 0.4s ease;
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease;
   white-space: nowrap;
 }
 

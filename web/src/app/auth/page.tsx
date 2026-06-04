@@ -38,7 +38,7 @@ export default function AuthPage() {
         if (list.length > 0 && active && active.id !== '0') {
           router.push('/');
         } else {
-          triggerToast("Account onboarding is incomplete. Please register using the mobile app.");
+          triggerToast('Account onboarding is incomplete. Please register using the mobile app.');
           useAuthStore.getState().logout();
         }
       });
@@ -63,19 +63,19 @@ export default function AuthPage() {
     const cleanPhone = normalizePhone(phone);
     try {
       const token = await sendOtpMutation.mutateAsync(cleanPhone);
-      setVerificationToken(token || "");
+      setVerificationToken(token || '');
       setOtpError('');
       setResendCooldown(30);
-      triggerToast("Verification code resent to +94 " + phone);
+      triggerToast('Verification code resent to +94 ' + phone);
     } catch (err: any) {
-      triggerToast(err.message || "Network error. Please try again.");
+      triggerToast(err.message || 'Network error. Please try again.');
     }
   };
 
   const normalizePhone = (phoneStr: string): string => {
-    let cleaned = phoneStr.replace(/\D/g, "");
-    if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-    if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+    let cleaned = phoneStr.replace(/\D/g, '');
+    if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+    if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
     return cleaned;
   };
 
@@ -83,17 +83,17 @@ export default function AuthPage() {
     e.preventDefault();
     const cleanPhone = normalizePhone(phone);
     if (cleanPhone.length !== 9) {
-      triggerToast("Please enter a valid mobile number!");
+      triggerToast('Please enter a valid mobile number!');
       return;
     }
     try {
       const token = await sendOtpMutation.mutateAsync(cleanPhone);
-      setVerificationToken(token || "");
+      setVerificationToken(token || '');
       setStep('otp');
       setResendCooldown(30);
-      triggerToast("Verification code sent to +94 " + phone);
+      triggerToast('Verification code sent to +94 ' + phone);
     } catch (err: any) {
-      triggerToast(err.message || "Network error. Please try again.");
+      triggerToast(err.message || 'Network error. Please try again.');
     }
   };
 
@@ -101,7 +101,7 @@ export default function AuthPage() {
     if (loading) return;
     setOtpError('');
     if (code.length < 5) {
-      triggerToast("Please enter a 5-digit code!");
+      triggerToast('Please enter a 5-digit code!');
       return;
     }
 
@@ -112,14 +112,16 @@ export default function AuthPage() {
         verificationToken,
       });
 
-      if (result.status === "success") {
-        triggerToast("Welcome back to Mini POS!");
+      if (result.status === 'success') {
+        triggerToast('Welcome back to Mini POS!');
         router.push('/');
       } else {
-        triggerToast("Account not found. Please use the mobile app to create an account. Web terminal registration is not supported.");
+        triggerToast(
+          'Account not found. Please use the mobile app to create an account. Web terminal registration is not supported.'
+        );
       }
     } catch (err: any) {
-      setOtpError(err.message || "Invalid OTP. Hint: Use 11111");
+      setOtpError(err.message || 'Invalid OTP. Hint: Use 11111');
     }
   };
 
@@ -137,11 +139,7 @@ export default function AuthPage() {
         {/* Brand Icon/Header */}
         <div className="auth-header">
           <div className="auth-logo-wrapper">
-            <img
-              src="/logo.png"
-              alt="Shopbook Logo"
-              className="auth-logo-image"
-            />
+            <img src="/logo.png" alt="Shopbook Logo" className="auth-logo-image" />
           </div>
           <h2 className="auth-title">Shopbook Mini POS</h2>
           <p className="auth-subtitle">Premium Web Billing Terminal</p>
@@ -170,10 +168,10 @@ export default function AuthPage() {
         {/* Powered by Shopbook */}
         <div className="powered-by-container">
           <span className="powered-by-text">powered by</span>
-          <a 
-            href="https://shopbook.lk" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href="https://shopbook.lk"
+            target="_blank"
+            rel="noopener noreferrer"
             className="powered-by-brand"
           >
             Shopbook

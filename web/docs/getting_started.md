@@ -7,6 +7,7 @@ This guide helps new developers set up, run, test, and build the **Shopbook POS 
 ## 1. Prerequisites
 
 Ensure you have the following installed on your machine:
+
 - **Node.js**: Version 18.x or 20.x (Recommended)
 - **Package Manager**: `npm` (v9+) or `yarn` / `pnpm`
 
@@ -15,6 +16,7 @@ Ensure you have the following installed on your machine:
 ## 2. Configuration (`.env.local`)
 
 Copy or create a `.env.local` file in the root of the `/web` directory:
+
 ```bash
 # Path: /Users/shenux/Desktop/Shopbook/shopbook-pos/web/.env.local
 NEXT_PUBLIC_SUPABASE_URL=https://<your-supabase-project>.supabase.co
@@ -60,6 +62,7 @@ pnpm run start
 To debug configurations, authentication schemas, and local DB adapters, the project provides several helper scripts and diagnostics tools:
 
 ### A. Terminal Diagnostics Component
+
 - **Location**: [TerminalDiagnostics.tsx](../src/components/TerminalDiagnostics.tsx)
 - **Features**: An interactive screen in the web client displaying:
   - **IndexedDB Space Usage**: Live estimation of LokiJS adapter's storage utilization.
@@ -67,6 +70,7 @@ To debug configurations, authentication schemas, and local DB adapters, the proj
   - **Sync Diagnostics**: Detailed logs showing last synced timestamps and replication success flags.
 
 ### B. OTP Backend Authentication Tester
+
 - **Script**: [test_auth.js](../src/test_auth.js)
 - **Usage**: Tests the Vercel microservices OTP generation endpoints (`/api/v1/auth/check` and `/api/v1/auth/verify`) directly from the command line:
   ```bash
@@ -74,6 +78,7 @@ To debug configurations, authentication schemas, and local DB adapters, the proj
   ```
 
 ### C. Sync RPC Query Tester
+
 - **Script**: [query_tables.js](../src/query_tables.js)
 - **Usage**: Simulates a pull replication cycle by invoking the PostgreSQL database RPC function `pull_watermelondb_changes` directly using network fetch:
   ```bash

@@ -1,20 +1,20 @@
-import { useEffect, useRef } from "react";
-import { Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Battery from "expo-battery";
-import * as Location from "expo-location";
-import NetInfo from "@react-native-community/netinfo";
-import Constants from "expo-constants";
-import { supabase } from "../services/sync";
-import { useAuthStore } from "../stores/useAuthStore";
-import { registerForPushNotificationsAsync } from "../services/notificationService";
+import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Battery from 'expo-battery';
+import * as Location from 'expo-location';
+import NetInfo from '@react-native-community/netinfo';
+import Constants from 'expo-constants';
+import { supabase } from '../services/sync';
+import { useAuthStore } from '../stores/useAuthStore';
+import { registerForPushNotificationsAsync } from '../services/notificationService';
 
-export const DEVICE_ID_KEY = "@shopbook_pos_device_id";
+export const DEVICE_ID_KEY = '@shopbook_pos_device_id';
 
 function generateUUID() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -28,14 +28,14 @@ export async function deleteCurrentDeviceSession() {
     const activeBusinessId = useAuthStore.getState().activeBusinessId;
     if (deviceId && activeBusinessId) {
       await supabase
-        .from("active_devices")
+        .from('active_devices')
         .delete()
-        .eq("device_id", deviceId)
-        .eq("business_id", activeBusinessId);
-      console.log("Deleted active device session on Supabase.");
+        .eq('device_id', deviceId)
+        .eq('business_id', activeBusinessId);
+      console.log('Deleted active device session on Supabase.');
     }
   } catch (e) {
-    console.warn("Failed to delete active session on logout:", e);
+    console.warn('Failed to delete active session on logout:', e);
   }
 }
 
@@ -73,10 +73,10 @@ export function useActiveDeviceTracker() {
             if (tokens.devicePushToken) {
               currentPushToken = tokens.devicePushToken;
               pushTokenRef.current = currentPushToken;
-              await AsyncStorage.setItem("@shopbook_pos_push_token", currentPushToken);
+              await AsyncStorage.setItem('@shopbook_pos_push_token', currentPushToken);
             }
           } catch (e) {
-            console.warn("Failed to retrieve push token in active device tracker:", e);
+            console.warn('Failed to retrieve push token in active device tracker:', e);
           }
         }
 
@@ -94,7 +94,7 @@ export function useActiveDeviceTracker() {
           const power = await Battery.getBatteryLevelAsync();
           batteryLevel = Math.round(power * 100);
         } catch (e) {
-          console.warn("Failed to get battery level:", e);
+          console.warn('Failed to get battery level:', e);
         }
 
         // 3. Fetch network info
@@ -103,7 +103,7 @@ export function useActiveDeviceTracker() {
           const net = await NetInfo.fetch();
           isOnline = net.isConnected ?? true;
         } catch (e) {
-          console.warn("Failed to get network state:", e);
+          console.warn('Failed to get network state:', e);
         }
 
         // 4. Fetch location info
@@ -113,14 +113,15 @@ export function useActiveDeviceTracker() {
 
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status === "granted") {
+          if (status === 'granted') {
             const loc = await Location.getCurrentPositionAsync({
               accuracy: Location.Accuracy.Balanced,
             });
             latitude = loc.coords.latitude;
             longitude = loc.coords.longitude;
 
-            const hasMoved = !lastCoordsRef.current || 
+            const hasMoved =
+              !lastCoordsRef.current ||
               Math.abs(lastCoordsRef.current.latitude - latitude) > 0.001 ||
               Math.abs(lastCoordsRef.current.longitude - longitude) > 0.001;
 
@@ -130,12 +131,9 @@ export function useActiveDeviceTracker() {
               const geo = await Location.reverseGeocodeAsync({ latitude, longitude });
               if (geo && geo.length > 0) {
                 const place = geo[0];
-                locationName = [
-                  place.city || place.subregion || place.district,
-                  place.country,
-                ]
+                locationName = [place.city || place.subregion || place.district, place.country]
                   .filter(Boolean)
-                  .join(", ");
+                  .join(', ');
               } else {
                 locationName = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
               }
@@ -143,35 +141,33 @@ export function useActiveDeviceTracker() {
               lastLocationNameRef.current = locationName;
             }
           } else {
-            locationName = "Location Denied";
+            locationName = 'Location Denied';
           }
         } catch (e) {
-          console.warn("Failed to get location info:", e);
-          locationName = "Location Unavailable";
+          console.warn('Failed to get location info:', e);
+          locationName = 'Location Unavailable';
         }
 
         // 5. Get device model / name
         const deviceModel =
           Constants.deviceName ||
           Constants.modelName ||
-          (Platform.OS === "ios" ? "iOS Device" : "Android Device");
+          (Platform.OS === 'ios' ? 'iOS Device' : 'Android Device');
 
         // If the device is offline, skip Supabase tracking to prevent error logging
         if (!isOnline) {
-          console.log("Device is offline, active device database tracking skipped.");
+          console.log('Device is offline, active device database tracking skipped.');
           return;
         }
 
         // 6. Update database record on Supabase
-        const recordId = `${activeBusinessId}_${
-          activeEmployeeId || "admin"
-        }_${deviceId}`;
+        const recordId = `${activeBusinessId}_${activeEmployeeId || 'admin'}_${deviceId}`;
 
         const payload = {
           id: recordId,
           business_id: activeBusinessId,
           employee_id: activeEmployeeId || null,
-          employee_name: employeeName || "Owner / Admin",
+          employee_name: employeeName || 'Owner / Admin',
           role: userRole,
           device_id: deviceId,
           device_model: deviceModel,
@@ -184,29 +180,27 @@ export function useActiveDeviceTracker() {
           last_active_at: new Date().toISOString(),
         };
 
-        const { error: upsertError } = await supabase
-          .from("active_devices")
-          .upsert(payload);
+        const { error: upsertError } = await supabase.from('active_devices').upsert(payload);
 
         if (upsertError) {
-          console.warn("Failed to upsert active device status:", upsertError);
+          console.warn('Failed to upsert active device status:', upsertError);
         }
 
         // 7. Remote session termination check
         const { data: dbSession, error: selectError } = await supabase
-          .from("active_devices")
-          .select("id")
-          .eq("device_id", deviceId)
-          .eq("business_id", activeBusinessId)
+          .from('active_devices')
+          .select('id')
+          .eq('device_id', deviceId)
+          .eq('business_id', activeBusinessId)
           .maybeSingle();
 
         if (!selectError && !dbSession) {
           // Explicitly deleted from DB by another device/admin, sign out
-          console.log("Active session was terminated remotely.");
+          console.log('Active session was terminated remotely.');
           useAuthStore.getState().logout();
         }
       } catch (err) {
-        console.warn("Active device tracker error:", err);
+        console.warn('Active device tracker error:', err);
       }
     };
 
@@ -238,11 +232,5 @@ export function useActiveDeviceTracker() {
       batterySub.remove();
       netSub();
     };
-  }, [
-    isLoggedIn,
-    activeBusinessId,
-    activeEmployeeId,
-    employeeName,
-    userRole,
-  ]);
+  }, [isLoggedIn, activeBusinessId, activeEmployeeId, employeeName, userRole]);
 }

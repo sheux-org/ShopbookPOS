@@ -189,7 +189,6 @@ export const TerminalDiagnostics: React.FC<TerminalDiagnosticsProps> = ({ showPr
   return (
     <div className={styles.diagnosticsCard}>
       <div className={styles.list}>
-
         {/* Local DB */}
         <div className={styles.item}>
           <span className={styles.label}>Local DB</span>
@@ -227,16 +226,17 @@ export const TerminalDiagnostics: React.FC<TerminalDiagnosticsProps> = ({ showPr
         {showPrinter && (
           <div className={styles.item}>
             <span className={styles.label}>Receipt Printer</span>
-            <span className={`${styles.badge} ${printerConnected ? styles.active : styles.inactive}`}>
+            <span
+              className={`${styles.badge} ${printerConnected ? styles.active : styles.inactive}`}
+            >
               {usbPrinterFound
                 ? 'Connected (USB)'
                 : pairedPrinter
-                ? `Paired: ${pairedPrinter.name}`
-                : 'Not Connected'}
+                  ? `Paired: ${pairedPrinter.name}`
+                  : 'Not Connected'}
             </span>
           </div>
         )}
-
       </div>
     </div>
   );

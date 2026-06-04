@@ -1,6 +1,7 @@
 # Shopbook POS (Point of Sale) Monorepo 📱💻🛒
 
 Welcome to the **Shopbook POS** (also known as **Mini POS**) monorepo. This repository contains a high-fidelity, ultra-premium Point-of-Sale ecosystem designed for modern retail environments. The ecosystem is split into two primary interfaces:
+
 1. 📱 **Mobile & Tablet POS App**: A native mobile app built with Expo, React Native, and Expo Router.
 2. 💻 **Desktop & Web POS App**: A modern web app built with Next.js App Router and Lucide React.
 
@@ -36,15 +37,15 @@ shopbook-pos/
 
 ## ⚡ Quick Feature Comparison Matrix
 
-| Feature | 📱 Mobile Client (Expo) | 💻 Web Client (Next.js) | Description |
-| :--- | :---: | :---: | :--- |
-| **Offline-First Storage** | SQLite (WatermelonDB) | IndexedDB (WatermelonDB) | Pure client-side database layer with high-performance querying |
-| **Supabase Cloud Sync** | Auto / Manual RPC Sync | Auto / Manual RPC Sync | Bidirectional changes syncing (orders, products, staff, logs) |
-| **Multi-Role Authentication**| OTP / Verification Code | OTP / Verification Code | Role-Based Access Control (Admin, Manager, Cashier) |
-| **Multi-Outlet Registry** | Outlets Isolation | Outlets Isolation | Segment products and orders strictly by active outlet ID |
-| **Item Scan Integration** | Camera Barcode Scanner | Hardware/Emulated Scanner | Real-time scanner decoding to automatically increment cart |
-| **Receipt Printing** | Native Bluetooth ESC/POS | Virtual Printer Feed | Print physical thermal tickets or view visual emulator previews |
-| **Telemetry & Log Monitor** | Location, Battery & Network | Session Sign Out | Keep track of active staff logins and force invalidations |
+| Feature                       |   📱 Mobile Client (Expo)   |  💻 Web Client (Next.js)  | Description                                                     |
+| :---------------------------- | :-------------------------: | :-----------------------: | :-------------------------------------------------------------- |
+| **Offline-First Storage**     |    SQLite (WatermelonDB)    | IndexedDB (WatermelonDB)  | Pure client-side database layer with high-performance querying  |
+| **Supabase Cloud Sync**       |   Auto / Manual RPC Sync    |  Auto / Manual RPC Sync   | Bidirectional changes syncing (orders, products, staff, logs)   |
+| **Multi-Role Authentication** |   OTP / Verification Code   |  OTP / Verification Code  | Role-Based Access Control (Admin, Manager, Cashier)             |
+| **Multi-Outlet Registry**     |      Outlets Isolation      |     Outlets Isolation     | Segment products and orders strictly by active outlet ID        |
+| **Item Scan Integration**     |   Camera Barcode Scanner    | Hardware/Emulated Scanner | Real-time scanner decoding to automatically increment cart      |
+| **Receipt Printing**          |  Native Bluetooth ESC/POS   |   Virtual Printer Feed    | Print physical thermal tickets or view visual emulator previews |
+| **Telemetry & Log Monitor**   | Location, Battery & Network |     Session Sign Out      | Keep track of active staff logins and force invalidations       |
 
 ---
 
@@ -52,11 +53,11 @@ shopbook-pos/
 
 The native mobile application is optimized for tablet layouts and hand-held terminals, providing low-latency checkout and physical hardware integrations:
 
-* **BT ESC/POS Thermal Printing**: Scans, pairs, and commands 58mm/80mm Bluetooth hardware thermal receipt printers. Generates native byte payloads for alignment, bold text, separators, and cuts.
-* **Offline Image upload Queue**: Saves product images locally immediately. When connection states monitor online through NetInfo, uploads them via `@uploadthing/expo` in a background queue.
-* **Device Telemetry Logs**: Automatically logs battery percentage, network state, device model, GPS coordinates, and push tokens. Allows managers to terminate devices remotely.
-* **Mandatory Force Updates**: Synchronizes client versions with remote `app_config` variables and blocks outmoded clients.
-* **Licensing & Payments**: Pro features license checks connected to subscription plan modals (RevenueCat checkout or bank slip WhatsApp submission).
+- **BT ESC/POS Thermal Printing**: Scans, pairs, and commands 58mm/80mm Bluetooth hardware thermal receipt printers. Generates native byte payloads for alignment, bold text, separators, and cuts.
+- **Offline Image upload Queue**: Saves product images locally immediately. When connection states monitor online through NetInfo, uploads them via `@uploadthing/expo` in a background queue.
+- **Device Telemetry Logs**: Automatically logs battery percentage, network state, device model, GPS coordinates, and push tokens. Allows managers to terminate devices remotely.
+- **Mandatory Force Updates**: Synchronizes client versions with remote `app_config` variables and blocks outmoded clients.
+- **Licensing & Payments**: Pro features license checks connected to subscription plan modals (RevenueCat checkout or bank slip WhatsApp submission).
 
 For detailed app routes and files, see the [mobile subdirectory](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/mobile).
 
@@ -66,11 +67,11 @@ For detailed app routes and files, see the [mobile subdirectory](file:///Users/s
 
 The desktop web application provides a responsive console tailored for desktop monitors, laptop screens, or fixed kiosk terminals:
 
-* **Collapsible Sidebar Layout**: Premium SaaS feel with expandable/collapsible sidebar menu toggles, store profile badges, active role indicators, and real-time network back-up indicators.
-* **Catalog Manager**: Dual representation using category grids or sidebar layout pages. Quick register modals let managers add new items (price, stock, barcode, quick code) with instant state refreshes.
-* **Billing Settlement Terminal**: Dedicated `/pos` workspace to view Active Invoice details, modify quantities, calculate balances, and complete payments.
-* **Invoices Sales Ledger**: A dedicated database auditing list (`/history`) to inspect past receipts, view total revenue aggregates, and void transactions.
-* **IndexedDB Local Engine**: Uses LokiJS and WatermelonDB web adapters to guarantee complete responsiveness even with temporary internet dropouts.
+- **Collapsible Sidebar Layout**: Premium SaaS feel with expandable/collapsible sidebar menu toggles, store profile badges, active role indicators, and real-time network back-up indicators.
+- **Catalog Manager**: Dual representation using category grids or sidebar layout pages. Quick register modals let managers add new items (price, stock, barcode, quick code) with instant state refreshes.
+- **Billing Settlement Terminal**: Dedicated `/pos` workspace to view Active Invoice details, modify quantities, calculate balances, and complete payments.
+- **Invoices Sales Ledger**: A dedicated database auditing list (`/history`) to inspect past receipts, view total revenue aggregates, and void transactions.
+- **IndexedDB Local Engine**: Uses LokiJS and WatermelonDB web adapters to guarantee complete responsiveness even with temporary internet dropouts.
 
 For detailed routes and CSS tokens, see the [web subdirectory](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/web).
 
@@ -81,32 +82,38 @@ For detailed routes and CSS tokens, see the [web subdirectory](file:///Users/she
 To install, configure, and launch the applications locally, ensure you have [Node.js](https://nodejs.org/) installed. This workspace strictly uses **pnpm**.
 
 ### 1. Install Workspace Dependencies
+
 Execute the install script from the project root:
+
 ```bash
 pnpm install
 ```
 
 ### 2. Running the Dev Servers
+
 You can run either application from the root using workspace scripts:
 
-* **Run Web App (Next.js)**:
+- **Run Web App (Next.js)**:
+
   ```bash
   pnpm dev:web
   ```
+
   Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-* **Run Mobile App (Expo)**:
+- **Run Mobile App (Expo)**:
   ```bash
   pnpm dev:mobile
   ```
   Press `i` for iOS Simulator, `a` for Android Emulator, or scan the QR code with Expo Go.
 
 ### 3. Production Builds
-* **Build Web Bundle**:
+
+- **Build Web Bundle**:
   ```bash
   pnpm build:web
   ```
-* **Type-Check and Linting**:
+- **Type-Check and Linting**:
   ```bash
   pnpm lint:web
   pnpm lint:mobile
@@ -116,19 +123,20 @@ You can run either application from the root using workspace scripts:
 
 ## ☁️ Supabase Setup & Database Migrations
 
-Both apps connect to the same remote Supabase database project for data synchronization. 
+Both apps connect to the same remote Supabase database project for data synchronization.
 
 ### 1. Environment Configurations
 
 Create environment config files in the respective directories:
 
-* **Mobile App Config (`mobile/.env`)**:
+- **Mobile App Config (`mobile/.env`)**:
+
   ```env
   EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
   ```
 
-* **Web App Config (`web/.env.local`)**:
+- **Web App Config (`web/.env.local`)**:
   ```env
   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
@@ -137,6 +145,7 @@ Create environment config files in the respective directories:
 ### 2. Schema Migration
 
 Deploy the database schema, including synchronization RPC scripts, from the root file:
+
 - Apply the SQL statements within [supabase_migration.sql](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/supabase_migration.sql) inside your Supabase project's SQL Editor dashboard, or apply them via the Supabase CLI:
   ```bash
   npx supabase db push
@@ -161,7 +170,7 @@ ALTER TABLE public.active_devices ENABLE ROW LEVEL SECURITY;
 
 ## 🎨 Color Palette & Typography
 
-* **Theme Color**: Premium Blue (`#3B82F6`) highlights all primary click, route, and checkout button accents.
-* **Low-Stock Alerts**: Red (`#EF4444`) warnings reflect critical items needing replenishment.
-* **Glassmorphism Backdrop**: UI layouts on both platforms overlay transclucent containers (`rgba(15, 23, 42, 0.6)`) to preserve modern design aesthetics.
-* **Fonts**: Plotted with modern high-legibility sans-serif typefaces (like *Plus Jakarta Sans* on mobile and *Inter* on desktop layouts) for rapid visual lookup.
+- **Theme Color**: Premium Blue (`#3B82F6`) highlights all primary click, route, and checkout button accents.
+- **Low-Stock Alerts**: Red (`#EF4444`) warnings reflect critical items needing replenishment.
+- **Glassmorphism Backdrop**: UI layouts on both platforms overlay transclucent containers (`rgba(15, 23, 42, 0.6)`) to preserve modern design aesthetics.
+- **Fonts**: Plotted with modern high-legibility sans-serif typefaces (like _Plus Jakarta Sans_ on mobile and _Inter_ on desktop layouts) for rapid visual lookup.

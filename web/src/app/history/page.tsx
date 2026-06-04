@@ -97,7 +97,12 @@ export default function OrderHistoryPage() {
       alert('This invoice has already been voided.');
       return;
     }
-    if (!confirm(`Are you sure you want to VOID invoice ${selectedOrder.invoiceNumber}? This will revert product stock counts.`)) return;
+    if (
+      !confirm(
+        `Are you sure you want to VOID invoice ${selectedOrder.invoiceNumber}? This will revert product stock counts.`
+      )
+    )
+      return;
 
     voidOrderMutation.mutate(
       {
@@ -122,7 +127,10 @@ export default function OrderHistoryPage() {
     if (!selectedOrder) return;
 
     const itemsText = orderItems
-      .map((item) => `• ${item.quantity} x ${item.name} - Rs. ${(item.price * item.quantity).toLocaleString()}`)
+      .map(
+        (item) =>
+          `• ${item.quantity} x ${item.name} - Rs. ${(item.price * item.quantity).toLocaleString()}`
+      )
       .join('\n');
 
     const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -157,65 +165,74 @@ Thank you for shopping with us!
 
   const handleExportExcel = () => {
     if (mappedOrders.length === 0) {
-      alert("No transaction records to export.");
+      alert('No transaction records to export.');
       return;
     }
 
     const headers = [
-      "Invoice Number",
-      "Date & Time",
-      "Cashier",
-      "Payment Method",
-      "Bank/Brand",
-      "Card Last 4",
-      "Status",
-      "Discount Value (Rs.)",
-      "Tax Value (Rs.)",
-      "Total Amount (Rs.)"
+      'Invoice Number',
+      'Date & Time',
+      'Cashier',
+      'Payment Method',
+      'Bank/Brand',
+      'Card Last 4',
+      'Status',
+      'Discount Value (Rs.)',
+      'Tax Value (Rs.)',
+      'Total Amount (Rs.)',
     ];
 
-    const rows = mappedOrders.map(o => [
+    const rows = mappedOrders.map((o) => [
       o.invoiceNumber,
       o.dateStr,
       o.cashierName,
       o.paymentMethod.toUpperCase(),
-      o.bankName || "",
-      o.cardLastFour ? `'${o.cardLastFour}` : "",
+      o.bankName || '',
+      o.cardLastFour ? `'${o.cardLastFour}` : '',
       o.status.toUpperCase(),
       o.discountValue.toString(),
       o.taxValue.toString(),
-      o.totalAmount.toString()
+      o.totalAmount.toString(),
     ]);
 
     const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(","))
-    ].join("\n");
+      headers.join(','),
+      ...rows.map((row) => row.map((val) => `"${val.replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
 
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Invoice_Sales_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute(
+      'download',
+      `Invoice_Sales_Report_${new Date().toISOString().slice(0, 10)}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    triggerToast("Sales ledger report exported to CSV/Excel! 📊");
+    triggerToast('Sales ledger report exported to CSV/Excel! 📊');
   };
 
   const handleExportPDF = () => {
     if (mappedOrders.length === 0) {
-      alert("No transaction records to export.");
+      alert('No transaction records to export.');
       return;
     }
 
-    const nonVoided = mappedOrders.filter(o => o.status !== 'voided');
+    const nonVoided = mappedOrders.filter((o) => o.status !== 'voided');
     const totalSales = nonVoided.reduce((sum, o) => sum + o.totalAmount, 0);
     const activeCount = nonVoided.length;
 
-    const cashSales = nonVoided.filter(o => o.paymentMethod === 'cash').reduce((sum, o) => sum + o.totalAmount, 0);
-    const cardSales = nonVoided.filter(o => o.paymentMethod === 'card').reduce((sum, o) => sum + o.totalAmount, 0);
-    const bankSales = nonVoided.filter(o => o.paymentMethod === 'bank').reduce((sum, o) => sum + o.totalAmount, 0);
+    const cashSales = nonVoided
+      .filter((o) => o.paymentMethod === 'cash')
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+    const cardSales = nonVoided
+      .filter((o) => o.paymentMethod === 'card')
+      .reduce((sum, o) => sum + o.totalAmount, 0);
+    const bankSales = nonVoided
+      .filter((o) => o.paymentMethod === 'bank')
+      .reduce((sum, o) => sum + o.totalAmount, 0);
 
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
@@ -379,18 +396,24 @@ Thank you for shopping with us!
                 </tr>
               </thead>
               <tbody>
-                ${mappedOrders.map(o => `
+                ${mappedOrders
+                  .map(
+                    (o) => `
                   <tr class="${o.status === 'voided' ? 'voided' : ''}">
                     <td><strong>${o.invoiceNumber}</strong></td>
                     <td>${o.dateStr}</td>
                     <td>${o.cashierName}</td>
                     <td>
                       <span class="badge badge-method">${o.paymentMethod.toUpperCase()}</span>
-                      ${(o.paymentMethod === 'card' || o.paymentMethod === 'bank') && o.bankName ? `
+                      ${
+                        (o.paymentMethod === 'card' || o.paymentMethod === 'bank') && o.bankName
+                          ? `
                         <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">
                           ${o.bankName} ${o.cardLastFour ? `(**** ${o.cardLastFour})` : ''}
                         </div>
-                      ` : ''}
+                      `
+                          : ''
+                      }
                     </td>
                     <td>
                       <span class="badge ${o.status === 'voided' ? 'badge-voided' : 'badge-paid'}">
@@ -401,7 +424,9 @@ Thank you for shopping with us!
                       Rs. ${o.totalAmount.toLocaleString()}
                     </td>
                   </tr>
-                `).join('')}
+                `
+                  )
+                  .join('')}
               </tbody>
             </table>
 
@@ -457,14 +482,21 @@ Thank you for shopping with us!
             </>
           )}
           {mappedOrders.length > 0 && (
-            <span style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: '500', marginLeft: canExport ? '8px' : '0' }}>
+            <span
+              style={{
+                fontSize: '12px',
+                color: 'var(--muted)',
+                fontWeight: '500',
+                marginLeft: canExport ? '8px' : '0',
+              }}
+            >
               Showing {mappedOrders.length} sales records
             </span>
           )}
         </div>
       </div>
 
-      <InvoiceListTable 
+      <InvoiceListTable
         loading={loading}
         filteredOrders={mappedOrders}
         onViewReceipt={handleViewReceipt}
@@ -482,7 +514,7 @@ Thank you for shopping with us!
         </div>
       )}
 
-      <InvoiceDetailModal 
+      <InvoiceDetailModal
         isOpen={showReceipt}
         order={selectedOrder}
         items={orderItems}

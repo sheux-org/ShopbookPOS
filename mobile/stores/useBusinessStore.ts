@@ -1,10 +1,10 @@
-import { Q } from "@nozbe/watermelondb";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-import database from "../components/data/db";
-import { SEEDING_PRODUCTS } from "../utils/seedProducts";
-import { useAuthStore } from "./useAuthStore";
+import { Q } from '@nozbe/watermelondb';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import database from '../components/data/db';
+import { SEEDING_PRODUCTS } from '../utils/seedProducts';
+import { useAuthStore } from './useAuthStore';
 
 export interface Business {
   id: string;
@@ -24,7 +24,7 @@ interface BusinessState {
     name: string,
     address: string,
     phone: string,
-    category?: string,
+    category?: string
   ) => Promise<void>;
   updateActiveBusinessDetails: (details: {
     name: string;
@@ -41,19 +41,19 @@ interface BusinessState {
       address: string;
       phone: string;
       logoUri?: string;
-    },
+    }
   ) => Promise<void>;
   deleteBusiness: (id: string) => Promise<void>;
 }
 
 // Clean onboarding placeholder when no business is registered yet
 const PLACEHOLDER_BUSINESS: Business = {
-  id: "0",
-  name: "Register Your Shop",
-  category: "General Retail",
-  address: "Complete onboarding setup",
-  phone: "",
-  logoUri: "",
+  id: '0',
+  name: 'Register Your Shop',
+  category: 'General Retail',
+  address: 'Complete onboarding setup',
+  phone: '',
+  logoUri: '',
 };
 
 const DEFAULT_BUSINESSES: Business[] = [PLACEHOLDER_BUSINESS];
@@ -73,7 +73,7 @@ export const useBusinessStore = create<BusinessState>()(
         try {
           // 1. Wait for Auth hydration to finish from AsyncStorage
           if (!useAuthStore.persist.hasHydrated()) {
-            console.log("Skipping business load: AuthStore not hydrated yet");
+            console.log('Skipping business load: AuthStore not hydrated yet');
             return;
           }
 
@@ -90,9 +90,9 @@ export const useBusinessStore = create<BusinessState>()(
           }
 
           const normalizePhone = (phoneStr: string): string => {
-            let cleaned = phoneStr.replace(/\D/g, "");
-            if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-            if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+            let cleaned = phoneStr.replace(/\D/g, '');
+            if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+            if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
             return cleaned;
           };
 
@@ -100,9 +100,9 @@ export const useBusinessStore = create<BusinessState>()(
           const matchedBusinessesMap = new Map<string, any>();
 
           // 1. Fetch businesses where the logged-in user is a registered staff member (Employee)
-          const allEmployees = await database.get("employees").query().fetch();
+          const allEmployees = await database.get('employees').query().fetch();
           const matchedEmployees = allEmployees.filter((emp: any) => {
-            return normalizePhone(emp.phone || "") === cleanLoggedInPhone;
+            return normalizePhone(emp.phone || '') === cleanLoggedInPhone;
           });
 
           for (const emp of matchedEmployees) {
@@ -113,12 +113,9 @@ export const useBusinessStore = create<BusinessState>()(
           }
 
           // 2. Fetch businesses owned directly by the logged-in user phone number
-          const allBusinesses = await database
-            .get("businesses")
-            .query()
-            .fetch();
+          const allBusinesses = await database.get('businesses').query().fetch();
           const matchedOwned = allBusinesses.filter((b: any) => {
-            return normalizePhone(b.phoneNumber || "") === cleanLoggedInPhone;
+            return normalizePhone(b.phoneNumber || '') === cleanLoggedInPhone;
           });
 
           for (const biz of matchedOwned) {
@@ -131,18 +128,16 @@ export const useBusinessStore = create<BusinessState>()(
             id: b.id,
             name: b.name,
             category: b.businessType,
-            address: b.address || "No Address Provided",
-            phone: b.phoneNumber || "+94 ** *** ****",
-            logoUri: b.logoUri || "",
+            address: b.address || 'No Address Provided',
+            phone: b.phoneNumber || '+94 ** *** ****',
+            logoUri: b.logoUri || '',
           }));
 
           // Determine target business to activate
-          const targetBizId =
-            useAuthStore.getState().activeBusinessId || get().activeBusiness.id;
+          const targetBizId = useAuthStore.getState().activeBusinessId || get().activeBusiness.id;
 
           if (list.length > 0) {
-            const selectedBiz =
-              list.find((b) => b.id === targetBizId) || list[0];
+            const selectedBiz = list.find((b) => b.id === targetBizId) || list[0];
             set({
               businesses: list,
               activeBusiness: selectedBiz,
@@ -154,53 +149,41 @@ export const useBusinessStore = create<BusinessState>()(
             });
           }
         } catch (err) {
-          console.error("Failed to load businesses from SQLite:", err);
+          console.error('Failed to load businesses from SQLite:', err);
         }
       },
-      registerBusiness: async (
-        name,
-        address,
-        phone,
-        category = "General Retail",
-      ) => {
+      registerBusiness: async (name, address, phone, category = 'General Retail') => {
         try {
           let newBusinessRecord: any;
           await database.write(async () => {
-            newBusinessRecord = await database
-              .get("businesses")
-              .create((biz: any) => {
-                biz.name = name;
-                biz.businessType = category;
-                biz.address = address;
-                biz.phoneNumber = phone;
-              });
+            newBusinessRecord = await database.get('businesses').create((biz: any) => {
+              biz.name = name;
+              biz.businessType = category;
+              biz.address = address;
+              biz.phoneNumber = phone;
+            });
 
-            await database.get("employees").create((emp: any) => {
+            await database.get('employees').create((emp: any) => {
               emp.business.set(newBusinessRecord);
-              emp.name = "Owner / Admin";
-              emp.role = "admin";
+              emp.name = 'Owner / Admin';
+              emp.role = 'admin';
               emp.phone = phone;
             });
           });
-          console.log(
-            "Successfully saved business and admin employee to local database",
-          );
+          console.log('Successfully saved business and admin employee to local database');
 
           // Seed products ONLY for the very first registered store in SQLite!
-          const dbBizs = await database.get("businesses").query().fetch();
+          const dbBizs = await database.get('businesses').query().fetch();
           if (dbBizs.length === 1) {
             console.log(
-              "First brand business registered. Seeding dynamic inventory catalog in SQLite...",
+              'First brand business registered. Seeding dynamic inventory catalog in SQLite...'
             );
-            const existingProducts = await database
-              .get("products")
-              .query()
-              .fetch();
+            const existingProducts = await database.get('products').query().fetch();
             if (existingProducts.length === 0) {
               // Use centralized seed data to avoid duplication and 404-prone image links
               await database.write(async () => {
                 for (const item of SEEDING_PRODUCTS) {
-                  await database.get("products").create((p: any) => {
+                  await database.get('products').create((p: any) => {
                     p.business.set(newBusinessRecord);
                     p.name = item.name;
                     p.price = item.price;
@@ -214,7 +197,7 @@ export const useBusinessStore = create<BusinessState>()(
                 }
               });
               console.log(
-                "Successfully seeded catalog products for the first registered business!",
+                'Successfully seeded catalog products for the first registered business!'
               );
             }
           }
@@ -228,10 +211,7 @@ export const useBusinessStore = create<BusinessState>()(
             }
           }
         } catch (err) {
-          console.error(
-            "Failed to write business/employee to local database:",
-            err,
-          );
+          console.error('Failed to write business/employee to local database:', err);
         }
       },
       updateActiveBusinessDetails: async (details) => {
@@ -239,8 +219,8 @@ export const useBusinessStore = create<BusinessState>()(
 
         try {
           const businesses = await database
-            .get("businesses")
-            .query(Q.where("id", activeBiz.id))
+            .get('businesses')
+            .query(Q.where('id', activeBiz.id))
             .fetch();
           if (businesses.length > 0) {
             const targetBiz = businesses[0];
@@ -255,38 +235,28 @@ export const useBusinessStore = create<BusinessState>()(
                 }
               });
             });
-            console.log(
-              "Successfully updated business details in local WatermelonDB database",
-            );
+            console.log('Successfully updated business details in local WatermelonDB database');
           } else {
             await database.write(async () => {
-              await database.get("businesses").create((b: any) => {
+              await database.get('businesses').create((b: any) => {
                 b.name = details.name;
                 b.businessType = details.category;
                 b.address = details.address;
                 b.phoneNumber = details.phone;
-                b.logoUri = details.logoUri || "";
+                b.logoUri = details.logoUri || '';
               });
             });
-            console.log(
-              "Successfully created business details in local WatermelonDB database",
-            );
+            console.log('Successfully created business details in local WatermelonDB database');
           }
 
           await get().loadBusinessesFromDb();
         } catch (err) {
-          console.error(
-            "Failed to update business details in WatermelonDB:",
-            err,
-          );
+          console.error('Failed to update business details in WatermelonDB:', err);
         }
       },
       updateBusinessDetails: async (id, details) => {
         try {
-          const businesses = await database
-            .get("businesses")
-            .query(Q.where("id", id))
-            .fetch();
+          const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
           if (businesses.length > 0) {
             const targetBiz = businesses[0];
             await database.write(async () => {
@@ -300,30 +270,22 @@ export const useBusinessStore = create<BusinessState>()(
                 }
               });
             });
-            console.log(
-              "Successfully updated business details in local WatermelonDB database",
-            );
+            console.log('Successfully updated business details in local WatermelonDB database');
           }
           await get().loadBusinessesFromDb();
         } catch (err) {
-          console.error(
-            "Failed to update business details in WatermelonDB:",
-            err,
-          );
+          console.error('Failed to update business details in WatermelonDB:', err);
         }
       },
       deleteBusiness: async (id) => {
         try {
-          const businesses = await database
-            .get("businesses")
-            .query(Q.where("id", id))
-            .fetch();
+          const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
           if (businesses.length > 0) {
             const targetBiz = businesses[0];
             await database.write(async () => {
               await targetBiz.destroyPermanently();
             });
-            console.log("Successfully deleted business record");
+            console.log('Successfully deleted business record');
           }
           await get().loadBusinessesFromDb();
 
@@ -334,13 +296,13 @@ export const useBusinessStore = create<BusinessState>()(
             }
           }
         } catch (err) {
-          console.error("Failed to delete business from WatermelonDB:", err);
+          console.error('Failed to delete business from WatermelonDB:', err);
         }
       },
     }),
     {
-      name: "business-storage",
+      name: 'business-storage',
       storage: createJSONStorage(() => AsyncStorage),
-    },
-  ),
+    }
+  )
 );

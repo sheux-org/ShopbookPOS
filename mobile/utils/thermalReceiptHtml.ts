@@ -28,10 +28,10 @@ export type BuildThermalReceiptOptions = {
 
 function escapeHtml(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function buildLogoHtml(logoUri?: string | null): string {
@@ -41,7 +41,7 @@ function buildLogoHtml(logoUri?: string | null): string {
   if (logoUri.length <= 2) {
     return `<div style="font-size: 38px; text-align: center; margin-bottom: 5px;">${escapeHtml(logoUri)}</div>`;
   }
-  const safeSrc = String(logoUri).replace(/"/g, "&quot;");
+  const safeSrc = String(logoUri).replace(/"/g, '&quot;');
   return `<div style="text-align: center; margin-bottom: 5px;"><img src="${safeSrc}" style="width: 60px; height: 60px; border-radius: 30px; object-fit: cover;" /></div>`;
 }
 
@@ -51,7 +51,7 @@ function buildLogoHtml(logoUri?: string | null): string {
  */
 export function buildThermalReceiptHtml(opts: BuildThermalReceiptOptions): string {
   const logoHtml = buildLogoHtml(opts.logoUri);
-  const phone = (opts.phone ?? "").trim();
+  const phone = (opts.phone ?? '').trim();
 
   const itemsHtml = opts.items
     .map(
@@ -62,9 +62,9 @@ export function buildThermalReceiptHtml(opts: BuildThermalReceiptOptions): strin
       </div>
     `
     )
-    .join("");
+    .join('');
 
-  const discountLabel = opts.discountLabel || "Discount";
+  const discountLabel = opts.discountLabel || 'Discount';
   const discountBlock =
     opts.discount && opts.discount > 0
       ? `
@@ -72,33 +72,33 @@ export function buildThermalReceiptHtml(opts: BuildThermalReceiptOptions): strin
             <span>${escapeHtml(discountLabel)}</span>
             <span>- Rs. ${opts.discount.toFixed(2)}</span>
           </div>`
-      : "";
+      : '';
 
   const invoiceRow = opts.invoiceLabel
     ? `<div class="flex-row">
             <span>Invoice</span>
             <span>${escapeHtml(opts.invoiceLabel)}</span>
           </div>`
-    : "";
+    : '';
 
   const paymentRow = opts.paymentMethod
     ? `<div class="flex-row">
             <span>Payment Method</span>
             <span>${escapeHtml(opts.paymentMethod)}</span>
           </div>`
-    : "";
+    : '';
 
   const statusRow = opts.status
     ? `<div class="flex-row">
             <span>Status</span>
             <span>${escapeHtml(opts.status)}</span>
           </div>`
-    : "";
+    : '';
 
   const barcode =
     opts.barcodeLine ??
-    "|||| | ||||| | ||| ||||||| " +
-      (opts.invoiceLabel?.replace(/\D/g, "").slice(-7).padStart(7, "0") || "0000000");
+    '|||| | ||||| | ||| ||||||| ' +
+      (opts.invoiceLabel?.replace(/\D/g, '').slice(-7).padStart(7, '0') || '0000000');
 
   return `
       <html>
@@ -128,7 +128,7 @@ export function buildThermalReceiptHtml(opts: BuildThermalReceiptOptions): strin
           <div class="center header-title">${escapeHtml(opts.businessName)}</div>
           <div class="center">${escapeHtml(opts.category)}</div>
           <div class="center">${escapeHtml(opts.address)}</div>
-          ${phone ? `<div class="center">Tel: ${escapeHtml(phone)}</div>` : ""}
+          ${phone ? `<div class="center">Tel: ${escapeHtml(phone)}</div>` : ''}
 
           <div class="separator"></div>
 
@@ -155,7 +155,7 @@ export function buildThermalReceiptHtml(opts: BuildThermalReceiptOptions): strin
             <span>Rs. ${opts.subtotal.toFixed(2)}</span>
           </div>
           <div class="flex-row">
-            <span>${escapeHtml(opts.taxLabel || "Standard Tax (8%)")}</span>
+            <span>${escapeHtml(opts.taxLabel || 'Standard Tax (8%)')}</span>
             <span>Rs. ${opts.tax.toFixed(2)}</span>
           </div>
           ${discountBlock}

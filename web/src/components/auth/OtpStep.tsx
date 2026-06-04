@@ -112,7 +112,9 @@ export const OtpStep: React.FC<OtpStepProps> = ({
               type="text"
               maxLength={1}
               value={digit}
-              ref={(el) => { otpRefs.current[idx] = el; }}
+              ref={(el) => {
+                otpRefs.current[idx] = el;
+              }}
               onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
               onKeyDown={(e) => handleOtpKeyDown(idx, e)}
               onPaste={handleOtpPaste}
@@ -141,12 +143,7 @@ export const OtpStep: React.FC<OtpStepProps> = ({
       </div>
 
       <div className="otp-btn-group">
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={loading}
-          className="auth-back-btn"
-        >
+        <button type="button" onClick={onBack} disabled={loading} className="auth-back-btn">
           Back
         </button>
         <button

@@ -1,5 +1,5 @@
-import * as Haptics from "expo-haptics";
-import { useSettingsStore } from "../stores/useSettingsStore";
+import * as Haptics from 'expo-haptics';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
 /**
  * Global Haptic feedback helper that respects the user's settings toggle.
@@ -13,7 +13,7 @@ export const hapticFeedback = {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } catch (error) {
-        console.warn("Haptic impactLight failed:", error);
+        console.warn('Haptic impactLight failed:', error);
       }
     }
   },
@@ -26,7 +26,7 @@ export const hapticFeedback = {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } catch (error) {
-        console.warn("Haptic impactMedium failed:", error);
+        console.warn('Haptic impactMedium failed:', error);
       }
     }
   },
@@ -39,7 +39,7 @@ export const hapticFeedback = {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       } catch (error) {
-        console.warn("Haptic impactHeavy failed:", error);
+        console.warn('Haptic impactHeavy failed:', error);
       }
     }
   },
@@ -52,7 +52,7 @@ export const hapticFeedback = {
       try {
         await Haptics.selectionAsync();
       } catch (error) {
-        console.warn("Haptic selection failed:", error);
+        console.warn('Haptic selection failed:', error);
       }
     }
   },
@@ -65,7 +65,7 @@ export const hapticFeedback = {
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch (error) {
-        console.warn("Haptic notificationSuccess failed:", error);
+        console.warn('Haptic notificationSuccess failed:', error);
       }
     }
   },
@@ -78,7 +78,7 @@ export const hapticFeedback = {
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       } catch (error) {
-        console.warn("Haptic notificationWarning failed:", error);
+        console.warn('Haptic notificationWarning failed:', error);
       }
     }
   },
@@ -91,7 +91,7 @@ export const hapticFeedback = {
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } catch (error) {
-        console.warn("Haptic notificationError failed:", error);
+        console.warn('Haptic notificationError failed:', error);
       }
     }
   },

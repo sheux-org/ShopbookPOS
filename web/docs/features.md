@@ -9,11 +9,14 @@ This guide details the core features of the **Shopbook POS Web Terminal** applic
 The primary workspace ([page.tsx](../src/app/page.tsx)) operates via a central controller hook **`usePosBilling`** ([usePosBilling.ts](../src/hooks/usePosBilling.ts)). The terminal can toggle between two modes:
 
 ### A. Tablet (Visual Grid Mode)
+
 - **UI Components**: Displays product grid tiles ([CatalogView.tsx](../src/components/pos/CatalogView.tsx)) on the left pane and scrollable invoice item summaries ([TabletCartScroller.tsx](../src/components/pos/TabletCartScroller.tsx)) on the right.
 - **Workflow**: Tap items to add/increment them in the cart. Clicking "Proceed to Payment" triggers the payment modal ([SettlementModal.tsx](../src/components/pos/SettlementModal.tsx)).
 
 ### B. Normal (Keyboard-Optimized Mode)
+
 Designed for high-speed checkout using physical keyboards and hardware barcode scanners:
+
 - **UI Components**: Displays a dense scanned items table ([DenseCartTable.tsx](../src/components/pos/DenseCartTable.tsx)) and checkout card ([SettlementCard.tsx](../src/components/pos/SettlementCard.tsx)) on the right.
 - **Keyboard Shortcuts**: Supported by global event listeners:
   - **`F2`** or **`/`**: Focuses the barcode/manual item entry scanner input.
@@ -36,17 +39,21 @@ Designed for high-speed checkout using physical keyboards and hardware barcode s
 ## 2. Active Devices & Remote Logout
 
 Terminals log their status and configuration metadata to allow central management:
+
 - **Hook**: [useActiveDeviceTracker.ts](../src/hooks/useActiveDeviceTracker.ts)
 - **UI Dialog**: [ActiveDevicesModal.tsx](../src/components/profile/ActiveDevicesModal.tsx)
 
 ### Pinging Mechanism
+
 Every **30 seconds**, the tracking hook sends device telemetry back to Supabase:
+
 - **Device ID**: Generated UUID stored in the browser's `localStorage` (`@shopbook_pos_web_device_id`).
 - **Device Model**: Detects browser vendor and host operating system.
 - **Battery**: Queries the Chrome Battery Status API to capture battery percentages.
 - **Location**: Fetches latitude and longitude via standard HTML Geolocation queries.
 
 ### Remote Session Revocation
+
 Administrators can view all active terminals in the devices modal. Removing a device from this modal deletes its row from the `active_devices` database table. On the revoked terminal's next ping, it detects that its session row is gone and automatically logs the cashier out locally.
 
 ---
@@ -54,13 +61,14 @@ Administrators can view all active terminals in the devices modal. Removing a de
 ## 3. OTP Authentication
 
 Authentication operates via phone-based verification codes:
+
 - **Flow Hook**: [useAuth.ts](../src/hooks/useAuth.ts)
 - **Normalizer**: Cleans input numbers (removes spaces, country prefix `+94`, and leading `0`s) to ensure consistent number structures:
   ```typescript
   const normalizePhone = (phoneStr: string): string => {
-    let cleaned = phoneStr.replace(/\D/g, "");
-    if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-    if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+    let cleaned = phoneStr.replace(/\D/g, '');
+    if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+    if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
     return cleaned;
   };
   ```
@@ -71,6 +79,7 @@ Authentication operates via phone-based verification codes:
 ## 4. Analytical Dashboards & Exporting
 
 Merchant insights are displayed on the analytics page ([page.tsx](../src/app/insights/page.tsx)):
+
 - **Analytics Controller**: [useInsights.ts](../src/hooks/useInsights.ts)
 - **KPI Metrics**: Displays Net Revenue, Sales Volume, Average Basket Value, Cost of Goods Sold, and Gross Profit.
 - **Charts**: Interactive SVG revenue charts ([RevenueChart.tsx](../src/components/insights/RevenueChart.tsx)).
@@ -84,6 +93,7 @@ Merchant insights are displayed on the analytics page ([page.tsx](../src/app/ins
 ## 5. Inventory & Stocks Management
 
 Allows monitoring and manual audit configuration:
+
 - **Inventory Controller Page**: [page.tsx](../src/app/stocks/page.tsx)
 - **Adjust Stocks dialog**: [AdjustStockModal.tsx](../src/components/stocks/AdjustStockModal.tsx)
 - **Audit Logs**: [AuditLogScroller.tsx](../src/components/stocks/AuditLogScroller.tsx)

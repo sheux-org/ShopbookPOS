@@ -54,7 +54,6 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
     return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [items]);
 
-
   if (!isOpen || !order) return null;
 
   const handlePrint = () => {
@@ -158,13 +157,17 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                 <span style="flex: 1; text-align: center;">Qty</span>
                 <span style="flex: 1; text-align: right;">Price</span>
               </div>
-              ${items.map(item => `
+              ${items
+                .map(
+                  (item) => `
                 <div class="receipt-item-row">
                   <span style="flex: 2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</span>
                   <span style="flex: 1; text-align: center;">${item.quantity}</span>
                   <span style="flex: 1; text-align: right;">Rs. ${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
-              `).join('')}
+              `
+                )
+                .join('')}
             </div>
 
             <div class="receipt-divider"></div>
@@ -174,12 +177,16 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                 <span>Subtotal</span>
                 <span>Rs. ${subtotal.toLocaleString()}</span>
               </div>
-              ${order.discountValue > 0 ? `
+              ${
+                order.discountValue > 0
+                  ? `
                 <div class="receipt-totals-row">
                   <span>Discount</span>
                   <span>- Rs. ${order.discountValue.toLocaleString()}</span>
                 </div>
-              ` : ''}
+              `
+                  : ''
+              }
               <div class="receipt-totals-row">
                 <span>VAT Tax (${order.taxRate}%)</span>
                 <span>Rs. ${order.taxValue.toLocaleString()}</span>
@@ -203,7 +210,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
         </html>
       `);
       doc.close();
-      
+
       // Allow browser to load iframe styles before print
       setTimeout(() => {
         iframe.contentWindow?.focus();
@@ -227,8 +234,12 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
       <div style={{ ...styles.modalContent, maxWidth: '420px', padding: '0px' }}>
         <div style={styles.receiptContainer} id="printable-history-receipt">
           <div style={styles.receiptHeader}>
-            <span style={styles.receiptSparkle}><Sparkles size={16} /></span>
-            <h3 style={styles.receiptStoreName}>{activeBusiness?.name || 'Shopbook POS Partner'}</h3>
+            <span style={styles.receiptSparkle}>
+              <Sparkles size={16} />
+            </span>
+            <h3 style={styles.receiptStoreName}>
+              {activeBusiness?.name || 'Shopbook POS Partner'}
+            </h3>
             <p style={styles.receiptStoreAddress}>{activeBusiness?.address || 'Sri Lanka'}</p>
             <p style={styles.receiptStorePhone}>{activeBusiness?.phone || '+94 ** *** ****'}</p>
           </div>
@@ -236,15 +247,25 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
           <div style={styles.receiptDivider} />
 
           <div style={styles.receiptMeta}>
-            <div><strong>Invoice:</strong> {order.invoiceNumber}</div>
-            <div><strong>Date:</strong> {order.dateStr}</div>
-            <div><strong>Cashier:</strong> {order.cashierName}</div>
+            <div>
+              <strong>Invoice:</strong> {order.invoiceNumber}
+            </div>
+            <div>
+              <strong>Date:</strong> {order.dateStr}
+            </div>
+            <div>
+              <strong>Cashier:</strong> {order.cashierName}
+            </div>
             <div>
               <strong>Status: </strong>
-              <span style={{ 
-                color: order.status === 'voided' ? 'var(--error)' : 'var(--success)',
-                fontWeight: 'bold'
-              }}>{order.status.toUpperCase()}</span>
+              <span
+                style={{
+                  color: order.status === 'voided' ? 'var(--error)' : 'var(--success)',
+                  fontWeight: 'bold',
+                }}
+              >
+                {order.status.toUpperCase()}
+              </span>
             </div>
           </div>
 
@@ -259,9 +280,20 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
             </div>
             {items.map((item, idx) => (
               <div key={idx} style={styles.receiptItemRow}>
-                <span style={{ flex: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                <span
+                  style={{
+                    flex: 2,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {item.name}
+                </span>
                 <span style={{ flex: 1, textAlign: 'center' }}>{item.quantity}</span>
-                <span style={{ flex: 1, textAlign: 'right' }}>Rs. {(item.price * item.quantity).toLocaleString()}</span>
+                <span style={{ flex: 1, textAlign: 'right' }}>
+                  Rs. {(item.price * item.quantity).toLocaleString()}
+                </span>
               </div>
             ))}
           </div>
@@ -284,7 +316,14 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
               <span>VAT Tax ({order.taxRate}%)</span>
               <span>Rs. {order.taxValue.toLocaleString()}</span>
             </div>
-            <div style={{ ...styles.receiptTotalsRow, fontWeight: 'bold', fontSize: '15px', marginTop: '6px' }}>
+            <div
+              style={{
+                ...styles.receiptTotalsRow,
+                fontWeight: 'bold',
+                fontSize: '15px',
+                marginTop: '6px',
+              }}
+            >
               <span>Total Due</span>
               <span>Rs. {order.totalAmount.toLocaleString()}</span>
             </div>
@@ -294,50 +333,42 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
 
           <div style={styles.receiptFooter}>
             <p>Payment Tender: {order.paymentMethod.toUpperCase()}</p>
-            {(order.paymentMethod === 'card' || order.paymentMethod === 'bank') && order.bankName && (
-              <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
-                {order.bankName} {order.cardLastFour ? `(**** ${order.cardLastFour})` : ''}
-              </p>
-            )}
-            <p style={{ marginTop: '8px', fontWeight: 'bold', letterSpacing: '0.5px' }}>THANK YOU FOR YOUR PATRONAGE! 🇱🇰</p>
-            <p style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '4px' }}>Shopbook Mini POS Cloud Sync Audit</p>
+            {(order.paymentMethod === 'card' || order.paymentMethod === 'bank') &&
+              order.bankName && (
+                <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
+                  {order.bankName} {order.cardLastFour ? `(**** ${order.cardLastFour})` : ''}
+                </p>
+              )}
+            <p style={{ marginTop: '8px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+              THANK YOU FOR YOUR PATRONAGE! 🇱🇰
+            </p>
+            <p style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '4px' }}>
+              Shopbook Mini POS Cloud Sync Audit
+            </p>
           </div>
         </div>
 
         {/* Receipt actions footer */}
         <div style={styles.receiptActions}>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button 
-              onClick={handlePrint}
-              style={styles.printBtn}
-            >
+            <button onClick={handlePrint} style={styles.printBtn}>
               <Printer size={15} />
               <span>Print PDF</span>
             </button>
-            <button 
-              onClick={onCopyText}
-              style={styles.copyBtn}
-            >
+            <button onClick={onCopyText} style={styles.copyBtn}>
               <Share2 size={15} />
               <span>Copy Text</span>
             </button>
           </div>
 
           {order.status !== 'voided' && canPerform('delete', 'transactions') && (
-            <button 
-              onClick={handleVoidClick}
-              disabled={voiding}
-              style={styles.voidBtn}
-            >
+            <button onClick={handleVoidClick} disabled={voiding} style={styles.voidBtn}>
               <Ban size={15} />
               <span>{voiding ? 'Voiding In Progress...' : 'Void Invoice Ledger Transaction'}</span>
             </button>
           )}
 
-          <button 
-            onClick={onClose}
-            style={styles.receiptDoneBtn}
-          >
+          <button onClick={onClose} style={styles.receiptDoneBtn}>
             Close Audit Inspection
           </button>
         </div>

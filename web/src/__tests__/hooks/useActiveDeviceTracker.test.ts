@@ -1,6 +1,10 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useActiveDeviceTracker, DEVICE_ID_KEY, deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
+import {
+  useActiveDeviceTracker,
+  DEVICE_ID_KEY,
+  deleteCurrentDeviceSession,
+} from '../../hooks/useActiveDeviceTracker';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import { supabase } from '../../services/sync';
@@ -61,7 +65,9 @@ describe('useActiveDeviceTracker Hook', () => {
 
     expect(vi.mocked(supabase.from)).toHaveBeenCalledWith('active_devices');
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
     expect(mockFromInstance.upsert).toHaveBeenCalled();
 
     const payload = mockFromInstance.upsert.mock.calls[0][0];
@@ -110,9 +116,11 @@ describe('useActiveDeviceTracker Hook', () => {
 
     Object.defineProperty(navigator, 'geolocation', {
       value: {
-        getCurrentPosition: vi.fn().mockImplementation((_success, error) =>
-          error({ code: 1, message: 'Permission denied' })
-        ),
+        getCurrentPosition: vi
+          .fn()
+          .mockImplementation((_success, error) =>
+            error({ code: 1, message: 'Permission denied' })
+          ),
       },
       writable: true,
       configurable: true,
@@ -121,7 +129,9 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
     const payload = mockFromInstance.upsert.mock.calls[0][0];
     expect(payload.location_name).toBe('Location Denied');
   });
@@ -138,7 +148,9 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
     const payload = mockFromInstance.upsert.mock.calls[0][0];
     expect(payload.location_name).toBe('Geolocation Unsupported');
   });
@@ -149,13 +161,17 @@ describe('useActiveDeviceTracker Hook', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     useAuthStore.setState({ isLoggedIn: true });
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
     mockFromInstance.upsert.mockResolvedValueOnce({ error: { message: 'Network Timeout' } } as any);
 
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to upsert active device status:', { message: 'Network Timeout' });
+    expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to upsert active device status:', {
+      message: 'Network Timeout',
+    });
     consoleWarnSpy.mockRestore();
   });
 
@@ -200,7 +216,9 @@ describe('useActiveDeviceTracker Hook', () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Called twice: once on mount, once from manual interval trigger
-    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
     expect(mockFromInstance.upsert).toHaveBeenCalledTimes(2);
 
     setIntervalSpy.mockRestore();
@@ -219,7 +237,9 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
     const payload = mockFromInstance.upsert.mock.calls[0][0];
     expect(payload.device_model).toContain('Windows');
     expect(payload.device_model).toContain('Chrome');
@@ -236,7 +256,9 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
     const payload = mockFromInstance.upsert.mock.calls[0][0];
     expect(payload.device_model).toContain('macOS');
   });
@@ -252,7 +274,9 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
     const payload = mockFromInstance.upsert.mock.calls[0][0];
     // X11 matches UNIX in the detector
     expect(payload.device_model).toMatch(/UNIX|Linux/);
@@ -270,7 +294,9 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as { upsert: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
     const payload = mockFromInstance.upsert.mock.calls[0][0];
     // This UA has no 'Linux' text, so Android regex matches
     expect(payload.device_model).toContain('Android');
@@ -278,7 +304,9 @@ describe('useActiveDeviceTracker Hook', () => {
 
   test('should clear interval when user logs out dynamically', async () => {
     useAuthStore.setState({ isLoggedIn: true });
-    useBusinessStore.setState({ activeBusiness: { id: 'biz-123', name: 'Test Shop', category: '', address: '', phone: '' } });
+    useBusinessStore.setState({
+      activeBusiness: { id: 'biz-123', name: 'Test Shop', category: '', address: '', phone: '' },
+    });
 
     const setIntervalSpy = vi.spyOn(window, 'setInterval').mockImplementation(() => 999 as any);
     const clearIntervalSpy = vi.spyOn(window, 'clearInterval').mockImplementation(() => {});
@@ -300,11 +328,15 @@ describe('useActiveDeviceTracker Hook', () => {
 
   test('should catch and warn errors in active device tracker', async () => {
     useAuthStore.setState({ isLoggedIn: true });
-    useBusinessStore.setState({ activeBusiness: { id: 'biz-123', name: 'Test Shop', category: '', address: '', phone: '' } });
+    useBusinessStore.setState({
+      activeBusiness: { id: 'biz-123', name: 'Test Shop', category: '', address: '', phone: '' },
+    });
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const originalGetItem = localStorage.getItem;
-    localStorage.getItem = () => { throw new Error('Storage Access Error'); };
+    localStorage.getItem = () => {
+      throw new Error('Storage Access Error');
+    };
 
     try {
       renderHook(() => useActiveDeviceTracker());
@@ -347,7 +379,9 @@ describe('deleteCurrentDeviceSession', () => {
 
     await deleteCurrentDeviceSession();
     // supabase.from for active_devices delete should NOT have been called
-    const mockFromInstance = supabase.from('active_devices') as unknown as { delete: ReturnType<typeof vi.fn> };
+    const mockFromInstance = supabase.from('active_devices') as unknown as {
+      delete: ReturnType<typeof vi.fn>;
+    };
     expect(mockFromInstance.delete).not.toHaveBeenCalled();
   });
 

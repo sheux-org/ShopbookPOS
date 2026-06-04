@@ -33,7 +33,6 @@ Welcome to the **Shopbook POS Web Terminal** documentation. This directory conta
    - Tablet Touch Mode vs Keyboard-optimized Normal Mode steps.
    - Keyboard Shortcuts cheat sheet, Customer registrations, and Inventory updates.
 
-
 ---
 
 ## Workspace Quick Links

@@ -72,7 +72,8 @@ export default function StockDetailPage() {
           </div>
           <h3 style={styles.restrictedTitle}>Inventory Operations Restricted</h3>
           <p style={styles.restrictedText}>
-            Cashier profiles are not authorized to view individual product ledgers, update, or edit products in the catalog list.
+            Cashier profiles are not authorized to view individual product ledgers, update, or edit
+            products in the catalog list.
           </p>
           <button onClick={() => router.push('/stocks')} style={styles.backBtn}>
             <ArrowLeft size={16} />
@@ -101,7 +102,8 @@ export default function StockDetailPage() {
           </div>
           <h3 style={styles.restrictedTitle}>Product Ledger Not Found</h3>
           <p style={styles.restrictedText}>
-            The product you are trying to view does not exist in this business catalog or has been deleted.
+            The product you are trying to view does not exist in this business catalog or has been
+            deleted.
           </p>
           <button onClick={() => router.push('/stocks')} style={styles.backBtn}>
             <ArrowLeft size={16} />
@@ -143,7 +145,11 @@ export default function StockDetailPage() {
     setTimeout(() => setCopiedCode(null), 1500);
   };
 
-  const handleAdjustSubmit = async (adjustType: 'in' | 'out', qtyNum: number, adjustReason: string) => {
+  const handleAdjustSubmit = async (
+    adjustType: 'in' | 'out',
+    qtyNum: number,
+    adjustReason: string
+  ) => {
     try {
       await adjustStockMutation.mutateAsync({
         productId: id,
@@ -182,7 +188,11 @@ export default function StockDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to permanently DELETE "${product.name}"? This action is irreversible and will delete all associated audit logs.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to permanently DELETE "${product.name}"? This action is irreversible and will delete all associated audit logs.`
+      )
+    ) {
       return;
     }
 
@@ -224,7 +234,11 @@ export default function StockDetailPage() {
         <div style={styles.detailsCard}>
           {/* Card Top Right Edit/Delete buttons */}
           <div style={styles.topCardActions}>
-            <button onClick={() => setShowEditModal(true)} style={styles.cardBtnSecondary} title="Edit Product">
+            <button
+              onClick={() => setShowEditModal(true)}
+              style={styles.cardBtnSecondary}
+              title="Edit Product"
+            >
               <Edit2 size={12} />
               <span>Edit Details</span>
             </button>
@@ -246,16 +260,20 @@ export default function StockDetailPage() {
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.05)',
                 }}
               />
-              
+
               <div style={styles.badgeColumn}>
-                <span style={{
-                  ...styles.stockIndicator,
-                  backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
-                  color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
-                  textAlign: 'center',
-                }}>
+                <span
+                  style={{
+                    ...styles.stockIndicator,
+                    backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
+                    color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
+                    textAlign: 'center',
+                  }}
+                >
                   {product.stockCount} {product.unitType || 'Units'}
-                  <div style={{ fontSize: '8px', opacity: 0.8, marginTop: '2px', fontWeight: '500' }}>
+                  <div
+                    style={{ fontSize: '8px', opacity: 0.8, marginTop: '2px', fontWeight: '500' }}
+                  >
                     {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
                   </div>
                 </span>
@@ -267,15 +285,24 @@ export default function StockDetailPage() {
 
             <div style={styles.metaCol}>
               <h2 style={styles.productName}>{product.name}</h2>
-              
+
               {/* Compact metadata fields with space-between */}
               <div style={styles.metaRowCompact}>
                 <span style={styles.metaLabelCompact}>Quick Code:</span>
                 <div style={styles.codeWrapper}>
-                  <span style={styles.codeTextCompact}>{product.quickCode ? `#${product.quickCode}` : 'None'}</span>
+                  <span style={styles.codeTextCompact}>
+                    {product.quickCode ? `#${product.quickCode}` : 'None'}
+                  </span>
                   {product.quickCode && (
-                    <button onClick={() => handleCopy(product.quickCode || '', 'quickcode')} style={styles.copyBtnCompact}>
-                      {copiedCode === 'quickcode' ? <Check size={10} color="var(--success)" /> : <Copy size={10} />}
+                    <button
+                      onClick={() => handleCopy(product.quickCode || '', 'quickcode')}
+                      style={styles.copyBtnCompact}
+                    >
+                      {copiedCode === 'quickcode' ? (
+                        <Check size={10} color="var(--success)" />
+                      ) : (
+                        <Copy size={10} />
+                      )}
                     </button>
                   )}
                 </div>
@@ -286,8 +313,15 @@ export default function StockDetailPage() {
                 <div style={styles.codeWrapper}>
                   <span style={styles.codeTextCompact}>{product.barcode || 'None'}</span>
                   {product.barcode && (
-                    <button onClick={() => handleCopy(product.barcode || '', 'barcode')} style={styles.copyBtnCompact}>
-                      {copiedCode === 'barcode' ? <Check size={10} color="var(--success)" /> : <Copy size={10} />}
+                    <button
+                      onClick={() => handleCopy(product.barcode || '', 'barcode')}
+                      style={styles.copyBtnCompact}
+                    >
+                      {copiedCode === 'barcode' ? (
+                        <Check size={10} color="var(--success)" />
+                      ) : (
+                        <Copy size={10} />
+                      )}
                     </button>
                   )}
                 </div>
@@ -300,7 +334,9 @@ export default function StockDetailPage() {
 
               <div style={styles.metaRowCompact}>
                 <span style={styles.metaLabelCompact}>Alert Level:</span>
-                <span style={styles.metaValCompact}>{product.lowStockAlert ? `${product.lowStockAlert} Units` : 'None'}</span>
+                <span style={styles.metaValCompact}>
+                  {product.lowStockAlert ? `${product.lowStockAlert} Units` : 'None'}
+                </span>
               </div>
 
               <div style={styles.metaRowCompact}>
@@ -310,7 +346,9 @@ export default function StockDetailPage() {
 
               <div style={styles.metaRowCompact}>
                 <span style={styles.metaLabelCompact}>Registered:</span>
-                <span style={styles.metaValCompact}>{product.createdAt ? new Date(product.createdAt).toLocaleDateString() : 'Unknown'}</span>
+                <span style={styles.metaValCompact}>
+                  {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : 'Unknown'}
+                </span>
               </div>
             </div>
           </div>
@@ -321,19 +359,45 @@ export default function StockDetailPage() {
           <div style={styles.infoGrid}>
             <div style={styles.infoRow}>
               <span style={styles.infoLabel}>Retail Price</span>
-              <span style={styles.infoValue}>Rs. {product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span style={styles.infoValue}>
+                Rs. {product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
             </div>
 
             <div style={styles.infoRow}>
               <span style={styles.infoLabel}>Cost Price</span>
-              <span style={styles.infoValue}>Rs. {product.costPrice ? product.costPrice.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</span>
+              <span style={styles.infoValue}>
+                Rs.{' '}
+                {product.costPrice
+                  ? product.costPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })
+                  : '0.00'}
+              </span>
             </div>
 
-            <div style={{ ...styles.infoRow, backgroundColor: '#f0fdf4', borderRadius: '8px', padding: '10px 12px', marginTop: '4px' }}>
+            <div
+              style={{
+                ...styles.infoRow,
+                backgroundColor: '#f0fdf4',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                marginTop: '4px',
+              }}
+            >
               <span style={{ ...styles.infoLabel, color: 'var(--success)' }}>Profit Margin</span>
-              <span style={{ ...styles.infoValue, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span
+                style={{
+                  ...styles.infoValue,
+                  color: 'var(--success)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
                 <TrendingUp size={14} />
-                <span>Rs. {profitAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} ({profitMarginPercentage.toFixed(1)}%)</span>
+                <span>
+                  Rs. {profitAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} (
+                  {profitMarginPercentage.toFixed(1)}%)
+                </span>
               </span>
             </div>
           </div>
@@ -359,25 +423,35 @@ export default function StockDetailPage() {
           <div style={styles.logsScroller}>
             {logs.map((log) => {
               const isIn = log.type === 'in';
-              const logDate = new Date(log.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+              const logDate = new Date(log.createdAt).toLocaleString([], {
+                dateStyle: 'short',
+                timeStyle: 'short',
+              });
               return (
                 <div key={log.id} style={styles.logItem}>
                   <div style={styles.logItemTop}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <span style={styles.logItemReason}>{log.reason || (isIn ? 'Restock' : 'Deduction')}</span>
+                      <span style={styles.logItemReason}>
+                        {log.reason || (isIn ? 'Restock' : 'Deduction')}
+                      </span>
                       <div style={styles.logItemDateRow}>
                         <Calendar size={11} color="var(--muted)" />
                         <span style={styles.logItemDate}>{logDate}</span>
                       </div>
                     </div>
 
-                    <div style={{
-                      ...styles.logBadge,
-                      backgroundColor: isIn ? '#DCFCE7' : '#FEE2E2',
-                      color: isIn ? '#16A34A' : '#DC2626',
-                    }}>
+                    <div
+                      style={{
+                        ...styles.logBadge,
+                        backgroundColor: isIn ? '#DCFCE7' : '#FEE2E2',
+                        color: isIn ? '#16A34A' : '#DC2626',
+                      }}
+                    >
                       {isIn ? <ArrowUpRight size={12} /> : <ArrowDownLeft size={12} />}
-                      <span>{isIn ? '+' : '-'}{log.quantity} {product.unitType || 'Units'}</span>
+                      <span>
+                        {isIn ? '+' : '-'}
+                        {log.quantity} {product.unitType || 'Units'}
+                      </span>
                     </div>
                   </div>
                 </div>

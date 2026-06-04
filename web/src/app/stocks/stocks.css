@@ -96,7 +96,7 @@
   .stocks-tab-bar {
     display: flex;
   }
-  
+
   .stocks-workspace {
     flex-direction: column !important;
     flex: 1 !important;
@@ -104,7 +104,7 @@
     overflow: hidden !important;
   }
 
-  .stocks-table-pane, 
+  .stocks-table-pane,
   .stocks-log-pane {
     flex: 1 !important;
     width: 100% !important;
@@ -116,12 +116,12 @@
     border: none !important;
   }
 
-  .stocks-table-pane.hidden-pane, 
+  .stocks-table-pane.hidden-pane,
   .stocks-log-pane.hidden-pane {
     display: none !important;
   }
 
-  .stocks-table-pane.active-pane, 
+  .stocks-table-pane.active-pane,
   .stocks-log-pane.active-pane {
     display: flex !important;
   }

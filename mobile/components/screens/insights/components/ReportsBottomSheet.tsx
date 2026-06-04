@@ -1,15 +1,24 @@
-import React, { useState } from "react";
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View, useWindowDimensions, StyleSheet } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { FlashList } from "@shopify/flash-list";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQueryClient } from "@tanstack/react-query";
-import { BottomSheet } from "../../../common/BottomSheet";
-import { ProductImage } from "../../../common/ProductImage";
-import { useStockInProduct } from "../../../../hooks/useProducts";
-import { TOKENS } from "../../../../constants/tokens";
-import { styles } from "../styles";
-import { OrderItemsList, OrderCardHeaderRight } from "./OrderHistoryHelpers";
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+  StyleSheet,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { FlashList } from '@shopify/flash-list';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
+import { BottomSheet } from '../../../common/BottomSheet';
+import { ProductImage } from '../../../common/ProductImage';
+import { useStockInProduct } from '../../../../hooks/useProducts';
+import { TOKENS } from '../../../../constants/tokens';
+import { styles } from '../styles';
+import { OrderItemsList, OrderCardHeaderRight } from './OrderHistoryHelpers';
 
 interface ReportsBottomSheetProps {
   visible: boolean;
@@ -40,7 +49,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
   const queryClient = useQueryClient();
   const { height: windowHeight } = useWindowDimensions();
 
-  const [reportsActiveTab, setReportsActiveTab] = useState<"orders" | "inventory">("orders");
+  const [reportsActiveTab, setReportsActiveTab] = useState<'orders' | 'inventory'>('orders');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [refillValues, setRefillValues] = useState<Record<string, string>>({});
@@ -58,23 +67,18 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
         {/* Premium Subheader Tabs */}
         <View style={styles.modalTabsRow}>
           <TouchableOpacity
-            style={[
-              styles.modalTab,
-              reportsActiveTab === "orders" && styles.modalTabActive,
-            ]}
-            onPress={() => setReportsActiveTab("orders")}
+            style={[styles.modalTab, reportsActiveTab === 'orders' && styles.modalTabActive]}
+            onPress={() => setReportsActiveTab('orders')}
           >
             <Feather
               name="list"
               size={14}
-              color={
-                reportsActiveTab === "orders" ? TOKENS.primary : TOKENS.muted
-              }
+              color={reportsActiveTab === 'orders' ? TOKENS.primary : TOKENS.muted}
             />
             <Text
               style={[
                 styles.modalTabText,
-                reportsActiveTab === "orders" && styles.modalTabTextActive,
+                reportsActiveTab === 'orders' && styles.modalTabTextActive,
               ]}
             >
               Order History
@@ -82,25 +86,18 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.modalTab,
-              reportsActiveTab === "inventory" && styles.modalTabActive,
-            ]}
-            onPress={() => setReportsActiveTab("inventory")}
+            style={[styles.modalTab, reportsActiveTab === 'inventory' && styles.modalTabActive]}
+            onPress={() => setReportsActiveTab('inventory')}
           >
             <Feather
               name="plus-circle"
               size={14}
-              color={
-                reportsActiveTab === "inventory"
-                  ? TOKENS.primary
-                  : TOKENS.muted
-              }
+              color={reportsActiveTab === 'inventory' ? TOKENS.primary : TOKENS.muted}
             />
             <Text
               style={[
                 styles.modalTabText,
-                reportsActiveTab === "inventory" && styles.modalTabTextActive,
+                reportsActiveTab === 'inventory' && styles.modalTabTextActive,
               ]}
             >
               Stock-In Refills
@@ -109,7 +106,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
         </View>
 
         {/* TAB CONTENT: ORDER HISTORY */}
-        {reportsActiveTab === "orders" && (
+        {reportsActiveTab === 'orders' && (
           <FlashList
             data={periodOrdersList}
             keyExtractor={(item) => item.id}
@@ -121,7 +118,11 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
             onEndReachedThreshold={0.3}
             ListFooterComponent={
               isFetchingNextPeriodOrders ? (
-                <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+                <ActivityIndicator
+                  size="small"
+                  color={TOKENS.primary}
+                  style={{ marginVertical: 16 }}
+                />
               ) : null
             }
             showsVerticalScrollIndicator={false}
@@ -135,20 +136,15 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                   <TouchableOpacity
                     activeOpacity={0.7}
                     style={styles.historyCardHeader}
-                    onPress={() =>
-                      setExpandedOrderId(isExpanded ? null : order.id)
-                    }
+                    onPress={() => setExpandedOrderId(isExpanded ? null : order.id)}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.historyInvoiceNum}>
-                        Invoice #{order.invoiceNumber}
-                      </Text>
+                      <Text style={styles.historyInvoiceNum}>Invoice #{order.invoiceNumber}</Text>
                       <Text style={styles.historyDateText}>
-                        {orderDate.toLocaleDateString()} at{" "}
-                        {orderDate.toLocaleTimeString()}
+                        {orderDate.toLocaleDateString()} at {orderDate.toLocaleTimeString()}
                       </Text>
                     </View>
-                    <View style={{ alignItems: "flex-end", gap: 4 }}>
+                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
                       <Text style={styles.historyTotalAmount}>
                         Rs. {order.totalAmount.toLocaleString()}
                       </Text>
@@ -178,7 +174,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
         )}
 
         {/* TAB CONTENT: STOCK-IN INVENTORY REFILL */}
-        {reportsActiveTab === "inventory" && (
+        {reportsActiveTab === 'inventory' && (
           <FlashList
             data={productsList}
             keyExtractor={(item) => item.id}
@@ -193,7 +189,11 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
             onEndReachedThreshold={0.3}
             ListFooterComponent={
               isFetchingNextProducts ? (
-                <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+                <ActivityIndicator
+                  size="small"
+                  color={TOKENS.primary}
+                  style={{ marginVertical: 16 }}
+                />
               ) : null
             }
             ListHeaderComponent={
@@ -203,15 +203,13 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
             }
             renderItem={({ item: prod }) => {
               const isExpanded = expandedProductId === prod.id;
-              const val = refillValues[prod.id] || "";
+              const val = refillValues[prod.id] || '';
               return (
                 <View style={styles.historyOrderCard}>
                   <TouchableOpacity
                     activeOpacity={0.7}
                     style={styles.refillCardHeader}
-                    onPress={() =>
-                      setExpandedProductId(isExpanded ? null : prod.id)
-                    }
+                    onPress={() => setExpandedProductId(isExpanded ? null : prod.id)}
                   >
                     <ProductImage
                       icon={prod.icon}
@@ -224,10 +222,10 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                         {prod.name}
                       </Text>
                       <Text style={styles.refillProductMeta} numberOfLines={1}>
-                        Code: {prod.quickCode || prod.sku || "—"} | Price: Rs. {prod.price}
+                        Code: {prod.quickCode || prod.sku || '—'} | Price: Rs. {prod.price}
                       </Text>
                     </View>
-                    <View style={{ alignItems: "flex-end", gap: 4 }}>
+                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
                       <Text
                         style={[
                           styles.refillStockCount,
@@ -237,7 +235,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                         Stock: {prod.stockCount}
                       </Text>
                       <Feather
-                        name={isExpanded ? "chevron-up" : "chevron-down"}
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
                         size={14}
                         color={TOKENS.muted}
                       />
@@ -281,8 +279,8 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                             const refillAmt = parseInt(val, 10);
                             if (isNaN(refillAmt) || refillAmt <= 0) {
                               Alert.alert(
-                                "Invalid Quantity",
-                                "Please enter a valid stock refill quantity!",
+                                'Invalid Quantity',
+                                'Please enter a valid stock refill quantity!'
                               );
                               return;
                             }
@@ -290,31 +288,36 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                               {
                                 productId: prod.id,
                                 quantity: refillAmt,
-                                reason: "Restock",
+                                reason: 'Restock',
                               },
                               {
                                 onSuccess: () => {
-                                  queryClient.invalidateQueries({ queryKey: ["insights"] });
-                                  Alert.alert("Stock In success", "Product stock refilled successfully!");
+                                  queryClient.invalidateQueries({ queryKey: ['insights'] });
+                                  Alert.alert(
+                                    'Stock In success',
+                                    'Product stock refilled successfully!'
+                                  );
                                   // Reset expanded refill values
                                   setRefillValues({});
                                   setExpandedProductId(null);
                                 },
                                 onError: (err: any) => {
-                                  Alert.alert("Refill Failed", err.message);
+                                  Alert.alert('Refill Failed', err.message);
                                 },
                               }
                             );
                           }}
                         >
                           {stockInMutation.isPending ? (
-                            <ActivityIndicator size="small" color="#fff" style={{ marginRight: 4 }} />
+                            <ActivityIndicator
+                              size="small"
+                              color="#fff"
+                              style={{ marginRight: 4 }}
+                            />
                           ) : (
                             <>
                               <Feather name="plus-circle" size={14} color="#fff" />
-                              <Text style={styles.refillSubmitBtnInlineText}>
-                                Stock-In
-                              </Text>
+                              <Text style={styles.refillSubmitBtnInlineText}>Stock-In</Text>
                             </>
                           )}
                         </TouchableOpacity>
@@ -342,22 +345,22 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
 
 const localStyles = StyleSheet.create({
   emptyStateContainer: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 64,
     paddingHorizontal: 24,
     marginTop: 32,
   },
   emptyStateTitle: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
     marginBottom: 4,
   },
   emptyStateSubtitle: {
     fontSize: 12,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 18,
   },
 });

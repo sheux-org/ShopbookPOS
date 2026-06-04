@@ -25,8 +25,12 @@ export default function ReceiptModal({
       <div style={{ ...styles.modalContent, maxWidth: '420px', padding: '0px' }}>
         <div style={styles.receiptContainer} id="printable-receipt-view">
           <div style={styles.receiptHeader}>
-            <span style={styles.receiptSparkle}><Sparkles size={16} /></span>
-            <h3 style={styles.receiptStoreName}>{activeBusiness?.name || 'Shopbook POS Partner'}</h3>
+            <span style={styles.receiptSparkle}>
+              <Sparkles size={16} />
+            </span>
+            <h3 style={styles.receiptStoreName}>
+              {activeBusiness?.name || 'Shopbook POS Partner'}
+            </h3>
             <p style={styles.receiptStoreAddress}>{activeBusiness?.address || 'Sri Lanka'}</p>
             <p style={styles.receiptStorePhone}>{activeBusiness?.phone || '+94 ** *** ****'}</p>
           </div>
@@ -34,9 +38,15 @@ export default function ReceiptModal({
           <div style={styles.receiptDivider} />
 
           <div style={styles.receiptMeta}>
-            <div><strong>Invoice:</strong> {selectedReceipt.invoiceNumber}</div>
-            <div><strong>Date:</strong> {selectedReceipt.date}</div>
-            <div><strong>Cashier:</strong> {employeeName}</div>
+            <div>
+              <strong>Invoice:</strong> {selectedReceipt.invoiceNumber}
+            </div>
+            <div>
+              <strong>Date:</strong> {selectedReceipt.date}
+            </div>
+            <div>
+              <strong>Cashier:</strong> {employeeName}
+            </div>
           </div>
 
           <div style={styles.receiptDivider} />
@@ -50,9 +60,20 @@ export default function ReceiptModal({
             </div>
             {selectedReceipt.items.map((item: any, idx: number) => (
               <div key={idx} style={styles.receiptItemRow}>
-                <span style={{ flex: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                <span
+                  style={{
+                    flex: 2,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {item.name}
+                </span>
                 <span style={{ flex: 1, textAlign: 'center' }}>{item.quantity}</span>
-                <span style={{ flex: 1, textAlign: 'right' }}>Rs. {(item.price * item.quantity).toLocaleString()}</span>
+                <span style={{ flex: 1, textAlign: 'right' }}>
+                  Rs. {(item.price * item.quantity).toLocaleString()}
+                </span>
               </div>
             ))}
           </div>
@@ -75,7 +96,14 @@ export default function ReceiptModal({
               <span>VAT Tax (8%)</span>
               <span>Rs. {selectedReceipt.taxValue.toLocaleString()}</span>
             </div>
-            <div style={{ ...styles.receiptTotalsRow, fontWeight: 'bold', fontSize: '15px', marginTop: '6px' }}>
+            <div
+              style={{
+                ...styles.receiptTotalsRow,
+                fontWeight: 'bold',
+                fontSize: '15px',
+                marginTop: '6px',
+              }}
+            >
               <span>Total Amount</span>
               <span>Rs. {selectedReceipt.totalAmount.toLocaleString()}</span>
             </div>
@@ -85,14 +113,18 @@ export default function ReceiptModal({
 
           <div style={styles.receiptFooter}>
             <p>Method: {selectedReceipt.paymentMethod.toUpperCase()}</p>
-            <p style={{ marginTop: '8px', fontWeight: 'bold', letterSpacing: '0.5px' }}>THANK YOU FOR YOUR VISIT! 🇱🇰</p>
-            <p style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '4px' }}>Powered by Shopbook Mini POS Pro</p>
+            <p style={{ marginTop: '8px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+              THANK YOU FOR YOUR VISIT! 🇱🇰
+            </p>
+            <p style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '4px' }}>
+              Powered by Shopbook Mini POS Pro
+            </p>
           </div>
         </div>
 
         {/* Receipt actions footer */}
         <div style={styles.receiptActions}>
-          <button 
+          <button
             onClick={() => {
               const printContents = document.getElementById('printable-receipt-view')?.innerHTML;
               const originalContents = document.body.innerHTML;
@@ -108,10 +140,7 @@ export default function ReceiptModal({
             <Printer size={16} />
             <span>Print receipt (PDF)</span>
           </button>
-          <button 
-            onClick={onClose}
-            style={styles.receiptDoneBtn}
-          >
+          <button onClick={onClose} style={styles.receiptDoneBtn}>
             Close Receipt
           </button>
         </div>

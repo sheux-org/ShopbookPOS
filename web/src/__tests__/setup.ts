@@ -6,9 +6,15 @@ const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => { store[key] = value.toString(); },
-    removeItem: (key: string) => { delete store[key]; },
-    clear: () => { store = {}; },
+    setItem: (key: string, value: string) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
   };
 })();
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
@@ -134,7 +140,9 @@ vi.mock('@supabase/supabase-js', () => {
       storage: {
         from: vi.fn().mockReturnValue({
           upload: vi.fn().mockResolvedValue({ error: null }),
-          getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://placeholder.logo' } }),
+          getPublicUrl: vi
+            .fn()
+            .mockReturnValue({ data: { publicUrl: 'https://placeholder.logo' } }),
         }),
       },
     }),
@@ -146,4 +154,3 @@ beforeEach(() => {
   localStorageMock.clear();
   vi.clearAllMocks();
 });
-

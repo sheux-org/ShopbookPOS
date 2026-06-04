@@ -1,10 +1,10 @@
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
-import { Q } from "@nozbe/watermelondb";
-import database from "../db/database";
-import { SEEDING_PRODUCTS } from "../utils/seedProducts";
-import { useAuthStore } from "./authStore";
-import { syncDatabase } from "../services/sync";
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { Q } from '@nozbe/watermelondb';
+import database from '../db/database';
+import { SEEDING_PRODUCTS } from '../utils/seedProducts';
+import { useAuthStore } from './authStore';
+import { syncDatabase } from '../services/sync';
 
 export interface Business {
   id: string;
@@ -48,12 +48,12 @@ interface BusinessState {
 }
 
 const PLACEHOLDER_BUSINESS: Business = {
-  id: "0",
-  name: "Register Your Shop",
-  category: "General Retail",
-  address: "Complete onboarding setup",
-  phone: "",
-  logoUri: "",
+  id: '0',
+  name: 'Register Your Shop',
+  category: 'General Retail',
+  address: 'Complete onboarding setup',
+  phone: '',
+  logoUri: '',
 };
 
 const DEFAULT_BUSINESSES: Business[] = [PLACEHOLDER_BUSINESS];
@@ -73,7 +73,7 @@ export const useBusinessStore = create<BusinessState>()(
         if (typeof window === 'undefined') return;
         try {
           if (!useAuthStore.persist.hasHydrated()) {
-            console.log("Skipping business load: AuthStore not hydrated yet");
+            console.log('Skipping business load: AuthStore not hydrated yet');
             return;
           }
 
@@ -89,9 +89,9 @@ export const useBusinessStore = create<BusinessState>()(
           }
 
           const normalizePhone = (phoneStr: string): string => {
-            let cleaned = phoneStr.replace(/\D/g, "");
-            if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-            if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+            let cleaned = phoneStr.replace(/\D/g, '');
+            if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+            if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
             return cleaned;
           };
 
@@ -99,9 +99,9 @@ export const useBusinessStore = create<BusinessState>()(
           const matchedBusinessesMap = new Map<string, any>();
 
           // 1. Employees query
-          const allEmployees = await database.get("employees").query().fetch();
+          const allEmployees = await database.get('employees').query().fetch();
           const matchedEmployees = allEmployees.filter((emp: any) => {
-            return normalizePhone(emp.phone || "") === cleanLoggedInPhone;
+            return normalizePhone(emp.phone || '') === cleanLoggedInPhone;
           });
 
           for (const emp of matchedEmployees) {
@@ -112,9 +112,9 @@ export const useBusinessStore = create<BusinessState>()(
           }
 
           // 2. Direct business owner query
-          const allBusinesses = await database.get("businesses").query().fetch();
+          const allBusinesses = await database.get('businesses').query().fetch();
           const matchedOwned = allBusinesses.filter((b: any) => {
-            return normalizePhone(b.phoneNumber || "") === cleanLoggedInPhone;
+            return normalizePhone(b.phoneNumber || '') === cleanLoggedInPhone;
           });
 
           for (const biz of matchedOwned) {
@@ -127,9 +127,9 @@ export const useBusinessStore = create<BusinessState>()(
             id: b.id,
             name: b.name,
             category: b.businessType,
-            address: b.address || "No Address Provided",
-            phone: b.phoneNumber || "+94 ** *** ****",
-            logoUri: b.logoUri || "",
+            address: b.address || 'No Address Provided',
+            phone: b.phoneNumber || '+94 ** *** ****',
+            logoUri: b.logoUri || '',
           }));
 
           const targetBizId = useAuthStore.getState().activeBusinessId || get().activeBusiness.id;
@@ -147,14 +147,14 @@ export const useBusinessStore = create<BusinessState>()(
             });
           }
         } catch (err) {
-          console.error("Failed to load businesses from IndexedDB:", err);
+          console.error('Failed to load businesses from IndexedDB:', err);
         }
       },
-      registerBusiness: async (name, address, phone, category = "General Retail", logoUri = "") => {
+      registerBusiness: async (name, address, phone, category = 'General Retail', logoUri = '') => {
         try {
           let newBusinessRecord: any;
           await database.write(async () => {
-            newBusinessRecord = await database.get("businesses").create((biz: any) => {
+            newBusinessRecord = await database.get('businesses').create((biz: any) => {
               biz.name = name;
               biz.businessType = category;
               biz.address = address;
@@ -162,22 +162,22 @@ export const useBusinessStore = create<BusinessState>()(
               biz.logoUri = logoUri;
             });
 
-            await database.get("employees").create((emp: any) => {
+            await database.get('employees').create((emp: any) => {
               emp.business.set(newBusinessRecord);
-              emp.name = "Owner / Admin";
-              emp.role = "admin";
+              emp.name = 'Owner / Admin';
+              emp.role = 'admin';
               emp.phone = phone;
             });
           });
 
           // Seed catalog products for first registered store
-          const dbBizs = await database.get("businesses").query().fetch();
+          const dbBizs = await database.get('businesses').query().fetch();
           if (dbBizs.length === 1) {
-            const existingProducts = await database.get("products").query().fetch();
+            const existingProducts = await database.get('products').query().fetch();
             if (existingProducts.length === 0) {
               await database.write(async () => {
                 for (const item of SEEDING_PRODUCTS) {
-                  await database.get("products").create((p: any) => {
+                  await database.get('products').create((p: any) => {
                     p.business.set(newBusinessRecord);
                     p.name = item.name;
                     p.price = item.price;
@@ -204,7 +204,7 @@ export const useBusinessStore = create<BusinessState>()(
           }
           return newBusinessRecord?.id;
         } catch (err) {
-          console.error("Failed to register business to IndexedDB:", err);
+          console.error('Failed to register business to IndexedDB:', err);
           return undefined;
         }
       },
@@ -212,8 +212,8 @@ export const useBusinessStore = create<BusinessState>()(
         const activeBiz = get().activeBusiness;
         try {
           const businesses = await database
-            .get("businesses")
-            .query(Q.where("id", activeBiz.id))
+            .get('businesses')
+            .query(Q.where('id', activeBiz.id))
             .fetch();
           if (businesses.length > 0) {
             const targetBiz = businesses[0];
@@ -232,15 +232,12 @@ export const useBusinessStore = create<BusinessState>()(
           await get().loadBusinessesFromDb();
           syncDatabase(); // Trigger real-time background replication
         } catch (err) {
-          console.error("Failed to update active business in IndexedDB:", err);
+          console.error('Failed to update active business in IndexedDB:', err);
         }
       },
       updateBusinessDetails: async (id, details) => {
         try {
-          const businesses = await database
-            .get("businesses")
-            .query(Q.where("id", id))
-            .fetch();
+          const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
           if (businesses.length > 0) {
             const targetBiz = businesses[0];
             await database.write(async () => {
@@ -258,15 +255,12 @@ export const useBusinessStore = create<BusinessState>()(
           await get().loadBusinessesFromDb();
           syncDatabase(); // Trigger real-time background replication
         } catch (err) {
-          console.error("Failed to update business in IndexedDB:", err);
+          console.error('Failed to update business in IndexedDB:', err);
         }
       },
       deleteBusiness: async (id) => {
         try {
-          const businesses = await database
-            .get("businesses")
-            .query(Q.where("id", id))
-            .fetch();
+          const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
           if (businesses.length > 0) {
             const targetBiz = businesses[0];
             await database.write(async () => {
@@ -283,12 +277,12 @@ export const useBusinessStore = create<BusinessState>()(
             }
           }
         } catch (err) {
-          console.error("Failed to delete business from IndexedDB:", err);
+          console.error('Failed to delete business from IndexedDB:', err);
         }
       },
     }),
     {
-      name: "business-storage",
+      name: 'business-storage',
       storage: typeof window !== 'undefined' ? createJSONStorage(() => localStorage) : undefined,
     }
   )

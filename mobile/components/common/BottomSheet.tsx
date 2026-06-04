@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,12 +11,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
-} from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TOKENS } from "../../constants/tokens";
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TOKENS } from '../../constants/tokens';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface BottomSheetProps {
   visible: boolean;
@@ -52,13 +52,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e) => {
         setKeyboardHeight(e.endCoordinates.height);
       }
     );
     const hideSubscription = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
         setKeyboardHeight(0);
       }
@@ -125,16 +125,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   if (!showModal) return null;
 
-  const calculatedMaxHeight = maxHeight ?? (SCREEN_HEIGHT - insets.top - 40);
+  const calculatedMaxHeight = maxHeight ?? SCREEN_HEIGHT - insets.top - 40;
   const dynamicMaxHeight = Math.max(120, calculatedMaxHeight - keyboardHeight);
 
   return (
-    <Modal
-      visible={showModal}
-      transparent
-      animationType="none"
-      onRequestClose={handleClose}
-    >
+    <Modal visible={showModal} transparent animationType="none" onRequestClose={handleClose}>
       <View style={StyleSheet.absoluteFill}>
         {/* Backdrop fades in/out independently and stays 100% static */}
         <TouchableWithoutFeedback onPress={handleClose}>
@@ -142,7 +137,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             style={[
               StyleSheet.absoluteFillObject,
               {
-                backgroundColor: "#000",
+                backgroundColor: '#000',
                 opacity: backdropOpacity,
               },
             ]}
@@ -151,7 +146,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
         {/* Sheet container sits on top and slides up/down */}
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.overlay}
           pointerEvents="box-none"
         >
@@ -196,44 +191,44 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
+    justifyContent: 'flex-end',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#000",
+    backgroundColor: '#000',
   },
   sheetContainer: {
     backgroundColor: TOKENS.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    boxShadow: "0px -4px 10px 0px rgba(0, 0, 0, 0.08)",
+    boxShadow: '0px -4px 10px 0px rgba(0, 0, 0, 0.08)',
   },
   dragHandle: {
     width: 40,
     height: 5,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: '#E2E8F0',
     borderRadius: 3,
-    alignSelf: "center",
+    alignSelf: 'center',
     marginBottom: 14,
   },
   sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 14,
   },
   sheetTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   closeBtn: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sheetBody: {
     // Allows inner components to render freely

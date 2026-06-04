@@ -1,5 +1,5 @@
-import React, { createContext, useContext } from "react";
-import { useCameraPermissions } from "expo-camera";
+import React, { createContext, useContext } from 'react';
+import { useCameraPermissions } from 'expo-camera';
 
 interface PermissionContextType {
   hasCameraAccess: boolean;
@@ -26,7 +26,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
       })
       .catch((err) => {
-        console.error("System permission request failed:", err);
+        console.error('System permission request failed:', err);
       });
   };
 
@@ -40,7 +40,7 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 export const usePermission = () => {
   const context = useContext(PermissionContext);
   if (!context) {
-    throw new Error("usePermission must be used within a PermissionProvider");
+    throw new Error('usePermission must be used within a PermissionProvider');
   }
   return context;
 };

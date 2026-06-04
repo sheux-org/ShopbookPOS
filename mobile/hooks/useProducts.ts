@@ -1,16 +1,16 @@
-import { Q } from "@nozbe/watermelondb";
-import * as NetInfo from "@react-native-community/netinfo";
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
-import * as ImagePicker from "expo-image-picker";
-import { Alert } from "react-native";
-import { cartState } from "../components/data/cartState";
-import database from "../components/data/db";
+import { Q } from '@nozbe/watermelondb';
+import * as NetInfo from '@react-native-community/netinfo';
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
+import { Alert } from 'react-native';
+import { cartState } from '../components/data/cartState';
+import database from '../components/data/db';
 import {
   deleteUploadThingFile,
   processUploadQueue,
   queueImageUpload,
   removeProductImage,
-} from "../services/uploadQueue";
+} from '../services/uploadQueue';
 
 export interface DBProduct {
   id: string;
@@ -19,7 +19,7 @@ export interface DBProduct {
   category: string;
   icon: string;
   stockCount: number;
-  stockType: "normal" | "low" | "out";
+  stockType: 'normal' | 'low' | 'out';
   stockText: string;
   barcode?: string;
   quickCode?: string;
@@ -31,65 +31,61 @@ export interface DBProduct {
   createdAt?: number;
 }
 
-export function useProducts(
-  category?: string,
-  search?: string,
-  activeChip?: string,
-) {
+export function useProducts(category?: string, search?: string, activeChip?: string) {
   const activeBiz = cartState.getActiveBusiness();
   const PAGE_SIZE = 30;
 
   const result = useInfiniteQuery<DBProduct[]>({
-    queryKey: ["products", activeBiz.id, category, search, activeChip],
+    queryKey: ['products', activeBiz.id, category, search, activeChip],
     queryFn: async ({ pageParam = 0 }) => {
-      let query = database.get("products").query();
+      let query = database.get('products').query();
 
       // Isolate products strictly by active business ID
-      query = query.extend(Q.where("business_id", activeBiz.id));
+      query = query.extend(Q.where('business_id', activeBiz.id));
 
-      if (category && category !== "all" && category !== "All") {
-        query = query.extend(Q.where("category", category.toLowerCase()));
+      if (category && category !== 'all' && category !== 'All') {
+        query = query.extend(Q.where('category', category.toLowerCase()));
       }
 
       // Filter by active chip directly inside WatermelonDB
       if (activeChip) {
-        if (activeChip === "In Stock") {
-          query = query.extend(Q.where("stock_count", Q.gt(0)));
-        } else if (activeChip === "Under Rs. 1000") {
-          query = query.extend(Q.where("price", Q.lt(1000)));
-        } else if (activeChip === "Low Stock") {
+        if (activeChip === 'In Stock') {
+          query = query.extend(Q.where('stock_count', Q.gt(0)));
+        } else if (activeChip === 'Under Rs. 1000') {
+          query = query.extend(Q.where('price', Q.lt(1000)));
+        } else if (activeChip === 'Low Stock') {
           // Do not apply hardcoded stock filter. We will filter in memory to support custom thresholds.
-          query = query.extend(Q.where("stock_count", Q.gt(0)));
-        } else if (activeChip === "Out of Stock") {
-          query = query.extend(Q.where("stock_count", 0));
-        } else if (activeChip === "Favorites" || activeChip === "favorites") {
-          query = query.extend(Q.where("is_favorite", true));
-        } else if (activeChip === "Recents" || activeChip === "recents") {
-          query = query.extend(Q.sortBy("created_at", Q.desc), Q.take(4));
+          query = query.extend(Q.where('stock_count', Q.gt(0)));
+        } else if (activeChip === 'Out of Stock') {
+          query = query.extend(Q.where('stock_count', 0));
+        } else if (activeChip === 'Favorites' || activeChip === 'favorites') {
+          query = query.extend(Q.where('is_favorite', true));
+        } else if (activeChip === 'Recents' || activeChip === 'recents') {
+          query = query.extend(Q.sortBy('created_at', Q.desc), Q.take(4));
         }
       }
 
-      if (search && search.trim() !== "") {
+      if (search && search.trim() !== '') {
         const sanitized = Q.sanitizeLikeString(search);
         query = query.extend(
           Q.or(
-            Q.where("name", Q.like(`%${sanitized}%`)),
-            Q.where("category", Q.like(`%${sanitized}%`)),
-            Q.where("barcode", Q.like(`%${sanitized}%`)),
-            Q.where("quick_code", Q.like(`%${sanitized}%`)),
-          ),
+            Q.where('name', Q.like(`%${sanitized}%`)),
+            Q.where('category', Q.like(`%${sanitized}%`)),
+            Q.where('barcode', Q.like(`%${sanitized}%`)),
+            Q.where('quick_code', Q.like(`%${sanitized}%`))
+          )
         );
       }
 
       // If activeChip is NOT "Recents" or "Low Stock", we paginate using limit and offset
-      if (activeChip !== "Recents" && activeChip !== "recents" && activeChip !== "Low Stock") {
+      if (activeChip !== 'Recents' && activeChip !== 'recents' && activeChip !== 'Low Stock') {
         const offset = (pageParam as number) * PAGE_SIZE;
         query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
       }
 
       let dbProducts = await query.fetch();
 
-      if (activeChip === "Low Stock") {
+      if (activeChip === 'Low Stock') {
         dbProducts = dbProducts.filter((p: any) => {
           const stockCount = p.stockCount ?? 0;
           const threshold = p.lowStockAlert ?? 5;
@@ -100,11 +96,11 @@ export function useProducts(
       return dbProducts.map((p: any) => {
         const stockCount = p.stockCount ?? 0;
         const stockType =
-          stockCount === 0 ? "out" : stockCount <= (p.lowStockAlert ?? 5) ? "low" : "normal";
+          stockCount === 0 ? 'out' : stockCount <= (p.lowStockAlert ?? 5) ? 'low' : 'normal';
         const stockText =
-          stockType === "out"
-            ? "Out of Stock"
-            : stockType === "low"
+          stockType === 'out'
+            ? 'Out of Stock'
+            : stockType === 'low'
               ? `Low · ${stockCount} remaining`
               : `${stockCount} in stock`;
 
@@ -112,9 +108,9 @@ export function useProducts(
           id: p.id,
           name: p.name,
           price: p.price,
-          category: p.category ?? "grocery",
+          category: p.category ?? 'grocery',
           // Only return a real photo URL — ProductImage renders placeholder for non-URLs
-          icon: p.icon ?? "",
+          icon: p.icon ?? '',
           stockCount,
           stockType,
           stockText,
@@ -122,7 +118,7 @@ export function useProducts(
           quickCode: p.quickCode,
           sku: p.sku,
           isFavorite: p.isFavorite ?? false,
-          unitType: p.unitType ?? "Pieces",
+          unitType: p.unitType ?? 'Pieces',
           costPrice: p.costPrice,
           lowStockAlert: p.lowStockAlert ?? 5,
           createdAt: p.createdAt ? new Date(p.createdAt).getTime() : Date.now(),
@@ -131,7 +127,7 @@ export function useProducts(
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
-      if (activeChip === "Recents" || activeChip === "recents") {
+      if (activeChip === 'Recents' || activeChip === 'recents') {
         return undefined;
       }
       return lastPage.length < PAGE_SIZE ? undefined : allPages.length;
@@ -153,23 +149,19 @@ export function useProducts(
 export function useUploadedProductImages() {
   const activeBiz = cartState.getActiveBusiness();
   return useQuery<{ id: string; name: string; icon: string }[]>({
-    queryKey: ["uploaded-images", activeBiz.id],
+    queryKey: ['uploaded-images', activeBiz.id],
     queryFn: async () => {
       const products = await database
-        .get("products")
-        .query(Q.where("business_id", activeBiz.id))
+        .get('products')
+        .query(Q.where('business_id', activeBiz.id))
         .fetch();
 
       return products
         .filter((p: any) => {
-          const icon: string = p.icon ?? "";
-          return (
-            icon.startsWith("http") ||
-            icon.startsWith("file://") ||
-            icon.startsWith("/")
-          );
+          const icon: string = p.icon ?? '';
+          return icon.startsWith('http') || icon.startsWith('file://') || icon.startsWith('/');
         })
-        .map((p: any) => ({ id: p.id, name: p.name, icon: p.icon ?? "" }));
+        .map((p: any) => ({ id: p.id, name: p.name, icon: p.icon ?? '' }));
     },
   });
 }
@@ -193,12 +185,12 @@ export function useAddProduct() {
     },
     onSuccess: () => {
       // Invalidate the query key so all screens automatically refetch from WatermelonDB!
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       // Trigger background upload queue check immediately as fallback
       try {
         processUploadQueue();
       } catch (err) {
-        console.error("Failed to run upload queue from hook:", err);
+        console.error('Failed to run upload queue from hook:', err);
       }
     },
   });
@@ -209,7 +201,7 @@ export function useToggleFavoriteProduct() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const product = await database.get("products").find(id);
+      const product = await database.get('products').find(id);
       await database.write(async () => {
         await product.update((p: any) => {
           p.isFavorite = !p.isFavorite;
@@ -218,7 +210,7 @@ export function useToggleFavoriteProduct() {
     },
     onSuccess: () => {
       // Invalidate products query cache so all components refetch instantly!
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     },
   });
 }
@@ -236,68 +228,60 @@ export function useUpdateProductImage() {
   const queryClient = useQueryClient();
 
   const pickAndUpload = async (productId: string) => {
-    Alert.alert("Product Image", "Choose how to add a product image", [
+    Alert.alert('Product Image', 'Choose how to add a product image', [
       {
-        text: "📷 Camera",
+        text: '📷 Camera',
         onPress: async () => {
           const { status } = await ImagePicker.requestCameraPermissionsAsync();
-          if (status !== "granted") {
-            Alert.alert("Permission needed", "Camera permission is required.");
+          if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Camera permission is required.');
             return;
           }
           try {
             const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ["images"],
+              mediaTypes: ['images'],
               allowsEditing: true,
               aspect: [1, 1] as [number, number],
               quality: 0.8,
             });
             if (!result.canceled && result.assets[0]?.uri) {
               const state = await NetInfo.fetch();
-              const isOnline =
-                (state.isConnected ?? false) &&
-                state.isInternetReachable !== false;
+              const isOnline = (state.isConnected ?? false) && state.isInternetReachable !== false;
               await queueImageUpload(productId, result.assets[0].uri, isOnline);
-              queryClient.invalidateQueries({ queryKey: ["products"] });
+              queryClient.invalidateQueries({ queryKey: ['products'] });
             }
           } catch {
             // Camera not available (e.g. simulator) — fall back to gallery
             Alert.alert(
-              "Camera Unavailable",
-              "Camera is not available on this device. Please use the Gallery option.",
+              'Camera Unavailable',
+              'Camera is not available on this device. Please use the Gallery option.'
             );
           }
         },
       },
       {
-        text: "🖼️ Gallery",
+        text: '🖼️ Gallery',
         onPress: async () => {
-          const { status } =
-            await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (status !== "granted") {
-            Alert.alert(
-              "Permission needed",
-              "Photo library permission is required.",
-            );
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Photo library permission is required.');
             return;
           }
           const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ["images"],
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [1, 1] as [number, number],
             quality: 0.8,
           });
           if (!result.canceled && result.assets[0]?.uri) {
             const state = await NetInfo.fetch();
-            const isOnline =
-              (state.isConnected ?? false) &&
-              state.isInternetReachable !== false;
+            const isOnline = (state.isConnected ?? false) && state.isInternetReachable !== false;
             await queueImageUpload(productId, result.assets[0].uri, isOnline);
-            queryClient.invalidateQueries({ queryKey: ["products"] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
           }
         },
       },
-      { text: "Cancel", style: "cancel" },
+      { text: 'Cancel', style: 'cancel' },
     ]);
   };
 
@@ -316,39 +300,32 @@ export function useUpdateProductImage() {
 export function useRemoveProductImage() {
   const queryClient = useQueryClient();
 
-  const confirmAndRemove = (
-    productId: string,
-    currentIcon: string,
-    productName: string,
-  ) => {
+  const confirmAndRemove = (productId: string, currentIcon: string, productName: string) => {
     // Only show if there's actually a custom image (not just an emoji)
     const hasCustomImage =
-      currentIcon.startsWith("http") ||
-      currentIcon.startsWith("file://") ||
-      currentIcon.startsWith("/");
+      currentIcon.startsWith('http') ||
+      currentIcon.startsWith('file://') ||
+      currentIcon.startsWith('/');
 
     if (!hasCustomImage) {
-      Alert.alert(
-        "No Custom Image",
-        `"${productName}" is using the default emoji icon.`,
-      );
+      Alert.alert('No Custom Image', `"${productName}" is using the default emoji icon.`);
       return;
     }
 
     Alert.alert(
-      "Remove Image?",
+      'Remove Image?',
       `This will delete the photo for "${productName}" and reset it to the default icon.`,
       [
         {
-          text: "Remove",
-          style: "destructive",
+          text: 'Remove',
+          style: 'destructive',
           onPress: async () => {
             await removeProductImage(productId);
-            queryClient.invalidateQueries({ queryKey: ["products"] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
           },
         },
-        { text: "Cancel", style: "cancel" },
-      ],
+        { text: 'Cancel', style: 'cancel' },
+      ]
     );
   };
 
@@ -385,7 +362,7 @@ export function useUpdateProduct() {
         barcode,
         lowStockAlert,
       } = params;
-      const product = await database.get("products").find(id);
+      const product = await database.get('products').find(id);
 
       await database.write(async () => {
         await product.update((p: any) => {
@@ -401,21 +378,20 @@ export function useUpdateProduct() {
           p.lowStockAlert = lowStockAlert;
 
           // Set pending upload flag if it's a local uri
-          const iconUri = icon ?? "";
-          const isLocal =
-            iconUri.startsWith("file://") || iconUri.startsWith("/");
+          const iconUri = icon ?? '';
+          const isLocal = iconUri.startsWith('file://') || iconUri.startsWith('/');
           p.iconPendingUpload = isLocal;
         });
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["uploaded-images"] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['uploaded-images'] });
       // Trigger background upload queue check immediately
       try {
         processUploadQueue();
       } catch (err) {
-        console.error("Failed to run upload queue from hook:", err);
+        console.error('Failed to run upload queue from hook:', err);
       }
     },
   });
@@ -426,16 +402,16 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const product = await database.get("products").find(id);
+      const product = await database.get('products').find(id);
 
       // Clean up uploaded image if it was a remote URL
-      const currentIcon: string = (product as any).icon ?? "";
-      const isRemoteUrl = currentIcon.startsWith("http");
+      const currentIcon: string = (product as any).icon ?? '';
+      const isRemoteUrl = currentIcon.startsWith('http');
       if (isRemoteUrl) {
         try {
           await deleteUploadThingFile(currentIcon);
         } catch (e) {
-          console.error("Failed to delete product file from UploadThing:", e);
+          console.error('Failed to delete product file from UploadThing:', e);
         }
       }
 
@@ -444,8 +420,8 @@ export function useDeleteProduct() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["uploaded-images"] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['uploaded-images'] });
     },
   });
 }
@@ -453,7 +429,7 @@ export function useDeleteProduct() {
 export interface DBInventoryLog {
   id: string;
   productId: string;
-  type: "in" | "out";
+  type: 'in' | 'out';
   quantity: number;
   reason?: string;
   createdAt: number;
@@ -462,16 +438,16 @@ export interface DBInventoryLog {
 export function useGetStockHistory(productId: string) {
   const PAGE_SIZE = 20;
   const result = useInfiniteQuery<DBInventoryLog[]>({
-    queryKey: ["stock-history", productId],
+    queryKey: ['stock-history', productId],
     queryFn: async ({ pageParam = 0 }) => {
       const offset = (pageParam as number) * PAGE_SIZE;
       const logs = await database
-        .get("inventory_logs")
+        .get('inventory_logs')
         .query(
-          Q.where("product_id", productId),
-          Q.sortBy("created_at", Q.desc),
+          Q.where('product_id', productId),
+          Q.sortBy('created_at', Q.desc),
           Q.skip(offset),
-          Q.take(PAGE_SIZE),
+          Q.take(PAGE_SIZE)
         )
         .fetch();
 
@@ -503,21 +479,17 @@ export function useStockInProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: {
-      productId: string;
-      quantity: number;
-      reason?: string;
-    }) => {
+    mutationFn: async (params: { productId: string; quantity: number; reason?: string }) => {
       const { productId, quantity, reason } = params;
-      const product = await database.get("products").find(productId);
+      const product = await database.get('products').find(productId);
 
       await database.write(async () => {
         // Create inventory log
-        await database.get("inventory_logs").create((log: any) => {
+        await database.get('inventory_logs').create((log: any) => {
           log.product.set(product);
-          log.type = "in";
+          log.type = 'in';
           log.quantity = quantity;
-          log.reason = reason || "Restock";
+          log.reason = reason || 'Restock';
         });
 
         // Update product stock count
@@ -527,9 +499,9 @@ export function useStockInProduct() {
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({
-        queryKey: ["stock-history", variables.productId],
+        queryKey: ['stock-history', variables.productId],
       });
     },
   });
@@ -537,17 +509,17 @@ export function useStockInProduct() {
 
 export function useProduct(id?: string) {
   return useQuery<DBProduct>({
-    queryKey: ["product", id],
+    queryKey: ['product', id],
     queryFn: async () => {
-      if (!id) throw new Error("Product ID is required");
-      const p = await database.get("products").find(id);
+      if (!id) throw new Error('Product ID is required');
+      const p = await database.get('products').find(id);
       const stockCount = (p as any).stockCount ?? 0;
       const stockType =
-        stockCount === 0 ? "out" : stockCount <= ((p as any).lowStockAlert ?? 5) ? "low" : "normal";
+        stockCount === 0 ? 'out' : stockCount <= ((p as any).lowStockAlert ?? 5) ? 'low' : 'normal';
       const stockText =
-        stockType === "out"
-          ? "Out of Stock"
-          : stockType === "low"
+        stockType === 'out'
+          ? 'Out of Stock'
+          : stockType === 'low'
             ? `Low · ${stockCount} remaining`
             : `${stockCount} in stock`;
 
@@ -555,8 +527,8 @@ export function useProduct(id?: string) {
         id: p.id,
         name: (p as any).name,
         price: (p as any).price,
-        category: (p as any).category ?? "grocery",
-        icon: (p as any).icon ?? "",
+        category: (p as any).category ?? 'grocery',
+        icon: (p as any).icon ?? '',
         stockCount,
         stockType,
         stockText,
@@ -564,7 +536,7 @@ export function useProduct(id?: string) {
         quickCode: (p as any).quickCode,
         sku: (p as any).sku,
         isFavorite: (p as any).isFavorite ?? false,
-        unitType: (p as any).unitType ?? "Pieces",
+        unitType: (p as any).unitType ?? 'Pieces',
         costPrice: (p as any).costPrice,
         lowStockAlert: (p as any).lowStockAlert ?? 5,
         createdAt: (p as any).createdAt ? new Date((p as any).createdAt).getTime() : Date.now(),
@@ -578,22 +550,19 @@ export function useFindProductByBarcode() {
   const activeBiz = cartState.getActiveBusiness();
   return async (barcode: string): Promise<DBProduct | null> => {
     const dbProducts = await database
-      .get("products")
-      .query(
-        Q.where("business_id", activeBiz.id),
-        Q.where("barcode", barcode),
-      )
+      .get('products')
+      .query(Q.where('business_id', activeBiz.id), Q.where('barcode', barcode))
       .fetch();
 
     if (dbProducts && dbProducts.length > 0) {
       const p: any = dbProducts[0];
       const stockCount = p.stockCount ?? 0;
       const stockType =
-        stockCount === 0 ? "out" : stockCount <= (p.lowStockAlert ?? 5) ? "low" : "normal";
+        stockCount === 0 ? 'out' : stockCount <= (p.lowStockAlert ?? 5) ? 'low' : 'normal';
       const stockText =
-        stockType === "out"
-          ? "Out of Stock"
-          : stockType === "low"
+        stockType === 'out'
+          ? 'Out of Stock'
+          : stockType === 'low'
             ? `Low · ${stockCount} remaining`
             : `${stockCount} in stock`;
 
@@ -601,8 +570,8 @@ export function useFindProductByBarcode() {
         id: p.id,
         name: p.name,
         price: p.price,
-        category: p.category ?? "grocery",
-        icon: p.icon ?? "",
+        category: p.category ?? 'grocery',
+        icon: p.icon ?? '',
         stockCount,
         stockType,
         stockText,
@@ -610,7 +579,7 @@ export function useFindProductByBarcode() {
         quickCode: p.quickCode,
         sku: p.sku,
         isFavorite: p.isFavorite ?? false,
-        unitType: p.unitType ?? "Pieces",
+        unitType: p.unitType ?? 'Pieces',
         costPrice: p.costPrice,
         lowStockAlert: p.lowStockAlert ?? 5,
         createdAt: p.createdAt ? new Date(p.createdAt).getTime() : Date.now(),
@@ -624,13 +593,10 @@ export function useFindProductByCode() {
   const activeBiz = cartState.getActiveBusiness();
   return async (code: string): Promise<DBProduct | null> => {
     const dbProducts = await database
-      .get("products")
+      .get('products')
       .query(
-        Q.where("business_id", activeBiz.id),
-        Q.or(
-          Q.where("barcode", code),
-          Q.where("quick_code", code)
-        )
+        Q.where('business_id', activeBiz.id),
+        Q.or(Q.where('barcode', code), Q.where('quick_code', code))
       )
       .fetch();
 
@@ -638,11 +604,11 @@ export function useFindProductByCode() {
       const p: any = dbProducts[0];
       const stockCount = p.stockCount ?? 0;
       const stockType =
-        stockCount === 0 ? "out" : stockCount <= (p.lowStockAlert ?? 5) ? "low" : "normal";
+        stockCount === 0 ? 'out' : stockCount <= (p.lowStockAlert ?? 5) ? 'low' : 'normal';
       const stockText =
-        stockType === "out"
-          ? "Out of Stock"
-          : stockType === "low"
+        stockType === 'out'
+          ? 'Out of Stock'
+          : stockType === 'low'
             ? `Low · ${stockCount} remaining`
             : `${stockCount} in stock`;
 
@@ -650,8 +616,8 @@ export function useFindProductByCode() {
         id: p.id,
         name: p.name,
         price: p.price,
-        category: p.category ?? "grocery",
-        icon: p.icon ?? "",
+        category: p.category ?? 'grocery',
+        icon: p.icon ?? '',
         stockCount,
         stockType,
         stockText,
@@ -659,7 +625,7 @@ export function useFindProductByCode() {
         quickCode: p.quickCode,
         sku: p.sku,
         isFavorite: p.isFavorite ?? false,
-        unitType: p.unitType ?? "Pieces",
+        unitType: p.unitType ?? 'Pieces',
         costPrice: p.costPrice,
         lowStockAlert: p.lowStockAlert ?? 5,
         createdAt: p.createdAt ? new Date(p.createdAt).getTime() : Date.now(),
@@ -668,4 +634,3 @@ export function useFindProductByCode() {
     return null;
   };
 }
-

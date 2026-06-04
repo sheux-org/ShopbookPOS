@@ -42,14 +42,16 @@ describe('authStore', () => {
   });
 
   test('should login with employee details and save token to localStorage', () => {
-    useAuthStore.getState().loginWithEmployee(
-      '0771234567',
-      'manager',
-      'John Cashier',
-      'biz-123',
-      'emp-456',
-      'test-jwt-token'
-    );
+    useAuthStore
+      .getState()
+      .loginWithEmployee(
+        '0771234567',
+        'manager',
+        'John Cashier',
+        'biz-123',
+        'emp-456',
+        'test-jwt-token'
+      );
 
     const state = useAuthStore.getState();
     expect(state.isLoggedIn).toBe(true);
@@ -82,14 +84,16 @@ describe('authStore', () => {
   });
 
   test('should clear all credentials and remove auth_token on logout', () => {
-    useAuthStore.getState().loginWithEmployee(
-      '0771234567',
-      'manager',
-      'John Cashier',
-      'biz-123',
-      'emp-456',
-      'test-jwt-token'
-    );
+    useAuthStore
+      .getState()
+      .loginWithEmployee(
+        '0771234567',
+        'manager',
+        'John Cashier',
+        'biz-123',
+        'emp-456',
+        'test-jwt-token'
+      );
 
     useAuthStore.getState().logout();
 
@@ -142,18 +146,18 @@ describe('authStore', () => {
   test('should support SSR environments where window is undefined', async () => {
     vi.resetModules();
     const originalWindow = global.window;
-    
+
     Object.defineProperty(global, 'window', {
       value: undefined,
       writable: true,
       configurable: true,
     });
-    
+
     const { useAuthStore: ssrStore } = await import('../../stores/authStore');
     expect(ssrStore).toBeDefined();
 
     ssrStore.getState().logout();
-    
+
     // Restore window
     Object.defineProperty(global, 'window', {
       value: originalWindow,

@@ -2,9 +2,17 @@
 
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { 
-  BarChart3, Package, User, LogOut, 
-  RefreshCw, X, ChevronLeft, ChevronRight, ShoppingCart, History
+import {
+  BarChart3,
+  Package,
+  User,
+  LogOut,
+  RefreshCw,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ShoppingCart,
+  History,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
@@ -60,9 +68,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   });
 
   return (
-    <aside className={`pos-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${sidebarOpen ? 'open' : ''}`}>
+    <aside
+      className={`pos-sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${sidebarOpen ? 'open' : ''}`}
+    >
       {/* Floating SaaS Edge Toggle Button (desktop only) */}
-      <button 
+      <button
         onClick={toggleSidebarCollapsed}
         className="sidebar-collapse-edge-btn hide-mobile"
         title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
@@ -71,14 +81,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </button>
 
       {/* Unified Store & Profile Header */}
-      <div className="sidebar-header-profile" title={`${activeBusiness?.name || 'Partner Store'} - ${employeeName}`}>
+      <div
+        className="sidebar-header-profile"
+        title={`${activeBusiness?.name || 'Partner Store'} - ${employeeName}`}
+      >
         <div className="sidebar-store-avatar">
           {activeBusiness?.logoUri ? (
-            <img 
-              src={activeBusiness.logoUri} 
-              alt="Store Logo" 
-              className="sidebar-store-logo-img" 
-            />
+            <img src={activeBusiness.logoUri} alt="Store Logo" className="sidebar-store-logo-img" />
           ) : (
             activeBusiness?.name?.substring(0, 2).toUpperCase() || 'SP'
           )}
@@ -91,10 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
         {/* Close button for mobile screen drawer */}
-        <button 
-          onClick={() => setSidebarOpen(false)} 
-          className="sidebar-close-btn"
-        >
+        <button onClick={() => setSidebarOpen(false)} className="sidebar-close-btn">
           <X size={18} />
         </button>
       </div>
@@ -114,12 +120,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={`sidebar-nav-btn ${isActive ? 'active' : ''}`}
               title={sidebarCollapsed ? item.name : undefined}
             >
-              <span className="nav-icon"><Icon size={18} /></span>
+              <span className="nav-icon">
+                <Icon size={18} />
+              </span>
               <span className="nav-label">{item.name}</span>
               {item.path === '/' && cartItemsCount > 0 && (
-                <span className="cart-badge">
-                  {cartItemsCount}
-                </span>
+                <span className="cart-badge">{cartItemsCount}</span>
               )}
             </button>
           );
@@ -130,26 +136,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div style={styles.bottomActions}>
         {/* Cloud Sync Status */}
         {canPerform('read', 'sync') && (
-          <button 
-            onClick={handleSync} 
+          <button
+            onClick={handleSync}
             disabled={syncing}
             className="sidebar-sync-btn"
             title={sidebarCollapsed ? (syncing ? 'Backing up...' : 'Backup to Cloud') : undefined}
           >
             <span className="btn-icon">
-              <RefreshCw size={16} className={syncing ? 'spin-anim' : ''} style={{
-                animation: syncing ? 'spin 1.5s linear infinite' : 'none'
-              }} />
+              <RefreshCw
+                size={16}
+                className={syncing ? 'spin-anim' : ''}
+                style={{
+                  animation: syncing ? 'spin 1.5s linear infinite' : 'none',
+                }}
+              />
             </span>
             <span className="btn-label">
-              {syncing ? 'Backing up...' : syncSuccess === true ? 'Sync Complete!' : syncSuccess === false ? 'Sync Failed' : 'Backup to Cloud'}
+              {syncing
+                ? 'Backing up...'
+                : syncSuccess === true
+                  ? 'Sync Complete!'
+                  : syncSuccess === false
+                    ? 'Sync Failed'
+                    : 'Backup to Cloud'}
             </span>
           </button>
         )}
         <style jsx global>{`
           @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
           }
         `}</style>
 
@@ -166,17 +186,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="sidebar-logout-btn"
           title={sidebarCollapsed ? 'Sign Out' : undefined}
         >
-          <span className="btn-icon"><LogOut size={16} /></span>
+          <span className="btn-icon">
+            <LogOut size={16} />
+          </span>
           <span className="btn-label">Sign Out</span>
         </button>
 
         {/* Powered by Shopbook */}
         <div className="powered-by-container">
           <span className="powered-by-text">powered by</span>
-          <a 
-            href="https://shopbook.lk" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href="https://shopbook.lk"
+            target="_blank"
+            rel="noopener noreferrer"
             className="powered-by-brand"
           >
             Shopbook

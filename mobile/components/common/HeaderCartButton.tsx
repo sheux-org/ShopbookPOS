@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { TOKENS } from "../../constants/tokens";
-import { cartState } from "../data/cartState";
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { TOKENS } from '../../constants/tokens';
+import { cartState } from '../data/cartState';
 
 export const HeaderCartButton: React.FC = () => {
   const router = useRouter();
@@ -25,7 +25,7 @@ export const HeaderCartButton: React.FC = () => {
     <TouchableOpacity
       style={styles.headerCartBtn}
       activeOpacity={0.8}
-      onPress={() => router.push("/pos/cart")}
+      onPress={() => router.push('/pos/cart')}
     >
       <Feather name="shopping-cart" size={18} color={TOKENS.primary} />
       <View style={styles.headerCartBadge}>
@@ -43,24 +43,24 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.lightBlue,
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
   headerCartBadge: {
-    position: "absolute",
+    position: 'absolute',
     top: -4,
     right: -4,
     backgroundColor: TOKENS.error,
     borderRadius: 9,
     width: 18,
     height: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCartBadgeText: {
     color: TOKENS.card,
     fontSize: 9,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
 });

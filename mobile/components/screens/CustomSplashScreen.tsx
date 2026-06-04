@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   runOnJS,
-} from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as SplashScreen from "expo-splash-screen";
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as SplashScreen from 'expo-splash-screen';
 
 interface CustomSplashScreenProps {
   isReady: boolean;
@@ -35,7 +35,7 @@ export function CustomSplashScreen({ isReady, onAnimationComplete }: CustomSplas
       try {
         await SplashScreen.hideAsync();
       } catch (err) {
-        console.warn("Failed to hide native splash screen:", err);
+        console.warn('Failed to hide native splash screen:', err);
       }
     };
     hideNativeSplash();
@@ -84,15 +84,12 @@ export function CustomSplashScreen({ isReady, onAnimationComplete }: CustomSplas
 
   return (
     <Animated.View style={[styles.outerContainer, animatedContainerStyle]}>
-      <LinearGradient
-        colors={["#2563EB", "#225AD6"]}
-        style={styles.container}
-      >
+      <LinearGradient colors={['#2563EB', '#225AD6']} style={styles.container}>
         <View style={styles.content}>
           {/* Circular Logo Container with solid white background */}
           <Animated.View style={[styles.logoContainer, animatedLogoStyle]}>
             <Image
-              source={require("../../assets/images/icon.png")}
+              source={require('../../assets/images/icon.png')}
               style={styles.logo}
               contentFit="contain"
             />
@@ -105,7 +102,13 @@ export function CustomSplashScreen({ isReady, onAnimationComplete }: CustomSplas
         </View>
 
         {/* Powered By Footer */}
-        <Animated.View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 32) }, animatedFooterStyle]}>
+        <Animated.View
+          style={[
+            styles.footer,
+            { paddingBottom: Math.max(insets.bottom, 32) },
+            animatedFooterStyle,
+          ]}
+        >
           <Text style={styles.footerPrefix}>powered by</Text>
           <Text style={styles.footerBrand}>shopbook</Text>
         </Animated.View>
@@ -121,59 +124,59 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    height: "100%",
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    height: '100%',
   },
   content: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     flex: 1,
   },
   logoContainer: {
     width: 120,
     height: 120,
     borderRadius: 60, // Circular shape
-    backgroundColor: "#FFFFFF", // Solid white background to make the logo pop on blue
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#FFFFFF', // Solid white background to make the logo pop on blue
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 24,
-    boxShadow: "0px 6px 12px 0px rgba(0, 0, 0, 0.12)",
+    boxShadow: '0px 6px 12px 0px rgba(0, 0, 0, 0.12)',
   },
   logo: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
   textContainer: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   title: {
     fontSize: 26,
-    fontWeight: "600",
-    color: "#FFFFFF", // High-contrast white
+    fontWeight: '600',
+    color: '#FFFFFF', // High-contrast white
     letterSpacing: 0.5,
-    textAlign: "center",
+    textAlign: 'center',
   },
   footer: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
-    alignItems: "center",
-    width: "100%",
+    alignItems: 'center',
+    width: '100%',
   },
   footerPrefix: {
     fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    color: "rgba(255, 255, 255, 0.75)", // Semi-transparent white
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    color: 'rgba(255, 255, 255, 0.75)', // Semi-transparent white
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   footerBrand: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#FFFFFF", // High-contrast white
+    fontWeight: '600',
+    color: '#FFFFFF', // High-contrast white
     letterSpacing: 0.5,
   },
 });

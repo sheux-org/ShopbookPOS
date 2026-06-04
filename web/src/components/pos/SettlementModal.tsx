@@ -57,10 +57,7 @@ export const SettlementModal: React.FC<SettlementModalProps> = (props) => {
             <span style={styles.invoiceTotalLabel}>Total Amount Due:</span>
             <span style={styles.invoiceTotalValue}>Rs. {props.totalAmount.toLocaleString()}</span>
           </div>
-          <SettlementCard 
-            {...props} 
-            handleConfirmCheckout={handleConfirm}
-          />
+          <SettlementCard {...props} handleConfirmCheckout={handleConfirm} />
         </div>
       </div>
     </div>

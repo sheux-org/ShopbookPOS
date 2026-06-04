@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,19 +7,19 @@ import {
   ScrollView,
   Animated,
   Easing,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScreenWrapper } from "../common/ScreenWrapper";
-import { HeaderCartButton } from "../common/HeaderCartButton";
-import { CameraView } from "expo-camera";
-import { usePermission } from "../../hooks/usePermissionHandler";
-import { TOKENS } from "../../constants/tokens";
-import { cartState, CartItem } from "../data/cartState";
-import { useProducts } from "../../hooks/useProducts";
-import { useUserPermissions } from "../../hooks/useUserPermissions";
-import { InvoiceItemCard } from "../common/InvoiceItemCard";
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenWrapper } from '../common/ScreenWrapper';
+import { HeaderCartButton } from '../common/HeaderCartButton';
+import { CameraView } from 'expo-camera';
+import { usePermission } from '../../hooks/usePermissionHandler';
+import { TOKENS } from '../../constants/tokens';
+import { cartState, CartItem } from '../data/cartState';
+import { useProducts } from '../../hooks/useProducts';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { InvoiceItemCard } from '../common/InvoiceItemCard';
 
 export const ScanScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -123,14 +123,18 @@ export const ScanScreen: React.FC = () => {
         </View>
 
         <View style={styles.headerRightActions}>
-          {role === "admin" && (
+          {role === 'admin' && (
             <TouchableOpacity
               style={styles.headerHistoryBtn}
               activeOpacity={0.7}
-              onPress={() => router.push("/pos/history")}
+              onPress={() => router.push('/pos/history')}
             >
               <Feather name="list" size={16} color={TOKENS.primary} />
-              <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Orders</Text>
+              <Text
+                style={{ fontSize: 12, fontWeight: 'bold', color: TOKENS.primary, marginLeft: 4 }}
+              >
+                Orders
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -166,20 +170,27 @@ export const ScanScreen: React.FC = () => {
             <CameraView
               style={StyleSheet.absoluteFillObject}
               barcodeScannerSettings={{
-                barcodeTypes: ["upc_a", "upc_e", "ean13", "ean8", "qr", "code128", "code39"],
+                barcodeTypes: ['upc_a', 'upc_e', 'ean13', 'ean8', 'qr', 'code128', 'code39'],
               }}
               onBarcodeScanned={handleBarcodeScanned}
             />
           ) : (
-            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 16 }}>
-              <Text style={{ color: "#fff", fontSize: 12, textAlign: "center", marginBottom: 10 }}>
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+              <Text style={{ color: '#fff', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>
                 Camera Access Required
               </Text>
               <TouchableOpacity
                 onPress={() => requestCameraAccess()}
-                style={{ backgroundColor: TOKENS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+                style={{
+                  backgroundColor: TOKENS.primary,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                }}
               >
-                <Text style={{ color: "#fff", fontSize: 11, fontWeight: "bold" }}>Grant Permission</Text>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
+                  Grant Permission
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -202,11 +213,11 @@ export const ScanScreen: React.FC = () => {
         <TouchableOpacity
           style={[
             styles.summaryBarButton,
-            invoiceItems.length === 0 && styles.summaryBarButtonDisabled
+            invoiceItems.length === 0 && styles.summaryBarButtonDisabled,
           ]}
           disabled={invoiceItems.length === 0}
           activeOpacity={0.85}
-          onPress={() => router.push("/pos/cart")}
+          onPress={() => router.push('/pos/cart')}
         >
           <View style={styles.summaryBarLeft}>
             <Feather
@@ -214,16 +225,20 @@ export const ScanScreen: React.FC = () => {
               size={16}
               color={invoiceItems.length === 0 ? TOKENS.muted : TOKENS.card}
             />
-            <Text style={[
-              styles.summaryLabelActive,
-              invoiceItems.length === 0 && styles.summaryLabelDisabled
-            ]}>
+            <Text
+              style={[
+                styles.summaryLabelActive,
+                invoiceItems.length === 0 && styles.summaryLabelDisabled,
+              ]}
+            >
               Proceed to Checkout
             </Text>
           </View>
           {invoiceItems.length > 0 ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={styles.summaryValueActive}>Rs. {totalInvoiceAmount.toLocaleString()}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.summaryValueActive}>
+                Rs. {totalInvoiceAmount.toLocaleString()}
+              </Text>
               <Feather name="arrow-right" size={16} color={TOKENS.card} />
             </View>
           ) : (
@@ -241,27 +256,27 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
   },
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -272,9 +287,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitleWrapper: {
     flex: 1,
@@ -282,7 +297,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   headerSubtitle: {
@@ -291,13 +306,13 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   headerRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   headerHistoryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 36,
     borderRadius: 18,
     backgroundColor: TOKENS.lightBlue,
@@ -314,21 +329,21 @@ const styles = StyleSheet.create({
   },
 
   emptyInvoiceState: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 64,
     gap: 8,
   },
   emptyInvoiceTitle: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
     marginTop: 12,
   },
   emptyInvoiceSub: {
     fontSize: 12,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     paddingHorizontal: 32,
   },
   bottomPanel: {
@@ -340,30 +355,30 @@ const styles = StyleSheet.create({
   },
   scannerLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.muted,
     letterSpacing: 0.5,
-    textAlign: "center",
+    textAlign: 'center',
   },
   mockViewfinder: {
-    width: "100%",
+    width: '100%',
     height: 180,
-    backgroundColor: "#111827",
+    backgroundColor: '#111827',
     borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
   },
   bracketContainer: {
     width: 200,
     height: 120,
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scanCorner: {
-    position: "absolute",
+    position: 'absolute',
     width: 16,
     height: 16,
     borderColor: TOKENS.yellow,
@@ -393,7 +408,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 3,
   },
   scanLaser: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 4,
     right: 4,
@@ -402,30 +417,30 @@ const styles = StyleSheet.create({
     boxShadow: `0px 0px 3px 0px ${TOKENS.yellow}CC`,
   },
   summaryBarButton: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: TOKENS.primary,
     paddingHorizontal: 20,
     height: 48,
     borderRadius: 24,
-    width: "100%",
+    width: '100%',
     marginTop: 10,
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}4D`,
   },
   summaryBarButtonDisabled: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
     shadowOpacity: 0,
     elevation: 0,
   },
   summaryBarLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   summaryLabelActive: {
     color: TOKENS.card,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     fontSize: 14,
   },
   summaryLabelDisabled: {
@@ -433,7 +448,7 @@ const styles = StyleSheet.create({
   },
   summaryValueActive: {
     color: TOKENS.card,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     fontSize: 14,
   },
 });

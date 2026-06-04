@@ -109,7 +109,7 @@ describe('Auth API Proxies', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer verify-jwt-token',
+        Authorization: 'Bearer verify-jwt-token',
       },
       body: JSON.stringify({ code: '11111', phone_number: '771234567' }),
     });
@@ -126,7 +126,7 @@ describe('Auth API Proxies', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer verify-jwt-token',
+          Authorization: 'Bearer verify-jwt-token',
         },
         body: JSON.stringify({ code: '11111', phone_number: '771234567' }),
       })

@@ -35,10 +35,12 @@ export const collections: Record<string, any> = {
 
 const databaseMock = {
   get: vi.fn().mockImplementation((tableName: string) => {
-    return collections[tableName] || {
-      query: vi.fn().mockReturnValue({ fetch: vi.fn().mockResolvedValue([]) }),
-      create: vi.fn().mockResolvedValue({}),
-    };
+    return (
+      collections[tableName] || {
+        query: vi.fn().mockReturnValue({ fetch: vi.fn().mockResolvedValue([]) }),
+        create: vi.fn().mockResolvedValue({}),
+      }
+    );
   }),
   write: vi.fn().mockImplementation((cb) => cb()),
 };

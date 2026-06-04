@@ -1,14 +1,7 @@
-import React from "react";
-import {
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-  StyleProp,
-  ViewStyle,
-} from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { TOKENS } from "../../constants/tokens";
+import React from 'react';
+import { StyleSheet, TextInput, TouchableOpacity, View, StyleProp, ViewStyle } from 'react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { TOKENS } from '../../constants/tokens';
 
 export interface SearchInputProps {
   value: string;
@@ -22,13 +15,13 @@ export interface SearchInputProps {
 export const SearchInput: React.FC<SearchInputProps> = ({
   value,
   onChangeText,
-  placeholder = "Search...",
+  placeholder = 'Search...',
   onScanPress,
   onClear,
   containerStyle,
 }) => {
   const handleClear = () => {
-    onChangeText("");
+    onChangeText('');
     if (onClear) {
       onClear();
     }
@@ -60,9 +53,9 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 
 const styles = StyleSheet.create({
   searchInputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
     borderRadius: 20,
     paddingHorizontal: 12,
     height: 40,

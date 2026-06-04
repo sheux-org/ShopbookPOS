@@ -1,19 +1,19 @@
 function escapeHtml(s: string): string {
-  if (!s) return "";
+  if (!s) return '';
   return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 export type ReportType =
-  | "best_sellers"
-  | "slow_movers"
-  | "orders_ledger"
-  | "item_sales"
-  | "branch_performance";
+  | 'best_sellers'
+  | 'slow_movers'
+  | 'orders_ledger'
+  | 'item_sales'
+  | 'branch_performance';
 
 export interface ReportData {
   business: {
@@ -30,9 +30,9 @@ export interface ReportData {
 export function buildReportHtml(type: ReportType, data: ReportData): string {
   const { business, orders, orderItems, products } = data;
   const businessName = escapeHtml(business.name);
-  const businessCategory = escapeHtml(business.category || "General Store");
-  const businessAddress = escapeHtml(business.address || "No Address Provided");
-  const businessPhone = escapeHtml(business.phone || "No Telephone");
+  const businessCategory = escapeHtml(business.category || 'General Store');
+  const businessAddress = escapeHtml(business.address || 'No Address Provided');
+  const businessPhone = escapeHtml(business.phone || 'No Telephone');
   const generatedDate = new Date().toLocaleString();
 
   // Helper calculations
@@ -41,26 +41,35 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
   const avgBasket = totalOrdersCount > 0 ? totalSales / totalOrdersCount : 0;
 
   // Let's build specific details for each report type
-  let reportTitle = "";
-  let kpiCardsHtml = "";
-  let contentHtml = "";
+  let reportTitle = '';
+  let kpiCardsHtml = '';
+  let contentHtml = '';
 
-  if (type === "best_sellers") {
-    reportTitle = "Best Selling Products Report";
+  if (type === 'best_sellers') {
+    reportTitle = 'Best Selling Products Report';
 
     // Build Product sales map
-    const productSales: Record<string, { sku: string; category: string; quantity: number; revenue: number; price: number }> = {};
+    const productSales: Record<
+      string,
+      { sku: string; category: string; quantity: number; revenue: number; price: number }
+    > = {};
     for (const item of orderItems) {
-      const name = item.name || "Unknown Item";
+      const name = item.name || 'Unknown Item';
       if (!productSales[name]) {
-        productSales[name] = { sku: item.sku || "N/A", category: item.category || "General", quantity: 0, revenue: 0, price: item.price || 0 };
+        productSales[name] = {
+          sku: item.sku || 'N/A',
+          category: item.category || 'General',
+          quantity: 0,
+          revenue: 0,
+          price: item.price || 0,
+        };
       }
       productSales[name].quantity += item.quantity || 0;
       productSales[name].revenue += (item.quantity || 0) * (item.price || 0);
     }
 
     const sortedBest = Object.keys(productSales)
-      .map(name => ({ name, ...productSales[name] }))
+      .map((name) => ({ name, ...productSales[name] }))
       .sort((a, b) => b.quantity - a.quantity);
 
     const totalUnitsSold = sortedBest.reduce((acc, p) => acc + p.quantity, 0);
@@ -82,12 +91,14 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
     `;
 
     // Table
-    let rowsHtml = sortedBest.length > 0 
-      ? sortedBest.map((p, idx) => {
-          const share = totalSales > 0 ? (p.revenue / totalSales) * 100 : 0;
-          return `
+    let rowsHtml =
+      sortedBest.length > 0
+        ? sortedBest
+            .map((p, idx) => {
+              const share = totalSales > 0 ? (p.revenue / totalSales) * 100 : 0;
+              return `
             <tr>
-              <td><span class="badge ${idx === 0 ? "gold" : idx === 1 ? "silver" : idx === 2 ? "bronze" : "gray"}">${idx + 1}</span></td>
+              <td><span class="badge ${idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : 'gray'}">${idx + 1}</span></td>
               <td><strong>${escapeHtml(p.name)}</strong></td>
               <td>${escapeHtml(p.sku)}</td>
               <td>${escapeHtml(p.category)}</td>
@@ -97,8 +108,9 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
               <td class="text-right">${share.toFixed(1)}%</td>
             </tr>
           `;
-        }).join("")
-      : `<tr><td colspan="8" class="text-center">No sales data recorded in the database.</td></tr>`;
+            })
+            .join('')
+        : `<tr><td colspan="8" class="text-center">No sales data recorded in the database.</td></tr>`;
 
     contentHtml = `
       <h3>Sales Ranking Ledger</h3>
@@ -120,9 +132,8 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
         </tbody>
       </table>
     `;
-
-  } else if (type === "slow_movers") {
-    reportTitle = "Slow Moving Inventory Report";
+  } else if (type === 'slow_movers') {
+    reportTitle = 'Slow Moving Inventory Report';
 
     // Build Product sales map
     const productSalesMap: Record<string, number> = {};
@@ -131,20 +142,22 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
     }
 
     // List all products and match their sales count
-    const slowMovers = products.map(p => {
-      const unitsSold = productSalesMap[p.name] || 0;
-      const revenue = unitsSold * (p.price || 0);
-      return {
-        name: p.name,
-        sku: p.sku || "N/A",
-        stockCount: p.stockCount || 0,
-        price: p.price || 0,
-        unitsSold,
-        revenue
-      };
-    }).sort((a, b) => a.unitsSold - b.unitsSold);
+    const slowMovers = products
+      .map((p) => {
+        const unitsSold = productSalesMap[p.name] || 0;
+        const revenue = unitsSold * (p.price || 0);
+        return {
+          name: p.name,
+          sku: p.sku || 'N/A',
+          stockCount: p.stockCount || 0,
+          price: p.price || 0,
+          unitsSold,
+          revenue,
+        };
+      })
+      .sort((a, b) => a.unitsSold - b.unitsSold);
 
-    const zeroSalesCount = slowMovers.filter(p => p.unitsSold === 0).length;
+    const zeroSalesCount = slowMovers.filter((p) => p.unitsSold === 0).length;
 
     // KPI Cards
     kpiCardsHtml = `
@@ -154,7 +167,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Stagnant Stock Value</div>
-        <div class="kpi-value">Rs. ${slowMovers.reduce((acc, p) => acc + (p.stockCount * p.price), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-value">Rs. ${slowMovers.reduce((acc, p) => acc + p.stockCount * p.price, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Total Catalog Products</div>
@@ -163,20 +176,25 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
     `;
 
     // Table
-    let rowsHtml = slowMovers.length > 0
-      ? slowMovers.map((p, idx) => `
+    let rowsHtml =
+      slowMovers.length > 0
+        ? slowMovers
+            .map(
+              (p, idx) => `
           <tr>
             <td><span class="badge gray">${idx + 1}</span></td>
             <td><strong>${escapeHtml(p.name)}</strong></td>
             <td>${escapeHtml(p.sku)}</td>
-            <td class="text-right bold ${p.stockCount <= 5 ? "text-error" : ""}">${p.stockCount}</td>
+            <td class="text-right bold ${p.stockCount <= 5 ? 'text-error' : ''}">${p.stockCount}</td>
             <td class="text-right">${p.unitsSold}</td>
             <td class="text-right">Rs. ${p.price.toFixed(2)}</td>
             <td class="text-right">Rs. ${p.revenue.toFixed(2)}</td>
-            <td><span class="status-indicator ${p.unitsSold === 0 ? "inactive" : "warning"}">${p.unitsSold === 0 ? "Stagnant" : "Slow"}</span></td>
+            <td><span class="status-indicator ${p.unitsSold === 0 ? 'inactive' : 'warning'}">${p.unitsSold === 0 ? 'Stagnant' : 'Slow'}</span></td>
           </tr>
-        `).join("")
-      : `<tr><td colspan="8" class="text-center">No inventory products defined in the database.</td></tr>`;
+        `
+            )
+            .join('')
+        : `<tr><td colspan="8" class="text-center">No inventory products defined in the database.</td></tr>`;
 
     contentHtml = `
       <h3>Stagnant Inventory & Sales Performance</h3>
@@ -198,9 +216,8 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
         </tbody>
       </table>
     `;
-
-  } else if (type === "orders_ledger") {
-    reportTitle = "Store Orders Ledger Report";
+  } else if (type === 'orders_ledger') {
+    reportTitle = 'Store Orders Ledger Report';
 
     // KPI Cards
     kpiCardsHtml = `
@@ -228,32 +245,40 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
       }
     }
 
-    const sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const sortedOrders = [...orders].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
-    let rowsHtml = sortedOrders.length > 0
-      ? sortedOrders.map(o => {
-          const date = new Date(o.createdAt).toLocaleString();
-          // Extract cashier from invoice number or default
-          const cashierLabel = o.invoiceNumber && o.invoiceNumber.includes("Staff:") 
-            ? o.invoiceNumber.split("Staff:")[1]?.split("|")[0]?.replace(")", "")?.trim() || "Cashier"
-            : "Cashier";
-          const paymentMethod = o.invoiceNumber && o.invoiceNumber.includes("Cust:")
-            ? "Cash" // or parse custody
-            : "Cash";
-          const itemsDesc = itemsByOrder[o.id] ? itemsByOrder[o.id].join(", ") : "—";
+    let rowsHtml =
+      sortedOrders.length > 0
+        ? sortedOrders
+            .map((o) => {
+              const date = new Date(o.createdAt).toLocaleString();
+              // Extract cashier from invoice number or default
+              const cashierLabel =
+                o.invoiceNumber && o.invoiceNumber.includes('Staff:')
+                  ? o.invoiceNumber.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() ||
+                    'Cashier'
+                  : 'Cashier';
+              const paymentMethod =
+                o.invoiceNumber && o.invoiceNumber.includes('Cust:')
+                  ? 'Cash' // or parse custody
+                  : 'Cash';
+              const itemsDesc = itemsByOrder[o.id] ? itemsByOrder[o.id].join(', ') : '—';
 
-          return `
+              return `
             <tr>
-              <td><strong>#${escapeHtml(o.invoiceNumber?.split(" ")[0] || o.id.slice(-6).toUpperCase())}</strong></td>
+              <td><strong>#${escapeHtml(o.invoiceNumber?.split(' ')[0] || o.id.slice(-6).toUpperCase())}</strong></td>
               <td>${date}</td>
               <td>${escapeHtml(cashierLabel)}</td>
-              <td><span class="status-indicator active">${escapeHtml(o.status || "Paid")}</span></td>
+              <td><span class="status-indicator active">${escapeHtml(o.status || 'Paid')}</span></td>
               <td><div class="compact-text">${escapeHtml(itemsDesc)}</div></td>
               <td class="text-right bold">Rs. ${(o.totalAmount || 0).toFixed(2)}</td>
             </tr>
           `;
-        }).join("")
-      : `<tr><td colspan="6" class="text-center">No orders recorded in the database.</td></tr>`;
+            })
+            .join('')
+        : `<tr><td colspan="6" class="text-center">No orders recorded in the database.</td></tr>`;
 
     contentHtml = `
       <h3>Invoices Registry</h3>
@@ -273,30 +298,46 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
         </tbody>
       </table>
     `;
-
-  } else if (type === "item_sales") {
-    reportTitle = "Item-Wise Sales Summary";
+  } else if (type === 'item_sales') {
+    reportTitle = 'Item-Wise Sales Summary';
 
     // Aggregate statistics per product SKU
-    const itemSales: Record<string, { sku: string; stock: number; ordersCount: number; unitsSold: number; price: number; revenue: number }> = {};
-    
+    const itemSales: Record<
+      string,
+      {
+        sku: string;
+        stock: number;
+        ordersCount: number;
+        unitsSold: number;
+        price: number;
+        revenue: number;
+      }
+    > = {};
+
     // Initialize map with all database products
     for (const p of products) {
       itemSales[p.name] = {
-        sku: p.sku || "N/A",
+        sku: p.sku || 'N/A',
         stock: p.stockCount || 0,
         ordersCount: 0,
         unitsSold: 0,
         price: p.price || 0,
-        revenue: 0
+        revenue: 0,
       };
     }
 
     // Populate using orderItems
     for (const item of orderItems) {
-      const name = item.name || "Unknown Item";
+      const name = item.name || 'Unknown Item';
       if (!itemSales[name]) {
-        itemSales[name] = { sku: item.sku || "N/A", stock: 0, ordersCount: 0, unitsSold: 0, price: item.price || 0, revenue: 0 };
+        itemSales[name] = {
+          sku: item.sku || 'N/A',
+          stock: 0,
+          ordersCount: 0,
+          unitsSold: 0,
+          price: item.price || 0,
+          revenue: 0,
+        };
       }
       itemSales[name].unitsSold += item.quantity || 0;
       itemSales[name].revenue += (item.quantity || 0) * (item.price || 0);
@@ -304,7 +345,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
     }
 
     const itemsList = Object.keys(itemSales)
-      .map(name => ({ name, ...itemSales[name] }))
+      .map((name) => ({ name, ...itemSales[name] }))
       .sort((a, b) => b.revenue - a.revenue);
 
     // KPI Cards
@@ -315,7 +356,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Active Selling Items</div>
-        <div class="kpi-value">${itemsList.filter(i => i.unitsSold > 0).length}</div>
+        <div class="kpi-value">${itemsList.filter((i) => i.unitsSold > 0).length}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Highest Revenue Product</div>
@@ -324,19 +365,24 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
     `;
 
     // Table
-    let rowsHtml = itemsList.length > 0
-      ? itemsList.map((item, idx) => `
+    let rowsHtml =
+      itemsList.length > 0
+        ? itemsList
+            .map(
+              (item, idx) => `
           <tr>
             <td><strong>${escapeHtml(item.name)}</strong></td>
             <td>${escapeHtml(item.sku)}</td>
-            <td class="text-right bold ${item.stock <= 5 ? "text-error" : ""}">${item.stock}</td>
+            <td class="text-right bold ${item.stock <= 5 ? 'text-error' : ''}">${item.stock}</td>
             <td class="text-right">${item.ordersCount} times</td>
             <td class="text-right">${item.unitsSold} units</td>
             <td class="text-right">Rs. ${item.price.toFixed(2)}</td>
             <td class="text-right bold">Rs. ${item.revenue.toFixed(2)}</td>
           </tr>
-        `).join("")
-      : `<tr><td colspan="7" class="text-center">No catalog items defined.</td></tr>`;
+        `
+            )
+            .join('')
+        : `<tr><td colspan="7" class="text-center">No catalog items defined.</td></tr>`;
 
     contentHtml = `
       <h3>Catalog Sales Metrics</h3>
@@ -357,17 +403,17 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
         </tbody>
       </table>
     `;
-
-  } else if (type === "branch_performance") {
-    reportTitle = "Branch Performance & Low Stock Audit";
+  } else if (type === 'branch_performance') {
+    reportTitle = 'Branch Performance & Low Stock Audit';
 
     // Staff / Cashier sales calculations
     const staffSales: Record<string, { count: number; total: number }> = {};
     for (const order of orders) {
-      const invoice = order.invoiceNumber || "";
-      let cashier = "Owner / Admin";
-      if (invoice.includes("Staff:")) {
-        cashier = invoice.split("Staff:")[1]?.split("|")[0]?.replace(")", "")?.trim() || "Owner / Admin";
+      const invoice = order.invoiceNumber || '';
+      let cashier = 'Owner / Admin';
+      if (invoice.includes('Staff:')) {
+        cashier =
+          invoice.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() || 'Owner / Admin';
       }
       if (!staffSales[cashier]) staffSales[cashier] = { count: 0, total: 0 };
       staffSales[cashier].count += 1;
@@ -375,11 +421,11 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
     }
 
     const sortedStaff = Object.keys(staffSales)
-      .map(name => ({ name, ...staffSales[name] }))
+      .map((name) => ({ name, ...staffSales[name] }))
       .sort((a, b) => b.total - a.total);
 
     // Filter low stock items
-    const lowStockProducts = products.filter(p => {
+    const lowStockProducts = products.filter((p) => {
       const stock = p.stockCount ?? 0;
       const alertLimit = p.lowStockAlert ?? 5;
       return stock <= alertLimit;
@@ -391,9 +437,9 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
         <div class="kpi-label">Gross Sales</div>
         <div class="kpi-value">Rs. ${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
       </div>
-      <div class="kpi-card ${lowStockProducts.length > 0 ? "error-border" : ""}">
+      <div class="kpi-card ${lowStockProducts.length > 0 ? 'error-border' : ''}">
         <div class="kpi-label">Critical Stock Alerts</div>
-        <div class="kpi-value ${lowStockProducts.length > 0 ? "text-error" : ""}">${lowStockProducts.length} items</div>
+        <div class="kpi-value ${lowStockProducts.length > 0 ? 'text-error' : ''}">${lowStockProducts.length} items</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Staff Registry Count</div>
@@ -402,29 +448,39 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
     `;
 
     // Staff Table
-    let staffRows = sortedStaff.length > 0
-      ? sortedStaff.map((staff, idx) => `
+    let staffRows =
+      sortedStaff.length > 0
+        ? sortedStaff
+            .map(
+              (staff, idx) => `
           <tr>
             <td><span class="badge gold">${idx + 1}</span></td>
             <td><strong>${escapeHtml(staff.name)}</strong></td>
             <td class="text-right">${staff.count} checkouts</td>
             <td class="text-right bold">Rs. ${staff.total.toFixed(2)}</td>
           </tr>
-        `).join("")
-      : `<tr><td colspan="4" class="text-center">No processed cashier orders in record.</td></tr>`;
+        `
+            )
+            .join('')
+        : `<tr><td colspan="4" class="text-center">No processed cashier orders in record.</td></tr>`;
 
     // Low stock Table
-    let lowStockRows = lowStockProducts.length > 0
-      ? lowStockProducts.map(p => `
+    let lowStockRows =
+      lowStockProducts.length > 0
+        ? lowStockProducts
+            .map(
+              (p) => `
           <tr>
             <td><strong>${escapeHtml(p.name)}</strong></td>
-            <td>${escapeHtml(p.sku || "N/A")}</td>
+            <td>${escapeHtml(p.sku || 'N/A')}</td>
             <td class="text-right text-error bold">${p.stockCount || 0} left</td>
             <td class="text-right">${p.lowStockAlert ?? 5} units</td>
             <td><span class="status-indicator error">Restock Required</span></td>
           </tr>
-        `).join("")
-      : `<tr><td colspan="5" class="text-center" style="color: #10B981; font-weight: bold;">✓ All store products are fully stocked!</td></tr>`;
+        `
+            )
+            .join('')
+        : `<tr><td colspan="5" class="text-center" style="color: #10B981; font-weight: bold;">✓ All store products are fully stocked!</td></tr>`;
 
     contentHtml = `
       <div class="row">
@@ -776,9 +832,9 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
 }
 
 function escapeCsv(val: any): string {
-  if (val === null || val === undefined) return "";
+  if (val === null || val === undefined) return '';
   let s = String(val);
-  if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
     return `"${s.replace(/"/g, '""')}"`;
   }
   return s;
@@ -793,9 +849,9 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
   const totalOrdersCount = orders.length;
   const avgBasket = totalOrdersCount > 0 ? totalSales / totalOrdersCount : 0;
 
-  let csvContent = "";
+  let csvContent = '';
 
-  if (type === "best_sellers") {
+  if (type === 'best_sellers') {
     // Header Info
     csvContent += `STORE BUSINESS REPORT,Best Selling Products\n`;
     csvContent += `Store Name,${escapeCsv(businessName)}\n`;
@@ -803,18 +859,27 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
     csvContent += `Scope,All-Time Database History\n\n`;
 
     // Process best sellers
-    const productSales: Record<string, { sku: string; category: string; quantity: number; revenue: number; price: number }> = {};
+    const productSales: Record<
+      string,
+      { sku: string; category: string; quantity: number; revenue: number; price: number }
+    > = {};
     for (const item of orderItems) {
-      const name = item.name || "Unknown Item";
+      const name = item.name || 'Unknown Item';
       if (!productSales[name]) {
-        productSales[name] = { sku: item.sku || "N/A", category: item.category || "General", quantity: 0, revenue: 0, price: item.price || 0 };
+        productSales[name] = {
+          sku: item.sku || 'N/A',
+          category: item.category || 'General',
+          quantity: 0,
+          revenue: 0,
+          price: item.price || 0,
+        };
       }
       productSales[name].quantity += item.quantity || 0;
       productSales[name].revenue += (item.quantity || 0) * (item.price || 0);
     }
 
     const sortedBest = Object.keys(productSales)
-      .map(name => ({ name, ...productSales[name] }))
+      .map((name) => ({ name, ...productSales[name] }))
       .sort((a, b) => b.quantity - a.quantity);
 
     // KPI row
@@ -828,8 +893,7 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
       const share = totalSales > 0 ? (p.revenue / totalSales) * 100 : 0;
       csvContent += `${idx + 1},${escapeCsv(p.name)},${escapeCsv(p.sku)},${escapeCsv(p.category)},${p.quantity},${p.price.toFixed(2)},${p.revenue.toFixed(2)},${share.toFixed(1)}%\n`;
     });
-
-  } else if (type === "slow_movers") {
+  } else if (type === 'slow_movers') {
     csvContent += `STORE BUSINESS REPORT,Slow Moving Inventory\n`;
     csvContent += `Store Name,${escapeCsv(businessName)}\n`;
     csvContent += `Generated Date,${escapeCsv(generatedDate)}\n`;
@@ -840,21 +904,23 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
       productSalesMap[item.name] = (productSalesMap[item.name] || 0) + (item.quantity || 0);
     }
 
-    const slowMovers = products.map(p => {
-      const unitsSold = productSalesMap[p.name] || 0;
-      const revenue = unitsSold * (p.price || 0);
-      return {
-        name: p.name,
-        sku: p.sku || "N/A",
-        stockCount: p.stockCount || 0,
-        price: p.price || 0,
-        unitsSold,
-        revenue
-      };
-    }).sort((a, b) => a.unitsSold - b.unitsSold);
+    const slowMovers = products
+      .map((p) => {
+        const unitsSold = productSalesMap[p.name] || 0;
+        const revenue = unitsSold * (p.price || 0);
+        return {
+          name: p.name,
+          sku: p.sku || 'N/A',
+          stockCount: p.stockCount || 0,
+          price: p.price || 0,
+          unitsSold,
+          revenue,
+        };
+      })
+      .sort((a, b) => a.unitsSold - b.unitsSold);
 
-    const zeroSalesCount = slowMovers.filter(p => p.unitsSold === 0).length;
-    const totalStockVal = slowMovers.reduce((acc, p) => acc + (p.stockCount * p.price), 0);
+    const zeroSalesCount = slowMovers.filter((p) => p.unitsSold === 0).length;
+    const totalStockVal = slowMovers.reduce((acc, p) => acc + p.stockCount * p.price, 0);
 
     // KPI row
     csvContent += `KPI,Zero Sales Items,Stagnant Stock Value (Rs.),Catalog size\n`;
@@ -863,10 +929,9 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
     // Table Data
     csvContent += `Index,Product Name,SKU,Current Stock,Units Sold,Unit Price (Rs.),Generated Sales (Rs.),Movement Status\n`;
     slowMovers.forEach((p, idx) => {
-      csvContent += `${idx + 1},${escapeCsv(p.name)},${escapeCsv(p.sku)},${p.stockCount},${p.unitsSold},${p.price.toFixed(2)},${p.revenue.toFixed(2)},${p.unitsSold === 0 ? "Stagnant" : "Slow"}\n`;
+      csvContent += `${idx + 1},${escapeCsv(p.name)},${escapeCsv(p.sku)},${p.stockCount},${p.unitsSold},${p.price.toFixed(2)},${p.revenue.toFixed(2)},${p.unitsSold === 0 ? 'Stagnant' : 'Slow'}\n`;
     });
-
-  } else if (type === "orders_ledger") {
+  } else if (type === 'orders_ledger') {
     csvContent += `STORE BUSINESS REPORT,Store Orders Ledger\n`;
     csvContent += `Store Name,${escapeCsv(businessName)}\n`;
     csvContent += `Generated Date,${escapeCsv(generatedDate)}\n`;
@@ -886,33 +951,59 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
       }
     }
 
-    const sortedOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const sortedOrders = [...orders].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     // Table Data
     csvContent += `Invoice Number,Date & Time,Processed By,Status,Items Summary,Total Amount (Rs.)\n`;
-    sortedOrders.forEach(o => {
+    sortedOrders.forEach((o) => {
       const date = new Date(o.createdAt).toLocaleString();
-      const cashierLabel = o.invoiceNumber && o.invoiceNumber.includes("Staff:") 
-        ? o.invoiceNumber.split("Staff:")[1]?.split("|")[0]?.replace(")", "")?.trim() || "Cashier"
-        : "Cashier";
-      const itemsDesc = itemsByOrder[o.id] ? itemsByOrder[o.id].join(", ") : "—";
-      csvContent += `#${escapeCsv(o.invoiceNumber?.split(" ")[0] || o.id.slice(-6).toUpperCase())},${escapeCsv(date)},${escapeCsv(cashierLabel)},${escapeCsv(o.status || "Paid")},${escapeCsv(itemsDesc)},${(o.totalAmount || 0).toFixed(2)}\n`;
+      const cashierLabel =
+        o.invoiceNumber && o.invoiceNumber.includes('Staff:')
+          ? o.invoiceNumber.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() || 'Cashier'
+          : 'Cashier';
+      const itemsDesc = itemsByOrder[o.id] ? itemsByOrder[o.id].join(', ') : '—';
+      csvContent += `#${escapeCsv(o.invoiceNumber?.split(' ')[0] || o.id.slice(-6).toUpperCase())},${escapeCsv(date)},${escapeCsv(cashierLabel)},${escapeCsv(o.status || 'Paid')},${escapeCsv(itemsDesc)},${(o.totalAmount || 0).toFixed(2)}\n`;
     });
-
-  } else if (type === "item_sales") {
+  } else if (type === 'item_sales') {
     csvContent += `STORE BUSINESS REPORT,Item-Wise Sales Summary\n`;
     csvContent += `Store Name,${escapeCsv(businessName)}\n`;
     csvContent += `Generated Date,${escapeCsv(generatedDate)}\n`;
     csvContent += `Scope,All-Time Database History\n\n`;
 
-    const itemSales: Record<string, { sku: string; stock: number; ordersCount: number; unitsSold: number; price: number; revenue: number }> = {};
+    const itemSales: Record<
+      string,
+      {
+        sku: string;
+        stock: number;
+        ordersCount: number;
+        unitsSold: number;
+        price: number;
+        revenue: number;
+      }
+    > = {};
     for (const p of products) {
-      itemSales[p.name] = { sku: p.sku || "N/A", stock: p.stockCount || 0, ordersCount: 0, unitsSold: 0, price: p.price || 0, revenue: 0 };
+      itemSales[p.name] = {
+        sku: p.sku || 'N/A',
+        stock: p.stockCount || 0,
+        ordersCount: 0,
+        unitsSold: 0,
+        price: p.price || 0,
+        revenue: 0,
+      };
     }
     for (const item of orderItems) {
-      const name = item.name || "Unknown Item";
+      const name = item.name || 'Unknown Item';
       if (!itemSales[name]) {
-        itemSales[name] = { sku: item.sku || "N/A", stock: 0, ordersCount: 0, unitsSold: 0, price: item.price || 0, revenue: 0 };
+        itemSales[name] = {
+          sku: item.sku || 'N/A',
+          stock: 0,
+          ordersCount: 0,
+          unitsSold: 0,
+          price: item.price || 0,
+          revenue: 0,
+        };
       }
       itemSales[name].unitsSold += item.quantity || 0;
       itemSales[name].revenue += (item.quantity || 0) * (item.price || 0);
@@ -920,19 +1011,18 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
     }
 
     const itemsList = Object.keys(itemSales)
-      .map(name => ({ name, ...itemSales[name] }))
+      .map((name) => ({ name, ...itemSales[name] }))
       .sort((a, b) => b.revenue - a.revenue);
 
     csvContent += `KPI,Products Catalogue Size,Active Selling Items,Highest Revenue (Rs.)\n`;
-    csvContent += `Summary,${products.length},${itemsList.filter(i => i.unitsSold > 0).length},${(itemsList[0]?.revenue || 0).toFixed(2)}\n\n`;
+    csvContent += `Summary,${products.length},${itemsList.filter((i) => i.unitsSold > 0).length},${(itemsList[0]?.revenue || 0).toFixed(2)}\n\n`;
 
     // Table Data
     csvContent += `Product Name,SKU,Current Stock,Orders Count,Total Units Sold,Standard Price (Rs.),Total Sales Revenue (Rs.)\n`;
-    itemsList.forEach(item => {
+    itemsList.forEach((item) => {
       csvContent += `${escapeCsv(item.name)},${escapeCsv(item.sku)},${item.stock},${item.ordersCount},${item.unitsSold},${item.price.toFixed(2)},${item.revenue.toFixed(2)}\n`;
     });
-
-  } else if (type === "branch_performance") {
+  } else if (type === 'branch_performance') {
     csvContent += `STORE BUSINESS REPORT,Branch Performance & Low Stock Audit\n`;
     csvContent += `Store Name,${escapeCsv(businessName)}\n`;
     csvContent += `Generated Date,${escapeCsv(generatedDate)}\n`;
@@ -941,21 +1031,22 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
     // Staff calculations
     const staffSales: Record<string, { count: number; total: number }> = {};
     for (const order of orders) {
-      const invoice = order.invoiceNumber || "";
-      let cashier = "Owner / Admin";
-      if (invoice.includes("Staff:")) {
-        cashier = invoice.split("Staff:")[1]?.split("|")[0]?.replace(")", "")?.trim() || "Owner / Admin";
+      const invoice = order.invoiceNumber || '';
+      let cashier = 'Owner / Admin';
+      if (invoice.includes('Staff:')) {
+        cashier =
+          invoice.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() || 'Owner / Admin';
       }
       if (!staffSales[cashier]) staffSales[cashier] = { count: 0, total: 0 };
       staffSales[cashier].count += 1;
       staffSales[cashier].total += order.totalAmount || 0;
     }
     const sortedStaff = Object.keys(staffSales)
-      .map(name => ({ name, ...staffSales[name] }))
+      .map((name) => ({ name, ...staffSales[name] }))
       .sort((a, b) => b.total - a.total);
 
     // Filter low stock
-    const lowStockProducts = products.filter(p => {
+    const lowStockProducts = products.filter((p) => {
       const stock = p.stockCount ?? 0;
       const alertLimit = p.lowStockAlert ?? 5;
       return stock <= alertLimit;
@@ -972,8 +1063,8 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
 
     csvContent += `\nCRITICAL INVENTORY ALERTS\n`;
     csvContent += `Item Name,SKU,Current Stock,Alert Threshold,Alert Action\n`;
-    lowStockProducts.forEach(p => {
-      csvContent += `${escapeCsv(p.name)},${escapeCsv(p.sku || "N/A")},${p.stockCount || 0},${p.lowStockAlert ?? 5},Restock Required\n`;
+    lowStockProducts.forEach((p) => {
+      csvContent += `${escapeCsv(p.name)},${escapeCsv(p.sku || 'N/A')},${p.stockCount || 0},${p.lowStockAlert ?? 5},Restock Required\n`;
     });
   }
 

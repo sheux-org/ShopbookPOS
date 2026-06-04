@@ -5,10 +5,26 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import { syncDatabase, uploadBusinessLogo } from '../../services/sync';
-import { 
-  User, Store, Users, RefreshCw, LogOut, 
-  HelpCircle, CheckCircle, ChevronRight, MapPin, Phone, Database,
-  Shield, Activity, HardDrive, Settings, Info, Building, Camera, Smartphone
+import {
+  User,
+  Store,
+  Users,
+  RefreshCw,
+  LogOut,
+  HelpCircle,
+  CheckCircle,
+  ChevronRight,
+  MapPin,
+  Phone,
+  Database,
+  Shield,
+  Activity,
+  HardDrive,
+  Settings,
+  Info,
+  Building,
+  Camera,
+  Smartphone,
 } from 'lucide-react';
 import './profile.css';
 import { TerminalDiagnostics } from '../../components/TerminalDiagnostics';
@@ -39,7 +55,7 @@ export default function ProfilePage() {
   const logout = useAuthStore((s) => s.logout);
   const userPhone = useAuthStore((s) => s.userPhone);
   const { canPerform } = useUserPermissions();
-  
+
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const businesses = useBusinessStore((s) => s.businesses);
   const setActiveBusiness = useBusinessStore((s) => s.setActiveBusiness);
@@ -48,14 +64,14 @@ export default function ProfilePage() {
   const updateActiveBusinessDetails = useBusinessStore((s) => s.updateActiveBusinessDetails);
   const updateBusinessDetails = useBusinessStore((s) => s.updateBusinessDetails);
 
-
-
   // States
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   // Modals state
-  const [activeModal, setActiveModal] = useState<'details' | 'staff' | 'branches' | 'faq' | 'devices' | null>(null);
+  const [activeModal, setActiveModal] = useState<
+    'details' | 'staff' | 'branches' | 'faq' | 'devices' | null
+  >(null);
 
   // Form states - Store details
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
@@ -133,7 +149,7 @@ export default function ProfilePage() {
         category: activeBusiness.category,
         address: activeBusiness.address,
         phone: activeBusiness.phone,
-        logoUri: publicUrl
+        logoUri: publicUrl,
       });
       await loadBusinesses();
       triggerToast('Logo updated successfully! 🚀');
@@ -169,7 +185,7 @@ export default function ProfilePage() {
         category: editCategory,
         address: editAddress,
         phone: editPhone,
-        logoUri: editLogoUri
+        logoUri: editLogoUri,
       });
       await loadBusinesses();
       triggerToast('Store details updated! 🏬');
@@ -214,12 +230,12 @@ export default function ProfilePage() {
       setSyncing(true);
       triggerToast('Initializing branch... 🏢');
       const businessId = await registerBusiness(
-        newBranchName, 
-        newBranchAddress, 
-        userPhone || activeBusiness.phone, 
+        newBranchName,
+        newBranchAddress,
+        userPhone || activeBusiness.phone,
         newBranchCategory
       );
-      
+
       if (businessId && newBranchLogo) {
         triggerToast('Uploading branch logo... ⏳');
         const publicUrl = await uploadBusinessLogo(newBranchLogo, businessId);
@@ -228,10 +244,10 @@ export default function ProfilePage() {
           category: newBranchCategory,
           address: newBranchAddress,
           phone: userPhone || activeBusiness.phone,
-          logoUri: publicUrl
+          logoUri: publicUrl,
         });
       }
-      
+
       await loadBusinesses();
       triggerToast(`Branch ${newBranchName} initialized! 🏢`);
       setNewBranchName('');
@@ -254,7 +270,9 @@ export default function ProfilePage() {
       if (success) {
         triggerToast('IndexedDB database synced successfully! ✅');
       } else {
-        alert('Sync failed. Please ensure the Supabase configuration parameters inside web/.env.local are correct.');
+        alert(
+          'Sync failed. Please ensure the Supabase configuration parameters inside web/.env.local are correct.'
+        );
       }
     } finally {
       setSyncing(false);
@@ -276,14 +294,14 @@ export default function ProfilePage() {
         <div className="profile-hero-banner">
           <div className="profile-hero-overlay" />
           <div className="profile-hero-content">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              accept="image/*" 
-              style={{ display: 'none' }} 
-              onChange={handleMainAvatarUpload} 
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleMainAvatarUpload}
             />
-            <div 
+            <div
               className={`profile-hero-avatar-wrap ${canPerform('update', 'settings') ? 'clickable' : ''}`}
               onClick={() => canPerform('update', 'settings') && fileInputRef.current?.click()}
               title={canPerform('update', 'settings') ? 'Click to change store logo' : undefined}
@@ -310,10 +328,12 @@ export default function ProfilePage() {
               <h2 className="profile-hero-title">{activeBusiness?.name || 'Partner Store'}</h2>
               <div className="profile-hero-tags">
                 <span className="profile-hero-tag">
-                  <Building size={12} style={{ marginRight: '4px' }} /> {activeBusiness?.category || 'General POS Retail'}
+                  <Building size={12} style={{ marginRight: '4px' }} />{' '}
+                  {activeBusiness?.category || 'General POS Retail'}
                 </span>
                 <span className="profile-hero-tag">
-                  <MapPin size={12} style={{ marginRight: '4px' }} /> {activeBusiness?.address || 'Sri Lanka'}
+                  <MapPin size={12} style={{ marginRight: '4px' }} />{' '}
+                  {activeBusiness?.address || 'Sri Lanka'}
                 </span>
               </div>
             </div>
@@ -322,7 +342,6 @@ export default function ProfilePage() {
 
         {/* Two-Column SaaS Dashboard Layout */}
         <div className="profile-dashboard-grid">
-          
           {/* Left Column: Premium Summary & Status Card */}
           <div className="profile-left-column">
             {/* Operator Card */}
@@ -331,7 +350,7 @@ export default function ProfilePage() {
                 <Activity size={16} className="profile-card-icon" />
                 <h4 className="profile-card-title">Active Operator Session</h4>
               </div>
-              
+
               <div className="profile-session-user">
                 <div className="profile-session-avatar">
                   <User size={22} />
@@ -340,11 +359,17 @@ export default function ProfilePage() {
                   <span className="profile-session-name">{employeeName}</span>
                   <span className={`profile-role-badge role-${userRole}`}>
                     {userRole === 'admin' ? (
-                      <><Shield size={10} style={{ marginRight: '4px' }} /> Admin</>
+                      <>
+                        <Shield size={10} style={{ marginRight: '4px' }} /> Admin
+                      </>
                     ) : userRole === 'manager' ? (
-                      <><Settings size={10} style={{ marginRight: '4px' }} /> Manager</>
+                      <>
+                        <Settings size={10} style={{ marginRight: '4px' }} /> Manager
+                      </>
                     ) : (
-                      <><User size={10} style={{ marginRight: '4px' }} /> Cashier</>
+                      <>
+                        <User size={10} style={{ marginRight: '4px' }} /> Cashier
+                      </>
                     )}
                   </span>
                 </div>
@@ -357,7 +382,9 @@ export default function ProfilePage() {
                 </div>
                 <div className="session-detail-row">
                   <span className="detail-label">Terminal ID</span>
-                  <span className="detail-val font-mono">{activeBusiness?.id?.substring(0, 8) || 'N/A'}</span>
+                  <span className="detail-val font-mono">
+                    {activeBusiness?.id?.substring(0, 8) || 'N/A'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -368,7 +395,7 @@ export default function ProfilePage() {
                 <HardDrive size={16} className="profile-card-icon" />
                 <h4 className="profile-card-title">Terminal Diagnostics</h4>
               </div>
-              
+
               <TerminalDiagnostics />
             </div>
           </div>
@@ -377,7 +404,10 @@ export default function ProfilePage() {
           <div className="profile-right-column">
             <div className="profile-section-title-wrap">
               <h3 className="profile-section-header">Terminal Operations Settings</h3>
-              <p className="profile-section-subtitle">Configure receipt layout templates, onboard cashier employees, switch locations, and force replication logs.</p>
+              <p className="profile-section-subtitle">
+                Configure receipt layout templates, onboard cashier employees, switch locations, and
+                force replication logs.
+              </p>
             </div>
 
             <div className="profile-options-grid">
@@ -389,7 +419,10 @@ export default function ProfilePage() {
                   </div>
                   <div className="profile-option-details">
                     <h4 className="profile-option-title">Store Profile Details</h4>
-                    <p className="profile-option-sub">Manage receipt layouts, active address, business contact credentials, and categories.</p>
+                    <p className="profile-option-sub">
+                      Manage receipt layouts, active address, business contact credentials, and
+                      categories.
+                    </p>
                   </div>
                   <ChevronRight size={18} className="profile-chevron-arrow" />
                 </div>
@@ -402,7 +435,10 @@ export default function ProfilePage() {
                 </div>
                 <div className="profile-option-details">
                   <h4 className="profile-option-title">Locations & Branches</h4>
-                  <p className="profile-option-sub">Registered branches: {businesses.length} · Initialize and swap active terminal contexts.</p>
+                  <p className="profile-option-sub">
+                    Registered branches: {businesses.length} · Initialize and swap active terminal
+                    contexts.
+                  </p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
@@ -415,7 +451,10 @@ export default function ProfilePage() {
                   </div>
                   <div className="profile-option-details">
                     <h4 className="profile-option-title">Staff Accounts Management</h4>
-                    <p className="profile-option-sub">Onboard and manage cashmere cashiers, store managers, and administration access ranks.</p>
+                    <p className="profile-option-sub">
+                      Onboard and manage cashmere cashiers, store managers, and administration
+                      access ranks.
+                    </p>
                   </div>
                   <ChevronRight size={18} className="profile-chevron-arrow" />
                 </div>
@@ -429,20 +468,29 @@ export default function ProfilePage() {
                   </div>
                   <div className="profile-option-details">
                     <h4 className="profile-option-title">Force Database Sync</h4>
-                    <p className="profile-option-sub">Manually push latest offline transaction queues and adjust stock registers with cloud tables.</p>
+                    <p className="profile-option-sub">
+                      Manually push latest offline transaction queues and adjust stock registers
+                      with cloud tables.
+                    </p>
                   </div>
                   <ChevronRight size={18} className="profile-chevron-arrow" />
                 </div>
               )}
 
-               {/* Option: Active Devices & Sessions */}
-              <div className="profile-option-card devices-card" onClick={() => setActiveModal('devices')}>
+              {/* Option: Active Devices & Sessions */}
+              <div
+                className="profile-option-card devices-card"
+                onClick={() => setActiveModal('devices')}
+              >
                 <div className="profile-icon-box card-devices">
                   <Smartphone size={20} />
                 </div>
                 <div className="profile-option-details">
                   <h4 className="profile-option-title">Active Devices & Sessions</h4>
-                  <p className="profile-option-sub">Monitor, inspect, and remotely log out active terminal sessions on Android, iOS, or web client instances.</p>
+                  <p className="profile-option-sub">
+                    Monitor, inspect, and remotely log out active terminal sessions on Android, iOS,
+                    or web client instances.
+                  </p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
@@ -454,13 +502,16 @@ export default function ProfilePage() {
                 </div>
                 <div className="profile-option-details">
                   <h4 className="profile-option-title">Help FAQ & Printing Manual</h4>
-                  <p className="profile-option-sub">Tax audit guidelines, hardware print configurations, and local offline database setup.</p>
+                  <p className="profile-option-sub">
+                    Tax audit guidelines, hardware print configurations, and local offline database
+                    setup.
+                  </p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
 
               {/* Option: Log out */}
-              <div 
+              <div
                 className="profile-option-card logout-card"
                 onClick={() => {
                   if (confirm('Disconnect POS terminal session?')) {
@@ -476,7 +527,10 @@ export default function ProfilePage() {
                 </div>
                 <div className="profile-option-details">
                   <h4 className="profile-option-title">Sign Out Session</h4>
-                  <p className="profile-option-sub">Safely commit offline cache states and disconnect this POS device terminal authorization.</p>
+                  <p className="profile-option-sub">
+                    Safely commit offline cache states and disconnect this POS device terminal
+                    authorization.
+                  </p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
@@ -487,10 +541,10 @@ export default function ProfilePage() {
         {/* Powered by Shopbook */}
         <div className="powered-by-container" style={{ marginTop: '36px', marginBottom: '24px' }}>
           <span className="powered-by-text">powered by</span>
-          <a 
-            href="https://shopbook.lk" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href="https://shopbook.lk"
+            target="_blank"
+            rel="noopener noreferrer"
             className="powered-by-brand"
           >
             Shopbook
@@ -546,10 +600,7 @@ export default function ProfilePage() {
         triggerToast={triggerToast}
       />
 
-      <FaqModal
-        isOpen={activeModal === 'faq'}
-        onClose={() => setActiveModal(null)}
-      />
+      <FaqModal isOpen={activeModal === 'faq'} onClose={() => setActiveModal(null)} />
 
       <ActiveDevicesModal
         isOpen={activeModal === 'devices'}
@@ -557,10 +608,7 @@ export default function ProfilePage() {
         activeBusinessId={activeBusiness?.id || '0'}
       />
 
-      <HelpSupportModal
-        isOpen={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-      />
+      <HelpSupportModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import React from "react";
-import { StyleSheet, Text, View, StyleProp, ViewStyle } from "react-native";
-import { TOKENS } from "../../constants/tokens";
+import React from 'react';
+import { StyleSheet, Text, View, StyleProp, ViewStyle } from 'react-native';
+import { TOKENS } from '../../constants/tokens';
 
 interface PoweredByProps {
   style?: StyleProp<ViewStyle>;
@@ -11,16 +11,16 @@ export const PoweredBy: React.FC<PoweredByProps> = ({ style, showPro = true }) =
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.text}>powered by</Text>
-      <Text style={styles.brand}>Shopbook{showPro ? " Pro" : ""}</Text>
+      <Text style={styles.brand}>Shopbook{showPro ? ' Pro' : ''}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     marginTop: 16,
     marginBottom: 8,
@@ -31,9 +31,8 @@ const styles = StyleSheet.create({
   },
   brand: {
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.primary,
     letterSpacing: 0.5,
   },
 });
-

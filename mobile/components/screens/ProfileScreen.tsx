@@ -1,54 +1,46 @@
-import React, { useState, useEffect } from "react";
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  Linking,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScreenWrapper } from "../common/ScreenWrapper";
-import { TOKENS } from "../../constants/tokens";
-import { cartState } from "../data/cartState";
-import { useSettingsStore } from "../../stores/useSettingsStore";
-import { syncDatabase } from "../../services/sync";
-import { useUserPermissions } from "../../hooks/useUserPermissions";
-import { BottomSheet } from "../common/BottomSheet";
-import { BusinessAvatar } from "../common/BusinessAvatar";
-import { deleteCurrentDeviceSession } from "../../hooks/useActiveDeviceTracker";
-import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenWrapper } from '../common/ScreenWrapper';
+import { TOKENS } from '../../constants/tokens';
+import { cartState } from '../data/cartState';
+import { useSettingsStore } from '../../stores/useSettingsStore';
+import { syncDatabase } from '../../services/sync';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { BottomSheet } from '../common/BottomSheet';
+import { BusinessAvatar } from '../common/BusinessAvatar';
+import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
+import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 
 const FAQS = [
   {
-    q: "Does Shopbook Mini POS work without an internet connection?",
-    a: "Yes! Shopbook Mini POS saves all transactions to a secure local database. You can perform billing, scan barcodes, and manage inventory offline. Cloud backup and synchronization is a premium feature available in the Shopbook Mini POS Pro version.",
+    q: 'Does Shopbook Mini POS work without an internet connection?',
+    a: 'Yes! Shopbook Mini POS saves all transactions to a secure local database. You can perform billing, scan barcodes, and manage inventory offline. Cloud backup and synchronization is a premium feature available in the Shopbook Mini POS Pro version.',
   },
   {
     q: "What is a 'Quick Code' and how do cashiers use it?",
     a: "Quick Codes are short numeric shortcuts (e.g., '101' for Bread) assigned to products. Cashiers can type these in the Search bar to add items to the invoice instantly without using a scanner.",
   },
   {
-    q: "How do I scan barcodes to add items in Shopbook Mini POS?",
+    q: 'How do I scan barcodes to add items in Shopbook Mini POS?',
     a: "Tap 'Scan' in the bottom navigation or tap the search icon in the header and click the camera icon. Line up the product barcode within the viewfinder to search and add it.",
   },
   {
-    q: "How do I connect a Bluetooth thermal printer?",
-    a: "Go to Profile Settings > Bluetooth Thermal Printer. Scan for nearby devices, select your printer, and pair it. Once connected, printing receipts via Bluetooth thermal printers is a premium feature available for Shopbook Mini POS Pro users.",
+    q: 'How do I connect a Bluetooth thermal printer?',
+    a: 'Go to Profile Settings > Bluetooth Thermal Printer. Scan for nearby devices, select your printer, and pair it. Once connected, printing receipts via Bluetooth thermal printers is a premium feature available for Shopbook Mini POS Pro users.',
   },
   {
-    q: "What can Managers and Cashiers access in Shopbook Mini POS?",
-    a: "Cashiers can only perform sales and scan barcodes, while Managers can manage stock. Granting multi-user access for staff (Managers/Cashiers) is a premium feature included in the Shopbook Mini POS Pro plan.",
+    q: 'What can Managers and Cashiers access in Shopbook Mini POS?',
+    a: 'Cashiers can only perform sales and scan barcodes, while Managers can manage stock. Granting multi-user access for staff (Managers/Cashiers) is a premium feature included in the Shopbook Mini POS Pro plan.',
   },
   {
-    q: "Can I manage multiple store locations or branches?",
-    a: "Yes! Creating and switching between multiple business branches is a premium feature in Shopbook Mini POS Pro. Upgrading lets you manage separate staff, products, and order histories for each branch.",
+    q: 'Can I manage multiple store locations or branches?',
+    a: 'Yes! Creating and switching between multiple business branches is a premium feature in Shopbook Mini POS Pro. Upgrading lets you manage separate staff, products, and order histories for each branch.',
   },
   {
-    q: "How do Low Stock Alerts work in Shopbook Mini POS?",
+    q: 'How do Low Stock Alerts work in Shopbook Mini POS?',
     a: "When adding/editing a product, you can set a 'Low Stock Alert' threshold. When the item count drops below this, the stock text turns orange on the Home Screen to warn cashiers.",
   },
 ];
@@ -62,9 +54,9 @@ export const ProfileScreen: React.FC = () => {
   const isPremium = useSettingsStore((s) => s.isPremium);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<"1_month" | "3_month" | "1_year">("3_month");
+  const [selectedPlan, setSelectedPlan] = useState<'1_month' | '3_month' | '1_year'>('3_month');
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
-  const [premiumFeatureName, setPremiumFeatureName] = useState("");
+  const [premiumFeatureName, setPremiumFeatureName] = useState('');
 
   // Real business details from local SQLite database
   const [activeBusiness, setActiveBusiness] = useState(cartState.getActiveBusiness());
@@ -112,7 +104,7 @@ export const ProfileScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/")}
+          onPress={() => router.push('/')}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
@@ -127,22 +119,26 @@ export const ProfileScreen: React.FC = () => {
       {/* Scrollable Settings Panel */}
       <ScrollView
         style={styles.scrollWrapper}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 100 }
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Avatar Card Glassmorphic Premium */}
         <View style={styles.avatarCard}>
           <BusinessAvatar
             logoUri={activeBusiness?.logoUri}
-            name={activeBusiness?.name || "SP"}
+            name={activeBusiness?.name || 'SP'}
             size={72}
           />
 
-          <Text style={styles.partnerName}>{activeBusiness?.name || "Shopbook Partner Store"}</Text>
-          <Text style={styles.partnerPlan}>🛡️ {userRole === "admin" ? "Administrator / Store Owner" : userRole === "manager" ? "Store Manager" : "Store Cashier"}</Text>
+          <Text style={styles.partnerName}>{activeBusiness?.name || 'Shopbook Partner Store'}</Text>
+          <Text style={styles.partnerPlan}>
+            🛡️{' '}
+            {userRole === 'admin'
+              ? 'Administrator / Store Owner'
+              : userRole === 'manager'
+                ? 'Store Manager'
+                : 'Store Cashier'}
+          </Text>
 
           <View style={styles.activeBadge}>
             <View style={styles.activeDot} />
@@ -158,14 +154,18 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push("/profile/business-details")}
+            onPress={() => router.push('/profile/business-details')}
           >
-            <View style={[styles.optionIconBox, { backgroundColor: "#E8F0FE" }]}>
+            <View style={[styles.optionIconBox, { backgroundColor: '#E8F0FE' }]}>
               <Feather name="home" size={18} color={TOKENS.primary} />
             </View>
             <View style={styles.optionTextWrapper}>
               <Text style={styles.optionTitle}>Store Details</Text>
-              <Text style={styles.optionSubtitle}>{userRole === "cashier" ? "View business details and addresses" : "Configure business logo, receipt details & addresses"}</Text>
+              <Text style={styles.optionSubtitle}>
+                {userRole === 'cashier'
+                  ? 'View business details and addresses'
+                  : 'Configure business logo, receipt details & addresses'}
+              </Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
@@ -174,14 +174,22 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => checkPremiumAction("Multiple branch management", () => router.push("/profile/manage-businesses"))}
+            onPress={() =>
+              checkPremiumAction('Multiple branch management', () =>
+                router.push('/profile/manage-businesses')
+              )
+            }
           >
-            <View style={[styles.optionIconBox, { backgroundColor: "#FEF7E0" }]}>
+            <View style={[styles.optionIconBox, { backgroundColor: '#FEF7E0' }]}>
               <Feather name="briefcase" size={18} color="#B06000" />
             </View>
             <View style={styles.optionTextWrapper}>
               <Text style={styles.optionTitle}>Business Management</Text>
-              <Text style={styles.optionSubtitle}>{userRole === "cashier" ? "View registered businesses and branches" : "Create and manage multiple businesses or branches"}</Text>
+              <Text style={styles.optionSubtitle}>
+                {userRole === 'cashier'
+                  ? 'View registered businesses and branches'
+                  : 'Create and manage multiple businesses or branches'}
+              </Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
@@ -190,15 +198,21 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => checkPremiumAction("Bluetooth thermal printer printing", () => router.push("/profile/bluetooth-printer"))}
+            onPress={() =>
+              checkPremiumAction('Bluetooth thermal printer printing', () =>
+                router.push('/profile/bluetooth-printer')
+              )
+            }
           >
-            <View style={[styles.optionIconBox, { backgroundColor: "#EFF6FF" }]}>
+            <View style={[styles.optionIconBox, { backgroundColor: '#EFF6FF' }]}>
               <Feather name="printer" size={18} color={TOKENS.primary} />
             </View>
             <View style={styles.optionTextWrapper}>
               <Text style={styles.optionTitle}>Bluetooth Thermal Printer</Text>
               <Text style={styles.optionSubtitle}>
-                {pairedPrinter ? `Connected: ${pairedPrinter} ✅` : "Scan and connect to receipt printers"}
+                {pairedPrinter
+                  ? `Connected: ${pairedPrinter} ✅`
+                  : 'Scan and connect to receipt printers'}
               </Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
@@ -208,49 +222,63 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => checkPremiumAction("Active devices monitoring", () => router.push("/profile/active-devices"))}
+            onPress={() =>
+              checkPremiumAction('Active devices monitoring', () =>
+                router.push('/profile/active-devices')
+              )
+            }
           >
-            <View style={[styles.optionIconBox, { backgroundColor: "#E8F0FE" }]}>
+            <View style={[styles.optionIconBox, { backgroundColor: '#E8F0FE' }]}>
               <Feather name="smartphone" size={18} color={TOKENS.primary} />
             </View>
             <View style={styles.optionTextWrapper}>
               <Text style={styles.optionTitle}>Active Devices</Text>
-              <Text style={styles.optionSubtitle}>Monitor and manage active devices logged into your account</Text>
+              <Text style={styles.optionSubtitle}>
+                Monitor and manage active devices logged into your account
+              </Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
 
           {/* Option: Staff Management (Hidden for Manager & Cashier!) */}
-          {canPerform("create", "staff") && (
+          {canPerform('create', 'staff') && (
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
-              onPress={() => checkPremiumAction("Staff accounts management", () => router.push("/profile/manage-staff"))}
+              onPress={() =>
+                checkPremiumAction('Staff accounts management', () =>
+                  router.push('/profile/manage-staff')
+                )
+              }
             >
-              <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
+              <View style={[styles.optionIconBox, { backgroundColor: '#E6F4EA' }]}>
                 <Feather name="users" size={18} color="#137333" />
               </View>
               <View style={styles.optionTextWrapper}>
                 <Text style={styles.optionTitle}>Staff Management</Text>
-                <Text style={styles.optionSubtitle}>Add and configure Admins, Managers & Cashiers</Text>
+                <Text style={styles.optionSubtitle}>
+                  Add and configure Admins, Managers & Cashiers
+                </Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
           )}
 
           {/* Option: Premium Plans Setup (Hidden for Manager & Cashier!) */}
-          {canPerform("create", "settings") && (
+          {canPerform('create', 'settings') && (
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
-              onPress={() => router.push("/profile/premium-plans")}
+              onPress={() => router.push('/profile/premium-plans')}
             >
-              <View style={[styles.optionIconBox, { backgroundColor: "#FEF3C7" }]}>
+              <View style={[styles.optionIconBox, { backgroundColor: '#FEF3C7' }]}>
                 <Ionicons name="diamond" size={18} color="#D97706" />
               </View>
               <View style={styles.optionTextWrapper}>
                 <Text style={styles.optionTitle}>Premium Plans</Text>
-                <Text style={styles.optionSubtitle}>Manage subscriptions, billing cycles, and feature access</Text>
+                <Text style={styles.optionSubtitle}>
+                  Manage subscriptions, billing cycles, and feature access
+                </Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
@@ -258,40 +286,44 @@ export const ProfileScreen: React.FC = () => {
         </View>
 
         {/* Option Group: Sync & Backup (Hidden for Cashier!) */}
-        {canPerform("read", "sync") && (
+        {canPerform('read', 'sync') && (
           <View style={styles.optionsGroup}>
             <Text style={styles.groupHeader}>Data Sync & Backup</Text>
 
             {/* Option: Cloud Backup Toggle */}
             <View style={styles.optionRow}>
-              <View style={[styles.optionIconBox, { backgroundColor: "#E8F0FE" }]}>
+              <View style={[styles.optionIconBox, { backgroundColor: '#E8F0FE' }]}>
                 <Feather name="cloud-lightning" size={18} color={TOKENS.primary} />
               </View>
               <View style={styles.optionTextWrapper}>
                 <Text style={styles.optionTitle}>Auto Backup to Cloud</Text>
                 <Text style={styles.optionSubtitle}>
                   {isBackupEnabled
-                    ? "Real-time sync to Supabase is active"
-                    : "Enable real-time cloud backup to Supabase"}
+                    ? 'Real-time sync to Supabase is active'
+                    : 'Enable real-time cloud backup to Supabase'}
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => {
-                  checkPremiumAction("Cloud backup and database synchronization", () => {
+                  checkPremiumAction('Cloud backup and database synchronization', () => {
                     toggleBackup();
-                    triggerToast(isBackupEnabled ? "Cloud backup disabled" : "Cloud backup enabled! ☁️");
+                    triggerToast(
+                      isBackupEnabled ? 'Cloud backup disabled' : 'Cloud backup enabled! ☁️'
+                    );
                   });
                 }}
                 style={[
                   styles.switchButton,
-                  isBackupEnabled ? styles.switchButtonActive : styles.switchButtonInactive
+                  isBackupEnabled ? styles.switchButtonActive : styles.switchButtonInactive,
                 ]}
                 activeOpacity={0.8}
               >
-                <View style={[
-                  styles.switchThumb,
-                  isBackupEnabled ? styles.switchThumbActive : styles.switchThumbInactive
-                ]} />
+                <View
+                  style={[
+                    styles.switchThumb,
+                    isBackupEnabled ? styles.switchThumbActive : styles.switchThumbInactive,
+                  ]}
+                />
               </TouchableOpacity>
             </View>
 
@@ -301,23 +333,28 @@ export const ProfileScreen: React.FC = () => {
                 style={styles.optionRow}
                 activeOpacity={0.7}
                 onPress={async () => {
-                  checkPremiumAction("Manual database synchronization", async () => {
-                    triggerToast("Syncing database... 🔄");
+                  checkPremiumAction('Manual database synchronization', async () => {
+                    triggerToast('Syncing database... 🔄');
                     const success = await syncDatabase();
                     if (success) {
-                      triggerToast("Database synced successfully! ✅");
+                      triggerToast('Database synced successfully! ✅');
                     } else {
-                      Alert.alert("Sync Failed", "Check your internet connection and Supabase environment configuration.");
+                      Alert.alert(
+                        'Sync Failed',
+                        'Check your internet connection and Supabase environment configuration.'
+                      );
                     }
                   });
                 }}
               >
-                <View style={[styles.optionIconBox, { backgroundColor: "#E6F4EA" }]}>
+                <View style={[styles.optionIconBox, { backgroundColor: '#E6F4EA' }]}>
                   <Feather name="refresh-cw" size={18} color="#137333" />
                 </View>
                 <View style={styles.optionTextWrapper}>
                   <Text style={styles.optionTitle}>Sync Database Now</Text>
-                  <Text style={styles.optionSubtitle}>Trigger manual synchronization of offline data</Text>
+                  <Text style={styles.optionSubtitle}>
+                    Trigger manual synchronization of offline data
+                  </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color={TOKENS.muted} />
               </TouchableOpacity>
@@ -334,7 +371,7 @@ export const ProfileScreen: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => setIsHelpModalOpen(true)}
           >
-            <View style={[styles.optionIconBox, { backgroundColor: "#F3F4F6" }]}>
+            <View style={[styles.optionIconBox, { backgroundColor: '#F3F4F6' }]}>
               <Feather name="help-circle" size={18} color={TOKENS.dark} />
             </View>
             <View style={styles.optionTextWrapper}>
@@ -349,22 +386,26 @@ export const ProfileScreen: React.FC = () => {
             style={styles.optionRow}
             activeOpacity={0.7}
             onPress={() =>
-              Alert.alert("Disconnect Profile", "Are you sure you want to log out from this Shopbook POS terminal?", [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Sign Out",
-                  style: "destructive",
-                  onPress: async () => {
-                    await deleteCurrentDeviceSession();
-                    cartState.logout();
-                    triggerToast("Profile logged out");
-                    router.replace("/auth/number-input");
+              Alert.alert(
+                'Disconnect Profile',
+                'Are you sure you want to log out from this Shopbook POS terminal?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Sign Out',
+                    style: 'destructive',
+                    onPress: async () => {
+                      await deleteCurrentDeviceSession();
+                      cartState.logout();
+                      triggerToast('Profile logged out');
+                      router.replace('/auth/number-input');
+                    },
                   },
-                },
-              ])
+                ]
+              )
             }
           >
-            <View style={[styles.optionIconBox, { backgroundColor: "#FCE8E6" }]}>
+            <View style={[styles.optionIconBox, { backgroundColor: '#FCE8E6' }]}>
               <Feather name="log-out" size={18} color={TOKENS.error} />
             </View>
             <View style={styles.optionTextWrapper}>
@@ -387,7 +428,10 @@ export const ProfileScreen: React.FC = () => {
         onClose={() => setIsHelpModalOpen(false)}
         title="Help & Support"
       >
-        <ScrollView showsVerticalScrollIndicator={false} style={[styles.modalHelpScroll, { maxHeight: 500 }]}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={[styles.modalHelpScroll, { maxHeight: 500 }]}
+        >
           <Text style={styles.supportIntro}>
             Need assistance with your Shopbook POS terminal? Get priority response 24/7.
           </Text>
@@ -397,9 +441,9 @@ export const ProfileScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.premiumSupportCard}
               activeOpacity={0.7}
-              onPress={() => Linking.openURL("tel:+94782470168")}
+              onPress={() => Linking.openURL('tel:+94782470168')}
             >
-              <View style={[styles.supportIconCircle, { backgroundColor: "#EFF6FF" }]}>
+              <View style={[styles.supportIconCircle, { backgroundColor: '#EFF6FF' }]}>
                 <Feather name="phone" size={18} color={TOKENS.primary} />
               </View>
               <View style={styles.supportCardTextWrapper}>
@@ -412,9 +456,9 @@ export const ProfileScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.premiumSupportCard}
               activeOpacity={0.7}
-              onPress={() => Linking.openURL("https://wa.me/94782470168")}
+              onPress={() => Linking.openURL('https://wa.me/94782470168')}
             >
-              <View style={[styles.supportIconCircle, { backgroundColor: "#E8FDF0" }]}>
+              <View style={[styles.supportIconCircle, { backgroundColor: '#E8FDF0' }]}>
                 <Feather name="message-circle" size={18} color="#10B981" />
               </View>
               <View style={styles.supportCardTextWrapper}>
@@ -439,7 +483,7 @@ export const ProfileScreen: React.FC = () => {
                   >
                     <Text style={styles.faqQuestionText}>{faq.q}</Text>
                     <Feather
-                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
                       size={16}
                       color={TOKENS.muted}
                     />
@@ -461,7 +505,6 @@ export const ProfileScreen: React.FC = () => {
         onClose={() => setPremiumModalVisible(false)}
         featureName={premiumFeatureName}
       />
-
     </ScreenWrapper>
   );
 };
@@ -472,28 +515,28 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
   },
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -504,13 +547,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   placeholderWidth: {
@@ -529,26 +572,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: TOKENS.border,
     padding: 20,
-    alignItems: "center",
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.02)",
+    alignItems: 'center',
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.02)',
   },
   avatarCircle: {
     width: 72,
     height: 72,
     borderRadius: 36,
     backgroundColor: TOKENS.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
   },
   avatarInitials: {
     fontSize: 26,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.card,
   },
   partnerName: {
     fontSize: 17,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
     marginTop: 14,
   },
@@ -558,9 +601,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   activeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E6F4EA",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E6F4EA',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -571,36 +614,36 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#137333",
+    backgroundColor: '#137333',
   },
   activeText: {
     fontSize: 11,
-    fontWeight: "bold",
-    color: "#137333",
+    fontWeight: 'bold',
+    color: '#137333',
   },
   statsRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     backgroundColor: TOKENS.card,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
     paddingVertical: 14,
-    alignItems: "center",
+    alignItems: 'center',
   },
   statCol: {
     flex: 1,
-    alignItems: "center",
+    alignItems: 'center',
     gap: 4,
   },
   statVal: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.primary,
   },
   statLabel: {
     fontSize: 11,
     color: TOKENS.muted,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   statDivider: {
     width: 1,
@@ -612,16 +655,16 @@ const styles = StyleSheet.create({
   },
   groupHeader: {
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.muted,
     letterSpacing: 0.5,
     marginLeft: 4,
     marginBottom: 2,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
   },
   optionRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: TOKENS.card,
     borderRadius: 12,
     borderWidth: 1,
@@ -632,8 +675,8 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   optionTextWrapper: {
@@ -642,7 +685,7 @@ const styles = StyleSheet.create({
   },
   optionTitle: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   optionSubtitle: {
@@ -652,8 +695,8 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   headerRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
 
@@ -662,70 +705,70 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     padding: 2,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   switchButtonActive: {
     backgroundColor: TOKENS.primary,
   },
   switchButtonInactive: {
-    backgroundColor: "#D1D5DB",
+    backgroundColor: '#D1D5DB',
   },
   switchThumb: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#fff",
-    boxShadow: "0px 1px 1.5px 0px rgba(0, 0, 0, 0.2)",
+    backgroundColor: '#fff',
+    boxShadow: '0px 1px 1.5px 0px rgba(0, 0, 0, 0.2)',
   },
   switchThumbActive: {
-    alignSelf: "flex-end",
+    alignSelf: 'flex-end',
   },
   switchThumbInactive: {
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
   },
   footerContainer: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 32,
     marginBottom: 8,
     gap: 4,
   },
   madeInText: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.muted,
   },
   versionText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.muted,
     opacity: 0.7,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.5)",
-    justifyContent: "flex-end",
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'flex-end',
   },
   modalHelpContent: {
     backgroundColor: TOKENS.background,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    maxHeight: "85%",
-    boxShadow: "0px -6px 16px 0px rgba(0, 0, 0, 0.12)",
+    maxHeight: '85%',
+    boxShadow: '0px -6px 16px 0px rgba(0, 0, 0, 0.12)',
   },
   dragHandle: {
     width: 40,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: "#E5E7EB",
-    alignSelf: "center",
+    backgroundColor: '#E5E7EB',
+    alignSelf: 'center',
     marginTop: 10,
     marginBottom: 6,
   },
   modalHelpHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 16,
@@ -736,21 +779,21 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 32,
   },
   premiumSupportCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: TOKENS.card,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: TOKENS.border,
     padding: 14,
-    boxShadow: "0px 2px 3px 0px rgba(0, 0, 0, 0.02)",
+    boxShadow: '0px 2px 3px 0px rgba(0, 0, 0, 0.02)',
   },
   supportIconCircle: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 14,
   },
   supportCardTextWrapper: {
@@ -758,7 +801,7 @@ const styles = StyleSheet.create({
   },
   supportCardTitle: {
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: '800',
     color: TOKENS.dark,
   },
   supportCardSubtitle: {
@@ -769,16 +812,16 @@ const styles = StyleSheet.create({
   },
   modalHelpTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   modalHelpCloseBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalHelpScroll: {
     paddingVertical: 16,
@@ -789,16 +832,16 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
     lineHeight: 18,
     marginBottom: 20,
-    textAlign: "center",
+    textAlign: 'center',
   },
   supportActions: {
     gap: 12,
     marginBottom: 24,
   },
   callSupportBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: TOKENS.primary,
     height: 48,
     borderRadius: 12,
@@ -806,31 +849,31 @@ const styles = StyleSheet.create({
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}26`,
   },
   callSupportText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   whatsappBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#25D366",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#25D366',
     height: 48,
     borderRadius: 12,
     gap: 8,
-    boxShadow: "0px 4px 6px 0px rgba(37, 211, 102, 0.15)",
+    boxShadow: '0px 4px 6px 0px rgba(37, 211, 102, 0.15)',
   },
   whatsappText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   supportIcon: {
     marginRight: 4,
   },
   faqHeader: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
     marginBottom: 12,
     marginTop: 8,
@@ -844,17 +887,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   faqQuestionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 14,
   },
   faqQuestionText: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.dark,
     flex: 1,
     marginRight: 8,
@@ -863,7 +906,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingBottom: 14,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: '#F3F4F6',
     paddingTop: 10,
   },
   faqAnswerText: {

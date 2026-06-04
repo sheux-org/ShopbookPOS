@@ -1,0 +1,5 @@
+{
+  "web/src/**/*.{js,jsx,ts,tsx}": ["prettier --write"],
+  "mobile/**/*.{js,jsx,ts,tsx}": ["prettier --write"],
+  "**/*.{json,css,md}": ["prettier --write"]
+}

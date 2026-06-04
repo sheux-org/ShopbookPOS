@@ -41,7 +41,7 @@ export function usePosBilling() {
   const addCustomCustomer = useCart((s) => s.addCustomCustomer);
   const queryClient = useQueryClient();
   const { findProductByCodeOrName, findProductByBarcode } = useFindProduct();
-  
+
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const posMode = useSettingsStore((s) => s.posMode);
@@ -107,10 +107,7 @@ export function usePosBilling() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useProducts(
-    selectedCategory === 'All' ? undefined : selectedCategory,
-    searchQuery
-  );
+  } = useProducts(selectedCategory === 'All' ? undefined : selectedCategory, searchQuery);
 
   const createOrderMutation = useCreateOrder();
 
@@ -138,11 +135,9 @@ export function usePosBilling() {
   const addCartItem = (name: string, price: number, icon?: string, sku?: string, stock?: number) =>
     baseAddCartItem(name, price, icon, sku, stock, triggerToast);
 
-  const updateQuantity = (id: string, delta: number) =>
-    baseUpdateQuantity(id, delta, triggerToast);
+  const updateQuantity = (id: string, delta: number) => baseUpdateQuantity(id, delta, triggerToast);
 
-  const clearCart = (restoreStock: boolean = true) =>
-    baseClearCart(restoreStock);
+  const clearCart = (restoreStock: boolean = true) => baseClearCart(restoreStock);
 
   // Scan or search manual submit
   const handleScanSubmit = async (e?: React.FormEvent) => {
@@ -162,7 +157,7 @@ export function usePosBilling() {
 
     const cleanQuery = query.toLowerCase();
     let matched = products.find(
-      p => p.barcode === query || p.quickCode === query || p.name.toLowerCase() === cleanQuery
+      (p) => p.barcode === query || p.quickCode === query || p.name.toLowerCase() === cleanQuery
     );
 
     if (!matched) {
@@ -172,7 +167,7 @@ export function usePosBilling() {
           matched = mapDBProduct(matches[0]);
         }
       } catch (err) {
-        console.error("Barcode scan database lookup failed:", err);
+        console.error('Barcode scan database lookup failed:', err);
       }
     }
 
@@ -182,7 +177,13 @@ export function usePosBilling() {
         return;
       }
       for (let i = 0; i < scanQty; i++) {
-        await addCartItem(matched.name, matched.price, matched.icon, matched.barcode || matched.id, matched.stockCount);
+        await addCartItem(
+          matched.name,
+          matched.price,
+          matched.icon,
+          matched.barcode || matched.id,
+          matched.stockCount
+        );
       }
       triggerToast(`Added ${scanQty}x ${matched.name} 🛒`);
       setScanQuery('');
@@ -194,7 +195,7 @@ export function usePosBilling() {
 
   // Hardware Scanner Hook capture
   const handleHardwareScan = async (barcode: string) => {
-    let matched = products.find(p => p.barcode === barcode || p.quickCode === barcode);
+    let matched = products.find((p) => p.barcode === barcode || p.quickCode === barcode);
 
     if (!matched) {
       try {
@@ -203,7 +204,7 @@ export function usePosBilling() {
           matched = mapDBProduct(matches[0]);
         }
       } catch (err) {
-        console.error("Hardware scan database lookup failed:", err);
+        console.error('Hardware scan database lookup failed:', err);
       }
     }
 
@@ -212,7 +213,13 @@ export function usePosBilling() {
         triggerToast(`Out of stock: ${matched.name} ⚠️`);
         return;
       }
-      await addCartItem(matched.name, matched.price, matched.icon, matched.barcode || matched.id, matched.stockCount);
+      await addCartItem(
+        matched.name,
+        matched.price,
+        matched.icon,
+        matched.barcode || matched.id,
+        matched.stockCount
+      );
       triggerToast(`Added ${matched.name} 🛒`);
       setSelectedRowIndex(cart.length);
     } else {
@@ -281,27 +288,29 @@ export function usePosBilling() {
 
   const validatePayment = () => {
     if (cart.length === 0) {
-      triggerToast("Cart is empty! 🛒");
+      triggerToast('Cart is empty! 🛒');
       return false;
     }
     if (paymentMethod === 'cash') {
       const cash = parseFloat(cashReceived);
       if (isNaN(cash) || cash < totalAmount) {
-        alert(`Insufficient Tender: Cash received (Rs. ${isNaN(cash) ? 0 : cash}) must be at least the total amount (Rs. ${totalAmount.toLocaleString()})`);
+        alert(
+          `Insufficient Tender: Cash received (Rs. ${isNaN(cash) ? 0 : cash}) must be at least the total amount (Rs. ${totalAmount.toLocaleString()})`
+        );
         return false;
       }
     } else if (paymentMethod === 'card') {
       if (!bankName) {
-        alert("Card Brand/Bank Required: Please select a card brand or bank.");
+        alert('Card Brand/Bank Required: Please select a card brand or bank.');
         return false;
       }
       if (!cardDigits || cardDigits.length !== 4 || !/^\d+$/.test(cardDigits)) {
-        alert("Card Number Required: Please enter the last 4 digits of the card.");
+        alert('Card Number Required: Please enter the last 4 digits of the card.');
         return false;
       }
     } else if (paymentMethod === 'bank') {
       if (!bankName.trim()) {
-        alert("Beneficiary Bank Name Required: Please select or type the bank name.");
+        alert('Beneficiary Bank Name Required: Please select or type the bank name.');
         return false;
       }
     }
@@ -326,11 +335,11 @@ export function usePosBilling() {
         discountValue: discountAmount,
         taxRate,
         taxValue: taxAmount,
-        cart: cart.map(c => ({
+        cart: cart.map((c) => ({
           name: c.name,
           price: c.price,
-          quantity: c.quantity
-        }))
+          quantity: c.quantity,
+        })),
       });
 
       setLatestOrder({
@@ -344,7 +353,10 @@ export function usePosBilling() {
         taxAmount,
         customer: customer ? { ...customer } : null,
         items: [...cart],
-        date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        date:
+          new Date().toLocaleDateString() +
+          ' ' +
+          new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
 
       triggerToast('Invoice completed successfully! 📑');
@@ -384,7 +396,9 @@ export function usePosBilling() {
       setDiscountType(tempDiscountType);
       setDiscountVal(val);
       setIsEditingDiscount(false);
-      triggerToast(`Discount set to ${tempDiscountType === 'percent' ? `${val}%` : `Rs. ${val}`} 🏷️`);
+      triggerToast(
+        `Discount set to ${tempDiscountType === 'percent' ? `${val}%` : `Rs. ${val}`} 🏷️`
+      );
       if (posMode === 'normal') setTimeout(() => scanInputRef.current?.focus(), 50);
     } else {
       triggerToast('Invalid discount value ⚠️');
@@ -462,21 +476,21 @@ export function usePosBilling() {
       bankName,
     };
   }, [
-      cart,
-      selectedRowIndex,
-      showCustModal,
-      showReceipt,
-      discountVal,
-      discountType,
-      taxRate,
-      paymentMethod,
-      custModalTab,
-      posMode,
-      isEditingDiscount,
-      isEditingTax,
-      isCustomBank,
-      bankName,
-    ]);
+    cart,
+    selectedRowIndex,
+    showCustModal,
+    showReceipt,
+    discountVal,
+    discountType,
+    taxRate,
+    paymentMethod,
+    custModalTab,
+    posMode,
+    isEditingDiscount,
+    isEditingTax,
+    isCustomBank,
+    bankName,
+  ]);
 
   useEffect(() => {
     const handleGlobalKeys = (e: KeyboardEvent) => {
@@ -503,13 +517,14 @@ export function usePosBilling() {
       if (state.showCustModal) {
         if (e.key === 'Tab') {
           e.preventDefault();
-          setCustModalTab(prev => (prev === 'search' ? 'create' : 'search'));
+          setCustModalTab((prev) => (prev === 'search' ? 'create' : 'search'));
         }
         return;
       }
 
       const activeEl = document.activeElement;
-      const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+      const isTyping =
+        activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
 
       if (state.posMode === 'normal') {
         if (e.key === 'F2' || (e.key === '/' && !isTyping)) {
@@ -526,7 +541,12 @@ export function usePosBilling() {
 
         if (e.key === 'F4') {
           e.preventDefault();
-          const next = state.paymentMethod === 'cash' ? 'card' : state.paymentMethod === 'card' ? 'bank' : 'cash';
+          const next =
+            state.paymentMethod === 'cash'
+              ? 'card'
+              : state.paymentMethod === 'card'
+                ? 'bank'
+                : 'cash';
           handlePaymentMethodChange(next);
           return;
         }
@@ -539,7 +559,7 @@ export function usePosBilling() {
             setIsEditingDiscount(true);
             setTimeout(() => discountInputRef.current?.focus(), 50);
           } else {
-            setTempDiscountType(prev => (prev === 'flat' ? 'percent' : 'flat'));
+            setTempDiscountType((prev) => (prev === 'flat' ? 'percent' : 'flat'));
           }
           return;
         }
@@ -605,7 +625,10 @@ export function usePosBilling() {
           }
         }
 
-        if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && (e.key === 'Backspace' || e.key === 'Delete'))) {
+        if (
+          e.key === 'F12' ||
+          ((e.ctrlKey || e.metaKey) && (e.key === 'Backspace' || e.key === 'Delete'))
+        ) {
           e.preventDefault();
           if (state.cart.length > 0 && confirm('Clear active invoice transaction?')) {
             resetAllStateRef.current();
@@ -620,10 +643,10 @@ export function usePosBilling() {
 
           if (e.key === 'ArrowUp') {
             e.preventDefault();
-            setSelectedRowIndex(prev => Math.max(0, prev - 1));
+            setSelectedRowIndex((prev) => Math.max(0, prev - 1));
           } else if (e.key === 'ArrowDown') {
             e.preventDefault();
-            setSelectedRowIndex(prev => Math.min(state.cart.length - 1, prev + 1));
+            setSelectedRowIndex((prev) => Math.min(state.cart.length - 1, prev + 1));
           } else if ((e.key === '+' || e.key === '=') && (!isTyping || isFocusOnScanner)) {
             e.preventDefault();
             if (item) {

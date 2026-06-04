@@ -9,27 +9,27 @@ export function useSendOtp() {
   return useMutation({
     mutationFn: async (phone: string) => {
       const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, "");
-        if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+        let cleaned = phoneStr.replace(/\D/g, '');
+        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
         return cleaned;
       };
 
       const cleanPhone = normalizePhone(phone);
       if (cleanPhone.length !== 9) {
-        throw new Error("Please enter a valid mobile number!");
+        throw new Error('Please enter a valid mobile number!');
       }
 
-      const response = await fetch("/api/auth/check", {
-        method: "POST",
+      const response = await fetch('/api/auth/check', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ phone_number: cleanPhone }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to check phone number. Please try again.");
+        throw new Error('Failed to check phone number. Please try again.');
       }
 
       const data = await response.json();
@@ -48,19 +48,19 @@ export function useVerifyOtp() {
       const { phone, otp, verificationToken } = params;
 
       const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, "");
-        if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+        let cleaned = phoneStr.replace(/\D/g, '');
+        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
         return cleaned;
       };
 
       const cleanPhone = normalizePhone(phone);
 
-      const response = await fetch("/api/auth/verify", {
-        method: "POST",
+      const response = await fetch('/api/auth/verify', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${verificationToken}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${verificationToken}`,
         },
         body: JSON.stringify({
           code: otp,
@@ -70,28 +70,28 @@ export function useVerifyOtp() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Invalid OTP code!");
+        throw new Error(errorData.message || 'Invalid OTP code!');
       }
 
       const verifyData = await response.json();
-      if (verifyData.message !== "Success") {
-        throw new Error(verifyData.message || "Invalid OTP code!");
+      if (verifyData.message !== 'Success') {
+        throw new Error(verifyData.message || 'Invalid OTP code!');
       }
 
       // Check local database for matched employee or business owner
-      const allEmployees = await database.get("employees").query().fetch();
+      const allEmployees = await database.get('employees').query().fetch();
       const matchedEmployee = allEmployees.find((emp: any) => {
-        return normalizePhone(emp.phone || "") === cleanPhone;
+        return normalizePhone(emp.phone || '') === cleanPhone;
       }) as any;
 
       if (matchedEmployee) {
         const activeBiz = await matchedEmployee.business.fetch();
         if (activeBiz) {
           return {
-            status: "success" as const,
+            status: 'success' as const,
             phone: cleanPhone,
-            role: matchedEmployee.role || "cashier",
-            name: matchedEmployee.name || "Staff Member",
+            role: matchedEmployee.role || 'cashier',
+            name: matchedEmployee.name || 'Staff Member',
             businessId: activeBiz.id,
             employeeId: matchedEmployee.id,
             token: verificationToken,
@@ -99,19 +99,19 @@ export function useVerifyOtp() {
         }
       }
 
-      const allBusinesses = await database.get("businesses").query().fetch();
+      const allBusinesses = await database.get('businesses').query().fetch();
       const matchedBiz = allBusinesses.find((biz: any) => {
-        return normalizePhone(biz.phoneNumber || "") === cleanPhone;
+        return normalizePhone(biz.phoneNumber || '') === cleanPhone;
       });
 
       if (matchedBiz) {
         return {
-          status: "success" as const,
+          status: 'success' as const,
           phone: cleanPhone,
-          role: "admin",
-          name: "Owner / Admin",
+          role: 'admin',
+          name: 'Owner / Admin',
           businessId: matchedBiz.id,
-          employeeId: "owner",
+          employeeId: 'owner',
           token: verificationToken,
         };
       }
@@ -119,48 +119,48 @@ export function useVerifyOtp() {
       // If not found locally, check if there is a synced account in the Supabase database
       try {
         const { data: remoteData, error: remoteError } = await supabase.rpc(
-          "check_synced_account",
+          'check_synced_account',
           {
             input_phone: cleanPhone,
-          },
+          }
         );
 
         if (remoteError) {
-          console.error("Failed to query remote synced account from Supabase:", remoteError);
+          console.error('Failed to query remote synced account from Supabase:', remoteError);
         } else if (remoteData && remoteData.exists) {
           useSettingsStore.getState().setBackupEnabled(true);
 
           // Store the auth_token BEFORE syncing so prepareSupabaseForSync can find it and authenticate
           if (typeof window !== 'undefined') {
-            localStorage.setItem("auth_token", verificationToken);
+            localStorage.setItem('auth_token', verificationToken);
           }
 
           // Force sync to pull all tables
           const syncSuccess = await syncDatabase();
-          console.log("Database sync finished with status:", syncSuccess);
+          console.log('Database sync finished with status:', syncSuccess);
 
           return {
-            status: "success" as const,
+            status: 'success' as const,
             phone: cleanPhone,
-            role: remoteData.role || "admin",
-            name: remoteData.name || "Owner / Admin",
+            role: remoteData.role || 'admin',
+            name: remoteData.name || 'Owner / Admin',
             businessId: remoteData.business_id,
-            employeeId: remoteData.employee_id || "owner",
+            employeeId: remoteData.employee_id || 'owner',
             token: verificationToken,
             synced: true,
           };
         }
       } catch (supabaseErr) {
-        console.error("Error checking remote synced account on Supabase:", supabaseErr);
+        console.error('Error checking remote synced account on Supabase:', supabaseErr);
       }
 
       return {
-        status: "not_found" as const,
+        status: 'not_found' as const,
         phone: cleanPhone,
       };
     },
     onSuccess: async (data) => {
-      if (data.status === "success") {
+      if (data.status === 'success') {
         loginWithEmployee(
           data.phone,
           data.role,
@@ -173,7 +173,7 @@ export function useVerifyOtp() {
         useBusinessStore.getState().setActiveBusiness(data.businessId);
 
         // Invalidate query caches
-        queryClient.invalidateQueries({ queryKey: ["businesses"] });
+        queryClient.invalidateQueries({ queryKey: ['businesses'] });
       }
     },
   });

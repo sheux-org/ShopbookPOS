@@ -39,7 +39,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({ icon, size = 48, sty
       <div style={containerStyle}>
         {/* Blur placeholder while loading */}
         {!loaded && (
-          <div 
+          <div
             className="image-loading-placeholder"
             style={{
               position: 'absolute',

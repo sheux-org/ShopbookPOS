@@ -33,11 +33,7 @@ export const MobileNavbar: React.FC<MobileNavbarProps> = ({
       {/* Brand */}
       <div className="mobile-brand-group">
         {/* Shopbook Logo Mark */}
-        <img
-          src="/logo.png"
-          alt="Shopbook Logo"
-          className="mobile-brand-logo-image"
-        />
+        <img src="/logo.png" alt="Shopbook Logo" className="mobile-brand-logo-image" />
 
         {/* Text block */}
         <div className="mobile-brand-text-block">
@@ -59,9 +55,7 @@ export const MobileNavbar: React.FC<MobileNavbarProps> = ({
           ) : (
             <CheckCircle2 size={17} />
           )}
-          <span className="mobile-sync-label">
-            {syncing ? 'Syncing...' : 'Synced'}
-          </span>
+          <span className="mobile-sync-label">{syncing ? 'Syncing...' : 'Synced'}</span>
         </button>
       )}
     </header>

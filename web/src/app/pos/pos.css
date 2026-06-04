@@ -7,7 +7,9 @@
 }
 
 @keyframes blinkCursor {
-  to { visibility: hidden; }
+  to {
+    visibility: hidden;
+  }
 }
 
 /* Viewfinder Sweep Laser Beam */
@@ -18,11 +20,18 @@
   height: 3px;
   background-color: var(--primary);
   opacity: 0.8;
-  box-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary);
+  box-shadow:
+    0 0 10px var(--primary),
+    0 0 20px var(--primary);
   animation: scanLaser 2.4s ease-in-out infinite;
 }
 
 @keyframes scanLaser {
-  0%, 100% { top: 0px; }
-  50% { top: 116px; }
+  0%,
+  100% {
+    top: 0px;
+  }
+  50% {
+    top: 116px;
+  }
 }

@@ -1,17 +1,17 @@
-import { synchronize } from '@nozbe/watermelondb/sync'
-import { createClient } from '@supabase/supabase-js'
-import { useSettingsStore } from '../stores/useSettingsStore'
-import { useAuthStore } from '../stores/useAuthStore'
-import database from '@/components/data/db'
-import { schema } from '@/components/data/db/schema'
+import { synchronize } from '@nozbe/watermelondb/sync';
+import { createClient } from '@supabase/supabase-js';
+import { useSettingsStore } from '../stores/useSettingsStore';
+import { useAuthStore } from '../stores/useAuthStore';
+import database from '@/components/data/db';
+import { schema } from '@/components/data/db/schema';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn(
     'Supabase env missing. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to .env'
-  )
+  );
 }
 
 export const supabase = createClient(
@@ -21,10 +21,10 @@ export const supabase = createClient(
     auth: {
       persistSession: false,
       autoRefreshToken: false,
-      detectSessionInUrl: false
-    }
+      detectSessionInUrl: false,
+    },
   }
-)
+);
 
 const PUSH_TABLE_ORDER = [
   'businesses',
@@ -33,35 +33,35 @@ const PUSH_TABLE_ORDER = [
   'orders',
   'order_items',
   'inventory_logs',
-] as const
+] as const;
 
-type SyncTableName = (typeof PUSH_TABLE_ORDER)[number]
+type SyncTableName = (typeof PUSH_TABLE_ORDER)[number];
 type TableChanges = {
-  created?: unknown[]
-  updated?: unknown[]
-  deleted?: unknown[]
-}
-type SyncChanges = Partial<Record<SyncTableName, TableChanges>>
+  created?: unknown[];
+  updated?: unknown[];
+  deleted?: unknown[];
+};
+type SyncChanges = Partial<Record<SyncTableName, TableChanges>>;
 
 function tableHasChanges(slice: TableChanges | undefined): boolean {
-  if (!slice) return false
+  if (!slice) return false;
   return (
     (slice.created?.length ?? 0) > 0 ||
     (slice.updated?.length ?? 0) > 0 ||
     (slice.deleted?.length ?? 0) > 0
-  )
+  );
 }
 
 async function pushChangesInOrder(changes: SyncChanges, clientBusinessId: string): Promise<void> {
   for (const table of PUSH_TABLE_ORDER) {
-    const slice = changes[table]
-    if (!tableHasChanges(slice)) continue
+    const slice = changes[table];
+    if (!tableHasChanges(slice)) continue;
 
     const { error } = await supabase.rpc('push_watermelondb_changes', {
       changes: { [table]: slice },
       client_business_id: clientBusinessId,
-    })
-    if (error) throw new Error(`${table}: ${error.message}`)
+    });
+    if (error) throw new Error(`${table}: ${error.message}`);
   }
 }
 
@@ -71,22 +71,22 @@ async function prepareSupabaseForSync(): Promise<void> {
 }
 
 export async function syncDatabase(): Promise<boolean> {
-  const isBackupEnabled = useSettingsStore.getState().isBackupEnabled
+  const isBackupEnabled = useSettingsStore.getState().isBackupEnabled;
   if (!isBackupEnabled) {
-    return false
+    return false;
   }
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error('Sync skipped: Supabase environment variables are not configured.')
-    return false
+    console.error('Sync skipped: Supabase environment variables are not configured.');
+    return false;
   }
 
-  await prepareSupabaseForSync()
+  await prepareSupabaseForSync();
 
-  const activeBusinessId = useAuthStore.getState().activeBusinessId
+  const activeBusinessId = useAuthStore.getState().activeBusinessId;
   if (!activeBusinessId) {
-    console.warn('Sync skipped: No active business ID selected.')
-    return false
+    console.warn('Sync skipped: No active business ID selected.');
+    return false;
   }
 
   try {
@@ -96,19 +96,19 @@ export async function syncDatabase(): Promise<boolean> {
         const { data, error } = await supabase.rpc('pull_watermelondb_changes', {
           last_pulled_at: lastPulledAt ?? 0,
           client_business_id: activeBusinessId,
-        })
-        if (error) throw new Error(error.message)
-        return { changes: data.changes, timestamp: data.timestamp }
+        });
+        if (error) throw new Error(error.message);
+        return { changes: data.changes, timestamp: data.timestamp };
       },
       pushChanges: async ({ changes }) => {
-        await pushChangesInOrder(changes as SyncChanges, activeBusinessId)
+        await pushChangesInOrder(changes as SyncChanges, activeBusinessId);
       },
       migrationsEnabledAtVersion: schema.version,
-    })
-    console.log('Database synced successfully')
-    return true
+    });
+    console.log('Database synced successfully');
+    return true;
   } catch (error) {
-    console.error('Failed to sync database:', error)
-    return false
+    console.error('Failed to sync database:', error);
+    return false;
   }
 }

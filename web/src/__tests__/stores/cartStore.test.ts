@@ -105,16 +105,16 @@ describe('cartStore', () => {
   test('should support SSR environments where window is undefined', async () => {
     vi.resetModules();
     const originalWindow = global.window;
-    
+
     Object.defineProperty(global, 'window', {
       value: undefined,
       writable: true,
       configurable: true,
     });
-    
+
     const { useCart: ssrCart } = await import('../../stores/cartStore');
     expect(ssrCart).toBeDefined();
-    
+
     // Restore window
     Object.defineProperty(global, 'window', {
       value: originalWindow,

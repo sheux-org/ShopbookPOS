@@ -1,6 +1,6 @@
-import { Q } from "@nozbe/watermelondb";
-import { useQuery } from "@tanstack/react-query";
-import database from "../components/data/db";
+import { Q } from '@nozbe/watermelondb';
+import { useQuery } from '@tanstack/react-query';
+import database from '../components/data/db';
 
 export interface ProductStat {
   name: string;
@@ -23,26 +23,16 @@ export interface BusinessInsightsData {
 
 export function useBusinessInsights(
   businessId: string,
-  period: "daily" | "monthly" | "yearly" | "custom",
+  period: 'daily' | 'monthly' | 'yearly' | 'custom',
   resolvedStartDate: Date | null,
-  resolvedEndDate: Date | null,
+  resolvedEndDate: Date | null
 ) {
   return useQuery<BusinessInsightsData>({
-    queryKey: [
-      "insights",
-      businessId,
-      period,
-      resolvedStartDate,
-      resolvedEndDate,
-    ],
+    queryKey: ['insights', businessId, period, resolvedStartDate, resolvedEndDate],
     queryFn: async () => {
       // 1. Fetch active business SQLite record
-      const businesses = await database
-        .get("businesses")
-        .query(Q.where("id", businessId))
-        .fetch();
-      const dbBiz =
-        businesses[0] || (await database.get("businesses").query().fetch())[0];
+      const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
+      const dbBiz = businesses[0] || (await database.get('businesses').query().fetch())[0];
       if (!dbBiz) {
         return {
           grossRevenue: 0,
@@ -60,8 +50,8 @@ export function useBusinessInsights(
 
       // 2. Fetch completed orders for active business
       const orders = await database
-        .get("orders")
-        .query(Q.where("business_id", dbBiz.id), Q.where("status", "paid"))
+        .get('orders')
+        .query(Q.where('business_id', dbBiz.id), Q.where('status', 'paid'))
         .fetch();
 
       // 3. Filter orders in JS based on active period
@@ -69,20 +59,16 @@ export function useBusinessInsights(
         const orderDate = new Date(order.createdAt);
         const today = new Date();
 
-        if (period === "daily") {
+        if (period === 'daily') {
           return orderDate.toDateString() === today.toDateString();
-        } else if (period === "monthly") {
+        } else if (period === 'monthly') {
           return (
             orderDate.getMonth() === today.getMonth() &&
             orderDate.getFullYear() === today.getFullYear()
           );
-        } else if (period === "yearly") {
+        } else if (period === 'yearly') {
           return orderDate.getFullYear() === today.getFullYear();
-        } else if (
-          period === "custom" &&
-          resolvedStartDate &&
-          resolvedEndDate
-        ) {
+        } else if (period === 'custom' && resolvedStartDate && resolvedEndDate) {
           return orderDate >= resolvedStartDate && orderDate <= resolvedEndDate;
         }
         return true;
@@ -90,8 +76,8 @@ export function useBusinessInsights(
 
       // 4. Fetch all active business products and filter low stock items in JS to support custom thresholds
       const allBizProducts = await database
-        .get("products")
-        .query(Q.where("business_id", dbBiz.id))
+        .get('products')
+        .query(Q.where('business_id', dbBiz.id))
         .fetch();
 
       const lowStockProducts = allBizProducts.filter((p: any) => {
@@ -103,26 +89,23 @@ export function useBusinessInsights(
       const lowStockItems = lowStockProducts.map((p: any) => ({
         id: p.id,
         name: p.name,
-        sku: p.sku || "N/A",
-        category: p.category || "General",
+        sku: p.sku || 'N/A',
+        category: p.category || 'General',
         stockCount: p.stockCount,
         lowStockAlert: p.lowStockAlert ?? 5,
-        icon: p.icon || "package",
+        icon: p.icon || 'package',
       }));
 
       // 5. Gather order items details
       let totalRevenue = 0;
-      const productSalesMap: Record<
-        string,
-        { quantity: number; revenue: number }
-      > = {};
+      const productSalesMap: Record<string, { quantity: number; revenue: number }> = {};
       const itemsByOrderMap: Record<string, any[]> = {};
 
       if (filteredOrders.length > 0) {
         const orderIds = filteredOrders.map((o: any) => o.id);
         const orderItems = await database
-          .get("order_items")
-          .query(Q.where("order_id", Q.oneOf(orderIds)))
+          .get('order_items')
+          .query(Q.where('order_id', Q.oneOf(orderIds)))
           .fetch();
 
         for (const order of filteredOrders as any[]) {
@@ -134,7 +117,7 @@ export function useBusinessInsights(
           const price = (item as any).price || 0;
           const cost = qty * price;
 
-          const itemName = (item as any).name || "Unknown";
+          const itemName = (item as any).name || 'Unknown';
           if (!productSalesMap[itemName]) {
             productSalesMap[itemName] = { quantity: 0, revenue: 0 };
           }
@@ -164,23 +147,15 @@ export function useBusinessInsights(
         items: itemsByOrderMap[order.id] || [],
       }));
 
-
-
       // 6. Format product lists
-      const salesList: ProductStat[] = Object.keys(productSalesMap).map(
-        (name) => ({
-          name,
-          quantity: productSalesMap[name].quantity,
-          revenue: productSalesMap[name].revenue,
-        }),
-      );
+      const salesList: ProductStat[] = Object.keys(productSalesMap).map((name) => ({
+        name,
+        quantity: productSalesMap[name].quantity,
+        revenue: productSalesMap[name].revenue,
+      }));
 
-      const bestSellers = [...salesList]
-        .sort((a, b) => b.quantity - a.quantity)
-        .slice(0, 5);
-      const slowMovers = [...salesList]
-        .sort((a, b) => a.quantity - b.quantity)
-        .slice(0, 5);
+      const bestSellers = [...salesList].sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+      const slowMovers = [...salesList].sort((a, b) => a.quantity - b.quantity).slice(0, 5);
 
       // Generate weekly sales distribution
       const daySales: Record<string, number> = {
@@ -192,7 +167,7 @@ export function useBusinessInsights(
         Sat: 0,
         Sun: 0,
       };
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
       for (const order of filteredOrders as any[]) {
         const dStr = days[new Date((order as any).createdAt).getDay()];
@@ -209,8 +184,7 @@ export function useBusinessInsights(
       return {
         grossRevenue: totalRevenue,
         ordersCount: filteredOrders.length,
-        avgTicket:
-          filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0,
+        avgTicket: filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0,
         lowStockCount: lowStockProducts.length,
         lowStockItems,
         bestSellers,
@@ -226,19 +200,16 @@ export function useInsightsExport(businessId: string) {
   return {
     fetchReportData: async () => {
       // 1. Fetch active business SQLite record
-      const businesses = await database
-        .get("businesses")
-        .query(Q.where("id", businessId))
-        .fetch();
+      const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
       const dbBiz = businesses[0];
       if (!dbBiz) {
-        throw new Error("Active business not found in local database!");
+        throw new Error('Active business not found in local database!');
       }
 
       // 2. Fetch completed orders for active business (Paid status, all-time)
       const orders = await database
-        .get("orders")
-        .query(Q.where("business_id", dbBiz.id), Q.where("status", "paid"))
+        .get('orders')
+        .query(Q.where('business_id', dbBiz.id), Q.where('status', 'paid'))
         .fetch();
 
       // 3. Gather all order items for these orders
@@ -249,8 +220,8 @@ export function useInsightsExport(businessId: string) {
         for (let i = 0; i < orderIds.length; i += chunkSize) {
           const chunk = orderIds.slice(i, i + chunkSize);
           const itemsChunk = await database
-            .get("order_items")
-            .query(Q.where("order_id", Q.oneOf(chunk)))
+            .get('order_items')
+            .query(Q.where('order_id', Q.oneOf(chunk)))
             .fetch();
           orderItems = [...orderItems, ...itemsChunk];
         }
@@ -258,8 +229,8 @@ export function useInsightsExport(businessId: string) {
 
       // 4. Fetch all active business products
       const products = await database
-        .get("products")
-        .query(Q.where("business_id", dbBiz.id))
+        .get('products')
+        .query(Q.where('business_id', dbBiz.id))
         .fetch();
 
       return {
@@ -268,6 +239,6 @@ export function useInsightsExport(businessId: string) {
         orderItems,
         products,
       };
-    }
+    },
   };
 }

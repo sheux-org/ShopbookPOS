@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { tabBarState } from "../components/data/tabBarState";
+import { useState, useEffect } from 'react';
+import { tabBarState } from '../components/data/tabBarState';
 
 export function useTabBarVisible() {
   const [tabBarVisible, setVisible] = useState(tabBarState.getTabBarVisible());

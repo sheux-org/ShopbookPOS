@@ -112,7 +112,7 @@ export function useActiveDeviceTracker() {
             const position: any = await new Promise((resolve, reject) => {
               navigator.geolocation.getCurrentPosition(resolve, reject, {
                 timeout: 8000,
-                enableHighAccuracy: false
+                enableHighAccuracy: false,
               });
             });
             latitude = position.coords.latitude;
@@ -124,7 +124,8 @@ export function useActiveDeviceTracker() {
             locationName = 'Geolocation Unsupported';
           }
         } catch (e: any) {
-          if (e && e.code === 1) { // PERMISSION_DENIED
+          if (e && e.code === 1) {
+            // PERMISSION_DENIED
             locationName = 'Location Denied';
           }
         }
@@ -146,13 +147,11 @@ export function useActiveDeviceTracker() {
           longitude: longitude,
           location_name: locationName,
           push_token: null, // No Expo push notification token for web POS clients
-          last_active_at: new Date().toISOString()
+          last_active_at: new Date().toISOString(),
         };
 
         // 4. Upsert status to Supabase
-        const { error: upsertError } = await supabase
-          .from('active_devices')
-          .upsert(payload);
+        const { error: upsertError } = await supabase.from('active_devices').upsert(payload);
 
         if (upsertError) {
           console.warn('Failed to upsert active device status:', upsertError);

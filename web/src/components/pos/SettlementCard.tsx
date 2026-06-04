@@ -36,7 +36,7 @@ const CARD_BRANDS_AND_BANKS = [
   'Visa - Sampath Bank',
   'Visa - HNB',
   'Visa - BOC',
-  'Visa - People\'s Bank',
+  "Visa - People's Bank",
   'Visa - Seylan Bank',
   'Visa - NTB',
   'Visa - DFCC Bank',
@@ -45,7 +45,7 @@ const CARD_BRANDS_AND_BANKS = [
   'MasterCard - Sampath Bank',
   'MasterCard - HNB',
   'MasterCard - BOC',
-  'MasterCard - People\'s Bank',
+  "MasterCard - People's Bank",
   'MasterCard - Seylan Bank',
   'Amex - Nations Trust Bank (NTB)',
   'JCB - HNB',
@@ -56,7 +56,7 @@ const CARD_BRANDS_AND_BANKS = [
 
 const SRI_LANKAN_BANKS = [
   'Bank of Ceylon (BOC)',
-  'People\'s Bank',
+  "People's Bank",
   'Commercial Bank of Ceylon',
   'Hatton National Bank (HNB)',
   'Sampath Bank',
@@ -102,13 +102,15 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
       <div style={styles.paymentSectionCard}>
         {/* Payment Method Selector */}
         <div>
-          <label style={styles.denseFieldLabel}>Payment Mode {posMode === 'normal' ? '[F4]' : ''}</label>
+          <label style={styles.denseFieldLabel}>
+            Payment Mode {posMode === 'normal' ? '[F4]' : ''}
+          </label>
           <div style={styles.payOptionRow}>
             <button
               onClick={() => handlePaymentMethodChange('cash')}
               style={{
                 ...styles.payOptionBtn,
-                ...(paymentMethod === 'cash' ? styles.payOptionBtnCashActive : {})
+                ...(paymentMethod === 'cash' ? styles.payOptionBtnCashActive : {}),
               }}
             >
               <Banknote size={16} />
@@ -118,7 +120,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
               onClick={() => handlePaymentMethodChange('card')}
               style={{
                 ...styles.payOptionBtn,
-                ...(paymentMethod === 'card' ? styles.payOptionBtnCardActive : {})
+                ...(paymentMethod === 'card' ? styles.payOptionBtnCardActive : {}),
               }}
             >
               <CreditCard size={16} />
@@ -128,7 +130,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
               onClick={() => handlePaymentMethodChange('bank')}
               style={{
                 ...styles.payOptionBtn,
-                ...(paymentMethod === 'bank' ? styles.payOptionBtnBankActive : {})
+                ...(paymentMethod === 'bank' ? styles.payOptionBtnBankActive : {}),
               }}
             >
               <Wallet size={16} />
@@ -141,7 +143,9 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
         <div style={styles.tenderTogglesArea}>
           {paymentMethod === 'cash' && (
             <div>
-              <label style={styles.denseFieldLabel}>Cash Tendered (Rs.) {posMode === 'normal' ? '[F8]' : ''}</label>
+              <label style={styles.denseFieldLabel}>
+                Cash Tendered (Rs.) {posMode === 'normal' ? '[F8]' : ''}
+              </label>
               <input
                 ref={cashReceivedRef}
                 type="number"
@@ -153,34 +157,45 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
 
               {/* Cash chips selector */}
               <div style={styles.fastTenderGrid}>
-                <button onClick={() => setCashReceived(Math.ceil(totalAmount).toString())} style={styles.fastTenderChip}>
+                <button
+                  onClick={() => setCashReceived(Math.ceil(totalAmount).toString())}
+                  style={styles.fastTenderChip}
+                >
                   Exact
                 </button>
-                {[100, 200, 500, 1000, 5000].map(note => {
+                {[100, 200, 500, 1000, 5000].map((note) => {
                   if (note < totalAmount) return null;
                   return (
-                    <button key={note} onClick={() => setCashReceived(note.toString())} style={styles.fastTenderChip}>
+                    <button
+                      key={note}
+                      onClick={() => setCashReceived(note.toString())}
+                      style={styles.fastTenderChip}
+                    >
                       Rs. {note}
                     </button>
                   );
                 })}
               </div>
 
-              {cashReceived !== '' && (
-                parseFloat(cashReceived) < totalAmount ? (
+              {cashReceived !== '' &&
+                (parseFloat(cashReceived) < totalAmount ? (
                   <div style={styles.tenderWarningBanner}>
                     <AlertTriangle size={14} />
-                    <span>Short by Rs. {(totalAmount - (parseFloat(cashReceived) || 0)).toLocaleString()}</span>
+                    <span>
+                      Short by Rs.{' '}
+                      {(totalAmount - (parseFloat(cashReceived) || 0)).toLocaleString()}
+                    </span>
                   </div>
-                ) : null
-              )}
+                ) : null)}
             </div>
           )}
 
           {paymentMethod === 'card' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div>
-                <label style={styles.denseFieldLabel}>Card Brand / Bank * {posMode === 'normal' ? '[F8]' : ''}</label>
+                <label style={styles.denseFieldLabel}>
+                  Card Brand / Bank * {posMode === 'normal' ? '[F8]' : ''}
+                </label>
                 <select
                   ref={cardBrandSelectRef}
                   value={isCustomBank ? 'Other' : bankName}
@@ -207,7 +222,9 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
                 >
                   <option value="">Select Card brand/bank...</option>
                   {CARD_BRANDS_AND_BANKS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
                   ))}
                   <option value="Other">Other Bank (Type...)</option>
                 </select>
@@ -224,7 +241,9 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
                 )}
               </div>
               <div>
-                <label style={styles.denseFieldLabel}>Card Number (Last 4 Digits) * {posMode === 'normal' ? '[F9]' : ''}</label>
+                <label style={styles.denseFieldLabel}>
+                  Card Number (Last 4 Digits) * {posMode === 'normal' ? '[F9]' : ''}
+                </label>
                 <input
                   ref={cardDigitsRef}
                   type="text"
@@ -232,7 +251,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
                   placeholder="e.g. 9876"
                   value={cardDigits}
                   onChange={(e) => {
-                    const numericVal = e.target.value.replace(/[^0-9]/g, "");
+                    const numericVal = e.target.value.replace(/[^0-9]/g, '');
                     setCardDigits(numericVal.slice(0, 4));
                   }}
                   style={styles.denseTenderInput}
@@ -243,7 +262,9 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
 
           {paymentMethod === 'bank' && (
             <div>
-              <label style={styles.denseFieldLabel}>Beneficiary Bank Name * {posMode === 'normal' ? '[F8]' : ''}</label>
+              <label style={styles.denseFieldLabel}>
+                Beneficiary Bank Name * {posMode === 'normal' ? '[F8]' : ''}
+              </label>
               <select
                 ref={bankNameSelectRef}
                 value={isCustomBank ? 'Other' : bankName}
@@ -270,7 +291,9 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
               >
                 <option value="">Select Beneficiary Bank...</option>
                 {SRI_LANKAN_BANKS.map((b) => (
-                  <option key={b} value={b}>{b}</option>
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
                 ))}
                 <option value="Other">Other Bank (Type...)</option>
               </select>
@@ -290,12 +313,14 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
         </div>
       </div>
 
-      {paymentMethod === 'cash' && cashReceived !== '' && parseFloat(cashReceived) >= totalAmount && (
-        <div style={styles.largeBalanceCard}>
-          <span style={styles.largeBalanceLabel}>Change / Balance to Return</span>
-          <span style={styles.largeBalanceValue}>Rs. {changeDue.toLocaleString()}</span>
-        </div>
-      )}
+      {paymentMethod === 'cash' &&
+        cashReceived !== '' &&
+        parseFloat(cashReceived) >= totalAmount && (
+          <div style={styles.largeBalanceCard}>
+            <span style={styles.largeBalanceLabel}>Change / Balance to Return</span>
+            <span style={styles.largeBalanceValue}>Rs. {changeDue.toLocaleString()}</span>
+          </div>
+        )}
 
       {/* Settle confirm checkout payment button */}
       <button
@@ -304,7 +329,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
         disabled={paying || cartLength === 0 || !isPaymentValid}
         style={{
           ...styles.settleInvoiceBtn,
-          ...((cartLength === 0 || !isPaymentValid) ? styles.settleInvoiceBtnDisabled : {})
+          ...(cartLength === 0 || !isPaymentValid ? styles.settleInvoiceBtnDisabled : {}),
         }}
       >
         <Printer size={16} />

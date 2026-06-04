@@ -65,9 +65,7 @@
         {
           "peripheralUsageDescription": "Mini POS uses Bluetooth to connect with your thermal printer.",
           "alwaysUsageDescription": "Mini POS requires Bluetooth to print invoices in the background.",
-          "protocols": [
-            "com.shopbook.pos"
-          ]
+          "protocols": ["com.shopbook.pos"]
         }
       ]
     ],

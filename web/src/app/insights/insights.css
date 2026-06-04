@@ -23,7 +23,11 @@
   overflow: hidden;
   background-color: #f8fafc;
   padding: 16px;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    sans-serif;
   gap: 16px;
 }
 
@@ -123,8 +127,14 @@
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .date-input-group {
@@ -213,13 +223,23 @@
   z-index: 1;
   filter: blur(36px);
   opacity: 0.16;
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+  transition:
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.8s ease;
 }
 
-.revenue-card .kpi-card-glow { background: radial-gradient(circle, #10b981 0%, transparent 70%); }
-.invoices-card .kpi-card-glow { background: radial-gradient(circle, #3b82f6 0%, transparent 70%); }
-.basket-card .kpi-card-glow { background: radial-gradient(circle, #8b5cf6 0%, transparent 70%); }
-.alerts-card .kpi-card-glow { background: radial-gradient(circle, #ef4444 0%, transparent 70%); }
+.revenue-card .kpi-card-glow {
+  background: radial-gradient(circle, #10b981 0%, transparent 70%);
+}
+.invoices-card .kpi-card-glow {
+  background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
+}
+.basket-card .kpi-card-glow {
+  background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
+}
+.alerts-card .kpi-card-glow {
+  background: radial-gradient(circle, #ef4444 0%, transparent 70%);
+}
 
 /* Interactive floating bubble elements (parallax layout) */
 .kpi-card-bubble {
@@ -227,7 +247,9 @@
   border-radius: 50%;
   pointer-events: none;
   z-index: 2;
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease;
+  transition:
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.8s ease;
 }
 
 /* Bubble 1: Semi-translucent Frosted Glass Sphere */
@@ -295,10 +317,18 @@
   z-index: 3;
 }
 
-.kpi-card:nth-child(1)::before { background: var(--insights-neon-success); }
-.kpi-card:nth-child(2)::before { background: var(--insights-neon-primary); }
-.kpi-card:nth-child(3)::before { background: #8b5cf6; }
-.kpi-card:nth-child(4)::before { background: var(--insights-neon-danger); }
+.kpi-card:nth-child(1)::before {
+  background: var(--insights-neon-success);
+}
+.kpi-card:nth-child(2)::before {
+  background: var(--insights-neon-primary);
+}
+.kpi-card:nth-child(3)::before {
+  background: #8b5cf6;
+}
+.kpi-card:nth-child(4)::before {
+  background: var(--insights-neon-danger);
+}
 
 .kpi-icon-box {
   width: 48px;
@@ -451,7 +481,9 @@
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
   white-space: nowrap;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
   z-index: 10;
 }
 
@@ -538,7 +570,7 @@
 }
 .rank-badge.silver {
   background: linear-gradient(135deg, #94a3b8 0%, #475569 100%);
-  box-shadow: 0 3px 8px rgba(71, 85, 105, 0.20);
+  box-shadow: 0 3px 8px rgba(71, 85, 105, 0.2);
 }
 .rank-badge.bronze {
   background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
@@ -902,8 +934,12 @@
 }
 
 @keyframes fadeInOverlay {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .pane-loading-spinner {
@@ -912,8 +948,12 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Critical Stock Alert banner */
@@ -932,9 +972,18 @@
 }
 
 @keyframes pulseAlarm {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
 }
 
 /* ==========================================================================
@@ -976,15 +1025,12 @@
     grid-template-columns: repeat(2, 1fr) !important; /* Perfect 2x2 grid for tablet */
     gap: 14px;
   }
-
 }
 
 @media (max-width: 768px) {
   .kpi-grid {
     grid-template-columns: 1fr !important; /* Stack KPIs on smaller devices */
   }
-
-
 
   .export-controls {
     flex-direction: column;

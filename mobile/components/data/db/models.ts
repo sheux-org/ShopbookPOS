@@ -19,7 +19,7 @@ export class Business extends Model {
   @text('tax_id') taxId?: string;
   @text('operating_hours') operatingHours?: string;
   @text('logo_uri') logoUri?: string;
-  
+
   @children('employees') employees!: any;
   @children('products') products!: any;
   @children('orders') orders!: any;

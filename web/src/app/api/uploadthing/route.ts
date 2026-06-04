@@ -19,9 +19,9 @@ export const { GET, POST } = createRouteHandler({ router: uploadRouter });
 
 export async function DELETE(request: Request) {
   try {
-    const { fileKey } = await request.json() as { fileKey: string };
+    const { fileKey } = (await request.json()) as { fileKey: string };
     if (!fileKey) return Response.json({ error: 'fileKey is required' }, { status: 400 });
-    
+
     const result = await utapi.deleteFiles(fileKey);
     console.log('[UploadThing] Deleted file:', fileKey, result);
     return Response.json({ success: true, deletedCount: result.deletedCount });

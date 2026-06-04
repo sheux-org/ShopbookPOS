@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -11,28 +11,27 @@ import {
   Animated,
   ActivityIndicator,
   Pressable,
-} from "react-native";
-import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
-import * as ImagePicker from "expo-image-picker";
-import { usePermission } from "../../hooks/usePermissionHandler";
-import { useUserPermissions } from "../../hooks/useUserPermissions";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScreenWrapper } from "../common/ScreenWrapper";
-import { TOKENS } from "../../constants/tokens";
-import { cartState } from "../data/cartState";
-import { HeaderCartButton } from "../common/HeaderCartButton";
-import { useAddProduct, useProducts, useToggleFavoriteProduct } from "../../hooks/useProducts";
-import { deleteUploadThingFile, uploadToUploadThing } from "../../services/uploadQueue";
-import { ProductImage } from "../common/ProductImage";
-import { hapticFeedback } from "../../utils/haptics";
-import { useSettingsStore } from "../../stores/useSettingsStore";
-import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
-
+} from 'react-native';
+import { BarcodeScannerModal } from '../common/BarcodeScannerModal';
+import * as ImagePicker from 'expo-image-picker';
+import { usePermission } from '../../hooks/usePermissionHandler';
+import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { useRouter } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenWrapper } from '../common/ScreenWrapper';
+import { TOKENS } from '../../constants/tokens';
+import { cartState } from '../data/cartState';
+import { HeaderCartButton } from '../common/HeaderCartButton';
+import { useAddProduct, useProducts, useToggleFavoriteProduct } from '../../hooks/useProducts';
+import { deleteUploadThingFile, uploadToUploadThing } from '../../services/uploadQueue';
+import { ProductImage } from '../common/ProductImage';
+import { hapticFeedback } from '../../utils/haptics';
+import { useSettingsStore } from '../../stores/useSettingsStore';
+import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 
 function getRelativeTimeAgo(timestamp?: number): string {
-  if (!timestamp) return "Just now";
+  if (!timestamp) return 'Just now';
   const now = Date.now();
   const diffMs = now - timestamp;
   const diffSec = Math.floor(diffMs / 1000);
@@ -40,22 +39,22 @@ function getRelativeTimeAgo(timestamp?: number): string {
   const diffHr = Math.floor(diffMin / 60);
   const diffDays = Math.floor(diffHr / 24);
 
-  if (diffSec < 60) return "Just now";
+  if (diffSec < 60) return 'Just now';
   if (diffMin < 60) return `${diffMin}m ago`;
   if (diffHr < 24) return `${diffHr}h ago`;
   return `${diffDays}d ago`;
 }
 
-const CATEGORIES_LIST = ["grocery", "dairy", "drinks", "snacks", "household"];
-const UNIT_TYPES = ["Pieces", "kg", "Liters", "Packets"];
+const CATEGORIES_LIST = ['grocery', 'dairy', 'drinks', 'snacks', 'household'];
+const UNIT_TYPES = ['Pieces', 'kg', 'Liters', 'Packets'];
 
 export const StocksScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const addProductMutation = useAddProduct();
-  const { data: favoriteProducts = [] } = useProducts(undefined, undefined, "Favorites");
-  const { data: recentProducts = [] } = useProducts(undefined, undefined, "Recents");
+  const { data: favoriteProducts = [] } = useProducts(undefined, undefined, 'Favorites');
+  const { data: recentProducts = [] } = useProducts(undefined, undefined, 'Recents');
 
   const toggleFavoriteMutation = useToggleFavoriteProduct();
   const [isEditingFavorites, setIsEditingFavorites] = useState(false);
@@ -84,24 +83,22 @@ export const StocksScreen: React.FC = () => {
     }).start(() => setImgSheetVisible(false));
   };
 
-  const [formName, setFormName] = useState("");
-  const [formCategory, setFormCategory] = useState("grocery");
-  const [formUnitType, setFormUnitType] = useState("Pieces");
-  const [formCostPrice, setFormCostPrice] = useState("");
-  const [formSalesPrice, setFormSalesPrice] = useState("");
-  const [formStockIn, setFormStockIn] = useState("");
-  const [formLowStock, setFormLowStock] = useState("");
+  const [formName, setFormName] = useState('');
+  const [formCategory, setFormCategory] = useState('grocery');
+  const [formUnitType, setFormUnitType] = useState('Pieces');
+  const [formCostPrice, setFormCostPrice] = useState('');
+  const [formSalesPrice, setFormSalesPrice] = useState('');
+  const [formStockIn, setFormStockIn] = useState('');
+  const [formLowStock, setFormLowStock] = useState('');
   const { requestCameraAccess } = usePermission();
   const { canPerform } = useUserPermissions();
   const isPremium = useSettingsStore((s) => s.isPremium);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
-  const [formQuickCode, setFormQuickCode] = useState("");
-  const [formBarcode, setFormBarcode] = useState("");
-  const [formImage, setFormImage] = useState("");
+  const [formQuickCode, setFormQuickCode] = useState('');
+  const [formBarcode, setFormBarcode] = useState('');
+  const [formImage, setFormImage] = useState('');
   const [isScanning, setIsScanning] = useState(false);
-
-
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -197,25 +194,31 @@ export const StocksScreen: React.FC = () => {
     if (formImage.startsWith('http')) {
       await deleteUploadThingFile(formImage);
     }
-    setFormImage("");
+    setFormImage('');
   };
 
   const handleSaveProduct = () => {
-    if (!canPerform("create", "products")) {
+    if (!canPerform('create', 'products')) {
       hapticFeedback.notificationError();
-      Alert.alert("Access Denied", "Your profile role is not authorized to add new catalog items.");
+      Alert.alert('Access Denied', 'Your profile role is not authorized to add new catalog items.');
       return;
     }
 
     if (!formName || !formSalesPrice || !formStockIn) {
       hapticFeedback.notificationWarning();
-      Alert.alert("Required Fields Missing", "Please enter product name, selling price, and initial stock quantity.");
+      Alert.alert(
+        'Required Fields Missing',
+        'Please enter product name, selling price, and initial stock quantity.'
+      );
       return;
     }
 
     if (!formQuickCode && !formBarcode) {
       hapticFeedback.notificationWarning();
-      Alert.alert("Identification Required", "Please enter at least either a Quick Code or a Barcode to identify this product.");
+      Alert.alert(
+        'Identification Required',
+        'Please enter at least either a Quick Code or a Barcode to identify this product.'
+      );
       return;
     }
 
@@ -226,7 +229,7 @@ export const StocksScreen: React.FC = () => {
 
     if (isNaN(priceNum) || isNaN(stockCount)) {
       hapticFeedback.notificationWarning();
-      Alert.alert("Invalid input type", "Please verify numeric fields.");
+      Alert.alert('Invalid input type', 'Please verify numeric fields.');
       return;
     }
 
@@ -249,14 +252,14 @@ export const StocksScreen: React.FC = () => {
     triggerToast(`Product "${formName}" saved to catalog!`);
 
     // Reset form fields
-    setFormName("");
-    setFormCostPrice("");
-    setFormSalesPrice("");
-    setFormStockIn("");
-    setFormLowStock("");
-    setFormQuickCode("");
-    setFormBarcode("");
-    setFormImage("");
+    setFormName('');
+    setFormCostPrice('');
+    setFormSalesPrice('');
+    setFormStockIn('');
+    setFormLowStock('');
+    setFormQuickCode('');
+    setFormBarcode('');
+    setFormImage('');
   };
 
   return (
@@ -276,7 +279,7 @@ export const StocksScreen: React.FC = () => {
           activeOpacity={0.7}
           onPress={() => {
             hapticFeedback.selection();
-            router.push("/");
+            router.push('/');
           }}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
@@ -293,11 +296,15 @@ export const StocksScreen: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => {
               hapticFeedback.selection();
-              router.push("/stocks/items");
+              router.push('/stocks/items');
             }}
           >
             <Feather name="archive" size={15} color={TOKENS.primary} />
-            <Text style={{ fontSize: 12, fontWeight: "bold", color: TOKENS.primary, marginLeft: 4 }}>Items</Text>
+            <Text
+              style={{ fontSize: 12, fontWeight: 'bold', color: TOKENS.primary, marginLeft: 4 }}
+            >
+              Items
+            </Text>
           </TouchableOpacity>
 
           <HeaderCartButton />
@@ -307,19 +314,17 @@ export const StocksScreen: React.FC = () => {
       {/* Scrollable Area */}
       <ScrollView
         style={styles.scrollWrapper}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 100 }
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-
         {/* ➕ ADD NEW PRODUCT FORM CARD (Sleek and beautiful border card) ➕ */}
-        {canPerform("create", "products") ? (
+        {canPerform('create', 'products') ? (
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>➕ Add Product to Catalog</Text>
-            <Text style={styles.formSubtitle}>Enter item specifications to dynamically update sales catalog list</Text>
+            <Text style={styles.formSubtitle}>
+              Enter item specifications to dynamically update sales catalog list
+            </Text>
 
             <View style={styles.formGrid}>
               {/* Field: Name */}
@@ -387,7 +392,12 @@ export const StocksScreen: React.FC = () => {
                           setFormCategory(cat);
                         }}
                       >
-                        <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
+                        <Text
+                          style={[
+                            styles.selectorChipText,
+                            isSelected && styles.selectorChipTextActive,
+                          ]}
+                        >
                           {cat.toUpperCase()}
                         </Text>
                       </TouchableOpacity>
@@ -411,7 +421,12 @@ export const StocksScreen: React.FC = () => {
                           setFormUnitType(u);
                         }}
                       >
-                        <Text style={[styles.selectorChipText, isSelected && styles.selectorChipTextActive]}>
+                        <Text
+                          style={[
+                            styles.selectorChipText,
+                            isSelected && styles.selectorChipTextActive,
+                          ]}
+                        >
                           {u}
                         </Text>
                       </TouchableOpacity>
@@ -477,7 +492,9 @@ export const StocksScreen: React.FC = () => {
               {/* ────── Product Image / Icon field ────── */}
               <View style={styles.fieldRow}>
                 <Text style={styles.fieldLabel}>Product Image *</Text>
-                <Text style={styles.fieldHelpText}>Tap the image to take a photo or pick from gallery</Text>
+                <Text style={styles.fieldHelpText}>
+                  Tap the image to take a photo or pick from gallery
+                </Text>
 
                 <View style={styles.imgPickerPanel}>
                   {formImage ? (
@@ -488,7 +505,7 @@ export const StocksScreen: React.FC = () => {
                         size={160}
                         style={styles.premiumImagePreview}
                       />
-                      
+
                       {/* Change Button Overlay */}
                       {!formImageUploading && (
                         <TouchableOpacity
@@ -520,7 +537,11 @@ export const StocksScreen: React.FC = () => {
                       {/* Loading overlay */}
                       {formImageUploading && (
                         <View style={styles.imgUploadingOverlay}>
-                          <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                          <ActivityIndicator
+                            size="small"
+                            color="#FFFFFF"
+                            style={{ marginBottom: 6 }}
+                          />
                           <Text style={styles.imgUploadingText}>Uploading image…</Text>
                         </View>
                       )}
@@ -540,13 +561,19 @@ export const StocksScreen: React.FC = () => {
                           <Ionicons name="cloud-upload-outline" size={24} color={TOKENS.primary} />
                         </View>
                         <Text style={styles.uploadAreaTitle}>Upload Product Image</Text>
-                        <Text style={styles.uploadAreaSubtitle}>Tap to take a photo or select from gallery</Text>
+                        <Text style={styles.uploadAreaSubtitle}>
+                          Tap to take a photo or select from gallery
+                        </Text>
                       </TouchableOpacity>
 
                       {/* Loading overlay for empty image state */}
                       {formImageUploading && (
                         <View style={[styles.imgUploadingOverlay, { borderRadius: 12 }]}>
-                          <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                          <ActivityIndicator
+                            size="small"
+                            color="#FFFFFF"
+                            style={{ marginBottom: 6 }}
+                          />
                           <Text style={styles.imgUploadingText}>Uploading image…</Text>
                         </View>
                       )}
@@ -566,13 +593,35 @@ export const StocksScreen: React.FC = () => {
             </View>
           </View>
         ) : (
-          <View style={[styles.formCard, { alignItems: "center", paddingVertical: 32, gap: 12 }]}>
-            <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FECACA" }}>
+          <View style={[styles.formCard, { alignItems: 'center', paddingVertical: 32, gap: 12 }]}>
+            <View
+              style={{
+                width: 54,
+                height: 54,
+                borderRadius: 27,
+                backgroundColor: '#FEE2E2',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: '#FECACA',
+              }}
+            >
               <Feather name="lock" size={24} color={TOKENS.error} />
             </View>
-            <Text style={{ fontSize: 16, fontWeight: "bold", color: TOKENS.dark }}>Inventory Operations Restricted</Text>
-            <Text style={{ fontSize: 12, color: TOKENS.muted, textAlign: "center", lineHeight: 17, paddingHorizontal: 24 }}>
-              Cashier profiles are not authorized to create, update, or edit products in the catalog list.
+            <Text style={{ fontSize: 16, fontWeight: 'bold', color: TOKENS.dark }}>
+              Inventory Operations Restricted
+            </Text>
+            <Text
+              style={{
+                fontSize: 12,
+                color: TOKENS.muted,
+                textAlign: 'center',
+                lineHeight: 17,
+                paddingHorizontal: 24,
+              }}
+            >
+              Cashier profiles are not authorized to create, update, or edit products in the catalog
+              list.
             </Text>
           </View>
         )}
@@ -581,7 +630,7 @@ export const StocksScreen: React.FC = () => {
         <View style={styles.favoritesSection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionHeaderTitle}>Favorites</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => {
@@ -589,8 +638,13 @@ export const StocksScreen: React.FC = () => {
                   setIsEditingFavorites(!isEditingFavorites);
                 }}
               >
-                <Text style={[styles.editLink, isEditingFavorites && { color: TOKENS.primary, fontWeight: "700" }]}>
-                  {isEditingFavorites ? "Done" : "Edit"}
+                <Text
+                  style={[
+                    styles.editLink,
+                    isEditingFavorites && { color: TOKENS.primary, fontWeight: '700' },
+                  ]}
+                >
+                  {isEditingFavorites ? 'Done' : 'Edit'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -599,7 +653,7 @@ export const StocksScreen: React.FC = () => {
           <View style={styles.favGrid}>
             {favoriteProducts.length === 0 ? (
               <View style={styles.emptyStateCard}>
-                <View style={[styles.emptyIconContainer, { backgroundColor: "#FFF1F2" }]}>
+                <View style={[styles.emptyIconContainer, { backgroundColor: '#FFF1F2' }]}>
                   <Ionicons name="heart-outline" size={20} color="#F43F5E" />
                 </View>
                 <Text style={styles.emptyStateTitle}>No Favorites Added</Text>
@@ -623,12 +677,17 @@ export const StocksScreen: React.FC = () => {
                   }}
                 >
                   {/* Product image */}
-                  <View style={{ width: "100%", height: 65, position: "relative" }}>
+                  <View style={{ width: '100%', height: 65, position: 'relative' }}>
                     <ProductImage
                       icon={item.icon}
                       category={item.category}
                       size={65}
-                      style={{ width: "100%", height: 65, borderTopLeftRadius: 11, borderTopRightRadius: 11 }}
+                      style={{
+                        width: '100%',
+                        height: 65,
+                        borderTopLeftRadius: 11,
+                        borderTopRightRadius: 11,
+                      }}
                     />
                     {isEditingFavorites && (
                       <TouchableOpacity
@@ -674,7 +733,7 @@ export const StocksScreen: React.FC = () => {
             ) : (
               recentProducts.map((item) => (
                 <View key={item.id} style={styles.recentRow}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <ProductImage
                       icon={item.icon}
                       category={item.category}
@@ -682,13 +741,26 @@ export const StocksScreen: React.FC = () => {
                       style={{ width: 58, height: 58, borderRadius: 10 }}
                     />
                     <View style={styles.recentInfoWrapper}>
-                      <Text style={styles.recentItemName} numberOfLines={1}>{item.name}</Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3 }}>
-                        <Text style={{ fontSize: 12, fontWeight: "600", color: TOKENS.primary }}>
+                      <Text style={styles.recentItemName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <View
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: TOKENS.primary }}>
                           Rs. {item.price.toLocaleString()}
                         </Text>
-                        <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#E2E8F0" }} />
-                        <Text style={styles.recentTimeAgo}>{getRelativeTimeAgo(item.createdAt)}</Text>
+                        <View
+                          style={{
+                            width: 3,
+                            height: 3,
+                            borderRadius: 1.5,
+                            backgroundColor: '#E2E8F0',
+                          }}
+                        />
+                        <Text style={styles.recentTimeAgo}>
+                          {getRelativeTimeAgo(item.createdAt)}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -810,28 +882,28 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
   },
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -842,19 +914,19 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   scanButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: TOKENS.primary,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -864,7 +936,7 @@ const styles = StyleSheet.create({
   },
   scanButtonText: {
     color: TOKENS.card,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     fontSize: 14,
   },
   scrollWrapper: {
@@ -880,11 +952,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: TOKENS.accentBlue,
     padding: 16,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.05)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.05)',
   },
   formTitle: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.primary,
   },
   formSubtitle: {
@@ -902,11 +974,11 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
   },
   formInput: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 8,
@@ -916,18 +988,18 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   chipsSelector: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginTop: 2,
   },
   selectorChip: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
     paddingHorizontal: 10,
     height: 28,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: TOKENS.border,
   },
@@ -937,14 +1009,14 @@ const styles = StyleSheet.create({
   },
   selectorChipText: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.muted,
   },
   selectorChipTextActive: {
     color: TOKENS.card,
   },
   fieldColumnsRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 10,
   },
   flexField: {
@@ -955,83 +1027,83 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.primary,
     borderRadius: 8,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 6,
     boxShadow: `0px 2px 4px 0px ${TOKENS.primary}33`,
   },
   submitBtnText: {
     color: TOKENS.card,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     fontSize: 14,
   },
   favoritesSection: {
     gap: 12,
   },
   sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   sectionHeaderTitle: {
     fontSize: 17,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   editLink: {
     fontSize: 14,
     color: TOKENS.primary,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   favGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   favCard: {
-    width: "31.5%",
+    width: '31.5%',
     backgroundColor: TOKENS.card,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingBottom: 10,
-    boxShadow: "0px 1px 2px 0px rgba(0, 0, 0, 0.03)",
+    boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.03)',
   },
   favImageBox: {
-    width: "100%",
+    width: '100%',
     height: 65,
     borderRadius: 0,
     marginBottom: 6,
   },
   favName: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
-    textAlign: "center",
+    textAlign: 'center',
     paddingHorizontal: 6,
     marginTop: 6,
   },
   favPrice: {
     fontSize: 11,
     color: TOKENS.primary,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginTop: 2,
   },
   recentsSection: {
     gap: 10,
   },
   recentHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
     paddingVertical: 4,
   },
   recentTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   recentsList: {
@@ -1046,9 +1118,9 @@ const styles = StyleSheet.create({
     paddingLeft: 3,
     paddingTop: 3,
     paddingBottom: 3,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     minHeight: 64,
   },
   recentInfoWrapper: {
@@ -1056,7 +1128,7 @@ const styles = StyleSheet.create({
   },
   recentItemName: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   recentTimeAgo: {
@@ -1073,17 +1145,17 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: TOKENS.card,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     fontSize: 13,
   },
   headerRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   headerHistoryBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 38,
     borderRadius: 19,
     backgroundColor: TOKENS.lightBlue,
@@ -1095,9 +1167,9 @@ const styles = StyleSheet.create({
     width: 38,
   },
   barcodeInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 8,
@@ -1115,8 +1187,8 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 6,
     backgroundColor: TOKENS.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
   },
@@ -1130,15 +1202,15 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   premiumUploadArea: {
-    width: "100%",
+    width: '100%',
     height: 120,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: TOKENS.accentBlue,
-    borderStyle: "dashed" as const,
+    borderStyle: 'dashed' as const,
     backgroundColor: TOKENS.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
     gap: 8,
   },
@@ -1146,14 +1218,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.05)",
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.05)',
   },
   uploadAreaTitle: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.primary,
   },
   uploadAreaSubtitle: {
@@ -1161,49 +1233,49 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
   },
   imgContainerWrap: {
-    position: "relative" as const,
-    width: "100%",
+    position: 'relative' as const,
+    width: '100%',
     height: 160,
     borderRadius: 12,
-    overflow: "hidden" as const,
+    overflow: 'hidden' as const,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: '#F8FAFC',
   },
   premiumImagePreview: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
   changeImageOverlay: {
-    position: "absolute" as const,
+    position: 'absolute' as const,
     bottom: 12,
     left: 12,
-    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   changeImageBadge: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
   },
   changeImageText: {
     fontSize: 12,
-    fontWeight: "600" as const,
-    color: "#FFFFFF",
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
   },
   floatingRemoveBtn: {
-    position: "absolute" as const,
+    position: 'absolute' as const,
     top: 12,
     right: 12,
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(239, 68, 68, 0.9)",
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.1)",
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.1)',
   },
   imgUploadingOverlay: {
     position: 'absolute' as const,
@@ -1215,7 +1287,7 @@ const styles = StyleSheet.create({
   },
   imgUploadingText: {
     fontSize: 13,
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontWeight: '600' as const,
   },
   // ── Standard upload placeholder & Fav edit styles ──
@@ -1242,7 +1314,7 @@ const styles = StyleSheet.create({
     height: 22,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    boxShadow: "0px 2px 3px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 3px 0px rgba(0, 0, 0, 0.15)',
     zIndex: 10,
   },
   // ── (old picker styles kept for reference, unused) ──
@@ -1317,56 +1389,56 @@ const styles = StyleSheet.create({
     color: TOKENS.primary,
   },
   emptyStateCard: {
-    width: "100%",
+    width: '100%',
     backgroundColor: TOKENS.card,
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: TOKENS.border,
-    borderStyle: "dashed",
+    borderStyle: 'dashed',
     paddingVertical: 24,
     paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyIconContainer: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
   },
   emptyStateTitle: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
-    textAlign: "center",
+    textAlign: 'center',
   },
   emptyStateSubtitle: {
     fontSize: 12,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     marginTop: 4,
     lineHeight: 16,
     paddingHorizontal: 12,
   },
   // Camera overlay button on favorites grid cards
   favCameraBtn: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 4,
     right: 4,
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "rgba(37, 99, 235, 0.85)",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0px 1px 2px 0px rgba(0, 0, 0, 0.2)",
+    backgroundColor: 'rgba(37, 99, 235, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.2)',
   },
   // Row wrapper for camera + add button in recents
   recentActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   // Camera icon button in recents rows
@@ -1377,8 +1449,8 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.lightBlue,
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // ── Image picker bottom sheet ──
   sheetScrim: {
@@ -1393,7 +1465,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 36,
     paddingTop: 12,
-    boxShadow: "0px -4px 16px 0px rgba(0, 0, 0, 0.12)",
+    boxShadow: '0px -4px 16px 0px rgba(0, 0, 0, 0.12)',
   },
   sheetHandle: {
     width: 40,

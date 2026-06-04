@@ -4,10 +4,7 @@ export type PermissionAction = 'create' | 'read' | 'update' | 'delete';
 export type PermissionResource = 'products' | 'transactions' | 'staff' | 'settings' | 'sync';
 
 // Professional Enterprise RBAC Matrix Mapping matching mobile exactly
-const PERMISSION_MATRIX: Record<
-  UserRole,
-  Record<PermissionResource, PermissionAction[]>
-> = {
+const PERMISSION_MATRIX: Record<UserRole, Record<PermissionResource, PermissionAction[]>> = {
   admin: {
     products: ['create', 'read', 'update', 'delete'],
     transactions: ['create', 'read', 'update', 'delete'],
@@ -17,17 +14,17 @@ const PERMISSION_MATRIX: Record<
   },
   manager: {
     products: ['create', 'read', 'update'], // Managers cannot DELETE products
-    transactions: ['create', 'read'],       // Managers cannot delete/alter sales transactions
-    staff: [],                              // Managers cannot access or manage staff list
-    settings: ['read'],                     // Managers can view, but not configure store settings
-    sync: ['create', 'read', 'update'],     // Managers can trigger cloud synchronizations
+    transactions: ['create', 'read'], // Managers cannot delete/alter sales transactions
+    staff: [], // Managers cannot access or manage staff list
+    settings: ['read'], // Managers can view, but not configure store settings
+    sync: ['create', 'read', 'update'], // Managers can trigger cloud synchronizations
   },
   cashier: {
-    products: ['read'],                     // Cashiers can ONLY view/scan items to add to cart
-    transactions: ['create', 'read'],       // Cashiers can checkout sales and view current invoice
-    staff: [],                              // Cashiers have zero staff panel access
-    settings: [],                           // Cashiers have zero store settings access
-    sync: ['read'],                         // Cashiers can trigger manual database syncs
+    products: ['read'], // Cashiers can ONLY view/scan items to add to cart
+    transactions: ['create', 'read'], // Cashiers can checkout sales and view current invoice
+    staff: [], // Cashiers have zero staff panel access
+    settings: [], // Cashiers have zero store settings access
+    sync: ['read'], // Cashiers can trigger manual database syncs
   },
 };
 

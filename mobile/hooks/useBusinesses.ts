@@ -1,19 +1,19 @@
-import { Q } from "@nozbe/watermelondb";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import database from "../components/data/db";
-import { supabase, syncDatabase } from "../services/sync";
-import { useAuthStore } from "../stores/useAuthStore";
-import { Business, useBusinessStore } from "../stores/useBusinessStore";
-import { SEEDING_PRODUCTS } from "../utils/seedProducts";
+import { Q } from '@nozbe/watermelondb';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import database from '../components/data/db';
+import { supabase, syncDatabase } from '../services/sync';
+import { useAuthStore } from '../stores/useAuthStore';
+import { Business, useBusinessStore } from '../stores/useBusinessStore';
+import { SEEDING_PRODUCTS } from '../utils/seedProducts';
 
 // Onboarding placeholder when no business is registered yet
 const PLACEHOLDER_BUSINESS: Business = {
-  id: "0",
-  name: "Register Your Shop",
-  category: "General Retail",
-  address: "Complete onboarding setup",
-  phone: "",
-  logoUri: "",
+  id: '0',
+  name: 'Register Your Shop',
+  category: 'General Retail',
+  address: 'Complete onboarding setup',
+  phone: '',
+  logoUri: '',
 };
 
 export function useBusinesses() {
@@ -21,16 +21,16 @@ export function useBusinesses() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
 
   return useQuery<Business[]>({
-    queryKey: ["businesses", loggedInPhone, isLoggedIn],
+    queryKey: ['businesses', loggedInPhone, isLoggedIn],
     queryFn: async () => {
       if (!isLoggedIn || !loggedInPhone) {
         return [PLACEHOLDER_BUSINESS];
       }
 
       const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, "");
-        if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+        let cleaned = phoneStr.replace(/\D/g, '');
+        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
         return cleaned;
       };
 
@@ -38,9 +38,9 @@ export function useBusinesses() {
       const matchedBusinessesMap = new Map<string, any>();
 
       // 1. Fetch businesses where the logged-in user is a registered staff member (Employee)
-      const allEmployees = await database.get("employees").query().fetch();
+      const allEmployees = await database.get('employees').query().fetch();
       const matchedEmployees = allEmployees.filter((emp: any) => {
-        return normalizePhone(emp.phone || "") === cleanLoggedInPhone;
+        return normalizePhone(emp.phone || '') === cleanLoggedInPhone;
       });
 
       for (const emp of matchedEmployees) {
@@ -51,9 +51,9 @@ export function useBusinesses() {
       }
 
       // 2. Fetch businesses owned directly by the logged-in user phone number
-      const allBusinesses = await database.get("businesses").query().fetch();
+      const allBusinesses = await database.get('businesses').query().fetch();
       const matchedOwned = allBusinesses.filter((b: any) => {
-        return normalizePhone(b.phoneNumber || "") === cleanLoggedInPhone;
+        return normalizePhone(b.phoneNumber || '') === cleanLoggedInPhone;
       });
 
       for (const biz of matchedOwned) {
@@ -70,9 +70,9 @@ export function useBusinesses() {
         id: b.id,
         name: b.name,
         category: b.businessType,
-        address: b.address || "No Address Provided",
-        phone: b.phoneNumber || "+94 ** *** ****",
-        logoUri: b.logoUri || "",
+        address: b.address || 'No Address Provided',
+        phone: b.phoneNumber || '+94 ** *** ****',
+        logoUri: b.logoUri || '',
       }));
 
       // Synchronize back to the business store list for backward compatibility
@@ -80,8 +80,7 @@ export function useBusinesses() {
 
       // Keep the active business in sync with fresh database updates in real-time
       const currentActive = useBusinessStore.getState().activeBusiness;
-      const targetBizId =
-        useAuthStore.getState().activeBusinessId || currentActive.id;
+      const targetBizId = useAuthStore.getState().activeBusinessId || currentActive.id;
       const selectedBiz =
         list.find((b) => b.id === targetBizId) ||
         list.find((b) => b.id === currentActive.id) ||
@@ -105,33 +104,31 @@ export function useRegisterBusiness() {
       phone: string;
       category?: string;
     }) => {
-      const { name, address, phone, category = "General Retail" } = params;
+      const { name, address, phone, category = 'General Retail' } = params;
       let newBusinessRecord: any;
       await database.write(async () => {
-        newBusinessRecord = await database
-          .get("businesses")
-          .create((biz: any) => {
-            biz.name = name;
-            biz.businessType = category;
-            biz.address = address;
-            biz.phoneNumber = phone;
-          });
+        newBusinessRecord = await database.get('businesses').create((biz: any) => {
+          biz.name = name;
+          biz.businessType = category;
+          biz.address = address;
+          biz.phoneNumber = phone;
+        });
 
-        await database.get("employees").create((emp: any) => {
+        await database.get('employees').create((emp: any) => {
           emp.business.set(newBusinessRecord);
-          emp.name = "Owner / Admin";
-          emp.role = "admin";
+          emp.name = 'Owner / Admin';
+          emp.role = 'admin';
           emp.phone = phone;
         });
       });
 
       // Seed products ONLY for the very first registered store in SQLite!
-      const dbBizs = await database.get("businesses").query().fetch();
+      const dbBizs = await database.get('businesses').query().fetch();
       if (dbBizs.length === 1) {
         // Use centralized seed data to avoid duplication and 404-prone image links
         await database.write(async () => {
           for (const item of SEEDING_PRODUCTS) {
-            await database.get("products").create((p: any) => {
+            await database.get('products').create((p: any) => {
               p.business.set(newBusinessRecord);
               p.name = item.name;
               p.price = item.price;
@@ -152,12 +149,12 @@ export function useRegisterBusiness() {
         category,
         address,
         phone,
-        logoUri: "",
+        logoUri: '',
       };
     },
     onSuccess: (newBiz) => {
       // Invalidate businesses query cache so all components refetch instantly!
-      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
 
       useBusinessStore.getState().setActiveBusiness(newBiz.id);
       useAuthStore.getState().setActiveBusinessId(newBiz.id);
@@ -166,13 +163,11 @@ export function useRegisterBusiness() {
       syncDatabase()
         .then((synced: boolean) => {
           if (synced) {
-            console.log(
-              "Background sync successfully pushed new business to Supabase.",
-            );
+            console.log('Background sync successfully pushed new business to Supabase.');
           }
         })
         .catch((err: any) => {
-          console.error("Background auto-sync failed:", err);
+          console.error('Background auto-sync failed:', err);
         });
     },
   });
@@ -192,8 +187,8 @@ export function useUpdateActiveBusiness() {
       const activeBiz = useBusinessStore.getState().activeBusiness;
 
       const businesses = await database
-        .get("businesses")
-        .query(Q.where("id", activeBiz.id))
+        .get('businesses')
+        .query(Q.where('id', activeBiz.id))
         .fetch();
       if (businesses.length > 0) {
         const targetBiz = businesses[0];
@@ -210,19 +205,19 @@ export function useUpdateActiveBusiness() {
         });
       } else {
         await database.write(async () => {
-          await database.get("businesses").create((b: any) => {
+          await database.get('businesses').create((b: any) => {
             b.name = details.name;
             b.businessType = details.category;
             b.address = details.address;
             b.phoneNumber = details.phone;
-            b.logoUri = details.logoUri || "";
+            b.logoUri = details.logoUri || '';
           });
         });
       }
       return { id: activeBiz.id, ...details };
     },
     onSuccess: (updatedBiz) => {
-      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
 
       // Real-time active business synchronization everywhere across all components!
       useBusinessStore.setState({
@@ -241,12 +236,12 @@ export function useUpdateActiveBusiness() {
         .then((synced: boolean) => {
           if (synced) {
             console.log(
-              "Background sync successfully pushed business profile changes to Supabase.",
+              'Background sync successfully pushed business profile changes to Supabase.'
             );
           }
         })
         .catch((err: any) => {
-          console.error("Background auto-sync failed:", err);
+          console.error('Background auto-sync failed:', err);
         });
     },
   });
@@ -268,10 +263,7 @@ export function useUpdateBusiness() {
     }) => {
       const { id, details } = params;
 
-      const businesses = await database
-        .get("businesses")
-        .query(Q.where("id", id))
-        .fetch();
+      const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
       if (businesses.length > 0) {
         const targetBiz = businesses[0];
         await database.write(async () => {
@@ -289,7 +281,7 @@ export function useUpdateBusiness() {
       return { id, ...details };
     },
     onSuccess: (updatedBiz) => {
-      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
 
       // Real-time active business synchronization everywhere across all components!
       const currentActive = useBusinessStore.getState().activeBusiness;
@@ -311,12 +303,12 @@ export function useUpdateBusiness() {
         .then((synced: boolean) => {
           if (synced) {
             console.log(
-              "Background sync successfully pushed business profile changes to Supabase.",
+              'Background sync successfully pushed business profile changes to Supabase.'
             );
           }
         })
         .catch((err: any) => {
-          console.error("Background auto-sync failed:", err);
+          console.error('Background auto-sync failed:', err);
         });
     },
   });
@@ -327,10 +319,7 @@ export function useDeleteBusiness() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const businesses = await database
-        .get("businesses")
-        .query(Q.where("id", id))
-        .fetch();
+      const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
       if (businesses.length > 0) {
         const targetBiz = businesses[0];
         await database.write(async () => {
@@ -340,14 +329,12 @@ export function useDeleteBusiness() {
       return id;
     },
     onSuccess: (deletedId) => {
-      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      queryClient.invalidateQueries({ queryKey: ['businesses'] });
 
       // Fallback active business if deleted active one
       const currentActive = useBusinessStore.getState().activeBusiness;
       if (currentActive.id === deletedId) {
-        const list = useBusinessStore
-          .getState()
-          .businesses.filter((b) => b.id !== deletedId);
+        const list = useBusinessStore.getState().businesses.filter((b) => b.id !== deletedId);
         if (list.length > 0) {
           useBusinessStore.getState().setActiveBusiness(list[0].id);
         } else {
@@ -359,13 +346,11 @@ export function useDeleteBusiness() {
       syncDatabase()
         .then((synced: boolean) => {
           if (synced) {
-            console.log(
-              "Background sync successfully pushed business deletion to Supabase.",
-            );
+            console.log('Background sync successfully pushed business deletion to Supabase.');
           }
         })
         .catch((err: any) => {
-          console.error("Background auto-sync failed:", err);
+          console.error('Background auto-sync failed:', err);
         });
     },
   });
@@ -373,25 +358,24 @@ export function useDeleteBusiness() {
 
 function base64ToArrayBuffer(base64: string): ArrayBuffer {
   let cleanBase64 = base64;
-  if (cleanBase64.startsWith("data:")) {
-    const commaIndex = cleanBase64.indexOf(",");
+  if (cleanBase64.startsWith('data:')) {
+    const commaIndex = cleanBase64.indexOf(',');
     if (commaIndex !== -1) {
       cleanBase64 = cleanBase64.substring(commaIndex + 1);
     }
   }
-  cleanBase64 = cleanBase64.replace(/[^A-Za-z0-9+/=]/g, "");
+  cleanBase64 = cleanBase64.replace(/[^A-Za-z0-9+/=]/g, '');
 
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const lookup = new Uint8Array(256);
   for (let i = 0; i < chars.length; i++) {
     lookup[chars.charCodeAt(i)] = i;
   }
 
   let bufferLength = cleanBase64.length * 0.75;
-  if (cleanBase64[cleanBase64.length - 1] === "=") {
+  if (cleanBase64[cleanBase64.length - 1] === '=') {
     bufferLength--;
-    if (cleanBase64[cleanBase64.length - 2] === "=") {
+    if (cleanBase64[cleanBase64.length - 2] === '=') {
       bufferLength--;
     }
   }
@@ -420,16 +404,12 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
 
 export function useUploadBusinessLogo() {
   return useMutation({
-    mutationFn: async (params: {
-      uri: string;
-      base64?: string;
-      businessId: string;
-    }) => {
+    mutationFn: async (params: { uri: string; base64?: string; businessId: string }) => {
       const { uri, base64, businessId } = params;
       let uploadData: any;
-      let contentType = "image/jpeg";
-      const fileExt = uri.split(".").pop() || "jpg";
-      contentType = `image/${fileExt === "png" ? "png" : fileExt === "svg" ? "svg+xml" : "jpeg"}`;
+      let contentType = 'image/jpeg';
+      const fileExt = uri.split('.').pop() || 'jpg';
+      contentType = `image/${fileExt === 'png' ? 'png' : fileExt === 'svg' ? 'svg+xml' : 'jpeg'}`;
 
       if (base64) {
         uploadData = base64ToArrayBuffer(base64);
@@ -440,12 +420,10 @@ export function useUploadBusinessLogo() {
 
       const fileName = `${businessId}/logo_${Date.now()}.${fileExt}`;
 
-      const { error } = await supabase.storage
-        .from("business-logos")
-        .upload(fileName, uploadData, {
-          contentType,
-          upsert: true,
-        });
+      const { error } = await supabase.storage.from('business-logos').upload(fileName, uploadData, {
+        contentType,
+        upsert: true,
+      });
 
       if (error) {
         throw error;
@@ -453,13 +431,10 @@ export function useUploadBusinessLogo() {
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from("business-logos").getPublicUrl(fileName);
+      } = supabase.storage.from('business-logos').getPublicUrl(fileName);
 
       // Save directly to local WatermelonDB
-      const businesses = await database
-        .get("businesses")
-        .query(Q.where("id", businessId))
-        .fetch();
+      const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
       if (businesses.length > 0) {
         const targetBiz = businesses[0];
         await database.write(async () => {
@@ -486,7 +461,7 @@ export function useUploadBusinessLogo() {
       try {
         await syncDatabase();
       } catch (syncErr) {
-        console.error("Auto sync after logo upload failed:", syncErr);
+        console.error('Auto sync after logo upload failed:', syncErr);
       }
 
       return publicUrl;

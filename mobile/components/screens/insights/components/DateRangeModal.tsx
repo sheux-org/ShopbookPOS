@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { Modal, StyleSheet, Text, TouchableOpacity, View, Alert, ScrollView } from "react-native";
-import { Calendar } from "react-native-calendars";
-import { Feather } from "@expo/vector-icons";
-import { TOKENS } from "../../../../constants/tokens";
-import { styles } from "../styles";
+import React, { useEffect, useState } from 'react';
+import { Modal, StyleSheet, Text, TouchableOpacity, View, Alert, ScrollView } from 'react-native';
+import { Calendar } from 'react-native-calendars';
+import { Feather } from '@expo/vector-icons';
+import { TOKENS } from '../../../../constants/tokens';
+import { styles } from '../styles';
 
 interface DateRangeModalProps {
   visible: boolean;
@@ -15,8 +15,8 @@ interface DateRangeModalProps {
 
 const formatDateString = (date: Date) => {
   const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 };
 
@@ -51,7 +51,7 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
           startingDay: true,
           endingDay: true,
           color: TOKENS.primary,
-          textColor: "white",
+          textColor: 'white',
         };
       } else {
         const endStr = formatDateString(tempEndDate);
@@ -61,18 +61,18 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
             startingDay: true,
             endingDay: true,
             color: TOKENS.primary,
-            textColor: "white",
+            textColor: 'white',
           };
         } else {
           marked[startStr] = {
             startingDay: true,
             color: TOKENS.primary,
-            textColor: "white",
+            textColor: 'white',
           };
           marked[endStr] = {
             endingDay: true,
             color: TOKENS.primary,
-            textColor: "white",
+            textColor: 'white',
           };
 
           let current = new Date(tempStartDate);
@@ -89,7 +89,7 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
           while (normalizeDate(current) < targetEnd) {
             const currentStr = formatDateString(current);
             marked[currentStr] = {
-              color: "#EFF6FF",
+              color: '#EFF6FF',
               textColor: TOKENS.primary,
             };
             current.setDate(current.getDate() + 1);
@@ -124,23 +124,23 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
     const compareEnd = new Date();
 
     switch (presetValue) {
-      case "today":
+      case 'today':
         compareStart.setTime(today.getTime());
         compareEnd.setTime(today.getTime());
         break;
-      case "yesterday":
+      case 'yesterday':
         compareStart.setDate(today.getDate() - 1);
         compareEnd.setDate(today.getDate() - 1);
         break;
-      case "7days":
+      case '7days':
         compareStart.setDate(today.getDate() - 6);
         compareEnd.setTime(today.getTime());
         break;
-      case "30days":
+      case '30days':
         compareStart.setDate(today.getDate() - 29);
         compareEnd.setTime(today.getTime());
         break;
-      case "thisMonth":
+      case 'thisMonth':
         compareStart.setFullYear(today.getFullYear(), today.getMonth(), 1);
         compareEnd.setTime(today.getTime());
         break;
@@ -159,26 +159,26 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
     let end = new Date();
 
     switch (presetValue) {
-      case "today":
+      case 'today':
         start = new Date(today);
         end = new Date(today);
         break;
-      case "yesterday":
+      case 'yesterday':
         start = new Date(today);
         start.setDate(today.getDate() - 1);
         end = new Date(start);
         break;
-      case "7days":
+      case '7days':
         start = new Date(today);
         start.setDate(today.getDate() - 6);
         end = new Date(today);
         break;
-      case "30days":
+      case '30days':
         start = new Date(today);
         start.setDate(today.getDate() - 29);
         end = new Date(today);
         break;
-      case "thisMonth":
+      case 'thisMonth':
         start = new Date(today.getFullYear(), today.getMonth(), 1);
         end = new Date(today);
         break;
@@ -206,12 +206,7 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
   const isSelectionEmpty = tempStartDate === null && tempEndDate === null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
       <View style={styles.premiumModalOverlay}>
         {/* Backdrop Touch Dismiss */}
         <TouchableOpacity
@@ -232,17 +227,25 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
           </TouchableOpacity>
 
           {/* Header Title and Selected Period Badge */}
-          <View style={{ alignItems: "center", marginBottom: 4 }}>
+          <View style={{ alignItems: 'center', marginBottom: 4 }}>
             <Text style={styles.modalTitle}>Select Date Range</Text>
             <View style={localStyles.selectedPeriodBadge}>
               <Text style={localStyles.selectedPeriodText}>
                 {tempStartDate
-                  ? tempStartDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-                  : "Start Date"}
-                {"  ➔  "}
+                  ? tempStartDate.toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
+                  : 'Start Date'}
+                {'  ➔  '}
                 {tempEndDate
-                  ? tempEndDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-                  : "End Date"}
+                  ? tempEndDate.toLocaleDateString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })
+                  : 'End Date'}
               </Text>
             </View>
           </View>
@@ -255,20 +258,17 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
               contentContainerStyle={localStyles.presetsContainer}
             >
               {[
-                { label: "Today", value: "today" },
-                { label: "Yesterday", value: "yesterday" },
-                { label: "7 Days", value: "7days" },
-                { label: "30 Days", value: "30days" },
-                { label: "This Month", value: "thisMonth" },
+                { label: 'Today', value: 'today' },
+                { label: 'Yesterday', value: 'yesterday' },
+                { label: '7 Days', value: '7days' },
+                { label: '30 Days', value: '30days' },
+                { label: 'This Month', value: 'thisMonth' },
               ].map((preset) => {
                 const isSelected = isPresetSelected(preset.value);
                 return (
                   <TouchableOpacity
                     key={preset.value}
-                    style={[
-                      localStyles.presetPill,
-                      isSelected && localStyles.presetPillActive,
-                    ]}
+                    style={[localStyles.presetPill, isSelected && localStyles.presetPillActive]}
                     onPress={() => handlePresetPress(preset.value)}
                     activeOpacity={0.7}
                   >
@@ -326,7 +326,7 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
             <TouchableOpacity
               style={[
                 localStyles.clearBtn,
-                isSelectionEmpty ? localStyles.clearBtnDisabled : localStyles.clearBtnActive
+                isSelectionEmpty ? localStyles.clearBtnDisabled : localStyles.clearBtnActive,
               ]}
               onPress={() => {
                 setTempStartDate(null);
@@ -337,10 +337,14 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
               disabled={isSelectionEmpty}
               activeOpacity={0.7}
             >
-              <Text style={[
-                localStyles.clearBtnText,
-                isSelectionEmpty ? localStyles.clearBtnTextDisabled : localStyles.clearBtnTextActive
-              ]}>
+              <Text
+                style={[
+                  localStyles.clearBtnText,
+                  isSelectionEmpty
+                    ? localStyles.clearBtnTextDisabled
+                    : localStyles.clearBtnTextActive,
+                ]}
+              >
                 Clear
               </Text>
             </TouchableOpacity>
@@ -361,15 +365,15 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
 
 const localStyles = StyleSheet.create({
   closeModalBtn: {
-    position: "absolute",
+    position: 'absolute',
     top: 16,
     right: 16,
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 10,
   },
   selectedPeriodBadge: {
@@ -378,11 +382,11 @@ const localStyles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     marginTop: 8,
-    alignSelf: "center",
+    alignSelf: 'center',
   },
   selectedPeriodText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.primary,
   },
   presetsContainer: {
@@ -395,11 +399,11 @@ const localStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   presetPillActive: {
     backgroundColor: TOKENS.primary,
@@ -407,15 +411,15 @@ const localStyles = StyleSheet.create({
   },
   presetPillText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#64748B",
+    fontWeight: '600',
+    color: '#64748B',
   },
   presetPillTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "700",
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   modalButtonsRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
     marginTop: 12,
   },
@@ -423,43 +427,41 @@ const localStyles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
   },
   clearBtnActive: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FEE2E2",
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FEE2E2',
   },
   clearBtnDisabled: {
-    backgroundColor: "#F8FAFC",
-    borderColor: "#E2E8F0",
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
     opacity: 0.6,
   },
   clearBtnText: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   clearBtnTextActive: {
-    color: "#EF4444",
+    color: '#EF4444',
   },
   clearBtnTextDisabled: {
-    color: "#94A3B8",
+    color: '#94A3B8',
   },
   confirmBtn: {
     flex: 1,
     height: 48,
     borderRadius: 14,
     backgroundColor: TOKENS.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     boxShadow: `0px 4px 8px 0px ${TOKENS.primary}26`,
   },
   confirmBtnText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: "#ffffff",
+    fontWeight: '700',
+    color: '#ffffff',
   },
 });
-
-

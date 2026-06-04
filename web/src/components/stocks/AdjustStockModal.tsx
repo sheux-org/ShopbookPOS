@@ -69,19 +69,27 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
       <div style={styles.modalContent}>
         <div style={styles.modalHeader}>
           <h3>Inventory Audit Adjustment</h3>
-          <button 
-            onClick={onClose} 
-            style={styles.modalCloseBtn}
-          >
+          <button onClick={onClose} style={styles.modalCloseBtn}>
             <X size={16} />
           </button>
         </div>
         <form onSubmit={handleSubmit} style={styles.modalBody}>
           <div style={styles.modalProductHeader}>
-            <ProductImage icon={product.icon} size={48} style={{ border: 'none', borderRadius: '8px' }} />
+            <ProductImage
+              icon={product.icon}
+              size={48}
+              style={{ border: 'none', borderRadius: '8px' }}
+            />
             <div style={{ flex: 1, minWidth: 0 }}>
               <h4 style={{ fontSize: '15px', fontWeight: 'bold', margin: 0 }}>{product.name}</h4>
-              <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px', marginBlockEnd: 0 }}>
+              <p
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--muted)',
+                  marginTop: '2px',
+                  marginBlockEnd: 0,
+                }}
+              >
                 Current Count: {product.stockCount} {product.unitType || 'Units'}
               </p>
             </div>
@@ -123,8 +131,8 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
           {/* Qty */}
           <div style={styles.modalInputGroup}>
             <label style={styles.modalLabel}>Change Quantity</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={adjustQty}
               onChange={(e) => setAdjustQty(e.target.value)}
               required
@@ -137,7 +145,7 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
           {/* Reason */}
           <div style={styles.modalInputGroup}>
             <label style={styles.modalLabel}>Adjustment Reason</label>
-            <select 
+            <select
               value={adjustReason}
               onChange={(e) => setAdjustReason(e.target.value)}
               style={styles.select}
@@ -159,11 +167,7 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
             </select>
           </div>
 
-          <button 
-            type="submit" 
-            disabled={adjusting || !adjustQty}
-            style={styles.modalSubmitBtn}
-          >
+          <button type="submit" disabled={adjusting || !adjustQty} style={styles.modalSubmitBtn}>
             <Save size={16} />
             <span>{adjusting ? 'Saving adjustments...' : 'Save Audit Adjust'}</span>
           </button>

@@ -18,19 +18,18 @@ import { useCart } from '../stores/cartStore';
 import { useCartActions } from '../hooks/useCartActions';
 import { useActiveDeviceTracker } from '../hooks/useActiveDeviceTracker';
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000,
-        refetchOnWindowFocus: false,
-      },
-    },
-  }));
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000,
+            refetchOnWindowFocus: false,
+          },
+        },
+      })
+  );
 
   return (
     <html lang="en">
@@ -59,7 +58,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { releaseReservedStocks } = useCartActions();
-  
+
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const loadBusinessesFromDb = useBusinessStore((s) => s.loadBusinessesFromDb);
 
@@ -107,7 +106,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   });
 
   const toggleSidebarCollapsed = () => {
-    setSidebarCollapsed(prev => {
+    setSidebarCollapsed((prev) => {
       const next = !prev;
       localStorage.setItem('sidebar-collapsed', String(next));
       return next;
@@ -232,25 +231,38 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
   if (!hydrated) {
     return (
-      <div style={{
-        backgroundColor: '#f9fafb',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        fontFamily: 'Inter, system-ui, sans-serif'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            border: '3px solid #e5e7eb',
-            borderTopColor: '#2563eb',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite'
-          }} />
-          <div style={{ color: '#6b7280', fontSize: '13px', fontWeight: '600', letterSpacing: '0.5px' }}>
+      <div
+        style={{
+          backgroundColor: '#f9fafb',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }}
+      >
+        <div
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}
+        >
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #e5e7eb',
+              borderTopColor: '#2563eb',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }}
+          />
+          <div
+            style={{
+              color: '#6b7280',
+              fontSize: '13px',
+              fontWeight: '600',
+              letterSpacing: '0.5px',
+            }}
+          >
             Initializing POS Terminal...
           </div>
         </div>
@@ -279,7 +291,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
-      <MobileNavbar 
+      <MobileNavbar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         syncing={syncing}
@@ -287,16 +299,11 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       />
 
       {/* Sidebar drawer overlay */}
-      {sidebarOpen && (
-        <div 
-          className="sidebar-backdrop" 
-          onClick={() => setSidebarOpen(false)} 
-        />
-      )}
+      {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {showSidebar && (
-          <Sidebar 
+          <Sidebar
             sidebarCollapsed={sidebarCollapsed}
             toggleSidebarCollapsed={toggleSidebarCollapsed}
             sidebarOpen={sidebarOpen}
@@ -307,8 +314,17 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
           />
         )}
 
-        <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
-          <Header 
+        <div
+          style={{
+            display: 'flex',
+            flex: 1,
+            flexDirection: 'column',
+            minWidth: 0,
+            height: '100vh',
+            overflow: 'hidden',
+          }}
+        >
+          <Header
             headerInfo={headerInfo}
             pathname={pathname}
             sidebarVisible={sidebarVisible}
@@ -317,27 +333,33 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
             setPosMode={setPosMode}
           />
 
-           {/* Main workspace contents */}
+          {/* Main workspace contents */}
           <main className="main-content">
             {!isOnline && (
-              <div style={{
-                backgroundColor: '#fef2f2',
-                borderBottom: '1px solid #fee2e2',
-                padding: '10px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                color: '#991b1b',
-                fontSize: '13px',
-                fontWeight: '500',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                flexShrink: 0,
-                zIndex: 20,
-                lineHeight: '1.4'
-              }}>
+              <div
+                style={{
+                  backgroundColor: '#fef2f2',
+                  borderBottom: '1px solid #fee2e2',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: '#991b1b',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  flexShrink: 0,
+                  zIndex: 20,
+                  lineHeight: '1.4',
+                }}
+              >
                 <WifiOff size={16} style={{ color: '#dc2626', flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
-                  <strong style={{ color: '#b91c1c' }}>Network Connection Unstable / Offline:</strong> Cloud replication is paused. Transactions are stored in the local database, but please restore connection to prevent data loss or sync delays.
+                  <strong style={{ color: '#b91c1c' }}>
+                    Network Connection Unstable / Offline:
+                  </strong>{' '}
+                  Cloud replication is paused. Transactions are stored in the local database, but
+                  please restore connection to prevent data loss or sync delays.
                 </div>
               </div>
             )}

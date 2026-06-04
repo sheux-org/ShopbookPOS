@@ -7,6 +7,7 @@ This guide describes the testing framework, infrastructure, scripts, and best pr
 ## 1. Testing Stack & Tools
 
 The project uses a modern testing stack tailored for React and Vite:
+
 - **Test Runner**: [Vitest](https://vitest.dev) - A blazing fast unit test framework powered by Vite.
 - **Environment**: [jsdom](https://github.com/jsdom/jsdom) - A pure-JavaScript implementation of web standards for testing browser behavior.
 - **Component Testing**: [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) - Light-weight utility for testing React components without relying on implementation details.
@@ -36,9 +37,11 @@ Test coverage results will be output to the console and a detailed HTML report w
 ## 3. Test Configuration & Setup
 
 ### A. Main Configuration
+
 The main test environment is configured in [vitest.config.ts](../vitest.config.ts). It sets up Vite plugins (React), registers the `jsdom` testing environment, resolves custom import paths (`@/*`), and includes a global setup file.
 
 ### B. Global Mocks & Browser Environment
+
 Testing in a Node.js environment requires mocking browser APIs, native database drivers, and cloud APIs. This is managed in [setup.ts](../src/__tests__/setup.ts):
 
 1. **LocalStorage / SessionStorage Mocks**: Custom key-value stores that mock `window.localStorage` and `window.sessionStorage` behaviors dynamically.
@@ -53,7 +56,9 @@ Testing in a Node.js environment requires mocking browser APIs, native database 
    - `@supabase/supabase-js`: Mocked globally to return stubbed database selections/updates and prevent actual network requests to your staging tables.
 
 ### C. Database Fallbacks & Dynamic Query Mocking
+
 To mock database collections (like `products`, `businesses`, `orders`) dynamically inside tests, use the mocked database module:
+
 - **Location**: [database.ts](../src/db/__mocks__/database.ts)
 - **Usage**: Exported stub database mock features like custom fetch queries (`mockFetch`) and record creation callbacks. You can import `databaseMock` directly in tests to verify database write hooks.
 
@@ -81,7 +86,9 @@ web/src/__tests__/
 When creating new features, follow these guidelines to add corresponding test coverage.
 
 ### A. Zustand Store Testing
+
 Ensure store tests reset the state `beforeEach` to prevent cross-test leakage.
+
 ```typescript
 import { describe, test, expect, beforeEach } from 'vitest';
 import { useCartStore } from '../../stores/cartStore';
@@ -94,7 +101,7 @@ describe('cartStore', () => {
   test('should add items to the cart', () => {
     const { addItem } = useCartStore.getState();
     addItem({ id: 'prod_1', name: 'Product A', price: 100 }, 2);
-    
+
     expect(useCartStore.getState().items.length).toBe(1);
     expect(useCartStore.getState().items[0].quantity).toBe(2);
   });
@@ -102,21 +109,25 @@ describe('cartStore', () => {
 ```
 
 ### B. Custom React Hooks Testing
+
 Use `renderHook` from `@testing-library/react` to test reactive hooks without rendering full visual DOMs.
+
 ```typescript
 import { renderHook, act } from '@testing-library/react';
 import { useActiveDeviceTracker } from '../../hooks/useActiveDeviceTracker';
 
 test('should track active devices and schedule ping interval', () => {
   const { result } = renderHook(() => useActiveDeviceTracker('business_1', 'user_1'));
-  
+
   // Assert hook outputs
   expect(result.current.isRegistered).toBe(true);
 });
 ```
 
 ### C. Component Testing
+
 Render components and fire user interaction events to assert UI behaviors.
+
 ```typescript
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -124,7 +135,7 @@ import TotalsSummary from '../../components/pos/TotalsSummary';
 
 test('should calculate summary totals correctly', async () => {
   render(<TotalsSummary subtotal={1000} discount={100} tax={50} />);
-  
+
   const totalText = screen.getByText('LKR 950.00');
   expect(totalText).toBeInTheDocument();
 });
@@ -135,6 +146,7 @@ test('should calculate summary totals correctly', async () => {
 ## 6. Maintenance Guidelines for Future Developers
 
 To keep the application stable as features grow:
+
 - **Run Tests Locally**: Always run `npm run test` before creating a pull request or pushing updates.
 - **Continuous Integration**: Ensure all mock responses inside [setup.ts](../src/__tests__/setup.ts) match your model interface upgrades.
 - **Act Wrappers**: Wrap any state changes inside test utilities with `act(() => { ... })` helper functions to avoid React DOM update warning alerts in test outputs.

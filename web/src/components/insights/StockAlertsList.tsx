@@ -6,16 +6,22 @@ interface StockAlertsListProps {
   lowStockItems: any[];
 }
 
-export default function StockAlertsList({
-  outOfStockItems,
-  lowStockItems,
-}: StockAlertsListProps) {
+export default function StockAlertsList({ outOfStockItems, lowStockItems }: StockAlertsListProps) {
   return (
     <>
       {/* Out of Stock Alerts (full row) */}
       {outOfStockItems.length > 0 && (
-        <div className="list-panel-card critical-alerts-card" style={{ border: '1.5px solid #ef4444', background: 'linear-gradient(135deg, #fffcfc 0%, #fef2f2 100%)' }}>
-          <h3 className="list-panel-title" style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div
+          className="list-panel-card critical-alerts-card"
+          style={{
+            border: '1.5px solid #ef4444',
+            background: 'linear-gradient(135deg, #fffcfc 0%, #fef2f2 100%)',
+          }}
+        >
+          <h3
+            className="list-panel-title"
+            style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
             <span className="alert-pulse-dot" style={{ backgroundColor: '#ef4444' }} />
             <AlertTriangle size={16} />
             <span>Out of Stock Alerts (Immediate Action Required)</span>
@@ -32,10 +38,14 @@ export default function StockAlertsList({
             <tbody>
               {outOfStockItems.map((item: any) => (
                 <tr key={item.id}>
-                  <td><strong style={{ color: '#ef4444' }}>{item.name}</strong></td>
+                  <td>
+                    <strong style={{ color: '#ef4444' }}>{item.name}</strong>
+                  </td>
                   <td>{item.sku}</td>
                   <td>{item.category.charAt(0).toUpperCase() + item.category.slice(1)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#ef4444' }}>Out of Stock</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#ef4444' }}>
+                    Out of Stock
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -46,7 +56,10 @@ export default function StockAlertsList({
       {/* Critical Low Stock list (full row) */}
       {lowStockItems.length > 0 && (
         <div className="list-panel-card critical-alerts-card">
-          <h3 className="list-panel-title" style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3
+            className="list-panel-title"
+            style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
             <span className="alert-pulse-dot" />
             <AlertTriangle size={16} />
             <span>Critical Stock Alerts (Restock Required)</span>
@@ -64,11 +77,17 @@ export default function StockAlertsList({
             <tbody>
               {lowStockItems.map((item: any) => (
                 <tr key={item.id}>
-                  <td><strong>{item.name}</strong></td>
+                  <td>
+                    <strong>{item.name}</strong>
+                  </td>
                   <td>{item.sku}</td>
                   <td>{item.category.charAt(0).toUpperCase() + item.category.slice(1)}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#ef4444' }}>{item.stockCount} left</td>
-                  <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{item.lowStockAlert}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#ef4444' }}>
+                    {item.stockCount} left
+                  </td>
+                  <td style={{ textAlign: 'right', color: 'var(--muted)' }}>
+                    {item.lowStockAlert}
+                  </td>
                 </tr>
               ))}
             </tbody>

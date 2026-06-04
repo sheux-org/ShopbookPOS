@@ -1,17 +1,10 @@
-import React, { useEffect, useRef } from "react";
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Animated,
-  Easing,
-} from "react-native";
-import { CameraView } from "expo-camera";
-import { Feather } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TOKENS } from "../../constants/tokens";
-import { usePermission } from "../../hooks/usePermissionHandler";
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, Animated, Easing } from 'react-native';
+import { CameraView } from 'expo-camera';
+import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TOKENS } from '../../constants/tokens';
+import { usePermission } from '../../hooks/usePermissionHandler';
 
 export interface BarcodeScannerModalProps {
   visible: boolean;
@@ -25,8 +18,8 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   visible,
   onClose,
   onBarcodeScanned,
-  title = "📷 Barcode Scanner Active",
-  instruction = "Align the retail product barcode within the viewfinder to automatically scan and catalog",
+  title = '📷 Barcode Scanner Active',
+  instruction = 'Align the retail product barcode within the viewfinder to automatically scan and catalog',
 }) => {
   const { hasCameraAccess, requestCameraAccess } = usePermission();
   const scanAnim = useRef(new Animated.Value(0)).current;
@@ -102,15 +95,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             <CameraView
               style={StyleSheet.absoluteFillObject}
               barcodeScannerSettings={{
-                barcodeTypes: [
-                  "upc_a",
-                  "upc_e",
-                  "ean13",
-                  "ean8",
-                  "qr",
-                  "code128",
-                  "code39",
-                ],
+                barcodeTypes: ['upc_a', 'upc_e', 'ean13', 'ean8', 'qr', 'code128', 'code39'],
               }}
               onBarcodeScanned={({ data }) => {
                 if (data) {
@@ -121,10 +106,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           ) : (
             <View style={styles.permissionRequiredContainer}>
               <Text style={styles.permissionText}>Camera Access Required</Text>
-              <TouchableOpacity
-                onPress={() => requestCameraAccess()}
-                style={styles.permissionBtn}
-              >
+              <TouchableOpacity onPress={() => requestCameraAccess()} style={styles.permissionBtn}>
                 <Text style={styles.permissionBtnText}>Grant Permission</Text>
               </TouchableOpacity>
             </View>
@@ -138,10 +120,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
           {/* Animated Laser line */}
           <Animated.View
-            style={[
-              styles.scannerLaserLine,
-              { transform: [{ translateY: laserTranslateY }] },
-            ]}
+            style={[styles.scannerLaserLine, { transform: [{ translateY: laserTranslateY }] }]}
           />
 
           <Text style={styles.scanningText}>SCANNING...</Text>
@@ -153,12 +132,12 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
 const styles = StyleSheet.create({
   scannerBg: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 24,
     zIndex: 99999,
     elevation: 99999,
@@ -167,50 +146,50 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
     borderRadius: 24,
     padding: 24,
-    width: "100%",
+    width: '100%',
     maxWidth: 360,
-    alignItems: "center",
+    alignItems: 'center',
     gap: 16,
-    boxShadow: "0px 8px 12px 0px rgba(0, 0, 0, 0.25)",
+    boxShadow: '0px 8px 12px 0px rgba(0, 0, 0, 0.25)',
   },
   scannerHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    width: "100%",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
   },
   scannerTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   closeScannerBtn: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scannerInstruction: {
     fontSize: 12,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 16,
   },
   scannerViewfinder: {
-    width: "100%",
+    width: '100%',
     height: 100,
     borderWidth: 1,
-    borderColor: "rgba(250, 204, 21, 0.3)",
-    backgroundColor: "#111827",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    overflow: "hidden",
+    borderColor: 'rgba(250, 204, 21, 0.3)',
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
   },
   viewfinderCorner: {
-    position: "absolute",
+    position: 'absolute',
     width: 16,
     height: 16,
     borderColor: TOKENS.yellow,
@@ -240,34 +219,34 @@ const styles = StyleSheet.create({
     borderRightWidth: 3,
   },
   scannerLaserLine: {
-    position: "absolute",
-    width: "90%",
+    position: 'absolute',
+    width: '90%',
     height: 2,
     backgroundColor: TOKENS.yellow,
     boxShadow: `0px 0px 3px 0px ${TOKENS.yellow}CC`,
     top: 2,
   },
   scanningText: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 10,
     fontSize: 10,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.yellow,
     letterSpacing: 1.5,
   },
   permissionRequiredContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    width: "100%",
-    height: "100%",
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: '100%',
+    height: '100%',
   },
   permissionText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 12,
-    textAlign: "center",
+    textAlign: 'center',
     marginBottom: 10,
   },
   permissionBtn: {
@@ -277,8 +256,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   permissionBtnText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 11,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
 });

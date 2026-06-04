@@ -1,10 +1,10 @@
-import React from "react";
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { TOKENS } from "../../constants/tokens";
+import React from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { TOKENS } from '../../constants/tokens';
 
 interface HeaderProps {
-  variant?: "default" | "primary";
+  variant?: 'default' | 'primary';
   title: string;
   subtitle: string;
   onBackPress?: () => void;
@@ -13,62 +13,38 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  variant = "default",
+  variant = 'default',
   title,
   subtitle,
   onBackPress,
   onCartPress,
   cartTotalDisplay,
 }) => {
-  const isPrimary = variant === "primary";
+  const isPrimary = variant === 'primary';
 
   return (
-    <View
-      style={[
-        styles.container,
-        isPrimary ? styles.containerPrimary : styles.containerDefault,
-      ]}
-    >
+    <View style={[styles.container, isPrimary ? styles.containerPrimary : styles.containerDefault]}>
       <TouchableOpacity
-        style={[
-          styles.backButton,
-          isPrimary ? styles.backButtonPrimary : styles.backButtonDefault,
-        ]}
+        style={[styles.backButton, isPrimary ? styles.backButtonPrimary : styles.backButtonDefault]}
         activeOpacity={0.7}
         onPress={onBackPress}
       >
         <Feather
-          name={isPrimary ? "arrow-left" : "chevron-left"}
+          name={isPrimary ? 'arrow-left' : 'chevron-left'}
           size={22}
           color={isPrimary ? TOKENS.card : TOKENS.dark}
         />
       </TouchableOpacity>
 
       <View style={styles.titleWrapper}>
-        <Text
-          style={[
-            styles.title,
-            isPrimary ? styles.textLight : styles.textDark,
-          ]}
-        >
-          {title}
-        </Text>
-        <Text
-          style={[
-            styles.subtitle,
-            isPrimary ? styles.textLightSubtitle : styles.textMuted,
-          ]}
-        >
+        <Text style={[styles.title, isPrimary ? styles.textLight : styles.textDark]}>{title}</Text>
+        <Text style={[styles.subtitle, isPrimary ? styles.textLightSubtitle : styles.textMuted]}>
           {subtitle}
         </Text>
       </View>
 
       {cartTotalDisplay && onCartPress && !isPrimary && (
-        <TouchableOpacity
-          style={styles.cartButton}
-          activeOpacity={0.8}
-          onPress={onCartPress}
-        >
+        <TouchableOpacity style={styles.cartButton} activeOpacity={0.8} onPress={onCartPress}>
           <Feather name="shopping-cart" size={16} color={TOKENS.primary} />
           <Text style={styles.cartButtonText}>{cartTotalDisplay}</Text>
         </TouchableOpacity>
@@ -79,8 +55,8 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -95,14 +71,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   backButtonDefault: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
   },
   backButtonPrimary: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   titleWrapper: {
     flex: 1,
@@ -110,7 +86,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   subtitle: {
     fontSize: 13,
@@ -127,22 +103,22 @@ const styles = StyleSheet.create({
   },
   textLightSubtitle: {
     color: TOKENS.card,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   cartButton: {
     backgroundColor: TOKENS.lightBlue,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
     borderWidth: 1,
-    borderColor: "#E0E7FF",
+    borderColor: '#E0E7FF',
   },
   cartButtonText: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.primary,
   },
 });

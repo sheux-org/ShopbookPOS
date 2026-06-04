@@ -1,6 +1,6 @@
-import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
   Alert,
   Platform,
@@ -10,19 +10,19 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BottomSheet } from "../../../components/common/BottomSheet";
-import { TOKENS } from "../../../constants/tokens";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomSheet } from '../../../components/common/BottomSheet';
+import { TOKENS } from '../../../constants/tokens';
 import {
   StaffMember,
   useCreateStaff,
   useDeleteStaff,
   useStaff,
   useUpdateStaff,
-} from "../../../hooks/useStaff";
-import { useUserPermissions } from "../../../hooks/useUserPermissions";
-import { useBusinessStore } from "../../../stores/useBusinessStore";
+} from '../../../hooks/useStaff';
+import { useUserPermissions } from '../../../hooks/useUserPermissions';
+import { useBusinessStore } from '../../../stores/useBusinessStore';
 
 export default function ManageStaffRoute() {
   const insets = useSafeAreaInsets();
@@ -39,21 +39,17 @@ export default function ManageStaffRoute() {
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newRole, setNewRole] = useState<"Admin" | "Manager" | "Cashier">(
-    "Cashier",
-  );
-  const [newEmail, setNewEmail] = useState("");
-  const [newPhone, setNewPhone] = useState("");
+  const [newName, setNewName] = useState('');
+  const [newRole, setNewRole] = useState<'Admin' | 'Manager' | 'Cashier'>('Cashier');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPhone, setNewPhone] = useState('');
 
   // Edit Modal states
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editRole, setEditRole] = useState<"Admin" | "Manager" | "Cashier">(
-    "Cashier",
-  );
-  const [editEmail, setEditEmail] = useState("");
-  const [editPhone, setEditPhone] = useState("");
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState<'Admin' | 'Manager' | 'Cashier'>('Cashier');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -75,7 +71,7 @@ export default function ManageStaffRoute() {
   const handleSaveEditStaff = () => {
     if (!editingStaff) return;
     if (!editName.trim() || !editPhone.trim()) {
-      triggerToast("Name and phone number are required!");
+      triggerToast('Name and phone number are required!');
       return;
     }
 
@@ -89,49 +85,49 @@ export default function ManageStaffRoute() {
       },
       {
         onSuccess: () => {
-          triggerToast("Staff details updated successfully! 🚀");
+          triggerToast('Staff details updated successfully! 🚀');
           setIsEditModalOpen(false);
           setEditingStaff(null);
         },
         onError: () => {
-          triggerToast("Failed to update staff details.");
+          triggerToast('Failed to update staff details.');
         },
-      },
+      }
     );
   };
 
   const handleConfirmDeleteStaff = (staff: StaffMember) => {
     Alert.alert(
-      "Remove Staff Member",
+      'Remove Staff Member',
       `Are you sure you want to permanently remove "${staff.name}"? This action cannot be undone.`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Remove Staff",
-          style: "destructive",
+          text: 'Remove Staff',
+          style: 'destructive',
           onPress: () => {
             deleteMutation.mutate(staff.id, {
               onSuccess: () => {
-                triggerToast("Staff member removed successfully! 🗑️");
+                triggerToast('Staff member removed successfully! 🗑️');
               },
               onError: () => {
-                triggerToast("Failed to delete staff member.");
+                triggerToast('Failed to delete staff member.');
               },
             });
           },
         },
-      ],
+      ]
     );
   };
 
   const handleAddStaff = () => {
     if (!newName.trim()) {
-      triggerToast("Please enter staff name!");
+      triggerToast('Please enter staff name!');
       return;
     }
     // Email is optional
     if (!newPhone.trim()) {
-      triggerToast("Please enter phone number!");
+      triggerToast('Please enter phone number!');
       return;
     }
 
@@ -148,49 +144,44 @@ export default function ManageStaffRoute() {
           setIsModalOpen(false);
 
           // Clear inputs
-          setNewName("");
-          setNewRole("Cashier");
-          setNewEmail("");
-          setNewPhone("");
+          setNewName('');
+          setNewRole('Cashier');
+          setNewEmail('');
+          setNewPhone('');
         },
         onError: () => {
-          triggerToast("Failed to add staff member.");
+          triggerToast('Failed to add staff member.');
         },
-      },
+      }
     );
   };
 
   const getRoleBadgeStyle = (role: string) => {
     switch (role) {
-      case "Admin":
-        return { backgroundColor: "#E6F4EA", color: "#137333" };
-      case "Manager":
-        return { backgroundColor: "#E8F0FE", color: TOKENS.primary };
+      case 'Admin':
+        return { backgroundColor: '#E6F4EA', color: '#137333' };
+      case 'Manager':
+        return { backgroundColor: '#E8F0FE', color: TOKENS.primary };
       default:
-        return { backgroundColor: "#F3F4F6", color: TOKENS.dark };
+        return { backgroundColor: '#F3F4F6', color: TOKENS.dark };
     }
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { paddingTop: Platform.OS === "ios" ? insets.top : 10 },
-      ]}
-    >
+    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top : 10 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/profile")}
+          onPress={() => router.push('/profile')}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Staff Management</Text>
 
-        {canPerform("create", "staff") && (
+        {canPerform('create', 'staff') && (
           <TouchableOpacity
             style={styles.createHeaderBtn}
             activeOpacity={0.8}
@@ -210,10 +201,7 @@ export default function ManageStaffRoute() {
       )}
 
       {/* Scrollable list */}
-      <ScrollView
-        style={styles.scrollWrapper}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.groupLabel}>Authorized Staff Members</Text>
 
         {staffList.map((member) => {
@@ -224,9 +212,9 @@ export default function ManageStaffRoute() {
                 <View style={styles.avatarBox}>
                   <Text style={styles.avatarInitials}>
                     {member.name
-                      .split(" ")
+                      .split(' ')
                       .map((n) => n[0])
-                      .join("")
+                      .join('')
                       .toUpperCase()
                       .slice(0, 2)}
                   </Text>
@@ -234,15 +222,8 @@ export default function ManageStaffRoute() {
                 <View style={styles.staffDetails}>
                   <View style={styles.staffHeaderRow}>
                     <Text style={styles.staffName}>{member.name}</Text>
-                    <View
-                      style={[
-                        styles.roleBadge,
-                        { backgroundColor: badge.backgroundColor },
-                      ]}
-                    >
-                      <Text
-                        style={[styles.roleBadgeText, { color: badge.color }]}
-                      >
+                    <View style={[styles.roleBadge, { backgroundColor: badge.backgroundColor }]}>
+                      <Text style={[styles.roleBadgeText, { color: badge.color }]}>
                         {member.role}
                       </Text>
                     </View>
@@ -252,11 +233,11 @@ export default function ManageStaffRoute() {
                 </View>
               </View>
               {/* Only admins can edit/delete staff */}
-              {canPerform("create", "staff") && (
+              {canPerform('create', 'staff') && (
                 <View
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
+                    flexDirection: 'row',
+                    alignItems: 'center',
                     gap: 10,
                   }}
                 >
@@ -266,9 +247,9 @@ export default function ManageStaffRoute() {
                       width: 32,
                       height: 32,
                       borderRadius: 16,
-                      backgroundColor: "#E8F0FE",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      backgroundColor: '#E8F0FE',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                     onPress={() => handleOpenEditStaffModal(member)}
                   >
@@ -281,9 +262,9 @@ export default function ManageStaffRoute() {
                       width: 32,
                       height: 32,
                       borderRadius: 16,
-                      backgroundColor: "#FCE8E6",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      backgroundColor: '#FCE8E6',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                     onPress={() => handleConfirmDeleteStaff(member)}
                   >
@@ -321,15 +302,12 @@ export default function ManageStaffRoute() {
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Staff Role</Text>
             <View style={styles.rolesSelectorRow}>
-              {(["Admin", "Manager", "Cashier"] as const).map((role) => {
+              {(['Admin', 'Manager', 'Cashier'] as const).map((role) => {
                 const isSelected = newRole === role;
                 return (
                   <TouchableOpacity
                     key={role}
-                    style={[
-                      styles.roleSelectTab,
-                      isSelected && styles.roleSelectTabActive,
-                    ]}
+                    style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
                     activeOpacity={0.8}
                     onPress={() => setNewRole(role)}
                   >
@@ -361,10 +339,8 @@ export default function ManageStaffRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>
-              Email Address{" "}
-              <Text style={{ fontWeight: "normal", color: TOKENS.muted }}>
-                (Optional)
-              </Text>
+              Email Address{' '}
+              <Text style={{ fontWeight: 'normal', color: TOKENS.muted }}>(Optional)</Text>
             </Text>
             <TextInput
               style={styles.formInput}
@@ -381,8 +357,7 @@ export default function ManageStaffRoute() {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!newName.trim() || !newPhone.trim()) &&
-              styles.submitButtonDisabled,
+            (!newName.trim() || !newPhone.trim()) && styles.submitButtonDisabled,
           ]}
           activeOpacity={0.8}
           onPress={handleAddStaff}
@@ -421,15 +396,12 @@ export default function ManageStaffRoute() {
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Staff Role</Text>
             <View style={styles.rolesSelectorRow}>
-              {(["Admin", "Manager", "Cashier"] as const).map((role) => {
+              {(['Admin', 'Manager', 'Cashier'] as const).map((role) => {
                 const isSelected = editRole === role;
                 return (
                   <TouchableOpacity
                     key={role}
-                    style={[
-                      styles.roleSelectTab,
-                      isSelected && styles.roleSelectTabActive,
-                    ]}
+                    style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
                     activeOpacity={0.8}
                     onPress={() => setEditRole(role)}
                   >
@@ -449,10 +421,8 @@ export default function ManageStaffRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>
-              Email Address{" "}
-              <Text style={{ fontWeight: "normal", color: TOKENS.muted }}>
-                (Optional)
-              </Text>
+              Email Address{' '}
+              <Text style={{ fontWeight: 'normal', color: TOKENS.muted }}>(Optional)</Text>
             </Text>
             <TextInput
               style={styles.formInput}
@@ -481,8 +451,7 @@ export default function ManageStaffRoute() {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!editName.trim() || !editPhone.trim()) &&
-              styles.submitButtonDisabled,
+            (!editName.trim() || !editPhone.trim()) && styles.submitButtonDisabled,
           ]}
           activeOpacity={0.8}
           onPress={handleSaveEditStaff}
@@ -502,9 +471,9 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -515,13 +484,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   createHeaderBtn: {
@@ -529,16 +498,16 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: TOKENS.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 70,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.dark,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -548,7 +517,7 @@ const styles = StyleSheet.create({
   toastText: {
     color: TOKENS.card,
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   scrollWrapper: {
     flex: 1,
@@ -559,17 +528,17 @@ const styles = StyleSheet.create({
   },
   groupLabel: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 8,
     marginBottom: 4,
   },
   staffCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: TOKENS.card,
     borderRadius: 16,
     borderWidth: 1,
@@ -577,22 +546,22 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   staffCardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
   },
   avatarBox: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   avatarInitials: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   staffDetails: {
@@ -600,13 +569,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   staffHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   staffName: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   roleBadge: {
@@ -616,7 +585,7 @@ const styles = StyleSheet.create({
   },
   roleBadgeText: {
     fontSize: 9,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   staffSub: {
     fontSize: 11,
@@ -624,8 +593,8 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "flex-end",
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
   },
   dismissArea: {
     flex: 1,
@@ -634,7 +603,7 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: "80%",
+    maxHeight: '80%',
     paddingBottom: 32,
   },
   modalHandle: {
@@ -642,13 +611,13 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: TOKENS.border,
     borderRadius: 2,
-    alignSelf: "center",
+    alignSelf: 'center',
     marginTop: 10,
   },
   modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
@@ -657,7 +626,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   modalCloseBtn: {
@@ -674,7 +643,7 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.dark,
   },
   formInput: {
@@ -685,13 +654,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
     color: TOKENS.dark,
-    backgroundColor: "#F9FAFB",
-    fontWeight: "500",
+    backgroundColor: '#F9FAFB',
+    fontWeight: '500',
   },
   rolesSelectorRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 8,
-    width: "100%",
+    width: '100%',
   },
   roleSelectTab: {
     flex: 1,
@@ -700,8 +669,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: TOKENS.border,
     backgroundColor: TOKENS.card,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   roleSelectTabActive: {
     borderColor: TOKENS.primary,
@@ -709,31 +678,31 @@ const styles = StyleSheet.create({
   },
   roleSelectTabText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
   },
   roleSelectTabTextActive: {
     color: TOKENS.primary,
   },
   submitButton: {
-    flexDirection: "row",
+    flexDirection: 'row',
     height: 48,
     backgroundColor: TOKENS.primary,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     marginTop: 8,
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
   },
   submitButtonDisabled: {
-    backgroundColor: "#E5E7EB",
+    backgroundColor: '#E5E7EB',
     shadowOpacity: 0,
     elevation: 0,
   },
   submitButtonText: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.card,
   },
 });

@@ -1,7 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = 'https://zsuxkwzcyulnlhkignrh.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzdXhrd3pjeXVsbmxoa2lnbnJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjc1NzIsImV4cCI6MjA5NDc0MzU3Mn0.aHqY5iBTf9uq61cav6e1848Lps6XunSwdHrJiyPQV4o';
+const supabaseKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzdXhrd3pjeXVsbmxoa2lnbnJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNjc1NzIsImV4cCI6MjA5NDc0MzU3Mn0.aHqY5iBTf9uq61cav6e1848Lps6XunSwdHrJiyPQV4o';
 global.WebSocket = class {
   constructor() {}
   addEventListener() {}
@@ -9,7 +10,7 @@ global.WebSocket = class {
 };
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: { persistSession: false }
+  auth: { persistSession: false },
 });
 
 async function run() {
@@ -21,14 +22,14 @@ async function run() {
     const checkRes = await fetch('https://mini-pos-sync-server.vercel.app/api/v1/auth/check', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone_number: phone })
+      body: JSON.stringify({ phone_number: phone }),
     });
-    
+
     if (!checkRes.ok) {
       console.error('Check failed:', await checkRes.text());
       return;
     }
-    
+
     const checkData = await checkRes.json();
     console.log('Check response:', checkData);
     const token = checkData.token;
@@ -38,9 +39,9 @@ async function run() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ code: otp, phone_number: phone })
+      body: JSON.stringify({ code: otp, phone_number: phone }),
     });
 
     if (!verifyRes.ok) {
@@ -61,7 +62,7 @@ async function run() {
     console.log('3. Trying to set session in Supabase...');
     const { data, error } = await supabase.auth.setSession({
       access_token: jwt,
-      refresh_token: ''
+      refresh_token: '',
     });
 
     if (error) {

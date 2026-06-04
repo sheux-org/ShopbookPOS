@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
         <h2 className="common-header-title">{headerInfo.title}</h2>
         <p className="common-header-subtitle">{headerInfo.subtitle}</p>
       </div>
-      
+
       {(pathname === '/' || pathname === '/pos') && (
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {/* Sidebar Toggle Button */}
@@ -48,17 +48,27 @@ export const Header: React.FC<HeaderProps> = ({
               fontWeight: 'bold',
               cursor: 'pointer',
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
             }}
-            title={sidebarVisible ? "Hide Sidebar Menu" : "Show Sidebar Menu"}
+            title={sidebarVisible ? 'Hide Sidebar Menu' : 'Show Sidebar Menu'}
           >
             {sidebarVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-            <span>{sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}</span>
+            <span>{sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}</span>
           </button>
 
           {/* View Mode Toggle Group */}
-          <div style={{ display: 'flex', gap: '4px', border: '1px solid var(--border)', padding: '4px', borderRadius: '8px', backgroundColor: '#f3f4f6', alignItems: 'center' }}>
-            <button 
+          <div
+            style={{
+              display: 'flex',
+              gap: '4px',
+              border: '1px solid var(--border)',
+              padding: '4px',
+              borderRadius: '8px',
+              backgroundColor: '#f3f4f6',
+              alignItems: 'center',
+            }}
+          >
+            <button
               onClick={() => setPosMode('tablet')}
               style={{
                 padding: '6px 14px',
@@ -70,12 +80,12 @@ export const Header: React.FC<HeaderProps> = ({
                 backgroundColor: posMode === 'tablet' ? '#ffffff' : 'transparent',
                 color: posMode === 'tablet' ? 'var(--primary)' : 'var(--muted)',
                 boxShadow: posMode === 'tablet' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
               }}
             >
               Tablet View
             </button>
-            <button 
+            <button
               onClick={() => setPosMode('normal')}
               style={{
                 padding: '6px 14px',
@@ -87,7 +97,7 @@ export const Header: React.FC<HeaderProps> = ({
                 backgroundColor: posMode === 'normal' ? '#ffffff' : 'transparent',
                 color: posMode === 'normal' ? 'var(--primary)' : 'var(--muted)',
                 boxShadow: posMode === 'normal' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
               }}
             >
               Normal View
@@ -97,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {pathname === '/profile' && (
-        <button 
+        <button
           onClick={() => window.dispatchEvent(new Event('open-help-modal'))}
           className="common-header-btn"
           style={{
@@ -113,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
             fontWeight: 'bold',
             cursor: 'pointer',
             boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-            transition: 'all 0.2s ease'
+            transition: 'all 0.2s ease',
           }}
           title="Help & Contact Support"
         >

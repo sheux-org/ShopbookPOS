@@ -60,9 +60,7 @@ export default schemaMigrations({
       steps: [
         addColumns({
           table: 'products',
-          columns: [
-            { name: 'icon_pending_upload', type: 'boolean', isOptional: true },
-          ],
+          columns: [{ name: 'icon_pending_upload', type: 'boolean', isOptional: true }],
         }),
       ],
     },
@@ -71,9 +69,7 @@ export default schemaMigrations({
       steps: [
         addColumns({
           table: 'businesses',
-          columns: [
-            { name: 'logo_uri', type: 'string', isOptional: true },
-          ],
+          columns: [{ name: 'logo_uri', type: 'string', isOptional: true }],
         }),
       ],
     },
@@ -82,9 +78,7 @@ export default schemaMigrations({
       steps: [
         addColumns({
           table: 'products',
-          columns: [
-            { name: 'is_favorite', type: 'boolean', isOptional: true },
-          ],
+          columns: [{ name: 'is_favorite', type: 'boolean', isOptional: true }],
         }),
       ],
     },

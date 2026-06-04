@@ -1,8 +1,8 @@
-import React from "react";
-import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { styles } from "./styles";
-import { TOKENS } from "../../constants/tokens";
+import React from 'react';
+import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { styles } from './styles';
+import { TOKENS } from '../../constants/tokens';
 
 interface PhoneInputPanelProps {
   phone: string;
@@ -17,7 +17,7 @@ export function PhoneInputPanel({
   isLoading,
   handleSendOtp,
 }: PhoneInputPanelProps) {
-  const isInputValid = phone.replace(/\D/g, "").length >= 9;
+  const isInputValid = phone.replace(/\D/g, '').length >= 9;
   const isSubmitDisabled = !isInputValid || isLoading;
 
   return (

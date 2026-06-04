@@ -1,12 +1,7 @@
-import React from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  View,
-  ViewStyle,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TOKENS } from "../../constants/tokens";
+import React from 'react';
+import { KeyboardAvoidingView, Platform, View, ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TOKENS } from '../../constants/tokens';
 
 interface ScreenWrapperProps {
   children: React.ReactNode;
@@ -69,7 +64,7 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
     return (
       <KeyboardAvoidingView
         style={[containerStyle, style]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
         {children}
@@ -77,9 +72,5 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
     );
   }
 
-  return (
-    <View style={[containerStyle, style]}>
-      {children}
-    </View>
-  );
+  return <View style={[containerStyle, style]}>{children}</View>;
 };

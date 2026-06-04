@@ -18,11 +18,11 @@
  *   and resets the WatermelonDB icon back to the category default emoji.
  */
 
-import { Q } from "@nozbe/watermelondb";
-import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
-import database from "../components/data/db";
-import { getEndpointUrl, uploadFiles } from "../utils/uploadthing";
-import { syncDatabase } from "./sync";
+import { Q } from '@nozbe/watermelondb';
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
+import database from '../components/data/db';
+import { getEndpointUrl, uploadFiles } from '../utils/uploadthing';
+import { syncDatabase } from './sync';
 
 let isProcessing = false;
 let unsubscribeNetInfo: (() => void) | null = null;
@@ -37,37 +37,35 @@ function extractFileKey(url: string): string | null {
   return match ? match[1] : null;
 }
 
-export async function deleteUploadThingFile(
-  remoteUrl: string,
-): Promise<boolean> {
+export async function deleteUploadThingFile(remoteUrl: string): Promise<boolean> {
   const fileKey = extractFileKey(remoteUrl);
   if (!fileKey) return false;
 
   try {
     const res = await fetch(getEndpointUrl(), {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileKey }),
     });
     return res.ok;
   } catch (err) {
-    console.error("[UploadQueue] Delete error:", err);
+    console.error('[UploadQueue] Delete error:', err);
     return false;
   }
 }
 
 export async function removeProductImage(productId: string): Promise<void> {
   try {
-    const product = await database.get("products").find(productId);
-    const currentIcon = (product as any).icon ?? "";
+    const product = await database.get('products').find(productId);
+    const currentIcon = (product as any).icon ?? '';
 
-    if (currentIcon.startsWith("http")) {
+    if (currentIcon.startsWith('http')) {
       await deleteUploadThingFile(currentIcon);
     }
 
     await database.write(async () => {
       await product.update((p: any) => {
-        p.icon = "";
+        p.icon = '';
         p.iconPendingUpload = false;
       });
     });
@@ -75,32 +73,30 @@ export async function removeProductImage(productId: string): Promise<void> {
     queryInvalidateFn?.();
     syncDatabase().catch(() => {});
   } catch (err) {
-    console.error("[UploadQueue] Remove image error:", err);
+    console.error('[UploadQueue] Remove image error:', err);
   }
 }
 
-export async function uploadToUploadThing(
-  localUri: string,
-): Promise<string | null> {
+export async function uploadToUploadThing(localUri: string): Promise<string | null> {
   try {
     const response = await fetch(localUri);
     if (!response.ok) return null;
     const blob = await response.blob();
 
-    const filename = localUri.split("/").pop() || `product-${Date.now()}.jpg`;
-    let type = "image/jpeg";
-    if (filename.endsWith(".png")) type = "image/png";
-    else if (filename.endsWith(".webp")) type = "image/webp";
-    else if (filename.endsWith(".gif")) type = "image/gif";
+    const filename = localUri.split('/').pop() || `product-${Date.now()}.jpg`;
+    let type = 'image/jpeg';
+    if (filename.endsWith('.png')) type = 'image/png';
+    else if (filename.endsWith('.webp')) type = 'image/webp';
+    else if (filename.endsWith('.gif')) type = 'image/gif';
 
     const file = Object.assign(new File([blob], filename, { type }), {
       uri: localUri,
     });
 
-    const result = await uploadFiles("productImageUploader", { files: [file] });
+    const result = await uploadFiles('productImageUploader', { files: [file] });
     return result?.[0]?.ufsUrl || result?.[0]?.url || null;
   } catch (err) {
-    console.error("[UploadQueue] uploadFiles error:", err);
+    console.error('[UploadQueue] uploadFiles error:', err);
     return null;
   }
 }
@@ -111,8 +107,8 @@ export async function processUploadQueue(): Promise<void> {
 
   try {
     const pendingProducts = await database
-      .get("products")
-      .query(Q.where("icon_pending_upload", true))
+      .get('products')
+      .query(Q.where('icon_pending_upload', true))
       .fetch();
     if (pendingProducts.length === 0) {
       isProcessing = false;
@@ -121,9 +117,8 @@ export async function processUploadQueue(): Promise<void> {
 
     let hasSuccessfulUploads = false;
     for (const product of pendingProducts) {
-      const localUri = (product as any).icon ?? "";
-      const isLocalUri =
-        localUri.startsWith("file://") || localUri.startsWith("/");
+      const localUri = (product as any).icon ?? '';
+      const isLocalUri = localUri.startsWith('file://') || localUri.startsWith('/');
 
       if (!isLocalUri) {
         await database.write(async () => {
@@ -153,7 +148,7 @@ export async function processUploadQueue(): Promise<void> {
       syncDatabase().catch(() => {});
     }
   } catch (err) {
-    console.error("[UploadQueue] Queue processing error:", err);
+    console.error('[UploadQueue] Queue processing error:', err);
   } finally {
     isProcessing = false;
   }
@@ -162,10 +157,10 @@ export async function processUploadQueue(): Promise<void> {
 export async function queueImageUpload(
   productId: string,
   localUri: string,
-  isOnline: boolean,
+  isOnline: boolean
 ): Promise<void> {
   try {
-    const product = await database.get("products").find(productId);
+    const product = await database.get('products').find(productId);
     await database.write(async () => {
       await product.update((p: any) => {
         p.icon = localUri;
@@ -178,15 +173,14 @@ export async function queueImageUpload(
       await processUploadQueue();
     }
   } catch (err) {
-    console.error("[UploadQueue] Queue image error:", err);
+    console.error('[UploadQueue] Queue image error:', err);
   }
 }
 
 export function startUploadQueueMonitor(): void {
   if (unsubscribeNetInfo) return;
   unsubscribeNetInfo = NetInfo.addEventListener((state: NetInfoState) => {
-    const isConnected =
-      state.isConnected && state.isInternetReachable !== false;
+    const isConnected = state.isConnected && state.isInternetReachable !== false;
     if (isConnected) {
       processUploadQueue();
     }

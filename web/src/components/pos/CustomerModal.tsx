@@ -30,7 +30,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
 }) => {
   const [tab, setTab] = useState<'search' | 'create'>('search');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Create Customer Form States
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -54,9 +54,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   if (!isOpen) return null;
 
   const filteredCustomers = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
+    (c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.phone.includes(searchQuery)
   );
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -81,22 +79,22 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
       <div style={styles.modalContent}>
         <div style={styles.modalHeader}>
           <h3>Attach Customer Profile</h3>
-          <button 
+          <button
             onClick={() => {
               onClose();
               if (posMode === 'normal') {
                 setTimeout(() => scanInputRef.current?.focus(), 50);
               }
-            }} 
+            }}
             style={styles.modalCloseBtn}
           >
             <X size={16} />
           </button>
         </div>
-        
+
         {/* Tab selector */}
         <div style={styles.tabContainer}>
-          <button 
+          <button
             onClick={() => {
               setTab('search');
               setTimeout(() => searchInputRef.current?.focus(), 50);
@@ -109,7 +107,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
           >
             Search Existing [Tab]
           </button>
-          <button 
+          <button
             onClick={() => {
               setTab('create');
               setTimeout(() => nameInputRef.current?.focus(), 50);
@@ -134,11 +132,11 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               style={styles.modalInput}
             />
-            
+
             <div style={styles.custListContainer}>
-              {filteredCustomers.map(c => (
-                <div 
-                  key={c.phone} 
+              {filteredCustomers.map((c) => (
+                <div
+                  key={c.phone}
                   onClick={() => {
                     onAttachCustomer(c);
                     onClose();
@@ -156,7 +154,14 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               ))}
 
               {filteredCustomers.length === 0 && (
-                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '12px' }}>
+                <div
+                  style={{
+                    padding: '24px',
+                    textAlign: 'center',
+                    color: 'var(--muted)',
+                    fontSize: '12px',
+                  }}
+                >
                   No customer profiles found. Switch tab to register.
                 </div>
               )}
@@ -176,7 +181,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 style={styles.modalInput}
               />
             </div>
-            
+
             <div style={styles.modalInputGroup}>
               <label style={styles.modalLabel}>Mobile Number *</label>
               <input

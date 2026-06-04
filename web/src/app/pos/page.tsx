@@ -11,7 +11,15 @@ export default function PosRedirectPage() {
   }, [router]);
 
   return (
-    <div style={{ padding: '32px', textAlign: 'center', fontSize: '14px', color: 'var(--muted)', fontFamily: 'sans-serif' }}>
+    <div
+      style={{
+        padding: '32px',
+        textAlign: 'center',
+        fontSize: '14px',
+        color: 'var(--muted)',
+        fontFamily: 'sans-serif',
+      }}
+    >
       Redirecting to POS Terminal...
     </div>
   );

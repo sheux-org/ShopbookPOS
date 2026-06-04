@@ -1,0 +1,16 @@
+#!/bin/sh
+echo "🔍 Running pre-commit health checks..."
+
+# 1. Run lint-staged (Auto-formats changed files with Prettier)
+echo "✨ Formatting staged files with Prettier..."
+npx lint-staged || { echo "❌ Prettier formatting failed!"; exit 1; }
+
+# 2. Run TypeScript Typechecking
+echo "🚀 Running TypeScript type check..."
+pnpm --filter web exec tsc --noEmit || { echo "❌ TypeScript typecheck failed! Please fix compiler errors before committing."; exit 1; }
+
+# 3. Run Web Application Build Verification
+echo "📦 Running Next.js build verification..."
+pnpm build:web || { echo "❌ Next.js build failed! Please fix build errors before committing."; exit 1; }
+
+echo "✅ All health checks passed! Creating git commit..."

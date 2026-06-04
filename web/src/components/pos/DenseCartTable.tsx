@@ -48,7 +48,9 @@ export const DenseCartTable: React.FC<DenseCartTableProps> = ({
             style={styles.scannerInput}
           />
         </div>
-        <button type="submit" style={styles.scannerBtn}>Add Item</button>
+        <button type="submit" style={styles.scannerBtn}>
+          Add Item
+        </button>
       </form>
 
       {/* Dense products grid table */}
@@ -68,23 +70,29 @@ export const DenseCartTable: React.FC<DenseCartTableProps> = ({
             {cart.map((item, index) => {
               const isSelected = index === selectedRowIndex;
               return (
-                <tr 
-                  key={item.id} 
+                <tr
+                  key={item.id}
                   onClick={() => setSelectedRowIndex(index)}
                   style={{
                     ...styles.posBodyRow,
-                    ...(isSelected ? styles.posRowActive : {})
+                    ...(isSelected ? styles.posRowActive : {}),
                   }}
                 >
                   <td style={styles.posTd}>{index + 1}</td>
                   <td style={styles.posTd}>{item.sku?.substring(0, 10) || 'General'}</td>
                   <td style={{ ...styles.posTd, fontWeight: 'bold' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <ProductImage icon={item.icon} size={28} style={{ border: 'none', borderRadius: '4px' }} />
+                      <ProductImage
+                        icon={item.icon}
+                        size={28}
+                        style={{ border: 'none', borderRadius: '4px' }}
+                      />
                       <span>{item.name}</span>
                     </div>
                   </td>
-                  <td style={{ ...styles.posTd, textAlign: 'right' }}>Rs. {item.price.toLocaleString()}</td>
+                  <td style={{ ...styles.posTd, textAlign: 'right' }}>
+                    Rs. {item.price.toLocaleString()}
+                  </td>
                   <td style={{ ...styles.posTd, textAlign: 'center' }}>
                     <span style={styles.qtyBadge}>{item.quantity}</span>
                   </td>
@@ -98,10 +106,31 @@ export const DenseCartTable: React.FC<DenseCartTableProps> = ({
             {cart.length === 0 && (
               <tr>
                 <td colSpan={6} style={styles.emptyTableTd}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '40px 0',
+                    }}
+                  >
                     <ShoppingBag size={80} color="#cbd5e1" style={{ marginBottom: '16px' }} />
-                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#475569' }}>Transaction Empty</h3>
-                    <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#64748b', textAlign: 'center', maxWidth: '300px', lineHeight: '1.4' }}>
+                    <h3
+                      style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#475569' }}
+                    >
+                      Transaction Empty
+                    </h3>
+                    <p
+                      style={{
+                        margin: '6px 0 0 0',
+                        fontSize: '13px',
+                        color: '#64748b',
+                        textAlign: 'center',
+                        maxWidth: '300px',
+                        lineHeight: '1.4',
+                      }}
+                    >
                       Scan product barcode or type a quick-code to begin checkout.
                     </p>
                   </div>
@@ -114,19 +143,45 @@ export const DenseCartTable: React.FC<DenseCartTableProps> = ({
 
       {/* Cheat sheet keyboard guide */}
       <div style={styles.cheatSheetBar}>
-        <span style={styles.cheatChip}><b>[↑/↓]</b> Select row</span>
-        <span style={styles.cheatChip}><b>[+]</b> Qty+</span>
-        <span style={styles.cheatChip}><b>[-]</b> Qty-</span>
-        <span style={styles.cheatChip}><b>[Del]</b> Delete</span>
-        <span style={styles.cheatChip}><b>[F2]</b> Focus Scan</span>
-        <span style={styles.cheatChip}><b>[F3]</b> Customer</span>
-        <span style={styles.cheatChip}><b>[F4]</b> Pay Method</span>
-        <span style={styles.cheatChip}><b>[F6]</b> Discount</span>
-        <span style={styles.cheatChip}><b>[F7]</b> Tax Rate</span>
-        <span style={styles.cheatChip}><b>[F8]</b> Card Brand / Bank / Cash</span>
-        <span style={styles.cheatChip}><b>[F9]</b> Card Number</span>
-        <span style={styles.cheatChip}><b>[F10]</b> Print Invoice</span>
-        <span style={styles.cheatChip}><b>[F12 / Ctrl+⌫]</b> Clear Cart</span>
+        <span style={styles.cheatChip}>
+          <b>[↑/↓]</b> Select row
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[+]</b> Qty+
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[-]</b> Qty-
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[Del]</b> Delete
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[F2]</b> Focus Scan
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[F3]</b> Customer
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[F4]</b> Pay Method
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[F6]</b> Discount
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[F7]</b> Tax Rate
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[F8]</b> Card Brand / Bank / Cash
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[F9]</b> Card Number
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[F10]</b> Print Invoice
+        </span>
+        <span style={styles.cheatChip}>
+          <b>[F12 / Ctrl+⌫]</b> Clear Cart
+        </span>
       </div>
     </div>
   );

@@ -61,23 +61,27 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
       <div className="modal-content">
         <div className="modal-header">
           <h3>Update Store details</h3>
-          <button onClick={onClose} className="modal-close-btn"><X size={16} /></button>
+          <button onClick={onClose} className="modal-close-btn">
+            <X size={16} />
+          </button>
         </div>
         <form onSubmit={onSubmit} className="modal-body">
           {!canUpdate && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 14px',
-              backgroundColor: '#fffbeb',
-              border: '1px solid #fef3c7',
-              borderRadius: '8px',
-              color: '#d97706',
-              fontSize: '11px',
-              fontWeight: '500',
-              marginBottom: '14px'
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 14px',
+                backgroundColor: '#fffbeb',
+                border: '1px solid #fef3c7',
+                borderRadius: '8px',
+                color: '#d97706',
+                fontSize: '11px',
+                fontWeight: '500',
+                marginBottom: '14px',
+              }}
+            >
               <Lock size={14} />
               <span>Viewing Mode: Only administrators can update store configuration details.</span>
             </div>
@@ -85,15 +89,15 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
 
           {/* Logo Section */}
           <div className="modal-logo-section">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              accept="image/*" 
-              style={{ display: 'none' }} 
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
               onChange={handleFileChange}
             />
-            <div 
-              className={`modal-logo-container ${canUpdate ? 'clickable' : ''}`} 
+            <div
+              className={`modal-logo-container ${canUpdate ? 'clickable' : ''}`}
               onClick={handleLogoClick}
               title={canUpdate ? 'Click to change store logo' : undefined}
             >
@@ -112,9 +116,9 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               )}
             </div>
             {editLogoUri && canUpdate && (
-              <button 
-                type="button" 
-                onClick={() => setEditLogoUri('')} 
+              <button
+                type="button"
+                onClick={() => setEditLogoUri('')}
                 className="modal-remove-logo-btn"
               >
                 <Trash2 size={12} />
@@ -125,8 +129,8 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
 
           <div className="modal-input-group">
             <label className="modal-label">Business Brand Name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               required
@@ -137,8 +141,8 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
 
           <div className="modal-input-group">
             <label className="modal-label">Store Category</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={editCategory}
               onChange={(e) => setEditCategory(e.target.value)}
               required
@@ -149,8 +153,8 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
 
           <div className="modal-input-group">
             <label className="modal-label">Billing Address</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={editAddress}
               onChange={(e) => setEditAddress(e.target.value)}
               required
@@ -161,8 +165,8 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
 
           <div className="modal-input-group">
             <label className="modal-label">Receipt Phone Number</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={editPhone}
               onChange={(e) => setEditPhone(e.target.value)}
               required
@@ -177,7 +181,12 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               <span>Save receipt details</span>
             </button>
           ) : (
-            <button type="button" onClick={onClose} className="modal-submit-btn" style={{ backgroundColor: 'var(--dark)' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              className="modal-submit-btn"
+              style={{ backgroundColor: 'var(--dark)' }}
+            >
               <span>Close View</span>
             </button>
           )}
@@ -186,4 +195,3 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
     </div>
   );
 };
-

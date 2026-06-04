@@ -23,11 +23,11 @@ export default function ReportExporter({
         </div>
         <h3 className="export-title">Export Business Reports</h3>
       </div>
-      
+
       <div className="export-controls">
         <div className="export-select-wrapper">
-          <select 
-            value={selectedReport} 
+          <select
+            value={selectedReport}
             onChange={(e) => setSelectedReport(e.target.value as ReportType)}
             className="export-select"
           >
@@ -40,7 +40,7 @@ export default function ReportExporter({
         </div>
 
         <div className="export-buttons-group">
-          <button 
+          <button
             onClick={handleDownloadPdf}
             className="export-btn pdf"
             title="Export Statement Report as PDF"
@@ -48,7 +48,7 @@ export default function ReportExporter({
             <Printer size={15} />
             <span>PDF</span>
           </button>
-          <button 
+          <button
             onClick={handleDownloadCsv}
             className="export-btn excel"
             title="Export Ledger Statement as CSV/Excel"

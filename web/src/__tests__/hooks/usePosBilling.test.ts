@@ -55,10 +55,14 @@ vi.mock('../../hooks/useCartActions', () => ({
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 const fireKey = (key: string, extra: Partial<KeyboardEventInit> = {}) => {
-  window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra }));
+  window.dispatchEvent(
+    new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra })
+  );
 };
 
-const setupCart = (items = [{ id: 'item-1', name: 'Pizza', price: 850, quantity: 1, stock: 10 }]) => {
+const setupCart = (
+  items = [{ id: 'item-1', name: 'Pizza', price: 850, quantity: 1, stock: 10 }]
+) => {
   useCart.setState({ cart: items });
 };
 
@@ -84,35 +88,58 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
     expect(result.current.subtotal).toBe(1800);
 
-    act(() => { result.current.setTempDiscount('10'); result.current.setTempDiscountType('percent'); });
-    act(() => { result.current.handleSaveDiscount(); });
+    act(() => {
+      result.current.setTempDiscount('10');
+      result.current.setTempDiscountType('percent');
+    });
+    act(() => {
+      result.current.handleSaveDiscount();
+    });
 
     expect(result.current.discountAmount).toBe(180);
 
-    act(() => { result.current.setTempTaxRate('8'); });
-    act(() => { result.current.handleSaveTax(); });
+    act(() => {
+      result.current.setTempTaxRate('8');
+    });
+    act(() => {
+      result.current.handleSaveTax();
+    });
 
     expect(result.current.taxAmount).toBe(129.6);
     expect(result.current.totalAmount).toBe(1749.6);
   });
 
   test('should calculate flat discount correctly', () => {
-    useCart.setState({ cart: [{ id: 'item-1', name: 'Pizza', price: 1000, quantity: 1, stock: 10 }] });
+    useCart.setState({
+      cart: [{ id: 'item-1', name: 'Pizza', price: 1000, quantity: 1, stock: 10 }],
+    });
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setTempDiscount('150'); result.current.setTempDiscountType('flat'); });
-    act(() => { result.current.handleSaveDiscount(); });
+    act(() => {
+      result.current.setTempDiscount('150');
+      result.current.setTempDiscountType('flat');
+    });
+    act(() => {
+      result.current.handleSaveDiscount();
+    });
 
     expect(result.current.discountAmount).toBe(150);
     expect(result.current.totalAmount).toBe(850);
   });
 
   test('should reject discount > 100% for percent type', () => {
-    useCart.setState({ cart: [{ id: 'item-1', name: 'Pizza', price: 1000, quantity: 1, stock: 10 }] });
+    useCart.setState({
+      cart: [{ id: 'item-1', name: 'Pizza', price: 1000, quantity: 1, stock: 10 }],
+    });
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setTempDiscount('150'); result.current.setTempDiscountType('percent'); });
-    act(() => { result.current.handleSaveDiscount(); });
+    act(() => {
+      result.current.setTempDiscount('150');
+      result.current.setTempDiscountType('percent');
+    });
+    act(() => {
+      result.current.handleSaveDiscount();
+    });
 
     // Should not apply (still 0)
     expect(result.current.discountAmount).toBe(0);
@@ -120,22 +147,34 @@ describe('usePosBilling Hook', () => {
 
   test('should reject invalid (NaN) discount value', () => {
     const { result } = renderHook(() => usePosBilling());
-    act(() => { result.current.setTempDiscount('abc'); });
-    act(() => { result.current.handleSaveDiscount(); });
+    act(() => {
+      result.current.setTempDiscount('abc');
+    });
+    act(() => {
+      result.current.handleSaveDiscount();
+    });
     expect(result.current.discountAmount).toBe(0);
   });
 
   test('should reject tax rate > 100%', () => {
     const { result } = renderHook(() => usePosBilling());
-    act(() => { result.current.setTempTaxRate('150'); });
-    act(() => { result.current.handleSaveTax(); });
+    act(() => {
+      result.current.setTempTaxRate('150');
+    });
+    act(() => {
+      result.current.handleSaveTax();
+    });
     expect(result.current.taxAmount).toBe(0);
   });
 
   test('should reject invalid (NaN) tax rate', () => {
     const { result } = renderHook(() => usePosBilling());
-    act(() => { result.current.setTempTaxRate('xyz'); });
-    act(() => { result.current.handleSaveTax(); });
+    act(() => {
+      result.current.setTempTaxRate('xyz');
+    });
+    act(() => {
+      result.current.handleSaveTax();
+    });
     expect(result.current.taxAmount).toBe(0);
   });
 
@@ -147,26 +186,39 @@ describe('usePosBilling Hook', () => {
 
     expect(result.current.isPaymentValid).toBe(false);
 
-    act(() => { result.current.setCashReceived('1100'); });
+    act(() => {
+      result.current.setCashReceived('1100');
+    });
     expect(result.current.isPaymentValid).toBe(true);
     expect(result.current.changeDue).toBe(250);
 
-    act(() => { result.current.handlePaymentMethodChange('card'); });
+    act(() => {
+      result.current.handlePaymentMethodChange('card');
+    });
     expect(result.current.isPaymentValid).toBe(false);
 
-    act(() => { result.current.setBankName('Sampath Bank'); result.current.setCardDigits('4321'); });
+    act(() => {
+      result.current.setBankName('Sampath Bank');
+      result.current.setCardDigits('4321');
+    });
     expect(result.current.isPaymentValid).toBe(true);
 
-    act(() => { result.current.handlePaymentMethodChange('bank'); });
+    act(() => {
+      result.current.handlePaymentMethodChange('bank');
+    });
     expect(result.current.isPaymentValid).toBe(false);
 
-    act(() => { result.current.setBankName('BOC'); });
+    act(() => {
+      result.current.setBankName('BOC');
+    });
     expect(result.current.isPaymentValid).toBe(true);
   });
 
   test('should return isPaymentValid false when cart is empty', () => {
     const { result } = renderHook(() => usePosBilling());
-    act(() => { result.current.setCashReceived('1000'); });
+    act(() => {
+      result.current.setCashReceived('1000');
+    });
     expect(result.current.isPaymentValid).toBe(false);
   });
 
@@ -174,8 +226,14 @@ describe('usePosBilling Hook', () => {
 
   test('should attach a new custom customer', () => {
     const { result } = renderHook(() => usePosBilling());
-    act(() => { result.current.handleCreateCustomer('Nimal', '0771234567', 'nimal@mail.com'); });
-    expect(result.current.customer).toEqual({ name: 'Nimal', phone: '0771234567', email: 'nimal@mail.com' });
+    act(() => {
+      result.current.handleCreateCustomer('Nimal', '0771234567', 'nimal@mail.com');
+    });
+    expect(result.current.customer).toEqual({
+      name: 'Nimal',
+      phone: '0771234567',
+      email: 'nimal@mail.com',
+    });
   });
 
   // ─── Keyboard shortcuts — normal mode ────────────────────────────
@@ -183,8 +241,12 @@ describe('usePosBilling Hook', () => {
   test('F2 / "/" key should be handled (no crash)', () => {
     const { result } = renderHook(() => usePosBilling());
     expect(() => {
-      act(() => { fireKey('F2'); });
-      act(() => { fireKey('/'); });
+      act(() => {
+        fireKey('F2');
+      });
+      act(() => {
+        fireKey('/');
+      });
     }).not.toThrow();
   });
 
@@ -192,7 +254,9 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
     expect(result.current.showCustModal).toBe(false);
 
-    act(() => { fireKey('F3'); });
+    act(() => {
+      fireKey('F3');
+    });
     expect(result.current.showCustModal).toBe(true);
   });
 
@@ -200,13 +264,19 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
     expect(result.current.paymentMethod).toBe('cash');
 
-    act(() => { fireKey('F4'); });
+    act(() => {
+      fireKey('F4');
+    });
     expect(result.current.paymentMethod).toBe('card');
 
-    act(() => { fireKey('F4'); });
+    act(() => {
+      fireKey('F4');
+    });
     expect(result.current.paymentMethod).toBe('bank');
 
-    act(() => { fireKey('F4'); });
+    act(() => {
+      fireKey('F4');
+    });
     expect(result.current.paymentMethod).toBe('cash');
   });
 
@@ -214,7 +284,9 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
     expect(result.current.isEditingDiscount).toBe(false);
 
-    act(() => { fireKey('F6'); });
+    act(() => {
+      fireKey('F6');
+    });
     expect(result.current.isEditingDiscount).toBe(true);
   });
 
@@ -222,49 +294,71 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
 
     // Open discount editor first
-    act(() => { fireKey('F6'); });
+    act(() => {
+      fireKey('F6');
+    });
     expect(result.current.isEditingDiscount).toBe(true);
     expect(result.current.tempDiscountType).toBe('flat');
 
     // Press F6 again → toggle to percent
-    act(() => { fireKey('F6'); });
+    act(() => {
+      fireKey('F6');
+    });
     expect(result.current.tempDiscountType).toBe('percent');
 
     // Press F6 again → toggle back to flat
-    act(() => { fireKey('F6'); });
+    act(() => {
+      fireKey('F6');
+    });
     expect(result.current.tempDiscountType).toBe('flat');
   });
 
   test('F7 should open tax editing', () => {
     const { result } = renderHook(() => usePosBilling());
-    act(() => { fireKey('F7'); });
+    act(() => {
+      fireKey('F7');
+    });
     expect(result.current.isEditingTax).toBe(true);
   });
 
   test('F8 should be handled without crashing', () => {
     const { result } = renderHook(() => usePosBilling());
-    expect(() => { act(() => { fireKey('F8'); }); }).not.toThrow();
+    expect(() => {
+      act(() => {
+        fireKey('F8');
+      });
+    }).not.toThrow();
   });
 
   test('F9 should be handled without crashing', () => {
     const { result } = renderHook(() => usePosBilling());
-    expect(() => { act(() => { fireKey('F9'); }); }).not.toThrow();
+    expect(() => {
+      act(() => {
+        fireKey('F9');
+      });
+    }).not.toThrow();
   });
 
   test('F10 should be handled (confirm checkout with empty cart)', async () => {
     const { result } = renderHook(() => usePosBilling());
     // Cart is empty → validatePayment will toast an error, not crash
-    await act(async () => { fireKey('F10'); });
+    await act(async () => {
+      fireKey('F10');
+    });
     expect(result.current.toastMsg).toBe('Cart is empty! 🛒');
   });
 
   test('Escape should close all modals and editing states', () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { fireKey('F3'); }); // open cust modal
+    act(() => {
+      fireKey('F3');
+    }); // open cust modal
     expect(result.current.showCustModal).toBe(true);
 
-    act(() => { fireKey('Escape'); });
+    act(() => {
+      fireKey('Escape');
+    });
     expect(result.current.showCustModal).toBe(false);
     expect(result.current.isEditingDiscount).toBe(false);
     expect(result.current.isEditingTax).toBe(false);
@@ -273,21 +367,31 @@ describe('usePosBilling Hook', () => {
   test('Enter while receipt is shown should dismiss receipt and reset', () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setShowReceipt(true); });
+    act(() => {
+      result.current.setShowReceipt(true);
+    });
     expect(result.current.showReceipt).toBe(true);
 
-    act(() => { fireKey('Enter'); });
+    act(() => {
+      fireKey('Enter');
+    });
     expect(result.current.showReceipt).toBe(false);
   });
 
   test('Tab while customer modal is open should toggle modal tab', () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { fireKey('F3'); }); // open modal
+    act(() => {
+      fireKey('F3');
+    }); // open modal
     expect(result.current.showCustModal).toBe(true);
 
     // custModalTab is not directly exposed, but Tab should not crash
-    expect(() => { act(() => { fireKey('Tab'); }); }).not.toThrow();
+    expect(() => {
+      act(() => {
+        fireKey('Tab');
+      });
+    }).not.toThrow();
   });
 
   test('F12 with non-empty cart should prompt and clear when confirmed', () => {
@@ -295,7 +399,9 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
 
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    act(() => { fireKey('F12'); });
+    act(() => {
+      fireKey('F12');
+    });
 
     expect(result.current.toastMsg).toBe('Transaction cleared');
     expect(result.current.cart).toHaveLength(0);
@@ -305,7 +411,9 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    act(() => { fireKey('F12'); });
+    act(() => {
+      fireKey('F12');
+    });
 
     expect(confirmSpy).not.toHaveBeenCalled();
   });
@@ -315,7 +423,9 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
 
     vi.spyOn(window, 'confirm').mockReturnValue(false);
-    act(() => { fireKey('F12'); });
+    act(() => {
+      fireKey('F12');
+    });
 
     expect(result.current.cart).toHaveLength(1);
   });
@@ -333,7 +443,9 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
     expect(result.current.selectedRowIndex).toBe(0);
 
-    act(() => { fireKey('ArrowDown'); });
+    act(() => {
+      fireKey('ArrowDown');
+    });
     expect(result.current.selectedRowIndex).toBe(1);
   });
 
@@ -347,8 +459,12 @@ describe('usePosBilling Hook', () => {
 
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setSelectedRowIndex(1); });
-    act(() => { fireKey('ArrowUp'); });
+    act(() => {
+      result.current.setSelectedRowIndex(1);
+    });
+    act(() => {
+      fireKey('ArrowUp');
+    });
     expect(result.current.selectedRowIndex).toBe(0);
   });
 
@@ -357,7 +473,9 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
     expect(result.current.selectedRowIndex).toBe(0);
 
-    act(() => { fireKey('ArrowUp'); });
+    act(() => {
+      fireKey('ArrowUp');
+    });
     expect(result.current.selectedRowIndex).toBe(0);
   });
 
@@ -365,7 +483,9 @@ describe('usePosBilling Hook', () => {
     setupCart([{ id: 'item-1', name: 'Pizza', price: 850, quantity: 1, stock: 10 }]);
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { fireKey('+'); });
+    act(() => {
+      fireKey('+');
+    });
 
     const updated = useCart.getState().cart.find((i) => i.id === 'item-1');
     expect(updated?.quantity).toBe(2);
@@ -376,7 +496,9 @@ describe('usePosBilling Hook', () => {
     setupCart([{ id: 'item-1', name: 'Pizza', price: 850, quantity: 1, stock: 10 }]);
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { fireKey('='); });
+    act(() => {
+      fireKey('=');
+    });
 
     const updated = useCart.getState().cart.find((i) => i.id === 'item-1');
     expect(updated?.quantity).toBe(2);
@@ -386,7 +508,9 @@ describe('usePosBilling Hook', () => {
     setupCart([{ id: 'item-1', name: 'Pizza', price: 850, quantity: 3, stock: 10 }]);
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { fireKey('-'); });
+    act(() => {
+      fireKey('-');
+    });
 
     const updated = useCart.getState().cart.find((i) => i.id === 'item-1');
     expect(updated?.quantity).toBe(2);
@@ -397,7 +521,9 @@ describe('usePosBilling Hook', () => {
     setupCart([{ id: 'item-1', name: 'Pizza', price: 850, quantity: 2, stock: 10 }]);
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { fireKey('Delete'); });
+    act(() => {
+      fireKey('Delete');
+    });
 
     expect(useCart.getState().cart).toHaveLength(0);
     expect(result.current.toastMsg).toContain('Removed Pizza');
@@ -407,7 +533,9 @@ describe('usePosBilling Hook', () => {
     setupCart([{ id: 'item-1', name: 'Pizza', price: 850, quantity: 1, stock: 10 }]);
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { fireKey('Backspace'); });
+    act(() => {
+      fireKey('Backspace');
+    });
 
     expect(useCart.getState().cart).toHaveLength(0);
   });
@@ -417,8 +545,12 @@ describe('usePosBilling Hook', () => {
   test('should add item to cart when scan query matches by name', async () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setScanQuery('Pizza'); });
-    await act(async () => { await result.current.handleScanSubmit(); });
+    act(() => {
+      result.current.setScanQuery('Pizza');
+    });
+    await act(async () => {
+      await result.current.handleScanSubmit();
+    });
 
     expect(useCart.getState().cart.some((i) => i.name === 'Pizza')).toBe(true);
     expect(result.current.toastMsg).not.toBeNull();
@@ -428,8 +560,12 @@ describe('usePosBilling Hook', () => {
   test('should add item to cart by barcode', async () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setScanQuery('12345'); });
-    await act(async () => { await result.current.handleScanSubmit(); });
+    act(() => {
+      result.current.setScanQuery('12345');
+    });
+    await act(async () => {
+      await result.current.handleScanSubmit();
+    });
 
     expect(useCart.getState().cart.some((i) => i.name === 'Pizza')).toBe(true);
   });
@@ -437,8 +573,12 @@ describe('usePosBilling Hook', () => {
   test('should add item to cart by quickCode', async () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setScanQuery('2001'); });
-    await act(async () => { await result.current.handleScanSubmit(); });
+    act(() => {
+      result.current.setScanQuery('2001');
+    });
+    await act(async () => {
+      await result.current.handleScanSubmit();
+    });
 
     expect(useCart.getState().cart.some((i) => i.name === 'Pizza')).toBe(true);
   });
@@ -446,8 +586,12 @@ describe('usePosBilling Hook', () => {
   test('should parse quantity prefix (3*Pizza) and add multiple items', async () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setScanQuery('3*Pizza'); });
-    await act(async () => { await result.current.handleScanSubmit(); });
+    act(() => {
+      result.current.setScanQuery('3*Pizza');
+    });
+    await act(async () => {
+      await result.current.handleScanSubmit();
+    });
 
     // Pizza should have been added 3 times → quantity 3
     const pizzaItem = useCart.getState().cart.find((i) => i.name === 'Pizza');
@@ -458,8 +602,12 @@ describe('usePosBilling Hook', () => {
   test('should show out-of-stock toast when adding unavailable item', async () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setScanQuery('Burger'); }); // stockCount: 0
-    await act(async () => { await result.current.handleScanSubmit(); });
+    act(() => {
+      result.current.setScanQuery('Burger');
+    }); // stockCount: 0
+    await act(async () => {
+      await result.current.handleScanSubmit();
+    });
 
     expect(result.current.toastMsg).not.toBeNull();
     expect(result.current.toastMsg).toContain('Out of stock');
@@ -468,8 +616,12 @@ describe('usePosBilling Hook', () => {
   test('should show not-found toast when scan query has no match', async () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setScanQuery('UNKNOWN_ITEM_XYZ'); });
-    await act(async () => { await result.current.handleScanSubmit(); });
+    act(() => {
+      result.current.setScanQuery('UNKNOWN_ITEM_XYZ');
+    });
+    await act(async () => {
+      await result.current.handleScanSubmit();
+    });
 
     expect(result.current.toastMsg).not.toBeNull();
     expect(result.current.toastMsg).toContain('not found');
@@ -478,8 +630,12 @@ describe('usePosBilling Hook', () => {
   test('should do nothing when scan query is empty', async () => {
     const { result } = renderHook(() => usePosBilling());
 
-    act(() => { result.current.setScanQuery('   '); });
-    await act(async () => { await result.current.handleScanSubmit(); });
+    act(() => {
+      result.current.setScanQuery('   ');
+    });
+    await act(async () => {
+      await result.current.handleScanSubmit();
+    });
 
     expect(useCart.getState().cart).toHaveLength(0);
   });
@@ -488,8 +644,12 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
     const mockEvent = { preventDefault: vi.fn() } as any;
 
-    act(() => { result.current.setScanQuery('Pizza'); });
-    await act(async () => { await result.current.handleScanSubmit(mockEvent); });
+    act(() => {
+      result.current.setScanQuery('Pizza');
+    });
+    await act(async () => {
+      await result.current.handleScanSubmit(mockEvent);
+    });
 
     expect(mockEvent.preventDefault).toHaveBeenCalled();
   });
@@ -499,37 +659,57 @@ describe('usePosBilling Hook', () => {
     const { result } = renderHook(() => usePosBilling());
 
     // 1. Card validation details
-    act(() => { result.current.handlePaymentMethodChange('card'); });
-    
+    act(() => {
+      result.current.handlePaymentMethodChange('card');
+    });
+
     // empty bankName, invalid card digits (empty)
-    act(() => { result.current.setBankName(''); result.current.setCardDigits(''); });
+    act(() => {
+      result.current.setBankName('');
+      result.current.setCardDigits('');
+    });
     expect(result.current.isPaymentValid).toBe(false);
 
     // valid bankName, invalid card digits (too short)
-    act(() => { result.current.setBankName('Sampath Bank'); result.current.setCardDigits('12'); });
+    act(() => {
+      result.current.setBankName('Sampath Bank');
+      result.current.setCardDigits('12');
+    });
     expect(result.current.isPaymentValid).toBe(false);
 
     // valid bankName, invalid card digits (non-numeric)
-    act(() => { result.current.setCardDigits('12ab'); });
+    act(() => {
+      result.current.setCardDigits('12ab');
+    });
     expect(result.current.isPaymentValid).toBe(false);
 
     // valid bankName, valid card digits
-    act(() => { result.current.setCardDigits('1234'); });
+    act(() => {
+      result.current.setCardDigits('1234');
+    });
     expect(result.current.isPaymentValid).toBe(true);
 
     // 2. Bank validation details
-    act(() => { result.current.handlePaymentMethodChange('bank'); });
-    
+    act(() => {
+      result.current.handlePaymentMethodChange('bank');
+    });
+
     // empty bankName
-    act(() => { result.current.setBankName(''); });
+    act(() => {
+      result.current.setBankName('');
+    });
     expect(result.current.isPaymentValid).toBe(false);
 
     // whitespace bankName
-    act(() => { result.current.setBankName('   '); });
+    act(() => {
+      result.current.setBankName('   ');
+    });
     expect(result.current.isPaymentValid).toBe(false);
 
     // valid bankName
-    act(() => { result.current.setBankName('BOC'); });
+    act(() => {
+      result.current.setBankName('BOC');
+    });
     expect(result.current.isPaymentValid).toBe(true);
   });
 
@@ -555,14 +735,18 @@ describe('usePosBilling Hook', () => {
       result.current.handlePaymentMethodChange('card');
       result.current.setIsCustomBank(true);
     });
-    act(() => { fireKey('F9'); });
+    act(() => {
+      fireKey('F9');
+    });
     expect(spyBankNameFocus).toHaveBeenCalled();
 
     // Test F9 - card & isCustomBank = false -> focus cardDigitsRef
     act(() => {
       result.current.setIsCustomBank(false);
     });
-    act(() => { fireKey('F9'); });
+    act(() => {
+      fireKey('F9');
+    });
     expect(spyDigitsFocus).toHaveBeenCalled();
 
     // Test F9 - bank & isCustomBank = true -> focus bankNameRef
@@ -571,7 +755,9 @@ describe('usePosBilling Hook', () => {
       result.current.setIsCustomBank(true);
     });
     spyBankNameFocus.mockClear();
-    act(() => { fireKey('F9'); });
+    act(() => {
+      fireKey('F9');
+    });
     expect(spyBankNameFocus).toHaveBeenCalled();
 
     // Test Enter key focus behaviors
@@ -582,14 +768,18 @@ describe('usePosBilling Hook', () => {
     });
 
     // When focused on cashReceivedRef, Enter confirms checkout
-    act(() => { fireKey('Enter'); });
+    act(() => {
+      fireKey('Enter');
+    });
 
     // When focused on cardDigitsRef, Enter confirms checkout
     Object.defineProperty(document, 'activeElement', {
       get: () => mockDigitsInput,
       configurable: true,
     });
-    act(() => { fireKey('Enter'); });
+    act(() => {
+      fireKey('Enter');
+    });
 
     // When focused on bankNameRef and method is card -> focus cardDigitsRef
     Object.defineProperty(document, 'activeElement', {
@@ -600,14 +790,18 @@ describe('usePosBilling Hook', () => {
       result.current.handlePaymentMethodChange('card');
     });
     spyDigitsFocus.mockClear();
-    act(() => { fireKey('Enter'); });
+    act(() => {
+      fireKey('Enter');
+    });
     expect(spyDigitsFocus).toHaveBeenCalled();
 
     // When focused on bankNameRef and method is not card -> checkoutConfirmRef
     act(() => {
       result.current.handlePaymentMethodChange('bank');
     });
-    act(() => { fireKey('Enter'); });
+    act(() => {
+      fireKey('Enter');
+    });
 
     // Restore activeElement to original
     Object.defineProperty(document, 'activeElement', {
@@ -700,7 +894,7 @@ describe('usePosBilling Hook', () => {
   test('should handle checkout error gracefully', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     setupCart();
-    
+
     mockMutateAsync.mockRejectedValueOnce(new Error('Checkout mutation failed'));
 
     const { result } = renderHook(() => usePosBilling());
@@ -752,7 +946,9 @@ describe('usePosBilling Hook', () => {
     await act(async () => {
       await result.current.handleConfirmCheckout();
     });
-    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('Beneficiary Bank Name Required'));
+    expect(alertSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Beneficiary Bank Name Required')
+    );
 
     alertSpy.mockRestore();
   });

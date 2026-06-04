@@ -1,41 +1,36 @@
-import { Q } from "@nozbe/watermelondb";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import database from "../db/database";
-import { syncDatabase } from "../services/sync";
+import { Q } from '@nozbe/watermelondb';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import database from '../db/database';
+import { syncDatabase } from '../services/sync';
 
 export interface StaffMember {
   id: string;
   name: string;
-  role: "Admin" | "Manager" | "Cashier";
+  role: 'Admin' | 'Manager' | 'Cashier';
   email: string;
   phone: string;
 }
 
 export function useStaff(businessId: string) {
   return useQuery<StaffMember[]>({
-    queryKey: ["staff", businessId],
+    queryKey: ['staff', businessId],
     queryFn: async () => {
-      if (!businessId || businessId === "0") return [];
+      if (!businessId || businessId === '0') return [];
 
       const dbEmployees = await database
-        .get("employees")
-        .query(Q.where("business_id", businessId))
+        .get('employees')
+        .query(Q.where('business_id', businessId))
         .fetch();
 
       return dbEmployees.map((emp: any) => ({
         id: emp.id,
         name: emp.name,
-        role:
-          emp.role === "admin"
-            ? "Admin"
-            : emp.role === "manager"
-              ? "Manager"
-              : "Cashier",
-        email: emp.email || "no-email@shopbook.lk",
+        role: emp.role === 'admin' ? 'Admin' : emp.role === 'manager' ? 'Manager' : 'Cashier',
+        email: emp.email || 'no-email@shopbook.lk',
         phone: emp.phone,
       }));
     },
-    enabled: !!businessId && businessId !== "0",
+    enabled: !!businessId && businessId !== '0',
   });
 }
 
@@ -45,45 +40,41 @@ export function useCreateStaff(businessId: string) {
   return useMutation({
     mutationFn: async (params: {
       name: string;
-      role: "Admin" | "Manager" | "Cashier";
+      role: 'Admin' | 'Manager' | 'Cashier';
       phone: string;
       email?: string;
     }) => {
       const { name, role, phone, email } = params;
-      const businesses = await database
-        .get("businesses")
-        .query(Q.where("id", businessId))
-        .fetch();
+      const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
       const dbBiz = businesses[0];
 
       if (!dbBiz) {
-        throw new Error("No business registered in SQLite database!");
+        throw new Error('No business registered in SQLite database!');
       }
 
-      const dbRole =
-        role === "Admin" ? "admin" : role === "Manager" ? "manager" : "cashier";
+      const dbRole = role === 'Admin' ? 'admin' : role === 'Manager' ? 'manager' : 'cashier';
 
       const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, "");
-        if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+        let cleaned = phoneStr.replace(/\D/g, '');
+        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
         return cleaned;
       };
 
       const cleanPhone = normalizePhone(phone);
 
       await database.write(async () => {
-        await database.get("employees").create((emp: any) => {
+        await database.get('employees').create((emp: any) => {
           emp.business.set(dbBiz);
           emp.name = name;
           emp.role = dbRole;
           emp.phone = cleanPhone;
-          emp.email = email || "";
+          emp.email = email || '';
         });
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["staff", businessId] });
+      queryClient.invalidateQueries({ queryKey: ['staff', businessId] });
       syncDatabase(); // Trigger real-time background replication
     },
   });
@@ -96,43 +87,39 @@ export function useUpdateStaff(businessId: string) {
     mutationFn: async (params: {
       id: string;
       name: string;
-      role: "Admin" | "Manager" | "Cashier";
+      role: 'Admin' | 'Manager' | 'Cashier';
       phone: string;
       email?: string;
     }) => {
       const { id, name, role, phone, email } = params;
-      const employees = await database
-        .get("employees")
-        .query(Q.where("id", id))
-        .fetch();
+      const employees = await database.get('employees').query(Q.where('id', id)).fetch();
       if (employees.length === 0) {
-        throw new Error("Staff member not found in database!");
+        throw new Error('Staff member not found in database!');
       }
 
       const targetEmp = employees[0];
 
       const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, "");
-        if (cleaned.startsWith("94")) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith("0")) cleaned = cleaned.slice(1);
+        let cleaned = phoneStr.replace(/\D/g, '');
+        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
         return cleaned;
       };
 
       const cleanPhone = normalizePhone(phone);
-      const dbRole =
-        role === "Admin" ? "admin" : role === "Manager" ? "manager" : "cashier";
+      const dbRole = role === 'Admin' ? 'admin' : role === 'Manager' ? 'manager' : 'cashier';
 
       await database.write(async () => {
         await targetEmp.update((emp: any) => {
           emp.name = name.trim();
           emp.role = dbRole;
           emp.phone = cleanPhone;
-          emp.email = (email || "").trim();
+          emp.email = (email || '').trim();
         });
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["staff", businessId] });
+      queryClient.invalidateQueries({ queryKey: ['staff', businessId] });
       syncDatabase(); // Trigger real-time background replication
     },
   });
@@ -143,12 +130,9 @@ export function useDeleteStaff(businessId: string) {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const employees = await database
-        .get("employees")
-        .query(Q.where("id", id))
-        .fetch();
+      const employees = await database.get('employees').query(Q.where('id', id)).fetch();
       if (employees.length === 0) {
-        throw new Error("Staff member not found in database!");
+        throw new Error('Staff member not found in database!');
       }
 
       const targetEmp = employees[0];
@@ -157,7 +141,7 @@ export function useDeleteStaff(businessId: string) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["staff", businessId] });
+      queryClient.invalidateQueries({ queryKey: ['staff', businessId] });
       syncDatabase(); // Trigger real-time background replication
     },
   });
