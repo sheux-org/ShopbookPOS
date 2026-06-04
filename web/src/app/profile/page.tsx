@@ -467,7 +467,7 @@ export default function ProfilePage() {
                     <RefreshCw size={20} className={syncing ? 'spin-anim' : ''} />
                   </div>
                   <div className="profile-option-details">
-                    <h4 className="profile-option-title">Force Database Sync</h4>
+                    <h4 className="profile-option-title">Sync to Cloud</h4>
                     <p className="profile-option-sub">
                       Manually push latest offline transaction queues and adjust stock registers
                       with cloud tables.
