@@ -60,6 +60,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const { releaseReservedStocks } = useCartActions();
 
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const activeBusinessId = useAuthStore((s) => s.activeBusinessId);
   const loadBusinessesFromDb = useBusinessStore((s) => s.loadBusinessesFromDb);
 
   const posMode = useSettingsStore((s) => s.posMode);
@@ -145,6 +146,9 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     try {
       const success = await syncDatabase();
       setSyncSuccess(success);
+      if (success) {
+        await loadBusinessesFromDb();
+      }
       setTimeout(() => setSyncSuccess(null), 2500);
     } catch {
       setSyncSuccess(false);
@@ -170,11 +174,15 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   // Auto trigger sync on mount, login, or when changing active business
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   useEffect(() => {
-    if (hydrated && isLoggedIn && activeBusiness?.id && activeBusiness.id !== '0') {
-      useSettingsStore.getState().setBackupEnabled(true); // Always enable sync on session load/refresh
-      handleSync();
+    if (hydrated && isLoggedIn) {
+      const targetBizId =
+        activeBusinessId || (activeBusiness?.id !== '0' ? activeBusiness?.id : null);
+      if (targetBizId && targetBizId !== '0') {
+        useSettingsStore.getState().setBackupEnabled(true); // Always enable sync on session load/refresh
+        handleSync();
+      }
     }
-  }, [hydrated, isLoggedIn, activeBusiness?.id]);
+  }, [hydrated, isLoggedIn, activeBusiness?.id, activeBusinessId]);
 
   const [prevBizId, setPrevBizId] = useState<string | null>(null);
 
@@ -280,6 +288,52 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       return children;
     }
     return <div style={{ backgroundColor: '#f9fafb', height: '100vh' }} />;
+  }
+
+  if (isLoggedIn && pathname !== '/auth' && (!activeBusiness || activeBusiness.id === '0')) {
+    return (
+      <div
+        style={{
+          backgroundColor: '#f9fafb',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }}
+      >
+        <div
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}
+        >
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #e5e7eb',
+              borderTopColor: '#2563eb',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }}
+          />
+          <div
+            style={{
+              color: '#6b7280',
+              fontSize: '13px',
+              fontWeight: '600',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Loading Business Profile...
+          </div>
+        </div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   if (pathname === '/auth') {

@@ -67,6 +67,7 @@ export const useBusinessStore = create<BusinessState>()(
         const found = get().businesses.find((b) => b.id === id);
         if (found) {
           set({ activeBusiness: found });
+          useAuthStore.getState().setActiveBusinessId(id);
         }
       },
       loadBusinessesFromDb: async () => {

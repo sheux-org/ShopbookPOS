@@ -87,6 +87,19 @@ export function useVerifyOtp() {
       if (matchedEmployee) {
         const activeBiz = await matchedEmployee.business.fetch();
         if (activeBiz) {
+          useAuthStore
+            .getState()
+            .loginWithEmployee(
+              cleanPhone,
+              matchedEmployee.role || 'cashier',
+              matchedEmployee.name || 'Staff Member',
+              activeBiz.id,
+              matchedEmployee.id,
+              verificationToken
+            );
+
+          await syncDatabase();
+
           return {
             status: 'success' as const,
             phone: cleanPhone,
@@ -105,6 +118,19 @@ export function useVerifyOtp() {
       });
 
       if (matchedBiz) {
+        useAuthStore
+          .getState()
+          .loginWithEmployee(
+            cleanPhone,
+            'admin',
+            'Owner / Admin',
+            matchedBiz.id,
+            'owner',
+            verificationToken
+          );
+
+        await syncDatabase();
+
         return {
           status: 'success' as const,
           phone: cleanPhone,
@@ -134,6 +160,17 @@ export function useVerifyOtp() {
           if (typeof window !== 'undefined') {
             localStorage.setItem('auth_token', verificationToken);
           }
+
+          useAuthStore
+            .getState()
+            .loginWithEmployee(
+              cleanPhone,
+              remoteData.role || 'admin',
+              remoteData.name || 'Owner / Admin',
+              remoteData.business_id,
+              remoteData.employee_id || 'owner',
+              verificationToken
+            );
 
           // Force sync to pull all tables
           const syncSuccess = await syncDatabase();
