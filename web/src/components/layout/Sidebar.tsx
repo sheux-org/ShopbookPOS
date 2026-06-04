@@ -140,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={handleSync}
             disabled={syncing}
             className="sidebar-sync-btn"
-            title={sidebarCollapsed ? (syncing ? 'Backing up...' : 'Backup to Cloud') : undefined}
+            title={sidebarCollapsed ? (syncing ? 'Syncing...' : 'Sync to Cloud') : undefined}
           >
             <span className="btn-icon">
               <RefreshCw
@@ -153,12 +153,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
             <span className="btn-label">
               {syncing
-                ? 'Backing up...'
+                ? 'Syncing...'
                 : syncSuccess === true
                   ? 'Sync Complete!'
                   : syncSuccess === false
                     ? 'Sync Failed'
-                    : 'Backup to Cloud'}
+                    : 'Sync to Cloud'}
             </span>
           </button>
         )}

@@ -3,16 +3,12 @@ import { AppState, type AppStateStatus } from 'react-native';
 import { syncDatabase } from '../services/sync';
 import { useSettingsStore } from '../stores/useSettingsStore';
 
-const SYNC_INTERVAL_MS = 60_000;
-
 export function useWatermelonSync() {
   const isBackupEnabled = useSettingsStore((s) => s.isBackupEnabled);
   const isSyncingRef = useRef(false);
 
   useEffect(() => {
     if (!isBackupEnabled) return;
-
-    let intervalId: ReturnType<typeof setInterval> | undefined;
 
     const runSync = async () => {
       if (isSyncingRef.current) return;
@@ -26,10 +22,6 @@ export function useWatermelonSync() {
 
     void runSync();
 
-    intervalId = setInterval(() => {
-      void runSync();
-    }, SYNC_INTERVAL_MS);
-
     const onAppStateChange = (state: AppStateStatus) => {
       if (state === 'active') void runSync();
     };
@@ -37,7 +29,6 @@ export function useWatermelonSync() {
     const subscription = AppState.addEventListener('change', onAppStateChange);
 
     return () => {
-      if (intervalId) clearInterval(intervalId);
       subscription.remove();
     };
   }, [isBackupEnabled]);

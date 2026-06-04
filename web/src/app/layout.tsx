@@ -8,7 +8,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { syncDatabase, supabase, getClientId } from '../services/sync';
 import { startUploadQueueMonitor } from '@/services/uploadQueue';
 import './globals.css';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from '../components/layout/Sidebar';
 import { MobileNavbar } from '../components/layout/MobileNavbar';
 import { Header } from '../components/layout/Header';
@@ -59,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   useActiveDeviceTracker();
   const router = useRouter();
   const pathname = usePathname();
@@ -153,6 +154,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       setSyncSuccess(success);
       if (success) {
         await loadBusinessesFromDb();
+        queryClient.invalidateQueries(); // Refresh active lists and tables in the UI
       }
       setTimeout(() => setSyncSuccess(null), 2500);
     } catch {
@@ -163,15 +165,9 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Periodic background sync every 30 seconds if online, and immediate sync when coming back online
+  // Trigger immediate sync when connection state is restored
   useEffect(() => {
     if (!hydrated || !isLoggedIn) return;
-
-    const interval = setInterval(() => {
-      if (navigator.onLine) {
-        syncDatabase();
-      }
-    }, 30000); // 30 seconds
 
     const handleOnline = () => {
       console.log('Device is back online, triggering sync...');
@@ -181,7 +177,6 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     window.addEventListener('online', handleOnline);
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener('online', handleOnline);
     };
   }, [hydrated, isLoggedIn]);
@@ -274,7 +269,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       case '/profile':
         return {
           title: 'Profile Settings Dashboard',
-          subtitle: 'Configure branches, staff logs, backups and terminal details',
+          subtitle: 'Configure branches, staff logs, synchronization and terminal details',
         };
       default:
         return null;

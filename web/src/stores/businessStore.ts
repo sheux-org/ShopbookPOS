@@ -4,7 +4,7 @@ import { Q } from '@nozbe/watermelondb';
 import database from '../db/database';
 import { SEEDING_PRODUCTS } from '../utils/seedProducts';
 import { useAuthStore } from './authStore';
-import { syncDatabase } from '../services/sync';
+import { syncDatabase, supabase } from '../services/sync';
 
 export interface Business {
   id: string;
@@ -87,6 +87,93 @@ export const useBusinessStore = create<BusinessState>()(
               });
             }
             return;
+          }
+
+          // If online, fetch user businesses from remote Supabase and upsert them locally
+          if (navigator.onLine) {
+            try {
+              const { data, error } = await supabase.rpc('fetch_user_businesses', {
+                input_phone: loggedInPhone,
+              });
+              if (!error && data) {
+                const { businesses: remoteBizs = [], employees: remoteEmps = [] } = data;
+                await database.write(async () => {
+                  // Upsert businesses
+                  for (const b of remoteBizs) {
+                    const localBizs = await database
+                      .get('businesses')
+                      .query(Q.where('id', b.id))
+                      .fetch();
+                    if (localBizs.length > 0) {
+                      await localBizs[0].update((biz: any) => {
+                        biz._raw._status = 'synced';
+                        biz._raw._changed = '';
+                        biz.name = b.name;
+                        biz.businessType = b.business_type;
+                        biz.address = b.address;
+                        biz.phoneNumber = b.phone_number;
+                        biz.taxId = b.tax_id;
+                        biz.operatingHours = b.operating_hours;
+                        biz.logoUri = b.logo_uri;
+                      });
+                    } else {
+                      await database.get('businesses').create((biz: any) => {
+                        biz._raw.id = b.id;
+                        biz._raw._status = 'synced';
+                        biz._raw._changed = '';
+                        biz.name = b.name;
+                        biz.businessType = b.business_type;
+                        biz.address = b.address;
+                        biz.phoneNumber = b.phone_number;
+                        biz.taxId = b.tax_id;
+                        biz.operatingHours = b.operating_hours;
+                        biz.logoUri = b.logo_uri;
+                      });
+                    }
+                  }
+
+                  // Upsert employees
+                  for (const emp of remoteEmps) {
+                    const localEmps = await database
+                      .get('employees')
+                      .query(Q.where('id', emp.id))
+                      .fetch();
+                    const bizRecord = await database
+                      .get('businesses')
+                      .query(Q.where('id', emp.business_id))
+                      .fetch();
+                    if (localEmps.length > 0) {
+                      await localEmps[0].update((e: any) => {
+                        e._raw._status = 'synced';
+                        e._raw._changed = '';
+                        e.name = emp.name;
+                        e.role = emp.role;
+                        e.phone = emp.phone;
+                        e.email = emp.email;
+                        if (bizRecord.length > 0) {
+                          e.business.set(bizRecord[0]);
+                        }
+                      });
+                    } else {
+                      await database.get('employees').create((e: any) => {
+                        e._raw.id = emp.id;
+                        e._raw._status = 'synced';
+                        e._raw._changed = '';
+                        e.name = emp.name;
+                        e.role = emp.role;
+                        e.phone = emp.phone;
+                        e.email = emp.email;
+                        if (bizRecord.length > 0) {
+                          e.business.set(bizRecord[0]);
+                        }
+                      });
+                    }
+                  }
+                });
+              }
+            } catch (rpcErr) {
+              console.warn('Failed to sync remote user businesses:', rpcErr);
+            }
           }
 
           const normalizePhone = (phoneStr: string): string => {
