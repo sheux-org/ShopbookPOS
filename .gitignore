@@ -57,3 +57,8 @@ app-example
 # Local logs
 *.log
 logs/
+
+# test coverage
+coverage/
+web/coverage/
+*.lcov
