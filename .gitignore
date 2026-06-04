@@ -60,5 +60,6 @@ logs/
 
 # test coverage
 coverage/
+web/coverage
 web/coverage/
 *.lcov
