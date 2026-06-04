@@ -121,6 +121,28 @@ You can run either application from the root using workspace scripts:
 
 ---
 
+## 🛡️ Code Quality & Pre-commit Workflow
+
+To maintain formatting standards and prevent broken code from being committed, this repository uses an automated pre-commit hook pipeline powered by **Husky** and **lint-staged**.
+
+### Core Quality Tools
+
+1. **Prettier**: Enforces consistent code styling project-wide. Staged files are formatted automatically before commit completion.
+2. **Husky**: Hooks into git actions to run checks during `git commit` automatically, keeping the repository green and buildable.
+3. **lint-staged**: Runs Prettier formatters exclusively on modified/staged files, ensuring fast commit operations.
+
+### Automated Pre-commit Hook Pipeline
+
+When you run `git commit`, the hook automatically executes the following checks:
+
+1. 🔍 **Stage Formatting**: Uses `Prettier` (via `lint-staged`) to format modified code, stylesheets, and configs.
+2. 🚀 **TypeScript Verification**: Runs a web compilation check (`tsc --noEmit`) to catch any static compiler errors before committing.
+3. 📦 **Next.js Production Build Validation**: Verifies the web bundle compile (`pnpm build:web`) to ensure no compile-time regressions are committed.
+
+If any of these verification stages fail, the commit process is aborted, allowing you to fix compilation or styling issues locally before pushing to GitHub.
+
+---
+
 ## ☁️ Supabase Setup & Database Migrations
 
 Both apps connect to the same remote Supabase database project for data synchronization.
