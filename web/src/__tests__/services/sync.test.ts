@@ -136,6 +136,28 @@ describe('Supabase Sync Service', () => {
     errorSpy.mockRestore();
   });
 
+  test('should handle network/offline errors gracefully with console.warn instead of console.error', async () => {
+    useAuthStore.setState({ isLoggedIn: true, activeBusinessId: 'biz-network-err' });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    mockSynchronize.mockImplementationOnce(async (config: any) => {
+      // Simulate fetch rejection due to network offline
+      supabase.rpc = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+      await config.pullChanges({ lastPulledAt: 0 });
+    });
+
+    const success = await syncDatabase();
+    expect(success).toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Sync failed due to network connectivity issues (offline mode).'
+    );
+
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
   // ─── uploadBusinessLogo ──────────────────────────────────────────
 
   test('should upload business logo file and return public url', async () => {

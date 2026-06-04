@@ -46,11 +46,26 @@ async function pushChangesInOrder(changes: SyncChanges, clientBusinessId: string
     const slice = changes[table];
     if (!tableHasChanges(slice)) continue;
 
-    const { error } = await supabase.rpc('push_watermelondb_changes', {
-      changes: { [table]: slice },
-      client_business_id: clientBusinessId,
-    });
-    if (error) throw new Error(`${table}: ${error.message}`);
+    try {
+      const { error } = await supabase.rpc('push_watermelondb_changes', {
+        changes: { [table]: slice },
+        client_business_id: clientBusinessId,
+      });
+      if (error) throw new Error(`${table}: ${error.message}`);
+    } catch (err: any) {
+      const isNetworkError =
+        err?.message?.includes('fetch') ||
+        err?.message?.includes('Network') ||
+        err?.name === 'TypeError' ||
+        (typeof navigator !== 'undefined' && !navigator.onLine);
+
+      if (isNetworkError) {
+        const netErr = new Error('Sync aborted: Network unreachable');
+        (netErr as any).isNetworkError = true;
+        throw netErr;
+      }
+      throw err;
+    }
   }
 }
 
@@ -86,12 +101,27 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
       await synchronize({
         database,
         pullChanges: async ({ lastPulledAt }) => {
-          const { data, error } = await supabase.rpc('pull_watermelondb_changes', {
-            last_pulled_at: lastPulledAt ?? 0,
-            client_business_id: activeBusinessId,
-          });
-          if (error) throw new Error(error.message);
-          return { changes: data.changes, timestamp: data.timestamp };
+          try {
+            const { data, error } = await supabase.rpc('pull_watermelondb_changes', {
+              last_pulled_at: lastPulledAt ?? 0,
+              client_business_id: activeBusinessId,
+            });
+            if (error) throw new Error(error.message);
+            return { changes: data.changes, timestamp: data.timestamp };
+          } catch (err: any) {
+            const isNetworkError =
+              err?.message?.includes('fetch') ||
+              err?.message?.includes('Network') ||
+              err?.name === 'TypeError' ||
+              (typeof navigator !== 'undefined' && !navigator.onLine);
+
+            if (isNetworkError) {
+              const netErr = new Error('Sync aborted: Network unreachable');
+              (netErr as any).isNetworkError = true;
+              throw netErr;
+            }
+            throw err;
+          }
         },
         pushChanges: async ({ changes }) => {
           await pushChangesInOrder(changes as SyncChanges, activeBusinessId);
@@ -100,8 +130,18 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
       });
       console.log('Database synced successfully');
       return true;
-    } catch (error) {
-      console.error('Failed to sync database:', error);
+    } catch (error: any) {
+      const isNetworkError =
+        error?.isNetworkError ||
+        error?.message?.includes('Network unreachable') ||
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('fetch');
+
+      if (isNetworkError) {
+        console.warn('Sync failed due to network connectivity issues (offline mode).');
+      } else {
+        console.error('Failed to sync database:', error);
+      }
       return false;
     }
   };

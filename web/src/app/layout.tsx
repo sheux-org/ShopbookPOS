@@ -158,7 +158,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Periodic background sync every 30 seconds if online
+  // Periodic background sync every 30 seconds if online, and immediate sync when coming back online
   useEffect(() => {
     if (!hydrated || !isLoggedIn) return;
 
@@ -168,7 +168,17 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       }
     }, 30000); // 30 seconds
 
-    return () => clearInterval(interval);
+    const handleOnline = () => {
+      console.log('Device is back online, triggering sync...');
+      handleSync();
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+    };
   }, [hydrated, isLoggedIn]);
 
   // Auto trigger sync on mount, login, or when changing active business
