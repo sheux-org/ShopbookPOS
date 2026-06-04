@@ -84,3 +84,15 @@ To debug configurations, authentication schemas, and local DB adapters, the proj
   ```bash
   node src/query_tables.js
   ```
+
+---
+
+## 6. Codebase Quality & Git Commit Hooks (Husky)
+
+Before submitting pull requests, ensure your code adheres to codebase standards. The project implements a local **Husky pre-commit hook** that automatically runs on every `git commit`. It executes:
+
+1. **Prettier Formatting** (`lint-staged`)
+2. **TypeScript Compilation Check** (`tsc --noEmit`)
+3. **Next.js Production Build Validation** (`pnpm build:web`)
+
+For more details, see the [Testing Guide](testing.md#7-git-pre-commit-quality-guard-husky).
