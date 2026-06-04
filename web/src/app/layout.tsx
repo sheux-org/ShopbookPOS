@@ -35,8 +35,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         <title>Shopbook Mini POS Web</title>
-        <meta name="description" content="Offline-first premium web point of sale" />
+        <meta name="description" content="premium web point of sale" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <meta name="keywords" content="shopbook, mini pos, point of sale, retail pos" />
+        <meta name="author" content="Pasan Pahasara Dewapriya" />
+        <meta name="robots" content="index, follow" />
       </head>
       <body className="antialiased">
         {/* Mobile viewport blocker screen */}
