@@ -110,41 +110,29 @@ export function useProducts(category?: string, search?: string, activeChip?: str
       const isLowStockChip = activeChip === 'Low Stock';
       const isRecentsChip = activeChip?.toLowerCase() === 'recents';
 
-      if (isSearchActive) {
-        // Fetch all matching data without limit/offset at database level
-        let dbProducts = await query.fetch();
+      // Paginate at database level if not in-memory filtering (Low Stock chip is processed in memory)
+      const shouldPaginateInDb = !isLowStockChip && !isRecentsChip;
 
-        if (isLowStockChip) {
-          dbProducts = dbProducts.filter((p: any) => {
-            const stockCount = p.stockCount ?? 0;
-            const threshold = p.lowStockAlert ?? 5;
-            return stockCount > 0 && stockCount <= threshold;
-          });
-        }
-
-        // Paginate manually on the returned array
+      if (shouldPaginateInDb) {
         const offset = (pageParam as number) * PAGE_SIZE;
-        const sliced = dbProducts.slice(offset, offset + PAGE_SIZE);
-        return sliced.map(mapDBProduct);
-      } else {
-        // Standard list: paginate at database level if not recents/low stock
-        if (!isRecentsChip && !isLowStockChip) {
-          const offset = (pageParam as number) * PAGE_SIZE;
-          query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
-        }
-
-        let dbProducts = await query.fetch();
-
-        if (isLowStockChip) {
-          dbProducts = dbProducts.filter((p: any) => {
-            const stockCount = p.stockCount ?? 0;
-            const threshold = p.lowStockAlert ?? 5;
-            return stockCount > 0 && stockCount <= threshold;
-          });
-        }
-
-        return dbProducts.map(mapDBProduct);
+        query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
       }
+
+      let dbProducts = await query.fetch();
+
+      if (isLowStockChip) {
+        dbProducts = dbProducts.filter((p: any) => {
+          const stockCount = p.stockCount ?? 0;
+          const threshold = p.lowStockAlert ?? 5;
+          return stockCount > 0 && stockCount <= threshold;
+        });
+
+        // Paginate manually only for in-memory filtered chips
+        const offset = (pageParam as number) * PAGE_SIZE;
+        dbProducts = dbProducts.slice(offset, offset + PAGE_SIZE);
+      }
+
+      return dbProducts.map(mapDBProduct);
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {

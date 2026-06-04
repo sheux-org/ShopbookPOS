@@ -71,19 +71,13 @@ export function useGetOrders(searchQuery?: string) {
             Q.where('status', Q.like(`%${sanitized}%`))
           )
         );
-
-        const dbOrders = await query.fetch();
-        const offset = (pageParam as number) * PAGE_SIZE;
-        const sliced = dbOrders.slice(offset, offset + PAGE_SIZE);
-
-        return sliced.map(mapDBOrder);
-      } else {
-        const offset = (pageParam as number) * PAGE_SIZE;
-        query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
-
-        const dbOrders = await query.fetch();
-        return dbOrders.map(mapDBOrder);
       }
+
+      const offset = (pageParam as number) * PAGE_SIZE;
+      query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
+
+      const dbOrders = await query.fetch();
+      return dbOrders.map(mapDBOrder);
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
