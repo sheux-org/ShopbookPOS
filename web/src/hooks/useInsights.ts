@@ -75,31 +75,39 @@ export function useBusinessInsights(
         .query(Q.where("business_id", dbBiz.id), Q.where("status", "paid"))
         .fetch();
 
-      // 3. Filter orders based on active period
+      // 3. Filter orders based on active period using robust range comparisons
       const filteredOrders = orders.filter((order: any) => {
+        if (!order.createdAt) return false;
         const orderDate = new Date(order.createdAt);
         const today = new Date();
 
         if (period === "daily") {
-          return orderDate.toDateString() === today.toDateString();
+          const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+          return orderDate >= start && orderDate <= end;
         } else if (period === "yesterday") {
           const yesterday = new Date();
           yesterday.setDate(today.getDate() - 1);
-          return orderDate.toDateString() === yesterday.toDateString();
+          const start = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+          const end = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+          return orderDate >= start && orderDate <= end;
         } else if (period === "weekly") {
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(today.getDate() - 7);
           sevenDaysAgo.setHours(0, 0, 0, 0);
           return orderDate >= sevenDaysAgo && orderDate <= today;
         } else if (period === "monthly") {
-          return (
-            orderDate.getMonth() === today.getMonth() &&
-            orderDate.getFullYear() === today.getFullYear()
-          );
+          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+          return orderDate >= startOfMonth && orderDate <= endOfMonth;
         } else if (period === "yearly") {
-          return orderDate.getFullYear() === today.getFullYear();
+          const startOfYear = new Date(today.getFullYear(), 0, 1);
+          const endOfYear = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+          return orderDate >= startOfYear && orderDate <= endOfYear;
         } else if (period === "custom" && startDate && endDate) {
-          return orderDate >= startDate && orderDate <= endDate;
+          const adjustedEnd = new Date(endDate);
+          adjustedEnd.setHours(23, 59, 59, 999);
+          return orderDate >= startDate && orderDate <= adjustedEnd;
         }
         return true;
       });

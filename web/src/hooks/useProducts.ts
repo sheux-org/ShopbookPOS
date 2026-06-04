@@ -258,6 +258,7 @@ export function useAddProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["global-stock-history"] });
       syncDatabase(); // Trigger real-time background replication
       
       // Trigger upload queue background processing
@@ -316,6 +317,7 @@ export function useUpdateProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["uploaded-images"] });
+      queryClient.invalidateQueries({ queryKey: ["global-stock-history"] });
       syncDatabase(); // Trigger real-time background replication
     },
   });
@@ -346,6 +348,7 @@ export function useDeleteProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["uploaded-images"] });
+      queryClient.invalidateQueries({ queryKey: ["global-stock-history"] });
       syncDatabase(); // Trigger real-time background replication
     },
   });
@@ -473,12 +476,16 @@ export function useGetGlobalStockHistory(businessId: string) {
     queryFn: async () => {
       if (!businessId || businessId === "0") return [];
 
-      const allLogs = await database.get("inventory_logs").query().fetch();
-      const mappedLogs: DBGlobalInventoryLog[] = [];
+      const allLogs = await database
+        .get("inventory_logs")
+        .query(Q.on("products", Q.where("business_id", businessId)))
+        .fetch();
+
+      const mappedLogs: (DBGlobalInventoryLog & { createdAtTime: number })[] = [];
       for (const logItem of allLogs) {
         const log = logItem as any;
         const prod = await log.product.fetch();
-        if (prod && prod.business.id === businessId) {
+        if (prod) {
           mappedLogs.push({
             id: log.id,
             productName: prod.name,
@@ -487,12 +494,13 @@ export function useGetGlobalStockHistory(businessId: string) {
             quantity: log.quantity,
             reason: log.reason,
             date: new Date(log.createdAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" }),
+            createdAtTime: log.createdAt ? new Date(log.createdAt).getTime() : 0,
           });
         }
       }
 
-      // Sort logs newest first
-      return mappedLogs.sort((a, b) => b.id.localeCompare(a.id));
+      // Sort logs newest first (chronologically by timestamp)
+      return mappedLogs.sort((a, b) => b.createdAtTime - a.createdAtTime);
     },
     enabled: !!businessId && businessId !== "0",
   });

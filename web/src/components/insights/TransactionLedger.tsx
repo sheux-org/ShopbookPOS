@@ -19,8 +19,11 @@ export default function TransactionLedger({
           <Loader2 className="pane-loading-spinner" size={24} />
         </div>
       )}
+      
       <div className="ledger-header">
-        <ShoppingCart size={16} color="var(--primary)" />
+        <div className="ledger-header-icon-wrapper">
+          <ShoppingCart size={16} />
+        </div>
         <h3 className="ledger-title">Transaction Ledger</h3>
       </div>
 
@@ -32,22 +35,26 @@ export default function TransactionLedger({
               <th>Date</th>
               <th>Method</th>
               <th>Amount</th>
-              <th style={{ textAlign: 'center' }}>Receipt</th>
+              <th>Receipt</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((o: any) => (
               <tr key={o.id}>
                 <td>
-                  <div style={{ fontWeight: 'bold' }}>{o.invoiceNumber.split(" ")[0]}</div>
+                  <span className="ledger-invoice-num">
+                    {o.invoiceNumber.split(" ")[0]}
+                  </span>
                 </td>
-                <td>{o.date}</td>
                 <td>
-                  <span className="ledger-method-badge">
+                  <span className="ledger-date">{o.date}</span>
+                </td>
+                <td>
+                  <span className={`ledger-method-badge method-${o.paymentMethod.toLowerCase()}`}>
                     {o.paymentMethod.toUpperCase()}
                   </span>
                 </td>
-                <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>
+                <td className="ledger-amount-cell">
                   Rs. {o.totalAmount.toLocaleString()}
                 </td>
                 <td style={{ textAlign: 'center' }}>

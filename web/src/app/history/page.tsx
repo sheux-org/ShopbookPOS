@@ -513,7 +513,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '12px',
     flexWrap: 'wrap',
-    marginBottom: '4px',
   },
   searchBox: {
     flex: 1,
@@ -531,7 +530,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     border: 'none',
     outline: 'none',
-    fontSize: '14px',
+    fontSize: '13px',
     color: 'var(--dark)',
   },
   toast: {

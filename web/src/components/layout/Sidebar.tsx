@@ -171,12 +171,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
 
         {/* Powered by Shopbook */}
-        {!sidebarCollapsed && (
-          <div className="powered-by-container" style={{ marginTop: '16px' }}>
-            <span className="powered-by-text" style={{ fontSize: '10px' }}>powered by</span>
-            <span className="powered-by-brand" style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 'bold' }}>Shopbook</span>
-          </div>
-        )}
+        <div className="powered-by-container">
+          <span className="powered-by-text">powered by</span>
+          <a 
+            href="https://shopbook.lk" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="powered-by-brand"
+          >
+            Shopbook
+          </a>
+        </div>
       </div>
     </aside>
   );

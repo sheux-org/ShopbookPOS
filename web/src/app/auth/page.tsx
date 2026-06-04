@@ -170,7 +170,14 @@ export default function AuthPage() {
         {/* Powered by Shopbook */}
         <div className="powered-by-container">
           <span className="powered-by-text">powered by</span>
-          <span className="powered-by-brand">Shopbook</span>
+          <a 
+            href="https://shopbook.lk" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="powered-by-brand"
+          >
+            Shopbook
+          </a>
         </div>
       </div>
     </div>

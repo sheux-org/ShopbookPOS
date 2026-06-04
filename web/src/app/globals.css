@@ -907,4 +907,55 @@ body.mobile-blocked .app-layout-wrapper {
   color: #b91c1c;
 }
 
+/* ==========================================================================
+   Powered by Shopbook Branding Styles
+   ========================================================================== */
+
+.powered-by-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 16px;
+  opacity: 1;
+  max-width: 200px;
+  max-height: 20px;
+  visibility: visible;
+  transition: opacity 0.2s ease, max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.pos-sidebar.collapsed .powered-by-container {
+  opacity: 0;
+  max-width: 0;
+  max-height: 0;
+  margin-top: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.powered-by-text {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.powered-by-brand {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--primary);
+  letter-spacing: 0.3px;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.powered-by-brand:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
 
