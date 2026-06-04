@@ -188,30 +188,56 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
           </div>
         )}
 
-        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          <div className="devices-info-banner">
+        <div className="modal-body" style={{ padding: '24px' }}>
+          <div className="devices-info-banner" style={{ margin: 0 }}>
             Monitor all active terminals logged into your business. You can remotely revoke access to force logout a device.
           </div>
 
-          {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '12px' }}>
+          <div className="devices-scroller">
+            {loading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', gap: '12px' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  border: '3px solid #ede9fe',
+                  borderTopColor: '#7c3aed',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite'
+                }} />
+                <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 500 }}>Loading active terminals...</span>
+              </div>
+            ) : devices.length === 0 ? (
               <div style={{
-                width: '32px',
-                height: '32px',
-                border: '3px solid #e5e7eb',
-                borderTopColor: '#2563eb',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite'
-              }} />
-              <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 500 }}>Loading active terminals...</span>
-            </div>
-          ) : devices.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', color: 'var(--muted)' }}>
-              <Smartphone size={40} style={{ marginBottom: '10px' }} />
-              <span style={{ fontSize: '14px', fontWeight: 600 }}>No Active Sessions Found</span>
-            </div>
-          ) : (
-            <div className="devices-list-wrapper">
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '240px',
+                color: 'var(--muted)',
+                textAlign: 'center',
+                padding: '24px'
+              }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  backgroundColor: '#f5f3ff',
+                  color: '#7c3aed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                  boxShadow: '0 4px 12px rgba(124, 58, 237, 0.08)'
+                }}>
+                  <Smartphone size={28} />
+                </div>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: 700, color: 'var(--dark)' }}>No Active Sessions</h4>
+                <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--muted)', maxWidth: '280px', lineHeight: '1.5' }}>
+                  There are no active devices or browser terminals logged into this business account.
+                </p>
+              </div>
+            ) : (
+              <div className="devices-list-wrapper">
               {devices.map((device) => {
                 const isCurrent = device.device_id === currentDeviceId;
                 const isOnline = (() => {
@@ -302,6 +328,7 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
               })}
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

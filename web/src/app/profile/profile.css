@@ -1302,4 +1302,21 @@
   to { transform: rotate(360deg); }
 }
 
+.devices-scroller {
+  height: 50vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 6px 8px 2px;
+}
+
+.devices-scroller::-webkit-scrollbar {
+  width: 4px;
+}
+
+.devices-scroller::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 2px;
+}
+
 
