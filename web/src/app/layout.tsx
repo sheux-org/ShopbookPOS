@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '../stores/authStore';
 import { useBusinessStore } from '../stores/businessStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import { syncDatabase } from '../services/sync';
+import { syncDatabase, supabase, getClientId } from '../services/sync';
 import { startUploadQueueMonitor } from '@/services/uploadQueue';
 import './globals.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -198,6 +198,35 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       }
     }
   }, [hydrated, isLoggedIn, activeBusiness?.id, activeBusinessId]);
+
+  // Real-time Supabase Broadcast listener for reactive sync
+  useEffect(() => {
+    if (!isLoggedIn || !activeBusinessId) return;
+
+    const clientId = getClientId();
+    const channel = supabase
+      .channel(`sync:${activeBusinessId}`)
+      .on('broadcast', { event: 'sync_trigger' }, (payload) => {
+        const data = payload.payload;
+        if (data && data.senderId !== clientId && data.businessId === activeBusinessId) {
+          console.log(
+            `[Sync Broadcast] Received mutation trigger from device: ${data.senderId}. Syncing...`
+          );
+          handleSync();
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(
+            `[Sync Broadcast] Subscribed to realtime sync channel: sync:${activeBusinessId}`
+          );
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isLoggedIn, activeBusinessId]);
 
   const [prevBizId, setPrevBizId] = useState<string | null>(null);
 

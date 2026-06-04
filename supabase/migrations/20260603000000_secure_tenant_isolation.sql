@@ -532,6 +532,13 @@ BEGIN
           RAISE EXCEPTION 'Unauthorized inventory_logs push';
         END IF;
 
+        -- Conflict check: Prevent duplicate void inventory log insertion from offline sync race condition
+        IF (r->>'reason') LIKE 'Voided Invoice Sale %' THEN
+          IF EXISTS (SELECT 1 FROM public.inventory_logs WHERE reason = (r->>'reason') AND product_id = (r->>'product_id')) THEN
+            CONTINUE; -- Skip duplicate insertion
+          END IF;
+        END IF;
+
         INSERT INTO inventory_logs (id, product_id, type, quantity, reason, created_at, updated_at)
         VALUES (
           (r->>'id'),

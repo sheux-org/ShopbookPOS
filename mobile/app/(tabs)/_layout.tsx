@@ -4,11 +4,46 @@ import { Animated } from 'react-native';
 import { BottomTabBar } from '../../components/common/BottomTabBar';
 import { useTabBarVisible } from '../../hooks/useTabBarVisible';
 import { useActiveDeviceTracker } from '../../hooks/useActiveDeviceTracker';
+import { useWatermelonSync } from '../../hooks/useWatermelonSync';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { syncDatabase, supabase, getClientId } from '../../services/sync';
 
 export default function TabLayout() {
   useActiveDeviceTracker();
+  useWatermelonSync(); // Enable periodic background database sync
+
   const { tabBarVisible } = useTabBarVisible();
   const translateYAnim = useRef(new Animated.Value(0)).current;
+  const activeBusinessId = useAuthStore((s) => s.activeBusinessId);
+
+  // Subscribe to real-time sync trigger broadcasts for active business
+  useEffect(() => {
+    if (!activeBusinessId) return;
+
+    const clientId = getClientId();
+    const channel = supabase
+      .channel(`sync:${activeBusinessId}`)
+      .on('broadcast', { event: 'sync_trigger' }, (payload) => {
+        const data = payload.payload;
+        if (data && data.senderId !== clientId && data.businessId === activeBusinessId) {
+          console.log(
+            `[Sync Broadcast] Received sync trigger from device: ${data.senderId}. Syncing...`
+          );
+          syncDatabase().catch((err) => console.error('Realtime sync failed:', err));
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(
+            `[Sync Broadcast] Subscribed to realtime sync channel: sync:${activeBusinessId}`
+          );
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeBusinessId]);
 
   useEffect(() => {
     Animated.spring(translateYAnim, {

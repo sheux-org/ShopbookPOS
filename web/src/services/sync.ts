@@ -15,6 +15,15 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
+let memoizedClientId = '';
+export function getClientId(): string {
+  if (!memoizedClientId) {
+    memoizedClientId =
+      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  }
+  return memoizedClientId;
+}
+
 const PUSH_TABLE_ORDER = [
   'businesses',
   'employees',
@@ -125,6 +134,26 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
         },
         pushChanges: async ({ changes }) => {
           await pushChangesInOrder(changes as SyncChanges, activeBusinessId);
+
+          // Broadcast sync trigger to other active terminals
+          const hasChanges = Object.values(changes).some((slice) =>
+            tableHasChanges(slice as TableChanges | undefined)
+          );
+          if (hasChanges) {
+            console.log('[Sync] Local changes pushed. Broadcasting sync trigger...');
+            supabase
+              .channel(`sync:${activeBusinessId}`)
+              .send({
+                type: 'broadcast',
+                event: 'sync_trigger',
+                payload: {
+                  senderId: getClientId(),
+                  businessId: activeBusinessId,
+                  timestamp: Date.now(),
+                },
+              })
+              .catch((err) => console.error('[Sync] Broadcast failed:', err));
+          }
         },
         migrationsEnabledAtVersion: schema.version,
       });
