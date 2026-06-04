@@ -1,9 +1,9 @@
-import { Q } from "@nozbe/watermelondb";
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
-import database from "../db/database";
-import { useBusinessStore } from "../stores/businessStore";
-import { useAuthStore } from "../stores/authStore";
-import { syncDatabase } from "../services/sync";
+import { Q } from '@nozbe/watermelondb';
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import database from '../db/database';
+import { useBusinessStore } from '../stores/businessStore';
+import { useAuthStore } from '../stores/authStore';
+import { syncDatabase } from '../services/sync';
 
 export interface DBOrder {
   id: string;
@@ -35,16 +35,16 @@ const mapDBOrder = (o: any): DBOrder => ({
   totalAmount: o.totalAmount,
   status: o.status,
   createdAt: o.createdAt ? new Date(o.createdAt).getTime() : Date.now(),
-  paymentMethod: o.paymentMethod || "cash",
-  bankName: o.bankName || "",
-  cardLastFour: o.cardLastFour || "",
-  discountType: o.discountType || "none",
+  paymentMethod: o.paymentMethod || 'cash',
+  bankName: o.bankName || '',
+  cardLastFour: o.cardLastFour || '',
+  discountType: o.discountType || 'none',
   discountValue: o.discountValue || 0,
   taxRate: o.taxRate || 0,
   taxValue: o.taxValue || 0,
-  cashierName: o.invoiceNumber.includes("Staff:")
-    ? o.invoiceNumber.split("Staff:")[1].split("|")[0].replace(")", "").trim()
-    : "Cashier",
+  cashierName: o.invoiceNumber.includes('Staff:')
+    ? o.invoiceNumber.split('Staff:')[1].split('|')[0].replace(')', '').trim()
+    : 'Cashier',
 });
 
 export function useGetOrders(searchQuery?: string) {
@@ -52,26 +52,23 @@ export function useGetOrders(searchQuery?: string) {
   const PAGE_SIZE = 30;
 
   const result = useInfiniteQuery<DBOrder[]>({
-    queryKey: ["orders", activeBiz?.id, searchQuery],
+    queryKey: ['orders', activeBiz?.id, searchQuery],
     queryFn: async ({ pageParam = 0 }) => {
-      if (!activeBiz || activeBiz.id === "0") return [];
+      if (!activeBiz || activeBiz.id === '0') return [];
 
       let query = database
-        .get("orders")
-        .query(
-          Q.where("business_id", activeBiz.id),
-          Q.sortBy("created_at", Q.desc)
-        );
+        .get('orders')
+        .query(Q.where('business_id', activeBiz.id), Q.sortBy('created_at', Q.desc));
 
-      const isSearchActive = searchQuery && searchQuery.trim() !== "";
+      const isSearchActive = searchQuery && searchQuery.trim() !== '';
 
       if (isSearchActive) {
         const sanitized = Q.sanitizeLikeString(searchQuery);
         query = query.extend(
           Q.or(
-            Q.where("invoice_number", Q.like(`%${sanitized}%`)),
-            Q.where("payment_method", Q.like(`%${sanitized}%`)),
-            Q.where("status", Q.like(`%${sanitized}%`))
+            Q.where('invoice_number', Q.like(`%${sanitized}%`)),
+            Q.where('payment_method', Q.like(`%${sanitized}%`)),
+            Q.where('status', Q.like(`%${sanitized}%`))
           )
         );
 
@@ -104,13 +101,11 @@ export function useGetOrders(searchQuery?: string) {
 
 export function useGetOrderItems(orderId?: string) {
   return useQuery<DBOrderItem[]>({
-    queryKey: ["order_items", orderId],
+    queryKey: ['order_items', orderId],
     enabled: !!orderId,
     queryFn: async () => {
       if (!orderId) return [];
-      const query = database
-        .get("order_items")
-        .query(Q.where("order_id", orderId));
+      const query = database.get('order_items').query(Q.where('order_id', orderId));
 
       const dbOrderItems = await query.fetch();
       return dbOrderItems.map((oi: any) => ({
@@ -158,19 +153,19 @@ export function useCreateOrder() {
         cart,
       } = params;
 
-      const cashierName = employeeName || "Cashier";
+      const cashierName = employeeName || 'Cashier';
       const invoiceNum = `INV-${Math.floor(100000 + Math.random() * 900000)} (Staff: ${cashierName})`;
 
       const result = await database.write(async () => {
-        const bizs = await database.get("businesses").query(Q.where("id", businessId)).fetch();
+        const bizs = await database.get('businesses').query(Q.where('id', businessId)).fetch();
         const dbBiz = bizs[0];
-        if (!dbBiz) throw new Error("Business record not found");
+        if (!dbBiz) throw new Error('Business record not found');
 
-        const newOrder = await database.get("orders").create((ord: any) => {
+        const newOrder = await database.get('orders').create((ord: any) => {
           ord.business.set(dbBiz);
           ord.invoiceNumber = invoiceNum;
           ord.totalAmount = totalAmount;
-          ord.status = "paid";
+          ord.status = 'paid';
           ord.paymentMethod = paymentMethod;
           ord.bankName = bankName;
           ord.cardLastFour = cardLastFour;
@@ -181,17 +176,17 @@ export function useCreateOrder() {
         });
 
         for (const item of cart) {
-          const dbProducts = await database.get("products").query(
-            Q.where("name", item.name),
-            Q.where("business_id", businessId)
-          ).fetch();
+          const dbProducts = await database
+            .get('products')
+            .query(Q.where('name', item.name), Q.where('business_id', businessId))
+            .fetch();
           let matchedProduct = null;
 
           if (dbProducts.length > 0) {
             matchedProduct = dbProducts[0];
           }
 
-          const newOrderItem = await database.get("order_items").create((oi: any) => {
+          const newOrderItem = await database.get('order_items').create((oi: any) => {
             oi.order.set(newOrder);
             if (matchedProduct) {
               oi.product.set(matchedProduct);
@@ -202,11 +197,11 @@ export function useCreateOrder() {
           });
 
           if (matchedProduct) {
-            await database.get("inventory_logs").create((log: any) => {
+            await database.get('inventory_logs').create((log: any) => {
               log.product.set(matchedProduct);
-              log.type = "out";
+              log.type = 'out';
               log.quantity = item.quantity;
-              log.reason = `Order Sale ${invoiceNum.split(" (")[0]}`;
+              log.reason = `Order Sale ${invoiceNum.split(' (')[0]}`;
             });
           }
         }
@@ -217,9 +212,9 @@ export function useCreateOrder() {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["insights"] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['insights'] });
       syncDatabase(); // Trigger real-time background replication
     },
   });
@@ -231,16 +226,16 @@ export function useVoidOrder() {
   return useMutation({
     mutationFn: async (params: { orderId: string; invoiceNumber: string }) => {
       const { orderId, invoiceNumber } = params;
-      const orderRecord = (await database.get("orders").find(orderId)) as any;
-      const dbItems = await database.get("order_items").query(Q.where("order_id", orderId)).fetch();
+      const orderRecord = (await database.get('orders').find(orderId)) as any;
+      const dbItems = await database.get('order_items').query(Q.where('order_id', orderId)).fetch();
 
       await database.write(async () => {
         const businessId = orderRecord.business.id;
         for (const item of dbItems as any[]) {
-          const matchedProducts = await database.get("products").query(
-            Q.where("name", item.name),
-            Q.where("business_id", businessId)
-          ).fetch();
+          const matchedProducts = await database
+            .get('products')
+            .query(Q.where('name', item.name), Q.where('business_id', businessId))
+            .fetch();
           if (matchedProducts.length > 0) {
             const product: any = matchedProducts[0];
             const currentStock = product.stockCount;
@@ -250,9 +245,9 @@ export function useVoidOrder() {
               p.stockCount = updatedStock;
             });
 
-            await database.get("inventory_logs").create((log: any) => {
+            await database.get('inventory_logs').create((log: any) => {
               log.product.set(product);
-              log.type = "in";
+              log.type = 'in';
               log.quantity = item.quantity;
               log.reason = `Voided Invoice Sale ${invoiceNumber}`;
             });
@@ -260,59 +255,58 @@ export function useVoidOrder() {
         }
 
         await orderRecord.update((ord: any) => {
-          ord.status = "voided";
+          ord.status = 'voided';
         });
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["insights"] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['insights'] });
       syncDatabase(); // Trigger real-time background replication
     },
   });
 }
 
 export function useGetPeriodOrders(
-  period: "daily" | "monthly" | "yearly" | "custom",
+  period: 'daily' | 'monthly' | 'yearly' | 'custom',
   startDate: Date | null,
-  endDate: Date | null,
+  endDate: Date | null
 ) {
   const activeBiz = useBusinessStore((s) => s.activeBusiness);
   const PAGE_SIZE = 20;
 
   const result = useInfiniteQuery<DBOrder[]>({
-    queryKey: ["period-orders", activeBiz?.id, period, startDate, endDate],
+    queryKey: ['period-orders', activeBiz?.id, period, startDate, endDate],
     queryFn: async ({ pageParam = 0 }) => {
-      if (!activeBiz || activeBiz.id === "0") return [];
+      if (!activeBiz || activeBiz.id === '0') return [];
 
       const offset = (pageParam as number) * PAGE_SIZE;
-      let query = database.get("orders").query(
-        Q.where("business_id", activeBiz.id),
-        Q.where("status", "paid")
-      );
+      let query = database
+        .get('orders')
+        .query(Q.where('business_id', activeBiz.id), Q.where('status', 'paid'));
 
       const today = new Date();
       let startTs = 0;
       let endTs = Date.now();
 
-      if (period === "daily") {
+      if (period === 'daily') {
         startTs = new Date().setHours(0, 0, 0, 0);
         endTs = new Date().setHours(23, 59, 59, 999);
-      } else if (period === "monthly") {
+      } else if (period === 'monthly') {
         startTs = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
         endTs = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-      } else if (period === "yearly") {
+      } else if (period === 'yearly') {
         startTs = new Date(today.getFullYear(), 0, 1).getTime();
         endTs = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
-      } else if (period === "custom" && startDate && endDate) {
+      } else if (period === 'custom' && startDate && endDate) {
         startTs = new Date(startDate).getTime();
         endTs = new Date(endDate).getTime();
       }
 
       query = query.extend(
-        Q.where("created_at", Q.between(startTs, endTs)),
-        Q.sortBy("created_at", Q.desc),
+        Q.where('created_at', Q.between(startTs, endTs)),
+        Q.sortBy('created_at', Q.desc),
         Q.skip(offset),
         Q.take(PAGE_SIZE)
       );

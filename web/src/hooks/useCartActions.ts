@@ -24,10 +24,10 @@ export function useCartActions() {
     if (!activeBusiness || activeBusiness.id === '0') return;
 
     try {
-      const dbProducts = await database.get("products").query(
-        Q.where("name", name),
-        Q.where("business_id", activeBusiness.id)
-      ).fetch();
+      const dbProducts = await database
+        .get('products')
+        .query(Q.where('name', name), Q.where('business_id', activeBusiness.id))
+        .fetch();
 
       if (dbProducts.length > 0) {
         const product: any = dbProducts[0];
@@ -43,25 +43,29 @@ export function useCartActions() {
         });
 
         storeAddCartItem(name, price, icon, sku, product.stockCount);
-        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ['products'] });
         syncDatabase();
       }
     } catch (err) {
-      console.error("Failed to add cart item:", err);
+      console.error('Failed to add cart item:', err);
     }
   };
 
-  const updateQuantity = async (id: string, delta: number, triggerToast?: (msg: string) => void) => {
+  const updateQuantity = async (
+    id: string,
+    delta: number,
+    triggerToast?: (msg: string) => void
+  ) => {
     if (!activeBusiness || activeBusiness.id === '0') return;
 
     const item = cart.find((c) => c.id === id);
     if (!item) return;
 
     try {
-      const dbProducts = await database.get("products").query(
-        Q.where("name", item.name),
-        Q.where("business_id", activeBusiness.id)
-      ).fetch();
+      const dbProducts = await database
+        .get('products')
+        .query(Q.where('name', item.name), Q.where('business_id', activeBusiness.id))
+        .fetch();
 
       if (dbProducts.length > 0) {
         const product: any = dbProducts[0];
@@ -86,11 +90,11 @@ export function useCartActions() {
         }
 
         storeUpdateQuantity(id, delta);
-        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ['products'] });
         syncDatabase();
       }
     } catch (err) {
-      console.error("Failed to update quantity:", err);
+      console.error('Failed to update quantity:', err);
     }
   };
 
@@ -104,10 +108,10 @@ export function useCartActions() {
       if (restoreStock && cart.length > 0) {
         await database.write(async () => {
           for (const item of cart) {
-            const dbProducts = await database.get("products").query(
-              Q.where("name", item.name),
-              Q.where("business_id", activeBusiness.id)
-            ).fetch();
+            const dbProducts = await database
+              .get('products')
+              .query(Q.where('name', item.name), Q.where('business_id', activeBusiness.id))
+              .fetch();
 
             if (dbProducts.length > 0) {
               const product: any = dbProducts[0];
@@ -117,11 +121,11 @@ export function useCartActions() {
             }
           }
         });
-        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ['products'] });
         syncDatabase();
       }
     } catch (err) {
-      console.error("Failed to clear cart:", err);
+      console.error('Failed to clear cart:', err);
     } finally {
       storeClearCart();
     }
@@ -136,10 +140,10 @@ export function useCartActions() {
     try {
       await database.write(async () => {
         for (const item of itemsToRelease) {
-          const dbProducts = await database.get("products").query(
-            Q.where("name", item.name),
-            Q.where("business_id", bizIdToRestore)
-          ).fetch();
+          const dbProducts = await database
+            .get('products')
+            .query(Q.where('name', item.name), Q.where('business_id', bizIdToRestore))
+            .fetch();
           if (dbProducts.length > 0) {
             const product: any = dbProducts[0];
             await product.update((p: any) => {
@@ -149,10 +153,10 @@ export function useCartActions() {
         }
       });
       storeClearCart();
-      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       syncDatabase();
     } catch (err) {
-      console.error("Release reserved stocks failed:", err);
+      console.error('Release reserved stocks failed:', err);
       storeClearCart();
     }
   };

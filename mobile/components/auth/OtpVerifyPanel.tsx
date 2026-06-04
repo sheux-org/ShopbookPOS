@@ -1,8 +1,8 @@
-import React from "react";
-import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { styles } from "./styles";
-import { TOKENS } from "../../constants/tokens";
+import React from 'react';
+import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { styles } from './styles';
+import { TOKENS } from '../../constants/tokens';
 
 interface OtpVerifyPanelProps {
   phone: string;
@@ -12,7 +12,7 @@ interface OtpVerifyPanelProps {
   setOtpError: (val: boolean) => void;
   isLoading: boolean;
   handleVerifyOtp: (val?: string) => void;
-  setStep: (step: "phone" | "otp" | "register") => void;
+  setStep: (step: 'phone' | 'otp' | 'register') => void;
 }
 
 export function OtpVerifyPanel({
@@ -30,11 +30,7 @@ export function OtpVerifyPanel({
 
   return (
     <View style={styles.card}>
-      <TouchableOpacity
-        style={styles.backBtn}
-        onPress={() => setStep("phone")}
-        activeOpacity={0.7}
-      >
+      <TouchableOpacity style={styles.backBtn} onPress={() => setStep('phone')} activeOpacity={0.7}>
         <Feather name="arrow-left" size={16} color={TOKENS.primary} />
         <Text style={styles.backBtnText}>Change number</Text>
       </TouchableOpacity>
@@ -66,14 +62,14 @@ export function OtpVerifyPanel({
         {/* 5 Premium individual digit slot boxes */}
         <View style={styles.otpSlotsRow}>
           {[0, 1, 2, 3, 4].map((idx) => {
-            const char = otp[idx] || "";
+            const char = otp[idx] || '';
             const isFocused = otp.length === idx;
             return (
               <View
                 key={idx}
                 style={[
                   styles.otpSlotBox,
-                  char !== "" && styles.otpSlotBoxFilled,
+                  char !== '' && styles.otpSlotBoxFilled,
                   isFocused && styles.otpSlotBoxFocused,
                   otpError && styles.otpSlotBoxError,
                 ]}

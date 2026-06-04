@@ -39,7 +39,7 @@ export const StocksTable: React.FC<StocksTableProps> = ({
   const router = useRouter();
 
   return (
-    <div 
+    <div
       style={styles.tablePane}
       className={`stocks-table-pane ${activeTab === 'inventory' ? 'active-pane' : 'hidden-pane'}`}
     >
@@ -66,8 +66,9 @@ export const StocksTable: React.FC<StocksTableProps> = ({
         <table style={styles.table}>
           <thead>
             <tr style={styles.thRow}>
-              <th style={{ ...styles.th, width: '40px' }} />
-              <th style={styles.th}>Product Details</th>
+              <th style={styles.th} colSpan={2}>
+                Product Name
+              </th>
               <th style={styles.th}>Category</th>
               <th style={styles.th}>Quick Code</th>
               <th style={styles.th}>Retail Price</th>
@@ -82,14 +83,18 @@ export const StocksTable: React.FC<StocksTableProps> = ({
               const isOut = p.stockCount <= 0;
               const isLow = p.lowStockAlert && p.stockCount <= p.lowStockAlert;
               return (
-                <tr 
-                  key={p.id} 
-                  style={{ ...styles.tr, cursor: 'pointer' }} 
+                <tr
+                  key={p.id}
+                  style={{ ...styles.tr, cursor: 'pointer' }}
                   className="stocks-table-row"
                   onClick={() => router.push(`/stocks/${p.id}`)}
                 >
                   <td style={styles.td}>
-                    <ProductImage icon={p.icon} size={32} style={{ border: 'none', borderRadius: '6px' }} />
+                    <ProductImage
+                      icon={p.icon}
+                      size={32}
+                      style={{ border: 'none', borderRadius: '6px' }}
+                    />
                   </td>
                   <td style={styles.td}>
                     <div style={{ fontWeight: 'bold', color: 'var(--dark)' }}>{p.name}</div>
@@ -104,17 +109,19 @@ export const StocksTable: React.FC<StocksTableProps> = ({
                   <td style={styles.td}>Rs. {p.price.toLocaleString()}</td>
                   <td style={styles.td}>Rs. {p.costPrice ? p.costPrice.toLocaleString() : '0'}</td>
                   <td style={styles.td}>
-                    <span style={{
-                      ...styles.stockIndicator,
-                      backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
-                      color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
-                    }}>
+                    <span
+                      style={{
+                        ...styles.stockIndicator,
+                        backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
+                        color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
+                      }}
+                    >
                       {p.stockCount} {p.unitType || 'Units'}
                     </span>
                   </td>
                   <td style={styles.td}>{p.lowStockAlert ? `${p.lowStockAlert} Units` : '-'}</td>
                   <td style={{ ...styles.td, textAlign: 'center' }}>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onAdjustStock(p);
@@ -146,28 +153,23 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    padding: '16px',
     overflow: 'hidden',
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    border: '1px solid var(--border)',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.03)',
+    gap: '16px',
   },
   queryBar: {
     display: 'flex',
     gap: '8px',
-    marginBottom: '10px',
     alignItems: 'center',
   },
   searchBox: {
     flex: 1,
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: '10px',
     backgroundColor: '#ffffff',
     border: '1px solid var(--border)',
-    borderRadius: 'var(--radius)',
-    padding: '8px 12px',
+    borderRadius: 'var(--radius-lg)',
+    padding: '10px 14px',
     boxShadow: 'var(--shadow)',
   },
   searchInput: {
@@ -199,13 +201,16 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 2,
   },
   th: {
-    padding: '8px 10px',
+    padding: '10px 10px',
     textAlign: 'left',
-    fontWeight: 'bold',
-    color: 'var(--muted)',
-    fontSize: '10px',
+    fontWeight: '700',
+    color: '#475569',
+    fontSize: '11px',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.05em',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   tr: {
     borderBottom: '1px solid #f3f4f6',
@@ -235,8 +240,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    padding: '8px 14px',
-    borderRadius: 'var(--radius)',
+    padding: '9px 16px',
+    borderRadius: 'var(--radius-lg)',
     border: 'none',
     background: 'var(--primary)',
     color: '#ffffff',

@@ -192,6 +192,13 @@
   font-weight: bold;
   color: var(--primary);
   letter-spacing: 0.5px;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.powered-by-brand:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
 }
 
 .auth-toast {

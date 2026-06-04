@@ -7,12 +7,15 @@ The Web POS terminal implements an offline-first storage model. All query operat
 ## WatermelonDB Configuration
 
 The database architecture is defined and loaded inside:
+
 - **Database Initializer**: [database.ts](../src/db/database.ts)
 - **Database Schema**: [schema.ts](../src/db/schema.ts)
 - **Database Models**: [models.ts](../src/db/models.ts)
 
 ### LokiJS Adapter
+
 For web browsers, WatermelonDB is configured to run on top of a **LokiJS adapter** rather than SQLite. LokiJS stores the database in memory and persists serialized snapshots to IndexedDB.
+
 ```typescript
 const LokiJSAdapter = require('@nozbe/watermelondb/adapters/lokijs').default;
 const adapter = new LokiJSAdapter({
@@ -30,7 +33,9 @@ const adapter = new LokiJSAdapter({
 The schema currently stands at **Version 8** and defines six core tables:
 
 ### 1. `businesses`
+
 Stores branch configuration metadata.
+
 - `id` (string, Primary Key)
 - `name` (string)
 - `business_type` (string) - Category, e.g. Grocery, Salon.
@@ -41,7 +46,9 @@ Stores branch configuration metadata.
 - `logo_uri` (string, optional) - Public CDN link to store logo.
 
 ### 2. `employees`
+
 Staff profiles authorized to operate terminals.
+
 - `id` (string, Primary Key)
 - `business_id` (string, Indexed) - Relationship key.
 - `name` (string)
@@ -50,7 +57,9 @@ Staff profiles authorized to operate terminals.
 - `email` (string, optional)
 
 ### 3. `products`
+
 The items catalog.
+
 - `id` (string, Primary Key)
 - `business_id` (string, Indexed)
 - `name` (string)
@@ -68,7 +77,9 @@ The items catalog.
 - `icon_pending_upload` (boolean, optional) - Track local uploads pending network restructurings.
 
 ### 4. `orders`
+
 Header table summarizing transactions.
+
 - `id` (string, Primary Key)
 - `business_id` (string, Indexed)
 - `invoice_number` (string, Indexed) - Auto-generated receipt identifier.
@@ -83,7 +94,9 @@ Header table summarizing transactions.
 - `tax_value` (number, optional)
 
 ### 5. `order_items`
+
 Individual items added to a specific transaction.
+
 - `id` (string, Primary Key)
 - `order_id` (string, Indexed)
 - `product_id` (string, Indexed, optional)
@@ -92,7 +105,9 @@ Individual items added to a specific transaction.
 - `price` (number) - Retail price of the item at the time of sale.
 
 ### 6. `inventory_logs`
+
 Historical audit trail of all manual and automated stock fluctuations.
+
 - `id` (string, Primary Key)
 - `product_id` (string, Indexed)
 - `type` (string) - Options: `'in'` (restock) | `'out'` (sale, damage, etc.).
@@ -116,6 +131,7 @@ erDiagram
 ```
 
 ### Decorator Usage Examples:
+
 - `@text('column')`: Maps raw database strings.
 - `@field('column')`: Maps raw numbers or booleans.
 - `@date('column')`: Automatically parses epoch integers into JavaScript `Date` objects.
@@ -127,8 +143,10 @@ erDiagram
 ## Database Migrations
 
 WatermelonDB maintains a strict schema migration history inside `src/db/migrations.ts` ([migrations.ts](../src/db/migrations.ts)). When structural changes (new columns/tables) are required:
+
 1. Increment the database version in [schema.ts](../src/db/schema.ts#L4).
 2. Add a `schemaMigration` block mapping modifications to help existing clients seamlessly transition without losing data:
+
 ```typescript
 import { schemaMigrations, addColumns } from '@nozbe/watermelondb/Schema/migrations';
 
@@ -139,9 +157,7 @@ export default schemaMigrations({
       steps: [
         addColumns({
           table: 'products',
-          columns: [
-            { name: 'icon_pending_upload', type: 'boolean', isOptional: true },
-          ],
+          columns: [{ name: 'icon_pending_upload', type: 'boolean', isOptional: true }],
         }),
       ],
     },
@@ -154,5 +170,6 @@ export default schemaMigrations({
 ## Initial Catalog Seeding
 
 When a store registers for the first time, the local database catalog is seeded with standard products (pizzas, salads, wraps) to provide placeholder catalog data for demonstration:
+
 - **Seed Trigger**: Triggered inside [businessStore.ts](../src/stores/businessStore.ts#L173-L194) upon the very first store registration if the local products table is empty.
 - **Seeded Items List**: Configured in [seedProducts.ts](../src/utils/seedProducts.ts), mapping item categories, pricing, unit types, cost prices, and quick codes.

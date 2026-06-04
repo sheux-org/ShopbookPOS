@@ -1,6 +1,6 @@
-import React from "react";
-import { Stack } from "expo-router";
-import { PosScreen } from "../../components/screens/PosScreen";
+import React from 'react';
+import { Stack } from 'expo-router';
+import { PosScreen } from '../../components/screens/PosScreen';
 
 export default function PosRoute() {
   return (

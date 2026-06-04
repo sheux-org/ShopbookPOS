@@ -1,7 +1,20 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, Smartphone, Laptop, Monitor, Trash2, Clock, Battery, MapPin, Bell, Copy, CheckCircle, RefreshCw } from 'lucide-react';
+import {
+  X,
+  Smartphone,
+  Laptop,
+  Monitor,
+  Trash2,
+  Clock,
+  Battery,
+  MapPin,
+  Bell,
+  Copy,
+  CheckCircle,
+  RefreshCw,
+} from 'lucide-react';
 import { supabase } from '../../services/sync';
 import { DEVICE_ID_KEY } from '../../hooks/useActiveDeviceTracker';
 
@@ -101,7 +114,9 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
   }, [isOpen, activeBusinessId, fetchDevices]);
 
   const handleTerminateSession = async (targetDeviceId: string, name: string) => {
-    if (!confirm(`Are you sure you want to remotely sign out "${name}" from this device session?`)) {
+    if (
+      !confirm(`Are you sure you want to remotely sign out "${name}" from this device session?`)
+    ) {
       return;
     }
 
@@ -150,7 +165,12 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
 
   const getDeviceIcon = (model: string) => {
     const lower = model.toLowerCase();
-    if (lower.includes('mac') || lower.includes('pc') || lower.includes('window') || lower.includes('linux')) {
+    if (
+      lower.includes('mac') ||
+      lower.includes('pc') ||
+      lower.includes('window') ||
+      lower.includes('linux')
+    ) {
       return <Monitor size={18} />;
     }
     if (lower.includes('ipad') || lower.includes('tablet')) {
@@ -167,7 +187,7 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h3>Active Devices & Sessions</h3>
-            <button 
+            <button
               onClick={() => {
                 setLoading(true);
                 fetchDevices();
@@ -178,122 +198,213 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
               <RefreshCw size={12} className={loading ? 'spin-anim' : ''} />
             </button>
           </div>
-          <button onClick={onClose} className="modal-close-btn"><X size={16} /></button>
+          <button onClick={onClose} className="modal-close-btn">
+            <X size={16} />
+          </button>
         </div>
 
         {toastMsg && (
-          <div className="profile-toast" style={{ position: 'absolute', top: '70px', zIndex: 10000 }}>
+          <div
+            className="profile-toast"
+            style={{ position: 'absolute', top: '70px', zIndex: 10000 }}
+          >
             <CheckCircle size={16} color="#FFFFFF" />
             <span>{toastMsg}</span>
           </div>
         )}
 
-        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          <div className="devices-info-banner">
-            Monitor all active terminals logged into your business. You can remotely revoke access to force logout a device.
+        <div className="modal-body" style={{ padding: '24px' }}>
+          <div className="devices-info-banner" style={{ margin: 0 }}>
+            Monitor all active terminals logged into your business. You can remotely revoke access
+            to force logout a device.
           </div>
 
-          {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', gap: '12px' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                border: '3px solid #e5e7eb',
-                borderTopColor: '#2563eb',
-                borderRadius: '50%',
-                animation: 'spin 0.8s linear infinite'
-              }} />
-              <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 500 }}>Loading active terminals...</span>
-            </div>
-          ) : devices.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', color: 'var(--muted)' }}>
-              <Smartphone size={40} style={{ marginBottom: '10px' }} />
-              <span style={{ fontSize: '14px', fontWeight: 600 }}>No Active Sessions Found</span>
-            </div>
-          ) : (
-            <div className="devices-list-wrapper">
-              {devices.map((device) => {
-                const isCurrent = device.device_id === currentDeviceId;
-                return (
-                  <div key={device.id} className={`device-item-card ${isCurrent ? 'current' : ''}`}>
-                    <div className="device-item-icon-box">
-                      {getDeviceIcon(device.device_model)}
-                    </div>
-                    <div className="device-item-details">
-                      <div className="device-item-header">
-                        <span className="device-employee-name">{device.employee_name}</span>
-                        <span className={`role-badge ${getRoleBadgeClass(device.role)}`}>
-                          {device.role.toUpperCase()}
-                        </span>
-                        {isCurrent && (
-                          <span className="current-device-badge">This Device</span>
-                        )}
+          <div className="devices-scroller">
+            {loading ? (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '200px',
+                  gap: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    border: '3px solid #ede9fe',
+                    borderTopColor: '#7c3aed',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
+                <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 500 }}>
+                  Loading active terminals...
+                </span>
+              </div>
+            ) : devices.length === 0 ? (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '240px',
+                  color: 'var(--muted)',
+                  textAlign: 'center',
+                  padding: '24px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: '#f5f3ff',
+                    color: '#7c3aed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '16px',
+                    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.08)',
+                  }}
+                >
+                  <Smartphone size={28} />
+                </div>
+                <h4
+                  style={{
+                    margin: '0 0 6px 0',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    color: 'var(--dark)',
+                  }}
+                >
+                  No Active Sessions
+                </h4>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '12.5px',
+                    color: 'var(--muted)',
+                    maxWidth: '280px',
+                    lineHeight: '1.5',
+                  }}
+                >
+                  There are no active devices or browser terminals logged into this business
+                  account.
+                </p>
+              </div>
+            ) : (
+              <div className="devices-list-wrapper">
+                {devices.map((device) => {
+                  const isCurrent = device.device_id === currentDeviceId;
+                  const isOnline = (() => {
+                    if (!device.is_online) return false;
+                    if (!device.last_active_at) return false;
+                    const lastActive = new Date(device.last_active_at);
+                    const diffMs = Date.now() - lastActive.getTime();
+                    return diffMs < 5 * 60 * 1000; // 5 minutes threshold
+                  })();
+
+                  return (
+                    <div
+                      key={device.id}
+                      className={`device-item-card ${isCurrent ? 'current' : ''}`}
+                    >
+                      <div className="device-item-icon-box">
+                        {getDeviceIcon(device.device_model)}
                       </div>
-                      
-                      <div className="device-model-name">{device.device_model}</div>
-
-                      <div className="device-meta-row">
-                        <span className="device-meta-item">
-                          <span className={`device-status-indicator ${device.is_online ? 'online' : 'offline'}`} />
-                          {device.is_online ? 'Online' : 'Offline'}
-                        </span>
-
-                        {device.battery_level !== null && (
-                          <span className="device-meta-item">
-                            <Battery size={12} style={{ marginRight: '2px' }} />
-                            {device.battery_level}%
+                      <div className="device-item-details">
+                        <div className="device-item-header">
+                          <span className="device-employee-name">{device.employee_name}</span>
+                          <span className={`role-badge ${getRoleBadgeClass(device.role)}`}>
+                            {device.role.toUpperCase()}
                           </span>
+                          {isCurrent && <span className="current-device-badge">This Device</span>}
+                        </div>
+
+                        <div className="device-model-name">{device.device_model}</div>
+
+                        <div className="device-meta-row">
+                          <span className="device-meta-item">
+                            <span
+                              className={`device-status-indicator ${isOnline ? 'online' : 'offline'}`}
+                            />
+                            {isOnline ? 'Online' : 'Offline'}
+                          </span>
+
+                          {isOnline &&
+                            device.battery_level !== null &&
+                            device.battery_level >= 0 && (
+                              <span className="device-meta-item">
+                                <Battery size={12} style={{ marginRight: '2px' }} />
+                                {device.battery_level}%
+                              </span>
+                            )}
+
+                          <span className="device-meta-item">
+                            <Clock size={12} style={{ marginRight: '2px' }} />
+                            {formatLastActive(device.last_active_at)}
+                          </span>
+                        </div>
+
+                        {device.location_name && (
+                          <div className="device-location-row">
+                            <MapPin size={12} style={{ marginRight: '2px', flexShrink: 0 }} />
+                            <span
+                              style={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {device.location_name}
+                            </span>
+                          </div>
                         )}
 
-                        <span className="device-meta-item">
-                          <Clock size={12} style={{ marginRight: '2px' }} />
-                          {formatLastActive(device.last_active_at)}
-                        </span>
+                        {device.push_token && (
+                          <div className="device-token-row">
+                            <Bell size={11} style={{ marginRight: '2px', flexShrink: 0 }} />
+                            <span className="device-token-text">{device.push_token}</span>
+                            <button
+                              className="device-copy-token-btn"
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(device.push_token || '');
+                                  triggerToast('Push token copied! 📋');
+                                } catch {
+                                  // fallback
+                                }
+                              }}
+                              title="Copy Push Token"
+                            >
+                              <Copy size={10} />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
-                      {device.location_name && (
-                        <div className="device-location-row">
-                          <MapPin size={12} style={{ marginRight: '2px', flexShrink: 0 }} />
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{device.location_name}</span>
-                        </div>
-                      )}
-
-                      {device.push_token && (
-                        <div className="device-token-row">
-                          <Bell size={11} style={{ marginRight: '2px', flexShrink: 0 }} />
-                          <span className="device-token-text">{device.push_token}</span>
-                          <button 
-                            className="device-copy-token-btn"
-                            onClick={async () => {
-                              try {
-                                await navigator.clipboard.writeText(device.push_token || '');
-                                triggerToast('Push token copied! 📋');
-                              } catch {
-                                // fallback
-                              }
-                            }}
-                            title="Copy Push Token"
-                          >
-                            <Copy size={10} />
-                          </button>
-                        </div>
+                      {!isCurrent && (
+                        <button
+                          className="device-terminate-btn"
+                          onClick={() =>
+                            handleTerminateSession(device.device_id, device.employee_name)
+                          }
+                          title="Revoke session"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       )}
                     </div>
-
-                    {!isCurrent && (
-                      <button 
-                        className="device-terminate-btn"
-                        onClick={() => handleTerminateSession(device.device_id, device.employee_name)}
-                        title="Revoke session"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

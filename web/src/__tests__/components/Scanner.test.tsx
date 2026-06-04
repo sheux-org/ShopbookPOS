@@ -216,7 +216,10 @@ describe('Scanner & useHardwareScanner Component', () => {
     renderHook(() => useHardwareScanner(mockOnScan));
 
     let fakeTime = 3000000;
-    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => { fakeTime += 5; return fakeTime; });
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => {
+      fakeTime += 5;
+      return fakeTime;
+    });
 
     fireEvent.keyDown(window, { key: 'Shift' });
     fireEvent.keyDown(window, { key: 'Control' });
@@ -233,7 +236,10 @@ describe('Scanner & useHardwareScanner Component', () => {
     renderHook(() => useHardwareScanner(mockOnScan));
 
     let fakeTime = 4000000;
-    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => { fakeTime += 5; return fakeTime; });
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => {
+      fakeTime += 5;
+      return fakeTime;
+    });
 
     fireEvent.keyDown(window, { key: 'A' });
     fireEvent.keyDown(window, { key: 'B' });
@@ -248,7 +254,10 @@ describe('Scanner & useHardwareScanner Component', () => {
     renderHook(() => useHardwareScanner(mockOnScan));
 
     let fakeTime = 5000000;
-    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => { fakeTime += 200; return fakeTime; });
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => {
+      fakeTime += 200;
+      return fakeTime;
+    });
 
     fireEvent.keyDown(window, { key: 'Enter' });
     expect(mockOnScan).not.toHaveBeenCalled();

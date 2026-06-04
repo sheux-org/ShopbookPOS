@@ -16,14 +16,20 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
   useEffect(() => {
     // Start camera stream on mount
     async function startCamera() {
-      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (
+        typeof navigator === 'undefined' ||
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+      ) {
         setHasPermission(false);
-        setErrorMsg("Camera access is not supported or blocked in this browser context. Please use a secure connection (HTTPS) or localhost.");
+        setErrorMsg(
+          'Camera access is not supported or blocked in this browser context. Please use a secure connection (HTTPS) or localhost.'
+        );
         return;
       }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
+          video: { facingMode: 'environment' },
         });
         streamRef.current = stream;
         if (videoRef.current) {
@@ -32,9 +38,11 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
         setHasPermission(true);
         startScanning();
       } catch (err: any) {
-        console.error("Camera access error:", err);
+        console.error('Camera access error:', err);
         setHasPermission(false);
-        setErrorMsg("Webcam permission denied or camera not found. Please ensure camera access is enabled.");
+        setErrorMsg(
+          'Webcam permission denied or camera not found. Please ensure camera access is enabled.'
+        );
       }
     }
 
@@ -43,7 +51,7 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
     return () => {
       // Clean up stream & intervals on unmount
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
       if (scanIntervalRef.current) {
         clearInterval(scanIntervalRef.current);
@@ -54,10 +62,10 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
   const startScanning = () => {
     // Check for native BarcodeDetector support
     const hasNativeDetector = typeof window !== 'undefined' && 'BarcodeDetector' in window;
-    
+
     if (hasNativeDetector) {
       const barcodeDetector = new (window as any).BarcodeDetector({
-        formats: ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39']
+        formats: ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'],
       });
 
       scanIntervalRef.current = setInterval(async () => {
@@ -78,7 +86,9 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
       // Fallback: draw video frame to temporary canvas and parse barcode
       // Since canvas scanning requires a full JS engine, we simulate with a friendly alert
       // or guide to use hardware keyboard scanners which are standard.
-      console.warn("Native BarcodeDetector API is not supported in this browser. Running mockup scanning feed.");
+      console.warn(
+        'Native BarcodeDetector API is not supported in this browser. Running mockup scanning feed.'
+      );
     }
   };
 
@@ -97,13 +107,7 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
 
         <div style={styles.viewfinder}>
           {hasPermission === true ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              style={styles.video}
-            />
+            <video ref={videoRef} autoPlay playsInline muted style={styles.video} />
           ) : hasPermission === false ? (
             <div style={styles.errorBox}>
               <ShieldAlert size={36} color="var(--warning)" />
@@ -127,11 +131,10 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
         </div>
 
         <div style={styles.footer}>
-          <p style={styles.footerText}>
-            Align a product barcode or QR code inside the viewport.
-          </p>
+          <p style={styles.footerText}>Align a product barcode or QR code inside the viewport.</p>
           <span style={styles.hardwareTip}>
-            Tip: Physical USB scanners are supported directly on the invoice screen without opening the camera.
+            Tip: Physical USB scanners are supported directly on the invoice screen without opening
+            the camera.
           </span>
         </div>
       </div>

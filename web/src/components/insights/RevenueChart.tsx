@@ -6,11 +6,7 @@ interface RevenueChartProps {
   maxChartVal: number;
 }
 
-export default function RevenueChart({
-  chartData,
-  chartTitle,
-  maxChartVal,
-}: RevenueChartProps) {
+export default function RevenueChart({ chartData, chartTitle, maxChartVal }: RevenueChartProps) {
   return (
     <div className="chart-card">
       <h3 className="chart-title">{chartTitle}</h3>
@@ -20,13 +16,8 @@ export default function RevenueChart({
             const percent = ((data.value || 0) / maxChartVal) * 100;
             return (
               <div key={idx} className="chart-col">
-                <div className="chart-tooltip">
-                  Rs. {data.value.toLocaleString()}
-                </div>
-                <div 
-                  className="chart-bar" 
-                  style={{ height: `${Math.max(4, percent)}%` }} 
-                />
+                <div className="chart-tooltip">Rs. {data.value.toLocaleString()}</div>
+                <div className="chart-bar" style={{ height: `${Math.max(4, percent)}%` }} />
                 <span className="chart-day-text">{data.label}</span>
               </div>
             );

@@ -1,9 +1,9 @@
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { SearchInput } from "../common/SearchInput";
-import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
-import React, { useState, useRef } from "react";
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { SearchInput } from '../common/SearchInput';
+import { BarcodeScannerModal } from '../common/BarcodeScannerModal';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import React, { useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,29 +16,26 @@ import {
   View,
   Animated,
   Pressable,
-} from "react-native";
-import { FlashList } from "@shopify/flash-list";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { hapticFeedback } from "../../utils/haptics";
-import { TOKENS } from "../../constants/tokens";
-import { usePermission } from "../../hooks/usePermissionHandler";
-import { useSettingsStore } from "../../stores/useSettingsStore";
-import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
+} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { hapticFeedback } from '../../utils/haptics';
+import { TOKENS } from '../../constants/tokens';
+import { usePermission } from '../../hooks/usePermissionHandler';
+import { useSettingsStore } from '../../stores/useSettingsStore';
+import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 import {
   useDeleteProduct,
   useProducts,
   useUpdateProduct,
   useFindProductByBarcode,
-} from "../../hooks/useProducts";
-import {
-  deleteUploadThingFile,
-  uploadToUploadThing,
-} from "../../services/uploadQueue";
-import { ProductImage } from "../common/ProductImage";
-import { ScreenWrapper } from "../common/ScreenWrapper";
+} from '../../hooks/useProducts';
+import { deleteUploadThingFile, uploadToUploadThing } from '../../services/uploadQueue';
+import { ProductImage } from '../common/ProductImage';
+import { ScreenWrapper } from '../common/ScreenWrapper';
 
-const CATEGORIES_LIST = ["grocery", "dairy", "drinks", "snacks", "household"];
-const UNIT_TYPES = ["Pieces", "kg", "Liters", "Packets"];
+const CATEGORIES_LIST = ['grocery', 'dairy', 'drinks', 'snacks', 'household'];
+const UNIT_TYPES = ['Pieces', 'kg', 'Liters', 'Packets'];
 
 export const ManageItemsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -48,7 +45,7 @@ export const ManageItemsScreen: React.FC = () => {
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   // Search input state
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Barcode scanner states
@@ -71,10 +68,7 @@ export const ManageItemsScreen: React.FC = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useProducts(
-    undefined,
-    searchQuery,
-  );
+  } = useProducts(undefined, searchQuery);
 
   // Mutators
   const updateProductMutation = useUpdateProduct();
@@ -86,21 +80,21 @@ export const ManageItemsScreen: React.FC = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
 
   // Edit form state
-  const [editName, setEditName] = useState("");
-  const [editCategory, setEditCategory] = useState("grocery");
-  const [editUnitType, setEditUnitType] = useState("Pieces");
-  const [editCostPrice, setEditCostPrice] = useState("");
-  const [editSalesPrice, setEditSalesPrice] = useState("");
-  const [editStockCount, setEditStockCount] = useState("");
-  const [editLowStock, setEditLowStock] = useState("");
-  const [editQuickCode, setEditQuickCode] = useState("");
-  const [editBarcode, setEditBarcode] = useState("");
-  const [editImage, setEditImage] = useState("");
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('grocery');
+  const [editUnitType, setEditUnitType] = useState('Pieces');
+  const [editCostPrice, setEditCostPrice] = useState('');
+  const [editSalesPrice, setEditSalesPrice] = useState('');
+  const [editStockCount, setEditStockCount] = useState('');
+  const [editLowStock, setEditLowStock] = useState('');
+  const [editQuickCode, setEditQuickCode] = useState('');
+  const [editBarcode, setEditBarcode] = useState('');
+  const [editImage, setEditImage] = useState('');
   const [editImageUploading, setEditImageUploading] = useState(false);
 
   const handleProductCardPress = (prod: any) => {
     router.push({
-      pathname: "/stocks/item-details",
+      pathname: '/stocks/item-details',
       params: { id: prod.id },
     });
   };
@@ -134,15 +128,15 @@ export const ManageItemsScreen: React.FC = () => {
   const handleEditPress = (prod: any) => {
     setEditingProduct(prod);
     setEditName(prod.name);
-    setEditCategory(prod.category || "grocery");
-    setEditUnitType(prod.unitType || "Pieces");
-    setEditCostPrice(prod.costPrice ? prod.costPrice.toString() : "");
-    setEditSalesPrice(prod.price ? prod.price.toString() : "");
-    setEditStockCount(prod.stockCount ? prod.stockCount.toString() : "0");
-    setEditLowStock(prod.lowStockAlert ? prod.lowStockAlert.toString() : "5");
-    setEditQuickCode(prod.quickCode || "");
-    setEditBarcode(prod.barcode || "");
-    setEditImage(prod.icon || "");
+    setEditCategory(prod.category || 'grocery');
+    setEditUnitType(prod.unitType || 'Pieces');
+    setEditCostPrice(prod.costPrice ? prod.costPrice.toString() : '');
+    setEditSalesPrice(prod.price ? prod.price.toString() : '');
+    setEditStockCount(prod.stockCount ? prod.stockCount.toString() : '0');
+    setEditLowStock(prod.lowStockAlert ? prod.lowStockAlert.toString() : '5');
+    setEditQuickCode(prod.quickCode || '');
+    setEditBarcode(prod.barcode || '');
+    setEditImage(prod.icon || '');
     setEditModalVisible(true);
   };
 
@@ -158,37 +152,37 @@ export const ManageItemsScreen: React.FC = () => {
         triggerToast(`No item found for barcode: ${barcode} 🔍`);
       }
     } catch (error) {
-      console.error("Failed to select product by barcode:", error);
-      triggerToast("Error finding product ❌");
+      console.error('Failed to select product by barcode:', error);
+      triggerToast('Error finding product ❌');
     }
   };
 
   const handleDeletePress = (prod: any) => {
     Alert.alert(
-      "Delete Product",
+      'Delete Product',
       `Are you sure you want to permanently delete "${prod.name}" from your stocks? This action cannot be undone.`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Delete",
-          style: "destructive",
+          text: 'Delete',
+          style: 'destructive',
           onPress: () => {
             deleteProductMutation.mutate(prod.id, {
               onSuccess: () => {
-                triggerToast("Product deleted successfully! 🗑️");
+                triggerToast('Product deleted successfully! 🗑️');
               },
               onError: (err) => {
-                Alert.alert("Error", "Failed to delete product.");
+                Alert.alert('Error', 'Failed to delete product.');
               },
             });
           },
         },
-      ],
+      ]
     );
   };
 
   // Image handling inside editing modal
-  const handlePickImage = async (source: "camera" | "gallery") => {
+  const handlePickImage = async (source: 'camera' | 'gallery') => {
     closeImgSheet();
 
     // Small delay to let the sheet close before opening picker
@@ -196,15 +190,15 @@ export const ManageItemsScreen: React.FC = () => {
 
     let localUri: string | null = null;
 
-    if (source === "camera") {
+    if (source === 'camera') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission needed", "Camera permission is required.");
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Camera permission is required.');
         return;
       }
       try {
         const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ["images"],
+          mediaTypes: ['images'],
           allowsEditing: true,
           aspect: [1, 1] as [number, number],
           quality: 0.85,
@@ -213,24 +207,17 @@ export const ManageItemsScreen: React.FC = () => {
           localUri = result.assets[0].uri;
         }
       } catch {
-        Alert.alert(
-          "Camera Unavailable",
-          "Camera is not available. Please use Gallery.",
-        );
+        Alert.alert('Camera Unavailable', 'Camera is not available. Please use Gallery.');
         return;
       }
     } else {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Photo library permission is required.",
-        );
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Photo library permission is required.');
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1] as [number, number],
         quality: 0.85,
@@ -244,43 +231,43 @@ export const ManageItemsScreen: React.FC = () => {
 
     setEditImage(localUri);
     setEditImageUploading(true);
-    triggerToast("Uploading image... ⏳");
+    triggerToast('Uploading image... ⏳');
 
     try {
       const remoteUrl = await uploadToUploadThing(localUri);
       if (remoteUrl) {
         setEditImage(remoteUrl);
-        triggerToast("Image uploaded! ✅");
+        triggerToast('Image uploaded! ✅');
       } else {
-        triggerToast("Upload failed — saved local preview");
+        triggerToast('Upload failed — saved local preview');
       }
     } catch {
-      triggerToast("Upload error — saved local preview");
+      triggerToast('Upload error — saved local preview');
     } finally {
       setEditImageUploading(false);
     }
   };
 
   const handleRemoveEditImage = async () => {
-    if (editImage.startsWith("http")) {
+    if (editImage.startsWith('http')) {
       await deleteUploadThingFile(editImage);
     }
-    setEditImage("");
+    setEditImage('');
   };
 
   const handleUpdateProduct = () => {
     if (!editName || !editSalesPrice || !editStockCount) {
       Alert.alert(
-        "Required Fields Missing",
-        "Please enter product name, selling price, and stock quantity.",
+        'Required Fields Missing',
+        'Please enter product name, selling price, and stock quantity.'
       );
       return;
     }
 
     if (!editQuickCode && !editBarcode) {
       Alert.alert(
-        "Identification Required",
-        "Please enter at least either a Quick Code or a Barcode.",
+        'Identification Required',
+        'Please enter at least either a Quick Code or a Barcode.'
       );
       return;
     }
@@ -290,8 +277,8 @@ export const ManageItemsScreen: React.FC = () => {
     const stockCountNum = parseInt(editStockCount, 10);
     if (isNaN(priceNum) || isNaN(stockCountNum)) {
       Alert.alert(
-        "Invalid input type",
-        "Please check that price and stock fields contain valid numbers.",
+        'Invalid input type',
+        'Please check that price and stock fields contain valid numbers.'
       );
       return;
     }
@@ -312,14 +299,14 @@ export const ManageItemsScreen: React.FC = () => {
       },
       {
         onSuccess: () => {
-          triggerToast("Product updated! ✅");
+          triggerToast('Product updated! ✅');
           setEditModalVisible(false);
           setEditingProduct(null);
         },
         onError: () => {
-          Alert.alert("Error", "Failed to update product details.");
+          Alert.alert('Error', 'Failed to update product details.');
         },
-      },
+      }
     );
   };
 
@@ -338,16 +325,14 @@ export const ManageItemsScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/stocks")}
+          onPress={() => router.push('/stocks')}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitle}>Manage Items</Text>
-          <Text style={styles.headerSubtitle}>
-            {productsList.length} items registered
-          </Text>
+          <Text style={styles.headerSubtitle}>{productsList.length} items registered</Text>
         </View>
       </View>
 
@@ -386,22 +371,19 @@ export const ManageItemsScreen: React.FC = () => {
           onEndReachedThreshold={0.3}
           ListFooterComponent={
             isFetchingNextPage ? (
-              <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
+              <ActivityIndicator
+                size="small"
+                color={TOKENS.primary}
+                style={{ marginVertical: 16 }}
+              />
             ) : null
           }
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + 20 },
-          ]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
           renderItem={({ item }) => {
-            const isScannedMatch =
-              scannedBarcode && item.barcode === scannedBarcode;
+            const isScannedMatch = scannedBarcode && item.barcode === scannedBarcode;
             return (
               <View
-                style={[
-                  styles.productItemCard,
-                  isScannedMatch && styles.productItemCardActive,
-                ]}
+                style={[styles.productItemCard, isScannedMatch && styles.productItemCardActive]}
               >
                 <TouchableOpacity
                   style={styles.productCardBody}
@@ -418,15 +400,12 @@ export const ManageItemsScreen: React.FC = () => {
                   <View style={styles.productMetaCol}>
                     <View
                       style={{
-                        flexDirection: "row",
-                        alignItems: "center",
+                        flexDirection: 'row',
+                        alignItems: 'center',
                         gap: 6,
                       }}
                     >
-                      <Text
-                        style={[styles.productName, { flexShrink: 1 }]}
-                        numberOfLines={1}
-                      >
+                      <Text style={[styles.productName, { flexShrink: 1 }]} numberOfLines={1}>
                         {item.name}
                       </Text>
                       {isScannedMatch && (
@@ -438,47 +417,32 @@ export const ManageItemsScreen: React.FC = () => {
                     </View>
 
                     <View style={styles.badgesRow}>
-                      <Text style={styles.productPriceText}>
-                        Rs. {item.price.toLocaleString()}
-                      </Text>
+                      <Text style={styles.productPriceText}>Rs. {item.price.toLocaleString()}</Text>
                       <View style={styles.dotDivider} />
                       <Text
                         style={[
                           styles.productStockText,
-                          item.stockType === "low" && styles.stockLowText,
-                          item.stockType === "out" && styles.stockOutText,
+                          item.stockType === 'low' && styles.stockLowText,
+                          item.stockType === 'out' && styles.stockOutText,
                         ]}
                       >
-                        {item.stockCount} {item.unitType || "pcs"}
+                        {item.stockCount} {item.unitType || 'pcs'}
                       </Text>
                     </View>
 
                     <View style={styles.codesRow}>
                       {item.quickCode ? (
                         <View style={styles.codePill}>
-                          <Text style={styles.codeText}>
-                            Code: {item.quickCode}
-                          </Text>
+                          <Text style={styles.codeText}>Code: {item.quickCode}</Text>
                         </View>
                       ) : null}
                       {item.barcode ? (
-                        <View
-                          style={[
-                            styles.codePill,
-                            { backgroundColor: "#F1F5F9" },
-                          ]}
-                        >
-                          <Text style={styles.codeText}>
-                            Barcode: {item.barcode}
-                          </Text>
+                        <View style={[styles.codePill, { backgroundColor: '#F1F5F9' }]}>
+                          <Text style={styles.codeText}>Barcode: {item.barcode}</Text>
                         </View>
                       ) : null}
-                      <View
-                        style={[styles.codePill, { backgroundColor: "#EFF6FF" }]}
-                      >
-                        <Text
-                          style={[styles.codeText, { color: TOKENS.primary }]}
-                        >
+                      <View style={[styles.codePill, { backgroundColor: '#EFF6FF' }]}>
+                        <Text style={[styles.codeText, { color: TOKENS.primary }]}>
                           {item.category.toUpperCase()}
                         </Text>
                       </View>
@@ -514,8 +478,8 @@ export const ManageItemsScreen: React.FC = () => {
               <Feather name="box" size={48} color={TOKENS.muted} />
               <Text style={styles.emptyTitle}>No items found</Text>
               <Text style={styles.emptySub}>
-                There are no products in stock matching your search query. Add
-                items to catalog in the Stocks tab.
+                There are no products in stock matching your search query. Add items to catalog in
+                the Stocks tab.
               </Text>
             </View>
           }
@@ -542,9 +506,7 @@ export const ManageItemsScreen: React.FC = () => {
 
             <View style={styles.headerTitleWrapper}>
               <Text style={styles.headerTitle}>Edit Product</Text>
-              <Text style={styles.headerSubtitle}>
-                Modify details and save changes
-              </Text>
+              <Text style={styles.headerSubtitle}>Modify details and save changes</Text>
             </View>
 
             <TouchableOpacity
@@ -559,10 +521,7 @@ export const ManageItemsScreen: React.FC = () => {
           {/* Modal Form ScrollView */}
           <ScrollView
             style={styles.modalFormScroll}
-            contentContainerStyle={[
-              styles.modalFormContent,
-              { paddingBottom: 60 },
-            ]}
+            contentContainerStyle={[styles.modalFormContent, { paddingBottom: 60 }]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -587,10 +546,7 @@ export const ManageItemsScreen: React.FC = () => {
                   return (
                     <TouchableOpacity
                       key={cat}
-                      style={[
-                        styles.selectorChip,
-                        isSelected && styles.selectorChipActive,
-                      ]}
+                      style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
                       onPress={() => setEditCategory(cat)}
                     >
                       <Text
@@ -670,10 +626,7 @@ export const ManageItemsScreen: React.FC = () => {
                   return (
                     <TouchableOpacity
                       key={unit}
-                      style={[
-                        styles.selectorChip,
-                        isSelected && styles.selectorChipActive,
-                      ]}
+                      style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
                       onPress={() => setEditUnitType(unit)}
                     >
                       <Text
@@ -734,7 +687,7 @@ export const ManageItemsScreen: React.FC = () => {
                       size={160}
                       style={styles.premiumImagePreview}
                     />
-                    
+
                     {/* Change Button Overlay */}
                     {!editImageUploading && (
                       <TouchableOpacity
@@ -766,7 +719,11 @@ export const ManageItemsScreen: React.FC = () => {
                     {/* Loading overlay */}
                     {editImageUploading && (
                       <View style={styles.imgUploadingOverlay}>
-                        <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                        <ActivityIndicator
+                          size="small"
+                          color="#FFFFFF"
+                          style={{ marginBottom: 6 }}
+                        />
                         <Text style={styles.imgUploadingText}>Uploading image…</Text>
                       </View>
                     )}
@@ -786,13 +743,19 @@ export const ManageItemsScreen: React.FC = () => {
                         <Ionicons name="cloud-upload-outline" size={24} color={TOKENS.primary} />
                       </View>
                       <Text style={styles.uploadAreaTitle}>Upload Product Image</Text>
-                      <Text style={styles.uploadAreaSubtitle}>Tap to take a photo or select from gallery</Text>
+                      <Text style={styles.uploadAreaSubtitle}>
+                        Tap to take a photo or select from gallery
+                      </Text>
                     </TouchableOpacity>
 
                     {/* Loading overlay for empty image state */}
                     {editImageUploading && (
                       <View style={[styles.imgUploadingOverlay, { borderRadius: 12 }]}>
-                        <ActivityIndicator size="small" color="#FFFFFF" style={{ marginBottom: 6 }} />
+                        <ActivityIndicator
+                          size="small"
+                          color="#FFFFFF"
+                          style={{ marginBottom: 6 }}
+                        />
                         <Text style={styles.imgUploadingText}>Uploading image…</Text>
                       </View>
                     )}
@@ -917,27 +880,27 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
   },
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -948,9 +911,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitleWrapper: {
     flex: 1,
@@ -958,7 +921,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   headerSubtitle: {
@@ -974,8 +937,8 @@ const styles = StyleSheet.create({
   },
   loaderContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 32,
   },
   loaderText: {
@@ -988,7 +951,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   productItemCard: {
-    flexDirection: "row",
+    flexDirection: 'row',
     backgroundColor: TOKENS.card,
     borderRadius: 14,
     borderWidth: 1,
@@ -998,43 +961,43 @@ const styles = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 3,
     gap: 12,
-    alignItems: "center",
+    alignItems: 'center',
   },
   productImage: {
     width: 74,
     height: 74,
     borderRadius: 10,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
   },
   productMetaCol: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     gap: 4,
   },
   productName: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   badgesRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   productPriceText: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.primary,
   },
   dotDivider: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#D1D5DB",
+    backgroundColor: '#D1D5DB',
   },
   productStockText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.muted,
   },
   stockLowText: {
@@ -1044,55 +1007,55 @@ const styles = StyleSheet.create({
     color: TOKENS.error,
   },
   codesRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginTop: 2,
   },
   codePill: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   codeText: {
     fontSize: 10,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.muted,
   },
   itemActionCol: {
-    flexDirection: "column",
-    alignSelf: "center",
+    flexDirection: 'column',
+    alignSelf: 'center',
     gap: 6,
   },
   editDeleteRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 6,
   },
   stockInLabelBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     height: 28,
     borderRadius: 6,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: "#A7F3D0",
+    borderColor: '#A7F3D0',
     gap: 4,
     width: 70,
   },
   stockInLabelText: {
-    color: "#059669",
+    color: '#059669',
     fontSize: 9,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   editIconBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
     backgroundColor: TOKENS.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
   },
@@ -1100,28 +1063,28 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#FEF2F2",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: '#FECACA',
   },
   emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 80,
     paddingHorizontal: 24,
     gap: 12,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   emptySub: {
     fontSize: 12,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 18,
   },
 
@@ -1131,8 +1094,8 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -1148,7 +1111,7 @@ const styles = StyleSheet.create({
   modalSaveTextHeader: {
     color: TOKENS.card,
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   modalFormScroll: {
     flex: 1,
@@ -1162,7 +1125,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
   },
   fieldHelpText: {
@@ -1181,20 +1144,20 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   chipsSelector: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginTop: 2,
   },
   selectorChip: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
     paddingHorizontal: 10,
     height: 28,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: '#E5E7EB',
   },
   selectorChipActive: {
     backgroundColor: TOKENS.lightBlue,
@@ -1202,28 +1165,28 @@ const styles = StyleSheet.create({
   },
   selectorChipText: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.muted,
   },
   selectorChipTextActive: {
     color: TOKENS.primary,
   },
   inputGridRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
   },
   saveSubmitBtn: {
     backgroundColor: TOKENS.primary,
     borderRadius: 8,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
     boxShadow: `0px 2px 4px 0px ${TOKENS.primary}33`,
   },
   saveSubmitBtnText: {
     color: TOKENS.card,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     fontSize: 14,
   },
 
@@ -1232,15 +1195,15 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   premiumUploadArea: {
-    width: "100%",
+    width: '100%',
     height: 120,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: TOKENS.accentBlue,
-    borderStyle: "dashed" as const,
+    borderStyle: 'dashed' as const,
     backgroundColor: TOKENS.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
     gap: 8,
   },
@@ -1248,14 +1211,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.05)",
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.05)',
   },
   uploadAreaTitle: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.primary,
   },
   uploadAreaSubtitle: {
@@ -1263,62 +1226,62 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
   },
   imgContainerWrap: {
-    position: "relative" as const,
-    width: "100%",
+    position: 'relative' as const,
+    width: '100%',
     height: 160,
     borderRadius: 12,
-    overflow: "hidden" as const,
+    overflow: 'hidden' as const,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: '#F8FAFC',
   },
   premiumImagePreview: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
   changeImageOverlay: {
-    position: "absolute" as const,
+    position: 'absolute' as const,
     bottom: 12,
     left: 12,
-    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   changeImageBadge: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
   },
   changeImageText: {
     fontSize: 12,
-    fontWeight: "600" as const,
-    color: "#FFFFFF",
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
   },
   floatingRemoveBtn: {
-    position: "absolute" as const,
+    position: 'absolute' as const,
     top: 12,
     right: 12,
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(239, 68, 68, 0.9)",
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.1)",
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.1)',
   },
   imgUploadingOverlay: {
-    position: "absolute" as const,
+    position: 'absolute' as const,
     inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     borderRadius: 12,
   },
   imgUploadingText: {
     fontSize: 13,
-    color: "#FFFFFF",
-    fontWeight: "600" as const,
+    color: '#FFFFFF',
+    fontWeight: '600' as const,
   },
   modalFooter: {
     paddingHorizontal: 16,
@@ -1331,32 +1294,32 @@ const styles = StyleSheet.create({
 
   searchScanBtn: {
     padding: 6,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   productItemCardActive: {
     borderColor: TOKENS.primary,
     borderWidth: 2,
-    backgroundColor: "#EFF6FF", // Premium light-blue background highlight
+    backgroundColor: '#EFF6FF', // Premium light-blue background highlight
   },
   scannedBadge: {
-    backgroundColor: "#16A34A",
-    flexDirection: "row",
-    alignItems: "center",
+    backgroundColor: '#16A34A',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 8,
     gap: 2,
   },
   scannedBadgeText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 8,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   productCardBody: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   sheetHeaderWrapper: {
@@ -1364,23 +1327,23 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sheetProductCard: {
-    flexDirection: "row",
-    backgroundColor: "#F8FAFC",
+    flexDirection: 'row',
+    backgroundColor: '#F8FAFC',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: '#E2E8F0',
     paddingRight: 16,
     paddingLeft: 3,
     paddingTop: 3,
     paddingBottom: 3,
     gap: 12,
-    alignItems: "center",
+    alignItems: 'center',
   },
   sheetProductImage: {
     width: 74,
     height: 74,
     borderRadius: 10,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: '#F1F5F9',
   },
   sheetProductMeta: {
     flex: 1,
@@ -1388,65 +1351,65 @@ const styles = StyleSheet.create({
   },
   sheetProductName: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   sheetProductBadges: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 6,
     marginTop: 2,
   },
   sheetPricesRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
     marginTop: 6,
   },
   sheetPriceLabel: {
     fontSize: 10,
     color: TOKENS.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   sheetPriceVal: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.primary,
   },
   sheetPriceValSec: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.dark,
   },
   sheetPriceDivider: {
     width: 1,
     height: 22,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: '#E2E8F0',
   },
   marginBadge: {
-    backgroundColor: "#F0FDF4",
-    borderColor: "#DCFCE7",
+    backgroundColor: '#F0FDF4',
+    borderColor: '#DCFCE7',
     borderWidth: 1,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    alignSelf: "flex-end",
+    alignSelf: 'flex-end',
   },
   marginBadgeText: {
-    color: "#16A34A",
+    color: '#16A34A',
     fontSize: 9,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   sheetStatusPanel: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: '#F1F5F9',
     marginTop: 8,
   },
   statusPanelCol: {
@@ -1458,28 +1421,28 @@ const styles = StyleSheet.create({
   },
   statusPanelCount: {
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: '800',
     color: TOKENS.dark,
   },
   statusPanelUnit: {
     fontSize: 12,
-    fontWeight: "normal",
+    fontWeight: 'normal',
     color: TOKENS.muted,
   },
   statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: '#F0FDF4',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
   },
   statusPillWarning: {
-    backgroundColor: "#FFFBEB",
+    backgroundColor: '#FFFBEB',
   },
   statusPillError: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: '#FEF2F2',
   },
   statusDot: {
     width: 6,
@@ -1489,12 +1452,12 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.success,
   },
   sectionDivider: {
     height: 1,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: '#E2E8F0',
     marginVertical: 16,
   },
   stockAdjustmentForm: {
@@ -1502,7 +1465,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   sectionSubtitle: {
@@ -1511,73 +1474,73 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   stockInRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
   },
   inputWithSuffix: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: TOKENS.card,
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 8,
     height: 38,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   suffixInput: {
     flex: 1,
-    height: "100%",
+    height: '100%',
     paddingHorizontal: 12,
     fontSize: 13,
     color: TOKENS.dark,
   },
   suffixContainer: {
-    backgroundColor: "#F1F5F9",
-    height: "100%",
+    backgroundColor: '#F1F5F9',
+    height: '100%',
     paddingHorizontal: 12,
-    justifyContent: "center",
+    justifyContent: 'center',
     borderLeftWidth: 1,
     borderLeftColor: TOKENS.border,
   },
   suffixText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.muted,
   },
   suggestionChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginVertical: 6,
   },
   suggestionChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F1F5F9",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: '#E2E8F0',
     gap: 6,
   },
   suggestionChipActive: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#10B981",
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
   },
   suggestionChipText: {
     fontSize: 11,
-    color: "#64748B",
-    fontWeight: "600",
+    color: '#64748B',
+    fontWeight: '600',
   },
   suggestionChipTextActive: {
-    color: "#059669",
-    fontWeight: "700",
+    color: '#059669',
+    fontWeight: '700',
   },
   stockInSubmitBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     backgroundColor: TOKENS.success,
     height: 40,
@@ -1585,30 +1548,30 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   stockInSubmitBtnText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   // Removed unused stockInIconBtn style
   logCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 14,
     backgroundColor: TOKENS.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: '#F1F5F9',
     marginBottom: 8,
     gap: 12,
-    boxShadow: "0px 1px 3px 0px rgba(15, 23, 42, 0.03)",
+    boxShadow: '0px 1px 3px 0px rgba(15, 23, 42, 0.03)',
   },
   logLeftCol: {
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   logBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -1616,23 +1579,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   logBadgeIn: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#A7F3D0",
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
   },
   logBadgeOut: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FCA5A5",
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FCA5A5',
   },
   logBadgeText: {
     fontSize: 9,
-    fontWeight: "800",
+    fontWeight: '800',
     letterSpacing: 0.5,
   },
   logBadgeTextIn: {
-    color: "#059669",
+    color: '#059669',
   },
   logBadgeTextOut: {
-    color: "#DC2626",
+    color: '#DC2626',
   },
   logMeta: {
     flex: 1,
@@ -1640,56 +1603,56 @@ const styles = StyleSheet.create({
   },
   logReasonText: {
     fontSize: 13,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontWeight: '700',
+    color: '#1E293B',
   },
   logDateRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
   },
   logDateText: {
     fontSize: 11,
-    color: "#64748B",
+    color: '#64748B',
   },
   logQtyBadge: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logQtyBadgeIn: {
-    backgroundColor: "#D1FAE5",
+    backgroundColor: '#D1FAE5',
   },
   logQtyBadgeOut: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: '#FEE2E2',
   },
   logQtyText: {
     fontSize: 12,
-    fontWeight: "800",
+    fontWeight: '800',
   },
   logQtyTextIn: {
-    color: "#047857",
+    color: '#047857',
   },
   logQtyTextOut: {
-    color: "#B91C1C",
+    color: '#B91C1C',
   },
   emptyLogsWrap: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 32,
     gap: 8,
   },
   emptyLogsTitle: {
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   emptyLogsSubtitle: {
     fontSize: 11,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     paddingHorizontal: 24,
     lineHeight: 16,
   },
@@ -1706,7 +1669,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 36,
     paddingTop: 12,
-    boxShadow: "0px -4px 16px 0px rgba(0, 0, 0, 0.12)",
+    boxShadow: '0px -4px 16px 0px rgba(0, 0, 0, 0.12)',
   },
   sheetHandle: {
     width: 40,
@@ -1771,16 +1734,16 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   standardPhotoPlaceholder: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
   },
   standardPhotoPlaceholderText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: "#64748B",
+    fontWeight: '600',
+    color: '#64748B',
     marginTop: 4,
   },
 });

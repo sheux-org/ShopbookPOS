@@ -143,13 +143,17 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <span style="flex: 1; text-align: center;">Qty</span>
                 <span style="flex: 1; text-align: right;">Price</span>
               </div>
-              ${items.map(item => `
+              ${items
+                .map(
+                  (item) => `
                 <div class="receipt-item-row">
                   <span style="flex: 2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</span>
                   <span style="flex: 1; text-align: center;">${item.quantity}</span>
                   <span style="flex: 1; text-align: right;">Rs. ${(item.price * item.quantity).toLocaleString()}</span>
                 </div>
-              `).join('')}
+              `
+                )
+                .join('')}
             </div>
 
             <div class="receipt-divider"></div>
@@ -159,12 +163,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <span>Subtotal</span>
                 <span>Rs. ${subtotal.toLocaleString()}</span>
               </div>
-              ${(order.discountValue ?? 0) > 0 ? `
+              ${
+                (order.discountValue ?? 0) > 0
+                  ? `
                 <div class="receipt-totals-row">
                   <span>Discount</span>
                   <span>- Rs. ${(order.discountValue ?? 0).toLocaleString()}</span>
                 </div>
-              ` : ''}
+              `
+                  : ''
+              }
               <div class="receipt-totals-row">
                 <span>VAT Tax (${order.taxRate ?? 0}%)</span>
                 <span>Rs. ${(order.taxValue ?? 0).toLocaleString()}</span>
@@ -173,12 +181,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <span>Total Paid</span>
                 <span>Rs. ${order.totalAmount.toLocaleString()}</span>
               </div>
-              ${order.paymentMethod === 'cash' && changeDue > 0 ? `
+              ${
+                order.paymentMethod === 'cash' && changeDue > 0
+                  ? `
                 <div class="receipt-totals-row" style="font-weight: bold; color: #16a34a; margin-top: 2px;">
                   <span>Change Return</span>
                   <span>Rs. ${changeDue.toLocaleString()}</span>
                 </div>
-              ` : ''}
+              `
+                  : ''
+              }
             </div>
 
             <div class="receipt-divider"></div>
@@ -191,7 +203,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </html>
       `);
       doc.close();
-      
+
       setTimeout(() => {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
@@ -205,8 +217,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       <div style={{ ...styles.modalContent, maxWidth: '420px', padding: '0px' }}>
         <div style={styles.receiptContainer} id="printable-receipt-card">
           <div style={styles.receiptHeader}>
-            <span style={styles.receiptSparkle}><Sparkles size={16} /></span>
-            <h3 style={styles.receiptStoreName}>{activeBusiness?.name || 'Shopbook POS Partner'}</h3>
+            <span style={styles.receiptSparkle}>
+              <Sparkles size={16} />
+            </span>
+            <h3 style={styles.receiptStoreName}>
+              {activeBusiness?.name || 'Shopbook POS Partner'}
+            </h3>
             <p style={styles.receiptStoreAddress}>{activeBusiness?.address || 'Sri Lanka'}</p>
             <p style={styles.receiptStorePhone}>{activeBusiness?.phone || '+94 ** *** ****'}</p>
           </div>
@@ -214,10 +230,19 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           <div style={styles.receiptDivider} />
 
           <div style={styles.receiptMeta}>
-            <div><strong>Invoice:</strong> {order.invoiceNumber}</div>
-            <div><strong>Date:</strong> {order.dateStr}</div>
-            <div><strong>Cashier:</strong> {order.cashierName}</div>
-            <div><strong>Status: </strong><span style={{ color: 'var(--success)', fontWeight: 'bold' }}>PAID</span></div>
+            <div>
+              <strong>Invoice:</strong> {order.invoiceNumber}
+            </div>
+            <div>
+              <strong>Date:</strong> {order.dateStr}
+            </div>
+            <div>
+              <strong>Cashier:</strong> {order.cashierName}
+            </div>
+            <div>
+              <strong>Status: </strong>
+              <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>PAID</span>
+            </div>
           </div>
 
           <div style={styles.receiptDivider} />
@@ -231,9 +256,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
             {items.map((item, idx) => (
               <div key={idx} style={styles.receiptItemRow}>
-                <span style={{ flex: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</span>
+                <span
+                  style={{
+                    flex: 2,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {item.name}
+                </span>
                 <span style={{ flex: 1, textAlign: 'center' }}>{item.quantity}</span>
-                <span style={{ flex: 1, textAlign: 'right' }}>Rs. {(item.price * item.quantity).toLocaleString()}</span>
+                <span style={{ flex: 1, textAlign: 'right' }}>
+                  Rs. {(item.price * item.quantity).toLocaleString()}
+                </span>
               </div>
             ))}
           </div>
@@ -256,12 +292,26 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <span>VAT Tax ({order.taxRate ?? 0}%)</span>
               <span>Rs. {(order.taxValue ?? 0).toLocaleString()}</span>
             </div>
-            <div style={{ ...styles.receiptTotalsRow, fontWeight: 'bold', fontSize: '15px', marginTop: '6px' }}>
+            <div
+              style={{
+                ...styles.receiptTotalsRow,
+                fontWeight: 'bold',
+                fontSize: '15px',
+                marginTop: '6px',
+              }}
+            >
               <span>Total Paid</span>
               <span>Rs. {order.totalAmount.toLocaleString()}</span>
             </div>
             {order.paymentMethod === 'cash' && changeDue > 0 && (
-              <div style={{ ...styles.receiptTotalsRow, fontWeight: 'bold', color: 'var(--success)', marginTop: '2px' }}>
+              <div
+                style={{
+                  ...styles.receiptTotalsRow,
+                  fontWeight: 'bold',
+                  color: 'var(--success)',
+                  marginTop: '2px',
+                }}
+              >
                 <span>Change Return</span>
                 <span>Rs. {changeDue.toLocaleString()}</span>
               </div>
@@ -272,25 +322,23 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
           <div style={styles.receiptFooter}>
             <p>Payment Tender: {order.paymentMethod.toUpperCase()}</p>
-            <p style={{ marginTop: '8px', fontWeight: 'bold', letterSpacing: '0.5px' }}>THANK YOU FOR YOUR PATRONAGE! 🇱🇰</p>
-            <p style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '4px' }}>Shopbook POS Cloud Sync Audit</p>
+            <p style={{ marginTop: '8px', fontWeight: 'bold', letterSpacing: '0.5px' }}>
+              THANK YOU FOR YOUR PATRONAGE! 🇱🇰
+            </p>
+            <p style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '4px' }}>
+              Shopbook POS Cloud Sync Audit
+            </p>
           </div>
         </div>
 
         {/* Receipt actions footer */}
         <div style={styles.receiptActions}>
-          <button 
-            onClick={handlePrint}
-            style={styles.printBtn}
-          >
+          <button onClick={handlePrint} style={styles.printBtn}>
             <Printer size={15} />
             <span>Print Receipt</span>
           </button>
 
-          <button 
-            onClick={onClose}
-            style={styles.receiptDoneBtn}
-          >
+          <button onClick={onClose} style={styles.receiptDoneBtn}>
             Done & Clear Screen
           </button>
         </div>

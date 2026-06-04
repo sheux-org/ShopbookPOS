@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,27 +10,39 @@ import {
   TextInput,
   ActivityIndicator,
   Dimensions,
-} from "react-native";
-import { FlashList } from "@shopify/flash-list";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScreenWrapper } from "../common/ScreenWrapper";
-import * as Contacts from "expo-contacts";
-import { TOKENS } from "../../constants/tokens";
-import { cartState, CartItem } from "../data/cartState";
-import { BottomSheet } from "../common/BottomSheet";
-import { ProductImage } from "../common/ProductImage";
-import { useCart } from "../../stores/useCart";
-import { hapticFeedback } from "../../utils/haptics";
+} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useRouter } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenWrapper } from '../common/ScreenWrapper';
+import * as Contacts from 'expo-contacts';
+import { TOKENS } from '../../constants/tokens';
+import { cartState, CartItem } from '../data/cartState';
+import { BottomSheet } from '../common/BottomSheet';
+import { ProductImage } from '../common/ProductImage';
+import { useCart } from '../../stores/useCart';
+import { hapticFeedback } from '../../utils/haptics';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Helper colors for premium initials avatars
 const getAvatarColor = (name: string) => {
   const colors = [
-    "#EF4444", "#F59E0B", "#10B981", "#3B82F6", "#6366F1", "#8B5CF6", "#EC4899",
-    "#14B8A6", "#06B6D4", "#059669", "#4F46E5", "#D97706", "#2563EB", "#DB2777"
+    '#EF4444',
+    '#F59E0B',
+    '#10B981',
+    '#3B82F6',
+    '#6366F1',
+    '#8B5CF6',
+    '#EC4899',
+    '#14B8A6',
+    '#06B6D4',
+    '#059669',
+    '#4F46E5',
+    '#D97706',
+    '#2563EB',
+    '#DB2777',
   ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
@@ -41,8 +53,8 @@ const getAvatarColor = (name: string) => {
 };
 
 const getInitials = (name: string) => {
-  if (!name) return "";
-  const parts = name.trim().split(" ");
+  if (!name) return '';
+  const parts = name.trim().split(' ');
   if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
@@ -53,27 +65,31 @@ export const CartScreen: React.FC = () => {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<CartItem[]>([]);
-  const [discountType, setDiscountType] = useState<"flat" | "percentage">("flat");
+  const [discountType, setDiscountType] = useState<'flat' | 'percentage'>('flat');
   const [discountValue, setDiscountValue] = useState(0); // Default Rs. 0
   const [isEditingDiscount, setIsEditingDiscount] = useState(false);
-  const [tempDiscount, setTempDiscount] = useState("0");
-  const [tempDiscountType, setTempDiscountType] = useState<"flat" | "percentage">("flat");
+  const [tempDiscount, setTempDiscount] = useState('0');
+  const [tempDiscountType, setTempDiscountType] = useState<'flat' | 'percentage'>('flat');
 
   // Tax rate state variables
   const [taxRate, setTaxRate] = useState(0); // Default 0%
   const [isEditingTax, setIsEditingTax] = useState(false);
-  const [tempTaxRate, setTempTaxRate] = useState("0");
+  const [tempTaxRate, setTempTaxRate] = useState('0');
 
   // Customer state hooks
   const [isCustomerModalVisible, setIsCustomerModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<"contacts" | "new">("contacts");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [deviceContacts, setDeviceContacts] = useState<{ id: string; name: string; phone: string }[]>([]);
+  const [activeTab, setActiveTab] = useState<'contacts' | 'new'>('contacts');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [deviceContacts, setDeviceContacts] = useState<
+    { id: string; name: string; phone: string }[]
+  >([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
-  const [newCustomerName, setNewCustomerName] = useState("");
-  const [newCustomerPhone, setNewCustomerPhone] = useState("");
-  const [attachedCustomer, setAttachedCustomer] = useState<{ name: string; phone: string } | null>(null);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
+  const [attachedCustomer, setAttachedCustomer] = useState<{ name: string; phone: string } | null>(
+    null
+  );
 
   const customCustomers = useCart((state) => state.customCustomers) || [];
 
@@ -103,23 +119,24 @@ export const CartScreen: React.FC = () => {
     setIsLoadingContacts(true);
     try {
       const { status } = await Contacts.requestPermissionsAsync();
-      if (status === "granted") {
+      if (status === 'granted') {
         const { data } = await Contacts.getContactsAsync({
           fields: [Contacts.Fields.PhoneNumbers],
         });
-        
+
         if (data && data.length > 0) {
           const formatted = data
             .map((c) => {
-              const phone = c.phoneNumbers && c.phoneNumbers.length > 0 ? c.phoneNumbers[0].number || "" : "";
+              const phone =
+                c.phoneNumbers && c.phoneNumbers.length > 0 ? c.phoneNumbers[0].number || '' : '';
               return {
                 id: c.id || Math.random().toString(),
-                name: c.name || "Unknown Name",
+                name: c.name || 'Unknown Name',
                 phone: phone,
               };
             })
-            .filter((c) => c.name.trim() !== "");
-          
+            .filter((c) => c.name.trim() !== '');
+
           formatted.sort((a, b) => a.name.localeCompare(b.name));
           setDeviceContacts(formatted);
         } else {
@@ -129,7 +146,7 @@ export const CartScreen: React.FC = () => {
         setDeviceContacts([]);
       }
     } catch (error) {
-      console.log("Failed to fetch native contacts:", error);
+      console.log('Failed to fetch native contacts:', error);
       setDeviceContacts([]);
     } finally {
       setIsLoadingContacts(false);
@@ -149,14 +166,14 @@ export const CartScreen: React.FC = () => {
       phone: c.phone,
       isCustom: true,
     }));
-    
+
     const combined = [...customWithIds];
-    
+
     for (const dc of deviceContacts) {
       const isDuplicate = customCustomers.some(
         (cc) =>
           cc.name.toLowerCase() === dc.name.toLowerCase() &&
-          cc.phone.replace(/[^0-9]/g, "") === dc.phone.replace(/[^0-9]/g, "")
+          cc.phone.replace(/[^0-9]/g, '') === dc.phone.replace(/[^0-9]/g, '')
       );
       if (!isDuplicate) {
         combined.push({
@@ -167,7 +184,7 @@ export const CartScreen: React.FC = () => {
         });
       }
     }
-    
+
     combined.sort((a, b) => a.name.localeCompare(b.name));
     return combined;
   }, [deviceContacts, customCustomers]);
@@ -176,20 +193,18 @@ export const CartScreen: React.FC = () => {
     const q = debouncedQuery.toLowerCase().trim();
     if (!q) return allContacts;
     return allContacts.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.phone.replace(/[^0-9]/g, "").includes(q)
+      (c) => c.name.toLowerCase().includes(q) || c.phone.replace(/[^0-9]/g, '').includes(q)
     );
   }, [debouncedQuery, allContacts]);
 
   const handleAddManualCustomer = () => {
     if (!newCustomerName.trim()) {
-      Alert.alert("Required Fields", "Please enter a customer name.");
+      Alert.alert('Required Fields', 'Please enter a customer name.');
       return;
     }
     const customer = {
       name: newCustomerName.trim(),
-      phone: newCustomerPhone.trim() || "Walking Customer",
+      phone: newCustomerPhone.trim() || 'Walking Customer',
     };
     // Save to custom customers persistent list
     useCart.getState().addCustomCustomer(customer);
@@ -197,8 +212,8 @@ export const CartScreen: React.FC = () => {
     cartState.setCustomer(customer);
     setAttachedCustomer(customer);
     setIsCustomerModalVisible(false);
-    setNewCustomerName("");
-    setNewCustomerPhone("");
+    setNewCustomerName('');
+    setNewCustomerPhone('');
     triggerToast(`Customer ${customer.name} attached`);
   };
 
@@ -206,23 +221,24 @@ export const CartScreen: React.FC = () => {
     cartState.setCustomer(null);
     setAttachedCustomer(null);
     setIsCustomerModalVisible(false);
-    triggerToast("Set as Walking Customer");
+    triggerToast('Set as Walking Customer');
   };
 
   const renderContactItem = ({ item }: { item: { id: string; name: string; phone: string } }) => {
     const avatarColor = getAvatarColor(item.name);
     const initials = getInitials(item.name);
-    const isSelected = attachedCustomer !== null &&
+    const isSelected =
+      attachedCustomer !== null &&
       attachedCustomer.name.toLowerCase() === item.name.toLowerCase() &&
       attachedCustomer.phone === item.phone;
-    
+
     return (
       <TouchableOpacity
         style={styles.contactItem}
         activeOpacity={0.7}
         onPress={() => {
           hapticFeedback.selection();
-          const customer = { name: item.name, phone: item.phone || "Walking Customer" };
+          const customer = { name: item.name, phone: item.phone || 'Walking Customer' };
           cartState.setCustomer(customer);
           setAttachedCustomer(customer);
           setIsCustomerModalVisible(false);
@@ -234,7 +250,7 @@ export const CartScreen: React.FC = () => {
         </View>
         <View style={styles.contactInfo}>
           <Text style={styles.contactName}>{item.name}</Text>
-          <Text style={styles.contactPhone}>{item.phone || "No phone number"}</Text>
+          <Text style={styles.contactPhone}>{item.phone || 'No phone number'}</Text>
         </View>
         {isSelected && (
           <Feather name="check" size={16} color={TOKENS.primary} style={{ marginRight: 8 }} />
@@ -247,18 +263,18 @@ export const CartScreen: React.FC = () => {
   const handleClearCart = () => {
     hapticFeedback.notificationWarning();
     Alert.alert(
-      "Clear Invoice",
-      "Are you sure you want to remove all items from this active checkout invoice?",
+      'Clear Invoice',
+      'Are you sure you want to remove all items from this active checkout invoice?',
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Clear All",
-          style: "destructive",
+          text: 'Clear All',
+          style: 'destructive',
           onPress: () => {
             hapticFeedback.impactMedium();
             cartState.clearCart();
-            triggerToast("Invoice cleared");
-            router.push("/pos");
+            triggerToast('Invoice cleared');
+            router.push('/pos');
           },
         },
       ]
@@ -271,7 +287,7 @@ export const CartScreen: React.FC = () => {
   }, [invoiceItems]);
 
   const computedDiscountAmount = useMemo(() => {
-    if (discountType === "percentage") {
+    if (discountType === 'percentage') {
       return Math.round(subtotal * (discountValue / 100));
     }
     return discountValue;
@@ -293,13 +309,13 @@ export const CartScreen: React.FC = () => {
   const handleProceedToPayment = () => {
     if (invoiceItems.length === 0) {
       hapticFeedback.notificationWarning();
-      Alert.alert("Empty Cart", "Please add products before checking out.");
+      Alert.alert('Empty Cart', 'Please add products before checking out.');
       return;
     }
     hapticFeedback.selection();
     // Navigate directly to Payment Tender screen, passing parameters
     router.push({
-      pathname: "/pos/payment-tender",
+      pathname: '/pos/payment-tender',
       params: {
         totalAmount: total.toString(),
         subtotal: subtotal.toString(),
@@ -308,7 +324,7 @@ export const CartScreen: React.FC = () => {
         discountValue: discountValue.toString(),
         tax: tax.toString(),
         taxRate: taxRate.toString(),
-        paymentMethod: "cash",
+        paymentMethod: 'cash',
       },
     });
   };
@@ -316,20 +332,20 @@ export const CartScreen: React.FC = () => {
   const handleSaveDiscount = () => {
     const val = parseFloat(tempDiscount);
     if (!isNaN(val) && val >= 0) {
-      if (tempDiscountType === "percentage" && val > 100) {
+      if (tempDiscountType === 'percentage' && val > 100) {
         hapticFeedback.notificationWarning();
-        Alert.alert("Invalid input", "Percentage discount cannot exceed 100%.");
+        Alert.alert('Invalid input', 'Percentage discount cannot exceed 100%.');
         return;
       }
       hapticFeedback.notificationSuccess();
       setDiscountType(tempDiscountType);
       setDiscountValue(val);
       setIsEditingDiscount(false);
-      const label = tempDiscountType === "percentage" ? `${val}%` : `Rs. ${val}`;
+      const label = tempDiscountType === 'percentage' ? `${val}%` : `Rs. ${val}`;
       triggerToast(`Discount set to ${label}`);
     } else {
       hapticFeedback.notificationError();
-      Alert.alert("Invalid input", "Please enter a valid positive discount amount.");
+      Alert.alert('Invalid input', 'Please enter a valid positive discount amount.');
     }
   };
 
@@ -338,7 +354,7 @@ export const CartScreen: React.FC = () => {
     if (!isNaN(val) && val >= 0) {
       if (val > 100) {
         hapticFeedback.notificationWarning();
-        Alert.alert("Invalid input", "Tax rate cannot exceed 100%.");
+        Alert.alert('Invalid input', 'Tax rate cannot exceed 100%.');
         return;
       }
       hapticFeedback.notificationSuccess();
@@ -347,7 +363,7 @@ export const CartScreen: React.FC = () => {
       triggerToast(`Tax rate set to ${val}%`);
     } else {
       hapticFeedback.notificationError();
-      Alert.alert("Invalid input", "Please enter a valid positive tax rate.");
+      Alert.alert('Invalid input', 'Please enter a valid positive tax rate.');
     }
   };
 
@@ -388,15 +404,15 @@ export const CartScreen: React.FC = () => {
       </View>
 
       {/* Scrollable list of items */}
-      <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollWrapper}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {invoiceItems.map((item) => (
           <View key={item.id} style={styles.itemRow}>
             {/* Left Box Icon */}
-            <ProductImage
-              icon={item.icon || "🥛"}
-              size={47}
-              style={styles.iconBox}
-            />
+            <ProductImage icon={item.icon || '🥛'} size={47} style={styles.iconBox} />
 
             {/* Middle Details */}
             <View style={styles.itemDetails}>
@@ -435,15 +451,11 @@ export const CartScreen: React.FC = () => {
           <View style={styles.emptyCart}>
             <Feather name="shopping-cart" size={48} color={TOKENS.muted} />
             <Text style={styles.emptyText}>Your cart checkout is empty</Text>
-            <TouchableOpacity
-              style={styles.browseBtn}
-              onPress={() => router.push("/pos")}
-            >
+            <TouchableOpacity style={styles.browseBtn} onPress={() => router.push('/pos')}>
               <Text style={styles.browseBtnText}>Go back to POS</Text>
             </TouchableOpacity>
           </View>
         )}
-
       </ScrollView>
 
       {/* Sticky Bottom Actions & Summary Container */}
@@ -451,7 +463,7 @@ export const CartScreen: React.FC = () => {
         <View
           style={[
             styles.bottomStickyContainer,
-            { paddingBottom: Platform.OS === "ios" ? Math.max(insets.bottom, 12) : 16 },
+            { paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 12) : 16 },
           ]}
         >
           {/* Summary Box exactly matching Image 7 */}
@@ -471,14 +483,14 @@ export const CartScreen: React.FC = () => {
                     <TouchableOpacity
                       style={[
                         styles.discountTypeToggleBtn,
-                        tempDiscountType === "flat" && styles.discountTypeToggleBtnActive,
+                        tempDiscountType === 'flat' && styles.discountTypeToggleBtnActive,
                       ]}
-                      onPress={() => setTempDiscountType("flat")}
+                      onPress={() => setTempDiscountType('flat')}
                     >
                       <Text
                         style={[
                           styles.discountTypeToggleText,
-                          tempDiscountType === "flat" && styles.discountTypeToggleTextActive,
+                          tempDiscountType === 'flat' && styles.discountTypeToggleTextActive,
                         ]}
                       >
                         Rs.
@@ -487,14 +499,14 @@ export const CartScreen: React.FC = () => {
                     <TouchableOpacity
                       style={[
                         styles.discountTypeToggleBtn,
-                        tempDiscountType === "percentage" && styles.discountTypeToggleBtnActive,
+                        tempDiscountType === 'percentage' && styles.discountTypeToggleBtnActive,
                       ]}
-                      onPress={() => setTempDiscountType("percentage")}
+                      onPress={() => setTempDiscountType('percentage')}
                     >
                       <Text
                         style={[
                           styles.discountTypeToggleText,
-                          tempDiscountType === "percentage" && styles.discountTypeToggleTextActive,
+                          tempDiscountType === 'percentage' && styles.discountTypeToggleTextActive,
                         ]}
                       >
                         %
@@ -515,14 +527,22 @@ export const CartScreen: React.FC = () => {
               ) : (
                 <View style={styles.summaryDiscountWrapper}>
                   <Text style={styles.summaryDiscountValue}>
-                    - Rs. {computedDiscountAmount.toLocaleString()}.00{discountType === "percentage" ? ` (${discountValue}%)` : ""}
+                    - Rs. {computedDiscountAmount.toLocaleString()}.00
+                    {discountType === 'percentage' ? ` (${discountValue}%)` : ''}
                   </Text>
-                  <TouchableOpacity onPress={() => {
-                    setTempDiscount(discountValue.toString());
-                    setTempDiscountType(discountType);
-                    setIsEditingDiscount(true);
-                  }}>
-                    <Feather name="edit-3" size={14} color={TOKENS.primary} style={styles.editIcon} />
+                  <TouchableOpacity
+                    onPress={() => {
+                      setTempDiscount(discountValue.toString());
+                      setTempDiscountType(discountType);
+                      setIsEditingDiscount(true);
+                    }}
+                  >
+                    <Feather
+                      name="edit-3"
+                      size={14}
+                      color={TOKENS.primary}
+                      style={styles.editIcon}
+                    />
                   </TouchableOpacity>
                 </View>
               )}
@@ -533,9 +553,7 @@ export const CartScreen: React.FC = () => {
               <View style={styles.taxLabelWrapper}>
                 <Text style={[styles.summaryLabelActive, { color: TOKENS.dark }]}>
                   Tax
-                  {taxRate > 0 && (
-                    <Text style={{ color: TOKENS.primary }}> ({taxRate}%)</Text>
-                  )}
+                  {taxRate > 0 && <Text style={{ color: TOKENS.primary }}> ({taxRate}%)</Text>}
                 </Text>
               </View>
               {isEditingTax ? (
@@ -555,11 +573,18 @@ export const CartScreen: React.FC = () => {
               ) : (
                 <View style={styles.summaryDiscountWrapper}>
                   <Text style={styles.summaryValue}>Rs. {tax.toLocaleString()}.00</Text>
-                  <TouchableOpacity onPress={() => {
-                    setTempTaxRate(taxRate.toString());
-                    setIsEditingTax(true);
-                  }}>
-                    <Feather name="edit-3" size={14} color={TOKENS.primary} style={styles.editIcon} />
+                  <TouchableOpacity
+                    onPress={() => {
+                      setTempTaxRate(taxRate.toString());
+                      setIsEditingTax(true);
+                    }}
+                  >
+                    <Feather
+                      name="edit-3"
+                      size={14}
+                      color={TOKENS.primary}
+                      style={styles.editIcon}
+                    />
                   </TouchableOpacity>
                 </View>
               )}
@@ -579,31 +604,39 @@ export const CartScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 styles.actionPill,
-                attachedCustomer && { backgroundColor: TOKENS.lightBlue, borderColor: TOKENS.accentBlue, borderWidth: 1 }
+                attachedCustomer && {
+                  backgroundColor: TOKENS.lightBlue,
+                  borderColor: TOKENS.accentBlue,
+                  borderWidth: 1,
+                },
               ]}
               activeOpacity={0.7}
               onPress={() => setIsCustomerModalVisible(true)}
             >
               <Ionicons
-                name={attachedCustomer ? "person" : "person-outline"}
+                name={attachedCustomer ? 'person' : 'person-outline'}
                 size={16}
                 color={attachedCustomer ? TOKENS.primary : TOKENS.dark}
               />
               <Text
                 style={[
                   styles.actionPillText,
-                  attachedCustomer && { color: TOKENS.primary, fontWeight: "700" }
+                  attachedCustomer && { color: TOKENS.primary, fontWeight: '700' },
                 ]}
                 numberOfLines={1}
               >
-                {attachedCustomer ? attachedCustomer.name : "Attach Customer"}
+                {attachedCustomer ? attachedCustomer.name : 'Attach Customer'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.actionPill}
               activeOpacity={0.7}
-              onPress={() => Alert.prompt("Add Note", "Enter custom checkout note:", (txt) => triggerToast(`Note saved: "${txt}"`))}
+              onPress={() =>
+                Alert.prompt('Add Note', 'Enter custom checkout note:', (txt) =>
+                  triggerToast(`Note saved: "${txt}"`)
+                )
+              }
             >
               <Ionicons name="pricetag-outline" size={16} color={TOKENS.dark} />
               <Text style={styles.actionPillText}>Note</Text>
@@ -616,7 +649,9 @@ export const CartScreen: React.FC = () => {
             activeOpacity={0.85}
             onPress={handleProceedToPayment}
           >
-            <Text style={styles.checkoutPayText}>Proceed to Pay (Rs. {total.toLocaleString()})</Text>
+            <Text style={styles.checkoutPayText}>
+              Proceed to Pay (Rs. {total.toLocaleString()})
+            </Text>
             <Feather name="arrow-right" size={18} color={TOKENS.card} />
           </TouchableOpacity>
         </View>
@@ -633,37 +668,37 @@ export const CartScreen: React.FC = () => {
           {/* Segmented Control / Tabs */}
           <View style={styles.tabBar}>
             <TouchableOpacity
-              style={[styles.tabItem, activeTab === "contacts" && styles.activeTabItem]}
-              onPress={() => setActiveTab("contacts")}
+              style={[styles.tabItem, activeTab === 'contacts' && styles.activeTabItem]}
+              onPress={() => setActiveTab('contacts')}
               activeOpacity={0.7}
             >
               <Feather
                 name="search"
                 size={14}
-                color={activeTab === "contacts" ? TOKENS.primary : TOKENS.muted}
+                color={activeTab === 'contacts' ? TOKENS.primary : TOKENS.muted}
               />
-              <Text style={[styles.tabText, activeTab === "contacts" && styles.activeTabText]}>
+              <Text style={[styles.tabText, activeTab === 'contacts' && styles.activeTabText]}>
                 Search Contacts
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tabItem, activeTab === "new" && styles.activeTabItem]}
-              onPress={() => setActiveTab("new")}
+              style={[styles.tabItem, activeTab === 'new' && styles.activeTabItem]}
+              onPress={() => setActiveTab('new')}
               activeOpacity={0.7}
             >
               <Feather
                 name="user-plus"
                 size={14}
-                color={activeTab === "new" ? TOKENS.primary : TOKENS.muted}
+                color={activeTab === 'new' ? TOKENS.primary : TOKENS.muted}
               />
-              <Text style={[styles.tabText, activeTab === "new" && styles.activeTabText]}>
+              <Text style={[styles.tabText, activeTab === 'new' && styles.activeTabText]}>
                 Create Customer
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Content based on tab */}
-          {activeTab === "contacts" ? (
+          {activeTab === 'contacts' ? (
             <View style={{ flex: 1 }}>
               {/* Search Bar */}
               <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
@@ -685,7 +720,7 @@ export const CartScreen: React.FC = () => {
                 activeOpacity={0.7}
                 onPress={handleSelectWalkingCustomer}
               >
-                <View style={[styles.contactAvatar, { backgroundColor: "#E5E7EB" }]}>
+                <View style={[styles.contactAvatar, { backgroundColor: '#E5E7EB' }]}>
                   <Ionicons name="people" size={18} color={TOKENS.muted} />
                 </View>
                 <View style={styles.contactInfo}>
@@ -777,28 +812,28 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
   },
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -809,16 +844,16 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitleWrapper: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   headerSubtitle: {
@@ -829,8 +864,8 @@ const styles = StyleSheet.create({
   clearCartButton: {
     width: 36,
     height: 36,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollWrapper: {
     flex: 1,
@@ -840,8 +875,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   itemRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: TOKENS.card,
     borderRadius: 12,
     borderWidth: 1,
@@ -866,7 +901,7 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   itemPricing: {
@@ -875,8 +910,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   modifiersRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   modifierBtn: {
@@ -886,26 +921,26 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.lightBlue,
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   quantityText: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
     minWidth: 14,
-    textAlign: "center",
+    textAlign: 'center',
   },
   emptyCart: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 60,
     gap: 12,
   },
   emptyText: {
     fontSize: 15,
     color: TOKENS.muted,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   browseBtn: {
     backgroundColor: TOKENS.primary,
@@ -915,7 +950,7 @@ const styles = StyleSheet.create({
   },
   browseBtnText: {
     color: TOKENS.card,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     fontSize: 13,
   },
   summaryCard: {
@@ -928,9 +963,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   summaryLabel: {
     fontSize: 14,
@@ -939,29 +974,29 @@ const styles = StyleSheet.create({
   summaryLabelActive: {
     fontSize: 14,
     color: TOKENS.primary,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
   },
   summaryDiscountWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   summaryDiscountValue: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.error,
   },
   editIcon: {
     marginTop: 1.5,
   },
   editDiscountRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   discountInput: {
@@ -972,11 +1007,11 @@ const styles = StyleSheet.create({
     height: 24,
     paddingHorizontal: 6,
     fontSize: 12,
-    textAlign: "right",
+    textAlign: 'right',
   },
   discountTypeToggleGroup: {
-    flexDirection: "row",
-    backgroundColor: "#F3F4F6",
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
     borderRadius: 6,
     padding: 2,
     marginRight: 4,
@@ -985,31 +1020,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   discountTypeToggleBtnActive: {
     backgroundColor: TOKENS.card,
-    boxShadow: "0px 1px 1px 0px rgba(0, 0, 0, 0.1)",
+    boxShadow: '0px 1px 1px 0px rgba(0, 0, 0, 0.1)',
   },
   discountTypeToggleText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.muted,
   },
   discountTypeToggleTextActive: {
     color: TOKENS.primary,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   taxLabelWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
   taxChangeLink: {
     fontSize: 12,
     color: TOKENS.primary,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   dividerLine: {
     height: 1,
@@ -1018,38 +1053,38 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   totalValue: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.primary,
   },
   actionsRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 10,
     marginTop: 4,
   },
   actionPill: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F3F4F6",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
     borderRadius: 8,
     height: 38,
     gap: 6,
   },
   actionPillText: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
   },
   checkoutPayButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: TOKENS.primary,
     height: 48,
     borderRadius: 24,
@@ -1065,12 +1100,12 @@ const styles = StyleSheet.create({
   checkoutPayText: {
     color: TOKENS.card,
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "flex-end",
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
   },
   modalSheet: {
     backgroundColor: TOKENS.card,
@@ -1079,9 +1114,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -1089,20 +1124,20 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   closeBtn: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabBar: {
-    flexDirection: "row",
-    backgroundColor: "#F3F4F6",
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     padding: 4,
     marginHorizontal: 16,
@@ -1111,25 +1146,25 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 8,
     borderRadius: 8,
     gap: 6,
   },
   activeTabItem: {
     backgroundColor: TOKENS.card,
-    boxShadow: "0px 1px 2px 0px rgba(0, 0, 0, 0.05)",
+    boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.05)',
   },
   tabText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.muted,
   },
   activeTabText: {
     color: TOKENS.primary,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   tabContent: {
     flex: 1,
@@ -1137,9 +1172,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   searchBarWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 40,
@@ -1150,13 +1185,13 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: "100%",
+    height: '100%',
     fontSize: 14,
     color: TOKENS.dark,
   },
   walkingCustomerRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
@@ -1164,19 +1199,19 @@ const styles = StyleSheet.create({
   },
   walkingText: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   listHeader: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: '#F9FAFB',
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: '#F3F4F6',
   },
   listHeaderText: {
     fontSize: 11,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.muted,
     letterSpacing: 0.5,
   },
@@ -1185,31 +1220,31 @@ const styles = StyleSheet.create({
   },
   contactItem: {
     height: 54,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: '#F3F4F6',
   },
   contactAvatar: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   contactInitials: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   contactInfo: {
     flex: 1,
   },
   contactName: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
   },
   contactPhone: {
@@ -1219,8 +1254,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 40,
     gap: 8,
   },
@@ -1229,8 +1264,8 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
   },
   emptyList: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 40,
     gap: 8,
   },
@@ -1246,7 +1281,7 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
     marginBottom: 6,
   },
@@ -1258,29 +1293,29 @@ const styles = StyleSheet.create({
     height: 40,
     fontSize: 14,
     color: TOKENS.dark,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: '#F9FAFB',
   },
   submitBtn: {
     backgroundColor: TOKENS.primary,
     height: 44,
     borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 10,
   },
   submitBtnText: {
     color: TOKENS.card,
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   cancelBtn: {
     height: 44,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelBtnText: {
     color: TOKENS.muted,
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: '500',
   },
 });

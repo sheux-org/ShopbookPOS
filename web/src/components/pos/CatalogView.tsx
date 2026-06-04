@@ -66,20 +66,20 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
 
         {/* Grid vs Sidebar switcher */}
         <div style={styles.viewToggleGroup}>
-          <button 
+          <button
             onClick={() => setViewMode('grid')}
             style={{
               ...styles.viewToggleBtn,
-              ...(viewMode === 'grid' ? styles.viewToggleBtnActive : {})
+              ...(viewMode === 'grid' ? styles.viewToggleBtnActive : {}),
             }}
           >
             Grid View
           </button>
-          <button 
+          <button
             onClick={() => setViewMode('catalog')}
             style={{
               ...styles.viewToggleBtn,
-              ...(viewMode === 'catalog' ? styles.viewToggleBtnActive : {})
+              ...(viewMode === 'catalog' ? styles.viewToggleBtnActive : {}),
             }}
           >
             POS Catalog
@@ -128,17 +128,23 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   className="product-grid-card"
                 >
                   <div style={styles.imageContainer}>
-                    <ProductImage 
-                      icon={p.icon} 
-                      size={120} 
-                      style={{ width: '100%', height: '100%', borderRadius: 0, border: 'none' }} 
+                    <ProductImage
+                      icon={p.icon}
+                      size={120}
+                      style={{ width: '100%', height: '100%', borderRadius: 0, border: 'none' }}
                     />
-                    <span style={{
-                      ...styles.stockBadge,
-                      backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
-                      color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
-                    }}>
-                      {isOut ? 'Out of Stock' : isLow ? `Low Stock (${p.stockCount} left)` : `${p.stockCount} left`}
+                    <span
+                      style={{
+                        ...styles.stockBadge,
+                        backgroundColor: isOut ? '#FEE2E2' : isLow ? '#FFEDD5' : '#DCFCE7',
+                        color: isOut ? '#DC2626' : isLow ? '#D97706' : '#15803D',
+                      }}
+                    >
+                      {isOut
+                        ? 'Out of Stock'
+                        : isLow
+                          ? `Low Stock (${p.stockCount} left)`
+                          : `${p.stockCount} left`}
                     </span>
                   </div>
 
@@ -148,16 +154,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     <div style={styles.priceAddRow}>
                       <span style={styles.prodPrice}>Rs. {p.price.toLocaleString()}</span>
                       {isOut ? (
-                        <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--muted)' }}>
+                        <span
+                          style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--muted)' }}
+                        >
                           Out of Stock
                         </span>
                       ) : (
-                        <div 
-                          style={styles.plusIconBadge}
-                          className="plus-icon-badge"
-                        >
+                        <div style={styles.plusIconBadge} className="plus-icon-badge">
                           <Plus size={10} color="#FFFFFF" />
-                          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#FFFFFF' }}>Add</span>
+                          <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#FFFFFF' }}>
+                            Add
+                          </span>
                         </div>
                       )}
                     </div>
@@ -192,19 +199,27 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
           <div style={styles.sidebar}>
             {categories.map((cat) => {
               const isActive = selectedCategory === cat;
-              const catEmoji = cat === 'All' ? '📦' :
-                               cat === 'Grocery' ? '🛒' :
-                               cat === 'Dairy' ? '🥛' :
-                               cat === 'Drinks' ? '🥤' :
-                               cat === 'Snacks' ? '🍿' :
-                               cat === 'Household' ? '🏠' : '📦';
+              const catEmoji =
+                cat === 'All'
+                  ? '📦'
+                  : cat === 'Grocery'
+                    ? '🛒'
+                    : cat === 'Dairy'
+                      ? '🥛'
+                      : cat === 'Drinks'
+                        ? '🥤'
+                        : cat === 'Snacks'
+                          ? '🍿'
+                          : cat === 'Household'
+                            ? '🏠'
+                            : '📦';
               return (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   style={{
                     ...styles.sidebarBtn,
-                    ...(isActive ? styles.sidebarBtnActive : {})
+                    ...(isActive ? styles.sidebarBtnActive : {}),
                   }}
                 >
                   <span style={{ fontSize: '16px' }}>{catEmoji}</span>
@@ -237,20 +252,26 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                     className="pos-catalog-card"
                   >
                     <div style={styles.catalogImageContainer}>
-                      <ProductImage 
-                        icon={p.icon} 
-                        size={120} 
-                        style={{ width: '100%', height: '100%', borderRadius: 0, border: 'none' }} 
+                      <ProductImage
+                        icon={p.icon}
+                        size={120}
+                        style={{ width: '100%', height: '100%', borderRadius: 0, border: 'none' }}
                       />
                     </div>
                     <div style={styles.catalogCardDetails}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <h4 style={styles.productName} title={p.name}>{p.name}</h4>
+                        <h4 style={styles.productName} title={p.name}>
+                          {p.name}
+                        </h4>
                         <span style={styles.productPrice}>Rs. {p.price}</span>
                         {isOut ? (
-                          <span style={{ ...styles.productStock, ...styles.productStockOut }}>Out of Stock</span>
+                          <span style={{ ...styles.productStock, ...styles.productStockOut }}>
+                            Out of Stock
+                          </span>
                         ) : isLow ? (
-                          <span style={{ ...styles.productStock, ...styles.productStockLow }}>Low Stock ({p.stockCount})</span>
+                          <span style={{ ...styles.productStock, ...styles.productStockLow }}>
+                            Low Stock ({p.stockCount})
+                          </span>
                         ) : (
                           <span style={styles.productStock}>Stock: {p.stockCount}</span>
                         )}
@@ -260,7 +281,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         className="product-add-btn"
                         style={{
                           ...styles.productAddBtn,
-                          ...(isOut ? styles.productAddBtnDisabled : {})
+                          ...(isOut ? styles.productAddBtnDisabled : {}),
                         }}
                       >
                         + Add

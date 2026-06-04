@@ -1,9 +1,9 @@
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { TOKENS } from "../../constants/tokens";
-import { ProductImage } from "./ProductImage";
-import { CartItem, cartState } from "../data/cartState";
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { TOKENS } from '../../constants/tokens';
+import { ProductImage } from './ProductImage';
+import { CartItem, cartState } from '../data/cartState';
 
 interface InvoiceItemCardProps {
   item: CartItem;
@@ -12,11 +12,7 @@ interface InvoiceItemCardProps {
 export const InvoiceItemCard: React.FC<InvoiceItemCardProps> = ({ item }) => {
   return (
     <View style={styles.itemCard}>
-      <ProductImage
-        icon={item.icon}
-        size={58}
-        style={styles.itemIconBox}
-      />
+      <ProductImage icon={item.icon} size={58} style={styles.itemIconBox} />
       <View style={styles.itemMainInfo}>
         <Text style={styles.itemName} numberOfLines={1}>
           {item.name}
@@ -27,9 +23,7 @@ export const InvoiceItemCard: React.FC<InvoiceItemCardProps> = ({ item }) => {
       </View>
 
       <View style={styles.itemRightRow}>
-        <Text style={styles.itemTotal}>
-          Rs. {(item.price * item.quantity).toLocaleString()}
-        </Text>
+        <Text style={styles.itemTotal}>Rs. {(item.price * item.quantity).toLocaleString()}</Text>
 
         <View style={styles.cardActions}>
           <TouchableOpacity
@@ -55,8 +49,8 @@ export const InvoiceItemCard: React.FC<InvoiceItemCardProps> = ({ item }) => {
 
 const styles = StyleSheet.create({
   itemCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: TOKENS.card,
     borderRadius: 12,
     borderWidth: 1,
@@ -65,7 +59,7 @@ const styles = StyleSheet.create({
     paddingLeft: 3,
     paddingTop: 3,
     paddingBottom: 3,
-    boxShadow: "0px 1px 2px 0px rgba(0, 0, 0, 0.03)",
+    boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.03)',
   },
   itemIconBox: {
     width: 58,
@@ -79,7 +73,7 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   itemQuantities: {
@@ -88,25 +82,25 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   itemRightRow: {
-    alignItems: "flex-end",
+    alignItems: 'flex-end',
     gap: 6,
   },
   itemTotal: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   cardActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   smallActionBtn: {
     width: 26,
     height: 26,
     borderRadius: 6,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -1,9 +1,9 @@
-import { Q } from "@nozbe/watermelondb";
-import { processUploadQueue } from "../../services/uploadQueue";
-import { useAuthStore } from "../../stores/useAuthStore";
-import { Business, useBusinessStore } from "../../stores/useBusinessStore";
-import { Customer, useCart } from "../../stores/useCart";
-import database from "./db";
+import { Q } from '@nozbe/watermelondb';
+import { processUploadQueue } from '../../services/uploadQueue';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { Business, useBusinessStore } from '../../stores/useBusinessStore';
+import { Customer, useCart } from '../../stores/useCart';
+import database from './db';
 
 export interface CartItem {
   id: string;
@@ -22,7 +22,7 @@ export interface CatalogProduct {
   category: string;
   icon: string;
   stockText: string;
-  stockType: "normal" | "low" | "out";
+  stockType: 'normal' | 'low' | 'out';
   stockCount: number;
   unitType?: string;
   costPrice?: number;
@@ -40,13 +40,7 @@ export const cartState = {
   setCustomer: (customer: Customer | null) => {
     useCart.getState().setCustomer(customer);
   },
-  addCartItem: (
-    name: string,
-    price: number,
-    icon?: string,
-    sku?: string,
-    stock?: number,
-  ) => {
+  addCartItem: (name: string, price: number, icon?: string, sku?: string, stock?: number) => {
     useCart.getState().addCartItem(name, price, icon, sku, stock);
   },
   updateQuantity: (id: string, delta: number) => {
@@ -66,11 +60,9 @@ export const cartState = {
     name: string,
     address: string,
     phone: string,
-    category: string = "General Retail",
+    category: string = 'General Retail'
   ) => {
-    await useBusinessStore
-      .getState()
-      .registerBusiness(name, address, phone, category);
+    await useBusinessStore.getState().registerBusiness(name, address, phone, category);
   },
   updateActiveBusinessDetails: async (details: {
     name: string;
@@ -85,11 +77,9 @@ export const cartState = {
     name: string,
     category: string,
     address: string,
-    phone: string,
+    phone: string
   ) => {
-    await useBusinessStore
-      .getState()
-      .updateBusinessDetails(id, { name, category, address, phone });
+    await useBusinessStore.getState().updateBusinessDetails(id, { name, category, address, phone });
   },
   deleteBusiness: async (id: string) => {
     await useBusinessStore.getState().deleteBusiness(id);
@@ -117,21 +107,19 @@ export const cartState = {
   },
 
   // Direct catalog adding mapped dynamically to local WatermelonDB database
-  addNewCatalogProduct: async (
-    product: Omit<CatalogProduct, "id" | "stockText" | "stockType">,
-  ) => {
+  addNewCatalogProduct: async (product: Omit<CatalogProduct, 'id' | 'stockText' | 'stockType'>) => {
     try {
       await database.write(async () => {
         const activeBiz = useBusinessStore.getState().activeBusiness;
         let dbBiz;
         const businesses = await database
-          .get("businesses")
-          .query(Q.where("name", activeBiz.name))
+          .get('businesses')
+          .query(Q.where('name', activeBiz.name))
           .fetch();
         if (businesses.length > 0) {
           dbBiz = businesses[0];
         } else {
-          dbBiz = await database.get("businesses").create((b: any) => {
+          dbBiz = await database.get('businesses').create((b: any) => {
             b.name = activeBiz.name;
             b.businessType = activeBiz.category;
             b.address = activeBiz.address;
@@ -139,7 +127,7 @@ export const cartState = {
           });
         }
 
-        const newProduct = await database.get("products").create((p: any) => {
+        const newProduct = await database.get('products').create((p: any) => {
           p.business.set(dbBiz);
           p.name = product.name;
           p.price = product.price;
@@ -152,32 +140,26 @@ export const cartState = {
           p.barcode = product.barcode;
           p.lowStockAlert = product.lowStockAlert;
 
-          const iconUri = product.icon ?? "";
-          const isLocal =
-            iconUri.startsWith("file://") || iconUri.startsWith("/");
+          const iconUri = product.icon ?? '';
+          const isLocal = iconUri.startsWith('file://') || iconUri.startsWith('/');
           p.iconPendingUpload = isLocal;
         });
 
         if (product.stockCount > 0) {
-          await database.get("inventory_logs").create((log: any) => {
+          await database.get('inventory_logs').create((log: any) => {
             log.product.set(newProduct);
-            log.type = "in";
+            log.type = 'in';
             log.quantity = product.stockCount;
-            log.reason = "Initial Stock";
+            log.reason = 'Initial Stock';
           });
         }
       });
-      console.log(
-        "Successfully saved new catalog product to WatermelonDB database",
-      );
+      console.log('Successfully saved new catalog product to WatermelonDB database');
 
       // Trigger background upload queue process if a local image needs upload
       processUploadQueue();
     } catch (err) {
-      console.error(
-        "Failed to write new catalog product to WatermelonDB:",
-        err,
-      );
+      console.error('Failed to write new catalog product to WatermelonDB:', err);
     }
   },
 };
@@ -187,6 +169,6 @@ setTimeout(async () => {
   try {
     await useBusinessStore.getState().loadBusinessesFromDb();
   } catch (err) {
-    console.error("Failed to load store profiles from SQLite on startup:", err);
+    console.error('Failed to load store profiles from SQLite on startup:', err);
   }
 }, 1000);

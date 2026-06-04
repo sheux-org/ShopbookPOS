@@ -68,16 +68,16 @@ describe('settingsStore', () => {
   test('should support SSR environments where window is undefined', async () => {
     vi.resetModules();
     const originalWindow = global.window;
-    
+
     Object.defineProperty(global, 'window', {
       value: undefined,
       writable: true,
       configurable: true,
     });
-    
+
     const { useSettingsStore: ssrStore } = await import('../../stores/settingsStore');
     expect(ssrStore).toBeDefined();
-    
+
     // Restore window
     Object.defineProperty(global, 'window', {
       value: originalWindow,

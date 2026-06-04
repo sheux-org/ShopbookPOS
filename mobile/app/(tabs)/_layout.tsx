@@ -1,9 +1,9 @@
-import { Tabs } from "expo-router";
-import React, { useEffect, useRef } from "react";
-import { Animated } from "react-native";
-import { BottomTabBar } from "../../components/common/BottomTabBar";
-import { useTabBarVisible } from "../../hooks/useTabBarVisible";
-import { useActiveDeviceTracker } from "../../hooks/useActiveDeviceTracker";
+import { Tabs } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { Animated } from 'react-native';
+import { BottomTabBar } from '../../components/common/BottomTabBar';
+import { useTabBarVisible } from '../../hooks/useTabBarVisible';
+import { useActiveDeviceTracker } from '../../hooks/useActiveDeviceTracker';
 
 export default function TabLayout() {
   useActiveDeviceTracker();
@@ -20,7 +20,7 @@ export default function TabLayout() {
   }, [tabBarVisible]);
 
   const mapRouteToTab = (routeName: string): any => {
-    if (routeName === "index") return "home";
+    if (routeName === 'index') return 'home';
     return routeName;
   };
 
@@ -32,7 +32,7 @@ export default function TabLayout() {
         return (
           <Animated.View
             style={{
-              position: "absolute",
+              position: 'absolute',
               bottom: 0,
               left: 0,
               right: 0,
@@ -43,7 +43,8 @@ export default function TabLayout() {
             <BottomTabBar
               activeTab={activeTab}
               onTabPress={(tabId) => {
-                const routeName = tabId === "home" ? "index" : (tabId === "orders" ? "insights" : tabId);
+                const routeName =
+                  tabId === 'home' ? 'index' : tabId === 'orders' ? 'insights' : tabId;
                 props.navigation.navigate(routeName);
               }}
             />
@@ -57,34 +58,33 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: 'Home',
         }}
       />
       <Tabs.Screen
         name="pos"
         options={{
-          title: "POS",
+          title: 'POS',
         }}
       />
       <Tabs.Screen
         name="stocks"
         options={{
-          title: "Stocks",
+          title: 'Stocks',
         }}
       />
       <Tabs.Screen
         name="insights"
         options={{
-          title: "Insights",
+          title: 'Insights',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: 'Profile',
         }}
       />
     </Tabs>
   );
 }
-

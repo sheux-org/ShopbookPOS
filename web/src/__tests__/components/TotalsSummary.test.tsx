@@ -47,7 +47,9 @@ describe('TotalsSummary Component', () => {
   });
 
   test('should display Rs. 0 when discountAmount is zero', () => {
-    render(<TotalsSummary {...buildProps({ discountAmount: 0, discountVal: 0, discountType: 'none' })} />);
+    render(
+      <TotalsSummary {...buildProps({ discountAmount: 0, discountVal: 0, discountType: 'none' })} />
+    );
     expect(screen.getByText('Rs. 0')).toBeInTheDocument();
   });
 

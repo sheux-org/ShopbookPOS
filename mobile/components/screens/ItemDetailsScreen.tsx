@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,20 +8,16 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQueryClient } from "@tanstack/react-query";
-import { TOKENS } from "../../constants/tokens";
-import {
-  useGetStockHistory,
-  useStockInProduct,
-  useProduct,
-} from "../../hooks/useProducts";
-import { ProductImage } from "../common/ProductImage";
-import { ScreenWrapper } from "../common/ScreenWrapper";
-import { syncDatabase } from "../../services/sync";
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
+import { TOKENS } from '../../constants/tokens';
+import { useGetStockHistory, useStockInProduct, useProduct } from '../../hooks/useProducts';
+import { ProductImage } from '../common/ProductImage';
+import { ScreenWrapper } from '../common/ScreenWrapper';
+import { syncDatabase } from '../../services/sync';
 
 export const ItemDetailsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -30,9 +26,9 @@ export const ItemDetailsScreen: React.FC = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   // Form states
-  const [stockInQty, setStockInQty] = useState("");
-  const [activeReasonChip, setActiveReasonChip] = useState("Restock");
-  const [customReasonText, setCustomReasonText] = useState("");
+  const [stockInQty, setStockInQty] = useState('');
+  const [activeReasonChip, setActiveReasonChip] = useState('Restock');
+  const [customReasonText, setCustomReasonText] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const { data: product, isLoading: isProductLoading } = useProduct(id);
@@ -42,7 +38,7 @@ export const ItemDetailsScreen: React.FC = () => {
     fetchNextPage: fetchNextHistory,
     hasNextPage: hasNextHistory,
     isFetchingNextPage: isFetchingNextHistory,
-  } = useGetStockHistory(id || "");
+  } = useGetStockHistory(id || '');
 
   const stockInMutation = useStockInProduct();
 
@@ -54,9 +50,9 @@ export const ItemDetailsScreen: React.FC = () => {
     const logsWithBalances = stockHistory.map((log) => {
       const newBalance = runningBalance;
       let prevBalance = runningBalance;
-      if (log.type === "in") {
+      if (log.type === 'in') {
         prevBalance = runningBalance - log.quantity;
-      } else if (log.type === "out") {
+      } else if (log.type === 'out') {
         prevBalance = runningBalance + log.quantity;
       }
       runningBalance = prevBalance;
@@ -73,10 +69,14 @@ export const ItemDetailsScreen: React.FC = () => {
       logsWithBalances.push({
         id: `virtual-initial-stock-${product.id}`,
         productId: product.id,
-        type: "in",
+        type: 'in',
         quantity: runningBalance,
-        reason: "Initial Stock",
-        createdAt: product.createdAt ? new Date(product.createdAt).getTime() : (stockHistory.length > 0 ? stockHistory[stockHistory.length - 1].createdAt - 1000 : Date.now()),
+        reason: 'Initial Stock',
+        createdAt: product.createdAt
+          ? new Date(product.createdAt).getTime()
+          : stockHistory.length > 0
+            ? stockHistory[stockHistory.length - 1].createdAt - 1000
+            : Date.now(),
         prevBalance: 0,
         newBalance: runningBalance,
         isVirtual: true,
@@ -95,7 +95,7 @@ export const ItemDetailsScreen: React.FC = () => {
     if (!product) return;
     const qtyNum = parseInt(stockInQty, 10);
     if (isNaN(qtyNum) || qtyNum <= 0) {
-      Alert.alert("Invalid Quantity", "Please enter a valid quantity greater than 0.");
+      Alert.alert('Invalid Quantity', 'Please enter a valid quantity greater than 0.');
       return;
     }
 
@@ -109,16 +109,16 @@ export const ItemDetailsScreen: React.FC = () => {
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["product", product.id] });
-          triggerToast("Stock updated successfully! 📦");
-          setStockInQty("");
-          setActiveReasonChip("Restock");
-          setCustomReasonText("");
+          queryClient.invalidateQueries({ queryKey: ['product', product.id] });
+          triggerToast('Stock updated successfully! 📦');
+          setStockInQty('');
+          setActiveReasonChip('Restock');
+          setCustomReasonText('');
           // Immediately trigger background sync
-          syncDatabase().catch((err) => console.error("Sync failed:", err));
+          syncDatabase().catch((err) => console.error('Sync failed:', err));
         },
         onError: () => {
-          Alert.alert("Error", "Failed to update product stock.");
+          Alert.alert('Error', 'Failed to update product stock.');
         },
       }
     );
@@ -163,8 +163,8 @@ export const ItemDetailsScreen: React.FC = () => {
 
   const sections = [
     {
-      title: "Inventory Transaction History",
-      subtitle: "History of stock inflows and sales transactions.",
+      title: 'Inventory Transaction History',
+      subtitle: 'History of stock inflows and sales transactions.',
       data: processedStockHistory,
     },
   ];
@@ -191,9 +191,7 @@ export const ItemDetailsScreen: React.FC = () => {
 
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitle}>Item Details</Text>
-          <Text style={styles.headerSubtitle}>
-            Product details & stock history
-          </Text>
+          <Text style={styles.headerSubtitle}>Product details & stock history</Text>
         </View>
       </View>
 
@@ -203,10 +201,7 @@ export const ItemDetailsScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         stickySectionHeadersEnabled={true}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + 20 },
-        ]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
         ListHeaderComponent={
           <View style={styles.sheetHeaderWrapper}>
             {/* 1. Product Details Card with 3px Spacing Top/Left/Bottom */}
@@ -222,7 +217,7 @@ export const ItemDetailsScreen: React.FC = () => {
                   {product.name}
                 </Text>
                 <View style={styles.sheetProductBadges}>
-                  <View style={[styles.codePill, { backgroundColor: "#EFF6FF" }]}>
+                  <View style={[styles.codePill, { backgroundColor: '#EFF6FF' }]}>
                     <Text style={[styles.codeText, { color: TOKENS.primary }]}>
                       {product.category.toUpperCase()}
                     </Text>
@@ -233,7 +228,7 @@ export const ItemDetailsScreen: React.FC = () => {
                     </View>
                   ) : null}
                   {product.barcode ? (
-                    <View style={[styles.codePill, { backgroundColor: "#F1F5F9" }]}>
+                    <View style={[styles.codePill, { backgroundColor: '#F1F5F9' }]}>
                       <Text style={styles.codeText}>Barcode: {product.barcode}</Text>
                     </View>
                   ) : null}
@@ -246,7 +241,9 @@ export const ItemDetailsScreen: React.FC = () => {
                   {product.costPrice ? (
                     <View style={styles.sheetPriceColumn}>
                       <Text style={styles.sheetPriceLabel}>Cost Price</Text>
-                      <Text style={styles.sheetPriceValSec}>Rs. {product.costPrice.toLocaleString()}</Text>
+                      <Text style={styles.sheetPriceValSec}>
+                        Rs. {product.costPrice.toLocaleString()}
+                      </Text>
                     </View>
                   ) : null}
                 </View>
@@ -258,24 +255,31 @@ export const ItemDetailsScreen: React.FC = () => {
               <View style={styles.statusPanelCol}>
                 <Text style={styles.statusPanelLabel}>Current Inventory</Text>
                 <Text style={styles.statusPanelCount}>
-                  {product.stockCount} <Text style={styles.statusPanelUnit}>{product.unitType || "pcs"}</Text>
+                  {product.stockCount}{' '}
+                  <Text style={styles.statusPanelUnit}>{product.unitType || 'pcs'}</Text>
                 </Text>
               </View>
-              <View style={[
-                styles.statusPill,
-                product.stockType === "low" && styles.statusPillWarning,
-                product.stockType === "out" && styles.statusPillError
-              ]}>
-                <View style={[
-                  styles.statusDot,
-                  product.stockType === "low" && { backgroundColor: TOKENS.warning },
-                  product.stockType === "out" && { backgroundColor: TOKENS.error }
-                ]} />
-                <Text style={[
-                  styles.statusPillText,
-                  product.stockType === "low" && { color: TOKENS.warning },
-                  product.stockType === "out" && { color: TOKENS.error }
-                ]}>
+              <View
+                style={[
+                  styles.statusPill,
+                  product.stockType === 'low' && styles.statusPillWarning,
+                  product.stockType === 'out' && styles.statusPillError,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.statusDot,
+                    product.stockType === 'low' && { backgroundColor: TOKENS.warning },
+                    product.stockType === 'out' && { backgroundColor: TOKENS.error },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    product.stockType === 'low' && { color: TOKENS.warning },
+                    product.stockType === 'out' && { color: TOKENS.error },
+                  ]}
+                >
                   {product.stockText}
                 </Text>
               </View>
@@ -287,8 +291,10 @@ export const ItemDetailsScreen: React.FC = () => {
             {/* 3. Manual Stock In Form */}
             <View style={styles.stockAdjustmentForm}>
               <Text style={styles.sectionTitle}>Manual Stock In (Add Stock)</Text>
-              <Text style={styles.sectionSubtitle}>Increment the count of this product in your catalog.</Text>
-              
+              <Text style={styles.sectionSubtitle}>
+                Increment the count of this product in your catalog.
+              </Text>
+
               <View style={styles.stockInRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.fieldLabel}>Quantity to Add *</Text>
@@ -302,7 +308,7 @@ export const ItemDetailsScreen: React.FC = () => {
                       placeholderTextColor="#A0AEC0"
                     />
                     <View style={styles.suffixContainer}>
-                      <Text style={styles.suffixText}>{product.unitType || "pcs"}</Text>
+                      <Text style={styles.suffixText}>{product.unitType || 'pcs'}</Text>
                     </View>
                   </View>
                 </View>
@@ -310,14 +316,14 @@ export const ItemDetailsScreen: React.FC = () => {
 
               <View style={[styles.fieldRow, { marginTop: 10 }]}>
                 <Text style={styles.fieldLabel}>Reason for Adjustment</Text>
-                
+
                 {/* Adjustment reason chips with emerald highlight states */}
                 <View style={styles.suggestionChips}>
                   {[
-                    { name: "Restock", icon: "refresh-cw" },
-                    { name: "Supplier Order", icon: "truck" },
-                    { name: "Inventory Correction", icon: "alert-circle" },
-                    { name: "Customer Return", icon: "corner-up-left" },
+                    { name: 'Restock', icon: 'refresh-cw' },
+                    { name: 'Supplier Order', icon: 'truck' },
+                    { name: 'Inventory Correction', icon: 'alert-circle' },
+                    { name: 'Customer Return', icon: 'corner-up-left' },
                   ].map((item) => {
                     const isChipSelected = activeReasonChip === item.name;
                     return (
@@ -330,18 +336,20 @@ export const ItemDetailsScreen: React.FC = () => {
                         activeOpacity={0.7}
                         onPress={() => {
                           setActiveReasonChip(item.name);
-                          setCustomReasonText("");
+                          setCustomReasonText('');
                         }}
                       >
                         <Feather
                           name={item.icon as any}
                           size={12}
-                          color={isChipSelected ? "#059669" : "#64748B"}
+                          color={isChipSelected ? '#059669' : '#64748B'}
                         />
-                        <Text style={[
-                          styles.suggestionChipText,
-                          isChipSelected && styles.suggestionChipTextActive,
-                        ]}>
+                        <Text
+                          style={[
+                            styles.suggestionChipText,
+                            isChipSelected && styles.suggestionChipTextActive,
+                          ]}
+                        >
                           {item.name}
                         </Text>
                       </TouchableOpacity>
@@ -359,10 +367,7 @@ export const ItemDetailsScreen: React.FC = () => {
               </View>
 
               <TouchableOpacity
-                style={[
-                  styles.stockInSubmitBtn,
-                  stockInMutation.isPending && { opacity: 0.7 }
-                ]}
+                style={[styles.stockInSubmitBtn, stockInMutation.isPending && { opacity: 0.7 }]}
                 activeOpacity={0.8}
                 onPress={handleStockIn}
                 disabled={stockInMutation.isPending}
@@ -389,39 +394,43 @@ export const ItemDetailsScreen: React.FC = () => {
           </View>
         )}
         renderItem={({ item: log }) => {
-          const isAddition = log.type === "in";
+          const isAddition = log.type === 'in';
           const formattedDate = new Date(log.createdAt).toLocaleString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
           });
 
           return (
             <View style={styles.logCard}>
               {/* Left Column: Icon Squircle */}
-              <View style={[
-                styles.logIconContainer,
-                isAddition ? styles.logIconContainerIn : styles.logIconContainerOut
-              ]}>
+              <View
+                style={[
+                  styles.logIconContainer,
+                  isAddition ? styles.logIconContainerIn : styles.logIconContainerOut,
+                ]}
+              >
                 <Feather
-                  name={isAddition ? "arrow-down-left" : "arrow-up-right"}
+                  name={isAddition ? 'arrow-down-left' : 'arrow-up-right'}
                   size={20}
-                  color={isAddition ? "#059669" : "#EF4444"}
+                  color={isAddition ? '#059669' : '#EF4444'}
                 />
               </View>
 
               {/* Middle Column: Reason + Metadata Inline Row */}
               <View style={styles.logMeta}>
                 <Text style={styles.logReasonText} numberOfLines={1}>
-                  {log.reason || (isAddition ? "Manual stock-in" : "Checkout sale")}
+                  {log.reason || (isAddition ? 'Manual stock-in' : 'Checkout sale')}
                 </Text>
                 <View style={styles.logDetailsRow}>
-                  <Text style={[
-                    styles.logTypeTag,
-                    isAddition ? styles.logTypeTagIn : styles.logTypeTagOut
-                  ]}>
-                    {isAddition ? "Stock In" : "Sale"}
+                  <Text
+                    style={[
+                      styles.logTypeTag,
+                      isAddition ? styles.logTypeTagIn : styles.logTypeTagOut,
+                    ]}
+                  >
+                    {isAddition ? 'Stock In' : 'Sale'}
                   </Text>
                   <Text style={styles.logSeparatorDot}>•</Text>
                   <View style={styles.logDateRow}>
@@ -432,22 +441,25 @@ export const ItemDetailsScreen: React.FC = () => {
                 <View style={styles.logBalanceRow}>
                   <Text style={styles.logBalanceLabel}>Balance: </Text>
                   <Text style={styles.logBalanceValue}>
-                    {log.reason === "Initial Stock"
-                      ? `${log.newBalance} ${product.unitType || "pcs"}`
-                      : `${log.prevBalance} → ${log.newBalance} ${product.unitType || "pcs"}`}
+                    {log.reason === 'Initial Stock'
+                      ? `${log.newBalance} ${product.unitType || 'pcs'}`
+                      : `${log.prevBalance} → ${log.newBalance} ${product.unitType || 'pcs'}`}
                   </Text>
                 </View>
               </View>
 
               {/* Right Column: Qty and Unit */}
               <View style={styles.logQtyCol}>
-                <Text style={[
-                  styles.logQtyText,
-                  isAddition ? styles.logQtyTextIn : styles.logQtyTextOut
-                ]}>
-                  {isAddition ? "+" : "-"}{log.quantity}
+                <Text
+                  style={[
+                    styles.logQtyText,
+                    isAddition ? styles.logQtyTextIn : styles.logQtyTextOut,
+                  ]}
+                >
+                  {isAddition ? '+' : '-'}
+                  {log.quantity}
                 </Text>
-                <Text style={styles.logUnitText}>{product.unitType || "pcs"}</Text>
+                <Text style={styles.logUnitText}>{product.unitType || 'pcs'}</Text>
               </View>
             </View>
           );
@@ -489,27 +501,27 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
   },
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -520,9 +532,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitleWrapper: {
     flex: 1,
@@ -530,7 +542,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   headerSubtitle: {
@@ -540,8 +552,8 @@ const styles = StyleSheet.create({
   },
   loaderContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 32,
   },
   loaderText: {
@@ -550,21 +562,21 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 80,
     paddingHorizontal: 24,
     gap: 12,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   emptySub: {
     fontSize: 12,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 18,
   },
   listContent: {
@@ -576,7 +588,7 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   sheetProductCard: {
-    flexDirection: "row",
+    flexDirection: 'row',
     backgroundColor: TOKENS.card,
     borderRadius: 14,
     borderWidth: 1,
@@ -586,13 +598,13 @@ const styles = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 3,
     gap: 12,
-    alignItems: "center",
+    alignItems: 'center',
   },
   sheetProductImage: {
     width: 74,
     height: 74,
     borderRadius: 10,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: '#F1F5F9',
   },
   sheetProductMeta: {
     flex: 1,
@@ -600,29 +612,29 @@ const styles = StyleSheet.create({
   },
   sheetProductName: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   sheetProductBadges: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginTop: 0,
   },
   codePill: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   codeText: {
     fontSize: 10,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.muted,
   },
   sheetPricesRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 2,
   },
   sheetPriceColumn: {
@@ -631,29 +643,29 @@ const styles = StyleSheet.create({
   sheetPriceLabel: {
     fontSize: 10,
     color: TOKENS.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   sheetPriceVal: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.primary,
   },
   sheetPriceValSec: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.dark,
   },
   sheetStatusPanel: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: '#F1F5F9',
   },
   statusPanelCol: {
     gap: 2,
@@ -664,28 +676,28 @@ const styles = StyleSheet.create({
   },
   statusPanelCount: {
     fontSize: 18,
-    fontWeight: "800",
+    fontWeight: '800',
     color: TOKENS.dark,
   },
   statusPanelUnit: {
     fontSize: 12,
-    fontWeight: "normal",
+    fontWeight: 'normal',
     color: TOKENS.muted,
   },
   statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
-    backgroundColor: "#F0FDF4",
+    backgroundColor: '#F0FDF4',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
   },
   statusPillWarning: {
-    backgroundColor: "#FFFBEB",
+    backgroundColor: '#FFFBEB',
   },
   statusPillError: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: '#FEF2F2',
   },
   statusDot: {
     width: 6,
@@ -695,12 +707,12 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.success,
   },
   sectionDivider: {
     height: 1,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: '#E2E8F0',
     marginVertical: 6,
   },
   stockAdjustmentForm: {
@@ -708,7 +720,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   sectionSubtitle: {
@@ -717,7 +729,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   stockInRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
   },
   fieldRow: {
@@ -725,68 +737,68 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
   },
   inputWithSuffix: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: TOKENS.card,
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 8,
     height: 38,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   suffixInput: {
     flex: 1,
-    height: "100%",
+    height: '100%',
     paddingHorizontal: 12,
     fontSize: 13,
     color: TOKENS.dark,
   },
   suffixContainer: {
-    backgroundColor: "#F1F5F9",
-    height: "100%",
+    backgroundColor: '#F1F5F9',
+    height: '100%',
     paddingHorizontal: 12,
-    justifyContent: "center",
+    justifyContent: 'center',
     borderLeftWidth: 1,
     borderLeftColor: TOKENS.border,
   },
   suffixText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.muted,
   },
   suggestionChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginVertical: 6,
   },
   suggestionChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F1F5F9",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: '#E2E8F0',
     gap: 6,
   },
   suggestionChipActive: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#10B981",
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
   },
   suggestionChipText: {
     fontSize: 11,
-    color: "#64748B",
-    fontWeight: "600",
+    color: '#64748B',
+    fontWeight: '600',
   },
   suggestionChipTextActive: {
-    color: "#059669",
-    fontWeight: "700",
+    color: '#059669',
+    fontWeight: '700',
   },
   formInput: {
     backgroundColor: TOKENS.card,
@@ -799,9 +811,9 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   stockInSubmitBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     backgroundColor: TOKENS.success,
     height: 40,
@@ -809,9 +821,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   stockInSubmitBtnText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   stickyHeaderContainer: {
     backgroundColor: TOKENS.background,
@@ -821,35 +833,35 @@ const styles = StyleSheet.create({
     borderBottomColor: TOKENS.border,
   },
   logCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 3,
     paddingLeft: 3,
     paddingRight: 16,
     backgroundColor: TOKENS.card,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: '#F1F5F9',
     marginHorizontal: 16,
     marginVertical: 4,
     gap: 12,
-    boxShadow: "0px 2px 6px 0px rgba(0, 0, 0, 0.02)",
+    boxShadow: '0px 2px 6px 0px rgba(0, 0, 0, 0.02)',
   },
   logIconContainer: {
     width: 50,
     height: 50,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
   },
   logIconContainerIn: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#D1FAE5",
+    backgroundColor: '#ECFDF5',
+    borderColor: '#D1FAE5',
   },
   logIconContainerOut: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FEE2E2",
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FEE2E2',
   },
   logMeta: {
     flex: 1,
@@ -857,32 +869,32 @@ const styles = StyleSheet.create({
   },
   logReasonText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
     lineHeight: 18,
   },
   logDetailsRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
   },
   logTypeTag: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   logTypeTagIn: {
-    color: "#059669",
+    color: '#059669',
   },
   logTypeTagOut: {
-    color: "#EF4444",
+    color: '#EF4444',
   },
   logSeparatorDot: {
     fontSize: 10,
     color: TOKENS.muted,
   },
   logDateRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 3,
   },
   logDateText: {
@@ -890,19 +902,19 @@ const styles = StyleSheet.create({
     color: TOKENS.muted,
   },
   logQtyCol: {
-    alignItems: "flex-end",
-    justifyContent: "center",
+    alignItems: 'flex-end',
+    justifyContent: 'center',
     minWidth: 60,
   },
   logQtyText: {
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   logQtyTextIn: {
-    color: "#059669",
+    color: '#059669',
   },
   logQtyTextOut: {
-    color: "#EF4444",
+    color: '#EF4444',
   },
   logUnitText: {
     fontSize: 10,
@@ -910,35 +922,35 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   logBalanceRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 2,
   },
   logBalanceLabel: {
     fontSize: 11,
     color: TOKENS.muted,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   logBalanceValue: {
     fontSize: 11,
     color: TOKENS.dark,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   emptyLogsWrap: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 32,
     gap: 8,
   },
   emptyLogsTitle: {
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   emptyLogsSubtitle: {
     fontSize: 11,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     paddingHorizontal: 24,
     lineHeight: 16,
   },

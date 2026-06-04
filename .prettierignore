@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+build
+.expo
+pnpm-lock.yaml
+skills-lock.json
+package-lock.json
+yarn.lock

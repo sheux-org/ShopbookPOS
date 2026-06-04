@@ -9,6 +9,7 @@ This document explains the technical implementation of the Firebase Push Notific
 We have integrated the official **Expo SDK 54 compatible** push notification modules to configure native push handling, register permissions, retrieve unique device tokens, and setup background and foreground event listeners.
 
 ### Key Components:
+
 1. **Installed Libraries**:
    - `expo-notifications`: Handles register commands, permission checks, foreground display settings, and event listeners.
    - `expo-device`: Checks if the app runs on a physical device (required for native push certificates on iOS).
@@ -42,9 +43,9 @@ We have integrated the official **Expo SDK 54 compatible** push notification mod
 
 In multi-user POS environments, employees (cashiers, managers, owners) frequently switch devices or log in across multiple tablets and phones. Linking the push token to the `active_devices` table provides significant advantages:
 
-* **Targeted Delivery**: The backend always has a real-time list mapping active employees (`employee_name`, `role`) to their active devices (`device_model`) and their respective `push_token`. The backend can target specific users (e.g., sending an inventory alert to managers only, or notifying a specific cashier about a register update).
-* **Automatic Session Cleanup**: When a cashier logs out of a device, the active session is deleted from Supabase. This immediately removes their `push_token` from the active list, preventing the backend from sending notifications to offline or dead app instances.
-* **No Redundant Overhead**: Instead of maintaining a separate complex notification token registry, the POS piggybacks on the existing 30-second heartbeat check-in. If a token changes or is updated by the OS, it is automatically corrected in Supabase within 30 seconds.
+- **Targeted Delivery**: The backend always has a real-time list mapping active employees (`employee_name`, `role`) to their active devices (`device_model`) and their respective `push_token`. The backend can target specific users (e.g., sending an inventory alert to managers only, or notifying a specific cashier about a register update).
+- **Automatic Session Cleanup**: When a cashier logs out of a device, the active session is deleted from Supabase. This immediately removes their `push_token` from the active list, preventing the backend from sending notifications to offline or dead app instances.
+- **No Redundant Overhead**: Instead of maintaining a separate complex notification token registry, the POS piggybacks on the existing 30-second heartbeat check-in. If a token changes or is updated by the OS, it is automatically corrected in Supabase within 30 seconds.
 
 ---
 
@@ -53,31 +54,38 @@ In multi-user POS environments, employees (cashiers, managers, owners) frequentl
 Follow these steps to fetch the token and trigger a test push notification:
 
 ### Step 1: Run the Application
+
 Start the dev environment and launch the app on your physical device or simulator:
+
 ```bash
 pnpm ios   # For iOS Devices/Simulators
 pnpm dev   # Start Expo CLI general server
 ```
 
 ### Step 2: Grant Permissions
+
 Upon launching the application, you will be prompted with the system-level request:
 **"Mini POS" Would Like to Send You Notifications**.
+
 - Select **Allow**.
 
 ### Step 3: Copy Your Push Token
+
 1. Open the POS app and navigate to **Profile Settings** (tap the profile menu icon).
 2. Tap on **Active Devices**.
 3. Under the list of "Currently Logged In Sessions," find your device card (marked as **This Device**).
 4. Look for the **bell icon (🔔)**. You will see a truncated token string.
 5. Tap the **Copy button (📋)** next to it.
-   - A toast will confirm: *"Push token copied! 📋"*
+   - A toast will confirm: _"Push token copied! 📋"_
 
-*(Note: Push notifications require a physical device. If running on a simulator, it will show "No push token registered" or display simulator-only warnings).*
+_(Note: Push notifications require a physical device. If running on a simulator, it will show "No push token registered" or display simulator-only warnings)._
 
 ### Step 4: Send a Test Notification
+
 You can trigger a test notification using the Firebase Console or a cURL command:
 
 #### Option A: Using Firebase Console
+
 1. Open the [Firebase Console](https://console.firebase.google.com/).
 2. Select your project and navigate to **Cloud Messaging** (under Engage).
 3. Click **Create your first campaign** or **New campaign** and select **Firebase Notification messages**.
@@ -87,7 +95,9 @@ You can trigger a test notification using the Firebase Console or a cURL command
 7. Select the checkbox next to the token and click **Test**.
 
 #### Option B: Using a cURL POST request
+
 If testing from a terminal or backend utility, send an HTTP POST request to the FCM v1 endpoint:
+
 ```bash
 curl -X POST https://fcm.googleapis.com/fcm/send \
   -H "Authorization: key=YOUR_FIREBASE_SERVER_KEY" \
@@ -104,4 +114,5 @@ curl -X POST https://fcm.googleapis.com/fcm/send \
     }
   }'
 ```
-*(Replace `YOUR_FIREBASE_SERVER_KEY` with your Firebase project's Legacy API key, or use OAuth2 credentials for the FCM v1 API).*
+
+_(Replace `YOUR_FIREBASE_SERVER_KEY` with your Firebase project's Legacy API key, or use OAuth2 credentials for the FCM v1 API)._

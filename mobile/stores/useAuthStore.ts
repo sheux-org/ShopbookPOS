@@ -20,7 +20,14 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setActiveBusinessId: (id: string | null) => void;
   setActiveEmployeeId: (id: string | null) => void;
-  loginWithEmployee: (phone: string, role: UserRole, employeeName: string, businessId: string, employeeId: string, token?: string) => void;
+  loginWithEmployee: (
+    phone: string,
+    role: UserRole,
+    employeeName: string,
+    businessId: string,
+    employeeId: string,
+    token?: string
+  ) => void;
   login: (phone: string, otp: string) => boolean;
   logout: () => void;
 }
@@ -41,47 +48,47 @@ export const useAuthStore = create<AuthState>()(
       setActiveBusinessId: (activeBusinessId) => set({ activeBusinessId }),
       setActiveEmployeeId: (activeEmployeeId) => set({ activeEmployeeId }),
       loginWithEmployee: (phone, role, employeeName, businessId, employeeId, token) => {
-        const cleanPhone = phone.replace(/\s+/g, "");
+        const cleanPhone = phone.replace(/\s+/g, '');
         set({
           isLoggedIn: true,
           userPhone: cleanPhone,
           userRole: role,
           employeeName: employeeName,
           activeBusinessId: businessId,
-          activeEmployeeId: employeeId
+          activeEmployeeId: employeeId,
         });
         if (token) {
-          SecureStore.setItemAsync("auth_token", token).catch((err) => {
-            console.error("Failed to store token in SecureStore:", err);
+          SecureStore.setItemAsync('auth_token', token).catch((err) => {
+            console.error('Failed to store token in SecureStore:', err);
           });
         }
       },
       login: (phone, otp) => {
-        const cleanPhone = phone.replace(/\s+/g, "");
-        if (otp === "11111") {
-          set({ 
-            isLoggedIn: true, 
+        const cleanPhone = phone.replace(/\s+/g, '');
+        if (otp === '11111') {
+          set({
+            isLoggedIn: true,
             userPhone: cleanPhone,
             userRole: 'admin',
-            employeeName: 'Owner / Admin'
+            employeeName: 'Owner / Admin',
           });
           return true;
         }
         return false;
       },
       logout: () => {
-        set({ 
-          isLoggedIn: false, 
-          session: null, 
-          user: null, 
+        set({
+          isLoggedIn: false,
+          session: null,
+          user: null,
           userPhone: null,
           userRole: 'admin',
           employeeName: 'Owner / Admin',
           activeBusinessId: null,
-          activeEmployeeId: null
+          activeEmployeeId: null,
         });
-        SecureStore.deleteItemAsync("auth_token").catch((err) => {
-          console.error("Failed to delete token from SecureStore:", err);
+        SecureStore.deleteItemAsync('auth_token').catch((err) => {
+          console.error('Failed to delete token from SecureStore:', err);
         });
         useCart.getState().clearCart();
       },

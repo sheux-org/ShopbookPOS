@@ -1,22 +1,19 @@
-import { Stack } from "expo-router";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PermissionProvider } from "../hooks/usePermissionHandler";
-import { useEffect, useState } from "react";
-import {
-  startUploadQueueMonitor,
-  setQueryInvalidator,
-} from "../services/uploadQueue";
-import { setupNotificationListeners } from "../services/notificationService";
-import { useForceUpdate } from "../hooks/useForceUpdate";
-import { ForceUpdateScreen } from "../components/screens/ForceUpdateScreen";
-import { CustomSplashScreen } from "../components/screens/CustomSplashScreen";
-import { useAuthStore } from "../stores/useAuthStore";
-import * as SplashScreen from "expo-splash-screen";
+import { Stack } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PermissionProvider } from '../hooks/usePermissionHandler';
+import { useEffect, useState } from 'react';
+import { startUploadQueueMonitor, setQueryInvalidator } from '../services/uploadQueue';
+import { setupNotificationListeners } from '../services/notificationService';
+import { useForceUpdate } from '../hooks/useForceUpdate';
+import { ForceUpdateScreen } from '../components/screens/ForceUpdateScreen';
+import { CustomSplashScreen } from '../components/screens/CustomSplashScreen';
+import { useAuthStore } from '../stores/useAuthStore';
+import * as SplashScreen from 'expo-splash-screen';
 
 // Prevent native splash screen from hiding automatically on app startup
 SplashScreen.preventAutoHideAsync().catch((err) => {
-  console.warn("Failed to prevent native splash auto hide:", err);
+  console.warn('Failed to prevent native splash auto hide:', err);
 });
 
 const queryClient = new QueryClient({
@@ -31,7 +28,7 @@ const queryClient = new QueryClient({
 // Register React Query invalidator with the upload queue service
 // so it can refresh all screens after a deferred upload completes
 setQueryInvalidator(() => {
-  queryClient.invalidateQueries({ queryKey: ["products"] });
+  queryClient.invalidateQueries({ queryKey: ['products'] });
 });
 
 function MainAppContent() {
@@ -62,13 +59,7 @@ function MainAppContent() {
 
   // Once splash completes, show force update blocking screen if required
   if (isUpdateRequired) {
-    return (
-      <ForceUpdateScreen
-        config={config}
-        currentVersion={currentVersion}
-        onRetry={refetch}
-      />
-    );
+    return <ForceUpdateScreen config={config} currentVersion={currentVersion} onRetry={refetch} />;
   }
 
   return (
@@ -100,10 +91,10 @@ export default function RootLayout() {
     // Configure push notification event handlers
     const cleanupNotifications = setupNotificationListeners(
       (notification) => {
-        console.log("Foreground notification received:", notification.request.content);
+        console.log('Foreground notification received:', notification.request.content);
       },
       (response) => {
-        console.log("Notification clicked:", response.notification.request.content);
+        console.log('Notification clicked:', response.notification.request.content);
       }
     );
 
@@ -122,4 +113,3 @@ export default function RootLayout() {
     </QueryClientProvider>
   );
 }
-

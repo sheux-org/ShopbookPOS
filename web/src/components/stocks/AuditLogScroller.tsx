@@ -19,10 +19,7 @@ interface AuditLogScrollerProps {
   activeTab: 'inventory' | 'audit';
 }
 
-export const AuditLogScroller: React.FC<AuditLogScrollerProps> = ({
-  logs,
-  activeTab,
-}) => {
+export const AuditLogScroller: React.FC<AuditLogScrollerProps> = ({ logs, activeTab }) => {
   return (
     <div
       style={styles.logPane}
@@ -40,24 +37,31 @@ export const AuditLogScroller: React.FC<AuditLogScrollerProps> = ({
           return (
             <div key={log.id} style={styles.logCard} className="stocks-log-card">
               <div style={styles.logCardTop}>
-                <ProductImage icon={log.productIcon} size={28} style={{ border: 'none', borderRadius: '6px', flexShrink: 0 }} />
+                <ProductImage
+                  icon={log.productIcon}
+                  size={28}
+                  style={{ border: 'none', borderRadius: '6px', flexShrink: 0 }}
+                />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h4 style={styles.logCardName}>{log.productName}</h4>
                   <p style={styles.logCardDate}>{log.date}</p>
                 </div>
 
-                <div style={{
-                  ...styles.logCardTypeBadge,
-                  backgroundColor: isIn ? '#DCFCE7' : '#FEE2E2',
-                  color: isIn ? '#16A34A' : '#DC2626',
-                }}>
+                <div
+                  style={{
+                    ...styles.logCardTypeBadge,
+                    backgroundColor: isIn ? '#DCFCE7' : '#FEE2E2',
+                    color: isIn ? '#16A34A' : '#DC2626',
+                  }}
+                >
                   {isIn ? <ArrowUpRight size={11} /> : <ArrowDownLeft size={11} />}
-                  <span>{isIn ? '+' : '-'}{log.quantity}</span>
+                  <span>
+                    {isIn ? '+' : '-'}
+                    {log.quantity}
+                  </span>
                 </div>
               </div>
-              {log.reason && (
-                <p style={styles.logCardReason}>Reason: {log.reason}</p>
-              )}
+              {log.reason && <p style={styles.logCardReason}>Reason: {log.reason}</p>}
             </div>
           );
         })}

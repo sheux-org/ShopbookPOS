@@ -70,24 +70,38 @@ describe('businessStore', () => {
     // so that it calls through its async callback, and database.get so it returns
     // stable per-table collection objects (same object per tableName per test).
     databaseMock.write.mockImplementation((cb: () => Promise<any>) => cb());
-    databaseMock.get.mockImplementation((tableName: string) =>
-      collectionMap[tableName] || {
-        query: vi.fn().mockReturnValue({ fetch: vi.fn().mockResolvedValue([]) }),
-        create: vi.fn().mockImplementation(async (cb) => {
-          const model: any = {};
-          if (cb) await cb(model);
-          return model;
-        }),
-      }
+    databaseMock.get.mockImplementation(
+      (tableName: string) =>
+        collectionMap[tableName] || {
+          query: vi.fn().mockReturnValue({ fetch: vi.fn().mockResolvedValue([]) }),
+          create: vi.fn().mockImplementation(async (cb) => {
+            const model: any = {};
+            if (cb) await cb(model);
+            return model;
+          }),
+        }
     );
 
     // Reset to default placeholder state
     useBusinessStore.setState({
-      businesses: [{ id: '0', name: 'Register Your Shop', category: 'General Retail', address: 'Complete onboarding setup', phone: '' }],
-      activeBusiness: { id: '0', name: 'Register Your Shop', category: 'General Retail', address: 'Complete onboarding setup', phone: '' },
+      businesses: [
+        {
+          id: '0',
+          name: 'Register Your Shop',
+          category: 'General Retail',
+          address: 'Complete onboarding setup',
+          phone: '',
+        },
+      ],
+      activeBusiness: {
+        id: '0',
+        name: 'Register Your Shop',
+        category: 'General Retail',
+        address: 'Complete onboarding setup',
+        phone: '',
+      },
     });
   });
-
 
   test('should initialize with default register shop placeholder', () => {
     const state = useBusinessStore.getState();
@@ -143,7 +157,13 @@ describe('businessStore', () => {
     const bizCollection = databaseMock.get('businesses');
     bizCollection.query.mockReturnValueOnce({
       fetch: vi.fn().mockResolvedValue([
-        { id: 'biz-loaded', name: 'Loaded Bakery', businessType: 'Bakery', address: 'Galle', phoneNumber: '0771112222' },
+        {
+          id: 'biz-loaded',
+          name: 'Loaded Bakery',
+          businessType: 'Bakery',
+          address: 'Galle',
+          phoneNumber: '0771112222',
+        },
       ]),
     });
 
@@ -181,16 +201,19 @@ describe('businessStore', () => {
     const bizCollection = databaseMock.get('businesses');
     bizCollection.query.mockReturnValue({
       fetch: vi.fn().mockResolvedValue([
-        { id: 'new-biz-id', name: 'My Bakery', businessType: 'Bakery', address: 'Galle', phoneNumber: '0771112222' }
+        {
+          id: 'new-biz-id',
+          name: 'My Bakery',
+          businessType: 'Bakery',
+          address: 'Galle',
+          phoneNumber: '0771112222',
+        },
       ]),
     });
 
-    const newId = await useBusinessStore.getState().registerBusiness(
-      'My Bakery',
-      'Galle',
-      '0771112222',
-      'Bakery'
-    );
+    const newId = await useBusinessStore
+      .getState()
+      .registerBusiness('My Bakery', 'Galle', '0771112222', 'Bakery');
 
     expect(newId).toBe('new-biz-id');
     expect(databaseMock.get).toHaveBeenCalledWith('businesses');
@@ -209,7 +232,13 @@ describe('businessStore', () => {
   // ─── updateActiveBusinessDetails ────────────────────────────────
 
   test('should update active business details in database', async () => {
-    const activeBiz = { id: 'biz-active', name: 'Active Shop', category: 'Retail', address: 'Colombo', phone: '0771111111' };
+    const activeBiz = {
+      id: 'biz-active',
+      name: 'Active Shop',
+      category: 'Retail',
+      address: 'Colombo',
+      phone: '0771111111',
+    };
     useBusinessStore.setState({ activeBusiness: activeBiz });
     useAuthStore.setState({ isLoggedIn: true, userPhone: '0771111111' });
 
@@ -249,7 +278,9 @@ describe('businessStore', () => {
     databaseMock.write.mockRejectedValueOnce(new Error('Update failure'));
     // Should not throw
     await expect(
-      useBusinessStore.getState().updateActiveBusinessDetails({ name: 'X', category: '', address: '', phone: '' })
+      useBusinessStore
+        .getState()
+        .updateActiveBusinessDetails({ name: 'X', category: '', address: '', phone: '' })
     ).resolves.not.toThrow();
   });
 
@@ -290,7 +321,9 @@ describe('businessStore', () => {
 
     databaseMock.write.mockRejectedValueOnce(new Error('Update DB error'));
     await expect(
-      useBusinessStore.getState().updateBusinessDetails('biz-err', { name: 'X', category: '', address: '', phone: '' })
+      useBusinessStore
+        .getState()
+        .updateBusinessDetails('biz-err', { name: 'X', category: '', address: '', phone: '' })
     ).resolves.not.toThrow();
   });
 
@@ -313,9 +346,21 @@ describe('businessStore', () => {
   });
 
   test('should switch active business to first remaining after deleting active one', async () => {
-    const remaining = { id: 'biz-remaining', name: 'Second Shop', category: 'Grocery', address: 'Addr', phone: '000' };
+    const remaining = {
+      id: 'biz-remaining',
+      name: 'Second Shop',
+      category: 'Grocery',
+      address: 'Addr',
+      phone: '000',
+    };
     useBusinessStore.setState({
-      activeBusiness: { id: 'biz-active-del', name: 'Soon Deleted', category: '', address: '', phone: '' },
+      activeBusiness: {
+        id: 'biz-active-del',
+        name: 'Soon Deleted',
+        category: '',
+        address: '',
+        phone: '',
+      },
       businesses: [
         { id: 'biz-active-del', name: 'Soon Deleted', category: '', address: '', phone: '' },
         remaining,
@@ -348,14 +393,18 @@ describe('businessStore', () => {
     bizCollection.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([targetBiz]) });
 
     databaseMock.write.mockRejectedValueOnce(new Error('Delete DB error'));
-    await expect(
-      useBusinessStore.getState().deleteBusiness('biz-err')
-    ).resolves.not.toThrow();
+    await expect(useBusinessStore.getState().deleteBusiness('biz-err')).resolves.not.toThrow();
   });
 
   test('should set activeBusiness to remaining[0] when active biz is deleted and others remain', async () => {
     const biz1 = { id: 'biz-deleted', name: 'Deleted', category: '', address: '', phone: '' };
-    const biz2 = { id: 'biz-kept', name: 'Kept Shop', category: 'Retail', address: 'Galle', phone: '0771' };
+    const biz2 = {
+      id: 'biz-kept',
+      name: 'Kept Shop',
+      category: 'Retail',
+      address: 'Galle',
+      phone: '0771',
+    };
 
     useBusinessStore.setState({
       activeBusiness: biz1,
@@ -374,7 +423,13 @@ describe('businessStore', () => {
     empCol.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) });
     bizCol.query.mockReturnValueOnce({
       fetch: vi.fn().mockResolvedValue([
-        { id: 'biz-kept', name: 'Kept Shop', businessType: 'Retail', address: 'Galle', phoneNumber: '0771234567' },
+        {
+          id: 'biz-kept',
+          name: 'Kept Shop',
+          businessType: 'Retail',
+          address: 'Galle',
+          phoneNumber: '0771234567',
+        },
       ]),
     });
 
@@ -421,7 +476,11 @@ describe('businessStore', () => {
   });
 
   test('should prefer activeBusinessId match when multiple businesses are loaded', async () => {
-    useAuthStore.setState({ isLoggedIn: true, userPhone: '0771112233', activeBusinessId: 'biz-preferred' });
+    useAuthStore.setState({
+      isLoggedIn: true,
+      userPhone: '0771112233',
+      activeBusinessId: 'biz-preferred',
+    });
 
     const empCol = databaseMock.get('employees');
     empCol.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) });
@@ -429,8 +488,20 @@ describe('businessStore', () => {
     const bizCol = databaseMock.get('businesses');
     bizCol.query.mockReturnValueOnce({
       fetch: vi.fn().mockResolvedValue([
-        { id: 'biz-first', name: 'First Shop', businessType: 'Retail', address: 'Colombo', phoneNumber: '0771112233' },
-        { id: 'biz-preferred', name: 'Preferred Shop', businessType: 'Grocery', address: 'Galle', phoneNumber: '0771112233' },
+        {
+          id: 'biz-first',
+          name: 'First Shop',
+          businessType: 'Retail',
+          address: 'Colombo',
+          phoneNumber: '0771112233',
+        },
+        {
+          id: 'biz-preferred',
+          name: 'Preferred Shop',
+          businessType: 'Grocery',
+          address: 'Galle',
+          phoneNumber: '0771112233',
+        },
       ]),
     });
 
@@ -449,7 +520,10 @@ describe('businessStore', () => {
     });
 
     await expect(useBusinessStore.getState().loadBusinessesFromDb()).resolves.not.toThrow();
-    expect(errorSpy).toHaveBeenCalledWith('Failed to load businesses from IndexedDB:', expect.any(Error));
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Failed to load businesses from IndexedDB:',
+      expect.any(Error)
+    );
     errorSpy.mockRestore();
   });
 
@@ -502,7 +576,13 @@ describe('businessStore', () => {
   });
 
   test('updateActiveBusinessDetails should update logoUri when provided', async () => {
-    const activeBiz = { id: 'biz-active', name: 'Active Shop', category: 'Retail', address: 'Colombo', phone: '0771111111' };
+    const activeBiz = {
+      id: 'biz-active',
+      name: 'Active Shop',
+      category: 'Retail',
+      address: 'Colombo',
+      phone: '0771111111',
+    };
     useBusinessStore.setState({ activeBusiness: activeBiz });
 
     const updatedFields: any = {};
@@ -529,7 +609,13 @@ describe('businessStore', () => {
 
   test('deleteBusiness should switch activeBusiness to first remaining when load is skipped', async () => {
     const biz1 = { id: 'biz-deleted', name: 'Deleted', category: '', address: '', phone: '' };
-    const biz2 = { id: 'biz-kept', name: 'Kept Shop', category: 'Retail', address: 'Galle', phone: '0771' };
+    const biz2 = {
+      id: 'biz-kept',
+      name: 'Kept Shop',
+      category: 'Retail',
+      address: 'Galle',
+      phone: '0771',
+    };
 
     useBusinessStore.setState({
       activeBusiness: biz1,
@@ -585,16 +671,16 @@ describe('businessStore', () => {
   test('should support SSR environments where window is undefined', async () => {
     vi.resetModules();
     const originalWindow = global.window;
-    
+
     Object.defineProperty(global, 'window', {
       value: undefined,
       writable: true,
       configurable: true,
     });
-    
+
     const { useBusinessStore: ssrStore } = await import('../../stores/businessStore');
     expect(ssrStore).toBeDefined();
-    
+
     // Restore window
     Object.defineProperty(global, 'window', {
       value: originalWindow,
@@ -609,17 +695,12 @@ describe('businessStore', () => {
     // businesses query returns two existing businesses
     const bizCollection = databaseMock.get('businesses');
     bizCollection.query.mockReturnValue({
-      fetch: vi.fn().mockResolvedValue([
-        { id: 'biz-1' },
-        { id: 'biz-2' }
-      ]),
+      fetch: vi.fn().mockResolvedValue([{ id: 'biz-1' }, { id: 'biz-2' }]),
     });
 
-    const newId = await useBusinessStore.getState().registerBusiness(
-      'Skip Seed Store',
-      'Colombo',
-      '0771112222'
-    );
+    const newId = await useBusinessStore
+      .getState()
+      .registerBusiness('Skip Seed Store', 'Colombo', '0771112222');
     expect(newId).toBeDefined();
     expect(databaseMock.write).toHaveBeenCalledTimes(1);
   });
@@ -630,19 +711,17 @@ describe('businessStore', () => {
     // businesses query returns 1 business
     const bizCollection = databaseMock.get('businesses');
     bizCollection.query.mockReturnValueOnce({
-      fetch: vi.fn().mockResolvedValue([{ id: 'biz-1' }])
+      fetch: vi.fn().mockResolvedValue([{ id: 'biz-1' }]),
     });
     // products query returns an existing product list
     const prodCollection = databaseMock.get('products');
     prodCollection.query.mockReturnValueOnce({
-      fetch: vi.fn().mockResolvedValue([{ id: 'prod-1' }])
+      fetch: vi.fn().mockResolvedValue([{ id: 'prod-1' }]),
     });
 
-    await useBusinessStore.getState().registerBusiness(
-      'Skip Seed Store 2',
-      'Colombo',
-      '0771112222'
-    );
+    await useBusinessStore
+      .getState()
+      .registerBusiness('Skip Seed Store 2', 'Colombo', '0771112222');
     expect(databaseMock.write).toHaveBeenCalledTimes(1);
   });
 
@@ -658,14 +737,23 @@ describe('businessStore', () => {
   });
 
   test('updateActiveBusinessDetails should return early when active business is not found', async () => {
-    const activeBiz = { id: 'biz-none', name: 'Active Shop', category: 'Retail', address: 'Colombo', phone: '0771111111' };
+    const activeBiz = {
+      id: 'biz-none',
+      name: 'Active Shop',
+      category: 'Retail',
+      address: 'Colombo',
+      phone: '0771111111',
+    };
     useBusinessStore.setState({ activeBusiness: activeBiz });
 
     const bizCol = databaseMock.get('businesses');
     bizCol.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) });
 
     await useBusinessStore.getState().updateActiveBusinessDetails({
-      name: 'X', category: '', address: '', phone: ''
+      name: 'X',
+      category: '',
+      address: '',
+      phone: '',
     });
     expect(databaseMock.write).not.toHaveBeenCalled();
   });
@@ -675,19 +763,21 @@ describe('businessStore', () => {
     bizCol.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) });
 
     await useBusinessStore.getState().updateBusinessDetails('biz-none', {
-      name: 'X', category: '', address: '', phone: ''
+      name: 'X',
+      category: '',
+      address: '',
+      phone: '',
     });
     expect(databaseMock.write).not.toHaveBeenCalled();
   });
 
   test('loadBusinessesFromDb should do nothing when user is logged in but has no phone', async () => {
     useAuthStore.setState({ isLoggedIn: true, userPhone: null });
-    
+
     const originalBusinesses = useBusinessStore.getState().businesses;
 
     await useBusinessStore.getState().loadBusinessesFromDb();
-    
+
     expect(useBusinessStore.getState().businesses).toEqual(originalBusinesses);
   });
 });
-

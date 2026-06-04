@@ -16,28 +16,14 @@ if (typeof window !== 'undefined') {
 
   database = new Database({
     adapter,
-    modelClasses: [
-      Business,
-      Employee,
-      Product,
-      Order,
-      OrderItem,
-      InventoryLog,
-    ],
+    modelClasses: [Business, Employee, Product, Order, OrderItem, InventoryLog],
   });
 } else {
   // SSR placeholder instance (won't be queried on server because components only use it in client-side useEffects/handlers)
   const LokiJSAdapter = require('@nozbe/watermelondb/adapters/lokijs').default;
   database = new Database({
     adapter: new LokiJSAdapter({ schema, useWebWorker: false, useIncrementalIndexedDB: false }),
-    modelClasses: [
-      Business,
-      Employee,
-      Product,
-      Order,
-      OrderItem,
-      InventoryLog,
-    ],
+    modelClasses: [Business, Employee, Product, Order, OrderItem, InventoryLog],
   });
 }
 

@@ -19,20 +19,21 @@ interface TabletCartScrollerProps {
   updateQuantity: (itemId: string, diff: number) => void;
 }
 
-export const TabletCartScroller: React.FC<TabletCartScrollerProps> = ({
-  cart,
-  updateQuantity,
-}) => {
+export const TabletCartScroller: React.FC<TabletCartScrollerProps> = ({ cart, updateQuantity }) => {
   return (
     <div style={styles.tabletCartScroller}>
       {cart.map((item) => (
         <div key={item.id} style={styles.cartItemRow}>
-          <ProductImage icon={item.icon} size={42} style={{ border: 'none', borderRadius: '6px' }} />
+          <ProductImage
+            icon={item.icon}
+            size={42}
+            style={{ border: 'none', borderRadius: '6px' }}
+          />
           <div style={{ flex: 1, minWidth: 0, marginLeft: '8px' }}>
             <h4 style={styles.cartItemName}>{item.name}</h4>
             <span style={styles.cartItemPrice}>Rs. {item.price.toLocaleString()}</span>
           </div>
-          
+
           {/* Quantity adjust buttons */}
           <div style={styles.qtyContainer}>
             <button onClick={() => updateQuantity(item.id, -1)} style={styles.qtyBtn}>
@@ -48,9 +49,15 @@ export const TabletCartScroller: React.FC<TabletCartScrollerProps> = ({
             Rs. {(item.price * item.quantity).toLocaleString()}
           </span>
 
-          <button 
-            onClick={() => updateQuantity(item.id, -item.quantity)} 
-            style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--error)', cursor: 'pointer', marginLeft: '6px' }}
+          <button
+            onClick={() => updateQuantity(item.id, -item.quantity)}
+            style={{
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: 'var(--error)',
+              cursor: 'pointer',
+              marginLeft: '6px',
+            }}
           >
             <Trash2 size={14} />
           </button>
@@ -60,8 +67,19 @@ export const TabletCartScroller: React.FC<TabletCartScrollerProps> = ({
       {cart.length === 0 && (
         <div style={styles.emptyCartState}>
           <ShoppingBag size={64} color="#cbd5e1" style={{ marginBottom: '12px' }} />
-          <span style={{ fontSize: '15px', fontWeight: '600', color: '#475569' }}>No items in cart</span>
-          <span style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', textAlign: 'center', maxWidth: '280px', lineHeight: '1.4' }}>
+          <span style={{ fontSize: '15px', fontWeight: '600', color: '#475569' }}>
+            No items in cart
+          </span>
+          <span
+            style={{
+              fontSize: '11px',
+              color: '#64748b',
+              marginTop: '6px',
+              textAlign: 'center',
+              maxWidth: '280px',
+              lineHeight: '1.4',
+            }}
+          >
             Scan product barcode or type a quick-code to begin checkout.
           </span>
         </div>

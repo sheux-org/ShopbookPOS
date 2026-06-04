@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, Download } from 'lucide-react';
+import { Printer, Download, FileDown } from 'lucide-react';
 import { ReportType } from '../../utils/reportTemplates';
 
 interface ReportExporterProps {
@@ -17,11 +17,17 @@ export default function ReportExporter({
 }: ReportExporterProps) {
   return (
     <div className="export-card">
-      <h3 className="export-title">📄 Export Business Reports</h3>
+      <div className="export-header">
+        <div className="export-header-icon-wrapper">
+          <FileDown size={16} />
+        </div>
+        <h3 className="export-title">Export Business Reports</h3>
+      </div>
+
       <div className="export-controls">
         <div className="export-select-wrapper">
-          <select 
-            value={selectedReport} 
+          <select
+            value={selectedReport}
             onChange={(e) => setSelectedReport(e.target.value as ReportType)}
             className="export-select"
           >
@@ -34,7 +40,7 @@ export default function ReportExporter({
         </div>
 
         <div className="export-buttons-group">
-          <button 
+          <button
             onClick={handleDownloadPdf}
             className="export-btn pdf"
             title="Export Statement Report as PDF"
@@ -42,7 +48,7 @@ export default function ReportExporter({
             <Printer size={15} />
             <span>PDF</span>
           </button>
-          <button 
+          <button
             onClick={handleDownloadCsv}
             className="export-btn excel"
             title="Export Ledger Statement as CSV/Excel"

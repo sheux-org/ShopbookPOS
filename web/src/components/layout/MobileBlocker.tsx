@@ -61,7 +61,11 @@ export const MobileBlocker: React.FC = () => {
         {/* Header Brand Info */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
           <img src="/logo.png" alt="Shopbook Logo" style={{ height: '52px', width: 'auto' }} />
-          <span style={{ fontWeight: 600, fontSize: '20px', color: '#0f172a', letterSpacing: '-0.3px' }}>Mini POS</span>
+          <span
+            style={{ fontWeight: 600, fontSize: '20px', color: '#0f172a', letterSpacing: '-0.3px' }}
+          >
+            Mini POS
+          </span>
         </div>
 
         <div className="mobile-blocker-icon-container">
@@ -73,7 +77,8 @@ export const MobileBlocker: React.FC = () => {
 
         <h1 className="mobile-blocker-title">Mobile View Unavailable</h1>
         <p className="mobile-blocker-desc">
-          To ensure a premium point-of-sale experience, the Shopbook web terminal is optimized exclusively for tablet and desktop viewports.
+          To ensure a premium point-of-sale experience, the Shopbook web terminal is optimized
+          exclusively for tablet and desktop viewports.
         </p>
 
         <div className="mobile-blocker-divider" />

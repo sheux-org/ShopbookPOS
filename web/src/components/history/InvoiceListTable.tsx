@@ -60,29 +60,40 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
                   <td style={styles.td}>{o.dateStr}</td>
                   <td style={styles.td}>{o.cashierName}</td>
                   <td style={styles.td}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start' }}>
-                      <span style={styles.methodBadge}>
-                        {o.paymentMethod.toUpperCase()}
-                      </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        alignItems: 'flex-start',
+                      }}
+                    >
+                      <span style={styles.methodBadge}>{o.paymentMethod.toUpperCase()}</span>
                       {(o.paymentMethod === 'card' || o.paymentMethod === 'bank') && o.bankName && (
-                        <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '500' }}>
+                        <span
+                          style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '500' }}
+                        >
                           {o.bankName} {o.cardLastFour ? `(**** ${o.cardLastFour})` : ''}
                         </span>
                       )}
                     </div>
                   </td>
                   <td style={styles.td}>
-                    <span style={{
-                       ...styles.statusBadge,
-                      backgroundColor: o.status === 'voided' ? '#fff1f2' : '#f0fdf4',
-                      color: o.status === 'voided' ? 'var(--error)' : 'var(--success)',
-                      border: o.status === 'voided' ? '1px solid #fecaca' : '1px solid #bbf7d0',
-                    }}>
+                    <span
+                      style={{
+                        ...styles.statusBadge,
+                        backgroundColor: o.status === 'voided' ? '#fff1f2' : '#f0fdf4',
+                        color: o.status === 'voided' ? 'var(--error)' : 'var(--success)',
+                        border: o.status === 'voided' ? '1px solid #fecaca' : '1px solid #bbf7d0',
+                      }}
+                    >
                       {o.status.toUpperCase()}
                     </span>
                   </td>
                   <td style={styles.td}>
-                    <strong style={{ color: o.status === 'voided' ? 'var(--muted)' : 'var(--primary)' }}>
+                    <strong
+                      style={{ color: o.status === 'voided' ? 'var(--muted)' : 'var(--primary)' }}
+                    >
                       Rs. {o.totalAmount.toLocaleString()}
                     </strong>
                   </td>
@@ -100,8 +111,12 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
                   <td colSpan={7} style={{ padding: 0 }}>
                     <div style={styles.emptyContainer}>
                       <FileText size={36} color="var(--muted)" style={{ marginBottom: '8px' }} />
-                      <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600' }}>No matching transactions found</h4>
-                      <p style={{ margin: 0, fontSize: '13px' }}>Invoiced completed records will populate inside this list.</p>
+                      <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600' }}>
+                        No matching transactions found
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '13px' }}>
+                        Invoiced completed records will populate inside this list.
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -140,19 +155,20 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: '850px',
   },
   trHead: {
-    borderBottom: '2px solid var(--border)',
+    borderBottom: '1px solid var(--border)',
     backgroundColor: 'var(--background)',
     position: 'sticky',
     top: 0,
     zIndex: 1,
   },
   th: {
-    padding: '12px 16px',
+    padding: '10px 16px',
+    textAlign: 'left',
     fontWeight: '700',
-    color: 'var(--muted)',
+    color: '#475569',
     fontSize: '11px',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.05em',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',

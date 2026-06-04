@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
-import { fetchAppConfig, type AppConfig } from "../services/appConfig";
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { fetchAppConfig, type AppConfig } from '../services/appConfig';
 
-const CACHE_KEY = "@shopbook_app_config_cache";
-const DEFAULT_VERSION = "1.0.0";
+const CACHE_KEY = '@shopbook_app_config_cache';
+const DEFAULT_VERSION = '1.0.0';
 
 /**
  * Compares two semantic version strings (e.g., '1.0.0' and '1.1.2').
@@ -14,22 +14,22 @@ const DEFAULT_VERSION = "1.0.0";
 export function isVersionLessThan(current: string, min: string): boolean {
   try {
     // Strip suffixes like -beta or +build
-    const cleanCurrent = current.split("-")[0].split("+")[0];
-    const cleanMin = min.split("-")[0].split("+")[0];
+    const cleanCurrent = current.split('-')[0].split('+')[0];
+    const cleanMin = min.split('-')[0].split('+')[0];
 
-    const currentParts = cleanCurrent.split(".").map((num) => parseInt(num, 10) || 0);
-    const minParts = cleanMin.split(".").map((num) => parseInt(num, 10) || 0);
+    const currentParts = cleanCurrent.split('.').map((num) => parseInt(num, 10) || 0);
+    const minParts = cleanMin.split('.').map((num) => parseInt(num, 10) || 0);
 
     for (let i = 0; i < Math.max(currentParts.length, minParts.length); i++) {
       const currentVal = currentParts[i] ?? 0;
       const minVal = minParts[i] ?? 0;
-      
+
       if (currentVal < minVal) return true;
       if (currentVal > minVal) return false;
     }
     return false;
   } catch (err) {
-    console.error("Error comparing versions:", err);
+    console.error('Error comparing versions:', err);
     return false;
   }
 }
@@ -48,7 +48,7 @@ export function useForceUpdate() {
           setCachedConfig(JSON.parse(json));
         }
       } catch (err) {
-        console.error("Failed to load app config cache:", err);
+        console.error('Failed to load app config cache:', err);
       } finally {
         setIsCacheLoaded(true);
       }
@@ -63,7 +63,7 @@ export function useForceUpdate() {
     error,
     refetch,
   } = useQuery<AppConfig | null>({
-    queryKey: ["appConfig"],
+    queryKey: ['appConfig'],
     queryFn: fetchAppConfig,
     staleTime: 1000 * 60 * 5, // 5 minutes cache duration
   });
@@ -72,7 +72,7 @@ export function useForceUpdate() {
   useEffect(() => {
     if (freshConfig) {
       AsyncStorage.setItem(CACHE_KEY, JSON.stringify(freshConfig)).catch((err) => {
-        console.error("Failed to save app config cache:", err);
+        console.error('Failed to save app config cache:', err);
       });
     }
   }, [freshConfig]);

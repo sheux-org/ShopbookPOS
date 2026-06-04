@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,23 +9,22 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-} from "react-native";
-import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { TOKENS } from "../../../constants/tokens";
-import { useSettingsStore } from "../../../stores/useSettingsStore";
-import { useBusinessStore } from "../../../stores/useBusinessStore";
-import { PermissionsAndroid } from "react-native";
+} from 'react-native';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TOKENS } from '../../../constants/tokens';
+import { useSettingsStore } from '../../../stores/useSettingsStore';
+import { useBusinessStore } from '../../../stores/useBusinessStore';
+import { PermissionsAndroid } from 'react-native';
 import RNBluetoothClassic, { BluetoothDevice } from 'react-native-bluetooth-classic';
 import Barcode from 'react-native-barcode-svg';
-
 
 export default function BluetoothPrinterRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  
+
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
   const setPairedPrinter = useSettingsStore((s) => s.setPairedPrinter);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
@@ -46,7 +45,7 @@ export default function BluetoothPrinterRoute() {
   const handleStartScan = async () => {
     setIsScanning(true);
     setDevices([]);
-    
+
     try {
       if (Platform.OS === 'android') {
         const granted = await PermissionsAndroid.requestMultiple([
@@ -56,10 +55,11 @@ export default function BluetoothPrinterRoute() {
         ]);
 
         if (
-          granted['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.DENIED ||
+          granted['android.permission.ACCESS_FINE_LOCATION'] ===
+            PermissionsAndroid.RESULTS.DENIED ||
           granted['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.DENIED
         ) {
-          triggerToast("Bluetooth permissions are required to scan.");
+          triggerToast('Bluetooth permissions are required to scan.');
           setIsScanning(false);
           return;
         }
@@ -67,22 +67,22 @@ export default function BluetoothPrinterRoute() {
 
       // First try to get bonded (paired) devices, which are usually what printers are
       const bonded = await RNBluetoothClassic.getBondedDevices();
-      
+
       // Also start discovery for new devices
       const discovered = await RNBluetoothClassic.startDiscovery();
-      
+
       const allDevices = [...bonded];
       for (const d of discovered) {
         if (!allDevices.find((x) => x.address === d.address)) {
           allDevices.push(d);
         }
       }
-      
+
       setDevices(allDevices);
-      triggerToast("Scan completed! Nearby devices found.");
+      triggerToast('Scan completed! Nearby devices found.');
     } catch (err) {
       console.warn(err);
-      triggerToast("Failed to scan for Bluetooth devices.");
+      triggerToast('Failed to scan for Bluetooth devices.');
     } finally {
       setIsScanning(false);
     }
@@ -96,43 +96,39 @@ export default function BluetoothPrinterRoute() {
         const connectedDevice = await RNBluetoothClassic.connectToDevice(device.address);
         isConnected = connectedDevice ? true : false;
       }
-      
+
       if (isConnected) {
-        setPairedPrinter({ name: device.name || "Unknown Printer", address: device.address });
+        setPairedPrinter({ name: device.name || 'Unknown Printer', address: device.address });
         triggerToast(`Connected to ${device.name}`);
       } else {
         triggerToast(`Failed to connect to ${device.name}`);
       }
     } catch (err) {
       console.warn(err);
-      triggerToast("Connection error occurred.");
+      triggerToast('Connection error occurred.');
     } finally {
       setConnectingDevice(null);
     }
   };
 
   const handleDisconnect = () => {
-    Alert.alert(
-      "Disconnect Printer",
-      "Are you sure you want to disconnect this thermal printer?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Disconnect",
-          style: "destructive",
-          onPress: () => {
-            setPairedPrinter(null);
-            setDevices([]);
-            triggerToast("Printer disconnected");
-          }
-        }
-      ]
-    );
+    Alert.alert('Disconnect Printer', 'Are you sure you want to disconnect this thermal printer?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Disconnect',
+        style: 'destructive',
+        onPress: () => {
+          setPairedPrinter(null);
+          setDevices([]);
+          triggerToast('Printer disconnected');
+        },
+      },
+    ]);
   };
 
   const handlePrintTestPage = async () => {
     if (!pairedPrinter) {
-      Alert.alert("No Printer", "Please pair a thermal printer first.");
+      Alert.alert('No Printer', 'Please pair a thermal printer first.');
       return;
     }
     setShowReceiptPreview(true);
@@ -140,58 +136,58 @@ export default function BluetoothPrinterRoute() {
 
   const executePhysicalPrint = async () => {
     if (!pairedPrinter) {
-      Alert.alert("No Printer", "No printer connected.");
+      Alert.alert('No Printer', 'No printer connected.');
       return;
     }
 
     try {
       const device = await RNBluetoothClassic.connectToDevice(pairedPrinter.address);
-      
+
       // Build ESC/POS payload
-      let receiptText = "";
-      receiptText += "\x1B\x40"; // Initialize
-      receiptText += "\x1B\x61\x01"; // Center align
-      receiptText += "\x1D\x21\x00"; // Normal size
-      
+      let receiptText = '';
+      receiptText += '\x1B\x40'; // Initialize
+      receiptText += '\x1B\x61\x01'; // Center align
+      receiptText += '\x1D\x21\x00'; // Normal size
+
       receiptText += `\n${activeBusiness.name}\n`;
       receiptText += `${activeBusiness.address}\n`;
       receiptText += `Tel: ${activeBusiness.phone}\n`;
-      
-      receiptText += "--------------------------------\n";
-      receiptText += "*** TEST PRINT RECEIPT ***\n";
-      receiptText += "--------------------------------\n";
-      
-      receiptText += "\x1B\x61\x00"; // Left align
-      receiptText += "1x Anchor Milk 1L       Rs. 680\n";
-      receiptText += "2x Marie Biscuits       Rs. 360\n";
-      
-      receiptText += "--------------------------------\n";
-      receiptText += "Subtotal               Rs. 1040\n";
-      receiptText += "Tax                      Rs. 83\n";
-      
-      receiptText += "\x1B\x61\x01"; // Center align
-      receiptText += "\x1D\x21\x11"; // Double size
-      receiptText += "TOTAL       Rs. 1123\n";
-      receiptText += "\x1D\x21\x00"; // Normal size
-      receiptText += "\x1B\x61\x01"; // Center align
-      receiptText += "--------------------------------\n";
-      
-      receiptText += "\nThank you for visiting!\n";
-      receiptText += "Powered by Mini POS\n\n\n\n";
+
+      receiptText += '--------------------------------\n';
+      receiptText += '*** TEST PRINT RECEIPT ***\n';
+      receiptText += '--------------------------------\n';
+
+      receiptText += '\x1B\x61\x00'; // Left align
+      receiptText += '1x Anchor Milk 1L       Rs. 680\n';
+      receiptText += '2x Marie Biscuits       Rs. 360\n';
+
+      receiptText += '--------------------------------\n';
+      receiptText += 'Subtotal               Rs. 1040\n';
+      receiptText += 'Tax                      Rs. 83\n';
+
+      receiptText += '\x1B\x61\x01'; // Center align
+      receiptText += '\x1D\x21\x11'; // Double size
+      receiptText += 'TOTAL       Rs. 1123\n';
+      receiptText += '\x1D\x21\x00'; // Normal size
+      receiptText += '\x1B\x61\x01'; // Center align
+      receiptText += '--------------------------------\n';
+
+      receiptText += '\nThank you for visiting!\n';
+      receiptText += 'Powered by Mini POS\n\n\n\n';
 
       // Write data to printer
       await device.write(receiptText, 'utf-8');
-      
+
       setShowReceiptPreview(false);
-      triggerToast("Receipt sent to physical printer! 🖨️");
+      triggerToast('Receipt sent to physical printer! 🖨️');
     } catch (error) {
-      console.warn("Print error", error);
-      Alert.alert("Print Error", "Could not communicate with the printer.");
+      console.warn('Print error', error);
+      Alert.alert('Print Error', 'Could not communicate with the printer.');
     }
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 10 }]}>
+    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top : 10 }]}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>
@@ -205,7 +201,7 @@ export default function BluetoothPrinterRoute() {
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/profile")}
+          onPress={() => router.push('/profile')}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
@@ -240,7 +236,8 @@ export default function BluetoothPrinterRoute() {
             </View>
             <Text style={styles.noPrinterTitle}>No Printer Connected</Text>
             <Text style={styles.noPrinterSub}>
-              Connect a Bluetooth 58mm or 80mm ESC/POS thermal printer to generate instant paper bills.
+              Connect a Bluetooth 58mm or 80mm ESC/POS thermal printer to generate instant paper
+              bills.
             </Text>
           </View>
         )}
@@ -255,7 +252,9 @@ export default function BluetoothPrinterRoute() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.actionRowTitle}>Print Test Page</Text>
-                <Text style={styles.actionRowSub}>Send test invoice layout to verify print alignments</Text>
+                <Text style={styles.actionRowSub}>
+                  Send test invoice layout to verify print alignments
+                </Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
@@ -270,11 +269,7 @@ export default function BluetoothPrinterRoute() {
           </View>
 
           {!isScanning && devices.length === 0 && (
-            <TouchableOpacity 
-              style={styles.scanBtn}
-              activeOpacity={0.8}
-              onPress={handleStartScan}
-            >
+            <TouchableOpacity style={styles.scanBtn} activeOpacity={0.8} onPress={handleStartScan}>
               <Feather name="search" size={16} color={TOKENS.card} />
               <Text style={styles.scanBtnText}>Scan for Bluetooth Printers</Text>
             </TouchableOpacity>
@@ -283,7 +278,9 @@ export default function BluetoothPrinterRoute() {
           {isScanning && (
             <View style={styles.scanningBox}>
               <Text style={styles.scanningText}>Searching for Bluetooth peripherals...</Text>
-              <Text style={styles.scanningSub}>Make sure your receipt printer is switched on and discoverable.</Text>
+              <Text style={styles.scanningSub}>
+                Make sure your receipt printer is switched on and discoverable.
+              </Text>
             </View>
           )}
 
@@ -302,7 +299,7 @@ export default function BluetoothPrinterRoute() {
                       <Ionicons name="bluetooth" size={18} color={TOKENS.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.deviceName}>{device.name || "Unknown Device"}</Text>
+                      <Text style={styles.deviceName}>{device.name || 'Unknown Device'}</Text>
                       <Text style={styles.deviceDetails}>{device.address}</Text>
                     </View>
                     {isConnecting ? (
@@ -313,7 +310,7 @@ export default function BluetoothPrinterRoute() {
                   </TouchableOpacity>
                 );
               })}
-              
+
               <TouchableOpacity style={styles.rescanBtn} onPress={handleStartScan}>
                 <Feather name="refresh-cw" size={14} color={TOKENS.primary} />
                 <Text style={styles.rescanText}>Scan Again</Text>
@@ -352,14 +349,14 @@ export default function BluetoothPrinterRoute() {
               ) : (
                 <Text style={styles.receiptLogoText}>★ MINI POS ★</Text>
               )}
-              
+
               <Text style={styles.receiptStoreName}>{activeBusiness.name}</Text>
               <Text style={styles.receiptStoreSub}>{activeBusiness.category}</Text>
               <Text style={styles.receiptStoreSub}>{activeBusiness.address}</Text>
               <Text style={styles.receiptStoreSub}>Tel: {activeBusiness.phone}</Text>
-              
+
               <Text style={styles.dashedSeparator}>- - - - - - - - - - - - - - - -</Text>
-              <Text style={[styles.receiptStoreSub, { fontWeight: "bold", textAlign: "center" }]}>
+              <Text style={[styles.receiptStoreSub, { fontWeight: 'bold', textAlign: 'center' }]}>
                 *** TEST PRINT RECEIPT ***
               </Text>
               <Text style={styles.receiptStoreSub}>Printer: {pairedPrinter?.name}</Text>
@@ -375,39 +372,51 @@ export default function BluetoothPrinterRoute() {
                 <Text style={styles.receiptItemName}>2x Marie Biscuits</Text>
                 <Text style={styles.receiptItemPrice}>Rs. 360.00</Text>
               </View>
-              
+
               <Text style={styles.dashedSeparator}>- - - - - - - - - - - - - - - -</Text>
 
               <View style={styles.receiptTotalRow}>
                 <Text style={styles.receiptTotalLabel}>Subtotal</Text>
                 <Text style={styles.receiptTotalVal}>Rs. 1,040.00</Text>
               </View>
-              
+
               <View style={styles.receiptTotalRow}>
                 <Text style={styles.receiptTotalLabel}>Standard Tax (8%)</Text>
                 <Text style={styles.receiptTotalVal}>Rs. 83.20</Text>
               </View>
 
               <View style={[styles.receiptTotalRow, { marginTop: 4 }]}>
-                <Text style={[styles.receiptTotalLabel, { fontWeight: "bold", fontSize: 15 }]}>TOTAL</Text>
-                <Text style={[styles.receiptTotalVal, { fontWeight: "bold", fontSize: 15 }]}>Rs. 1,123.20</Text>
+                <Text style={[styles.receiptTotalLabel, { fontWeight: 'bold', fontSize: 15 }]}>
+                  TOTAL
+                </Text>
+                <Text style={[styles.receiptTotalVal, { fontWeight: 'bold', fontSize: 15 }]}>
+                  Rs. 1,123.20
+                </Text>
               </View>
 
               <Text style={styles.dashedSeparator}>- - - - - - - - - - - - - - - -</Text>
-              
-              <Text style={[styles.receiptStoreSub, { textAlign: "center", fontStyle: "italic" }]}>
+
+              <Text style={[styles.receiptStoreSub, { textAlign: 'center', fontStyle: 'italic' }]}>
                 Thank you for visiting!
               </Text>
-              <Text style={[styles.receiptStoreSub, { textAlign: "center" }]}>Powered by Mini POS</Text>
+              <Text style={[styles.receiptStoreSub, { textAlign: 'center' }]}>
+                Powered by Mini POS
+              </Text>
 
               <View style={styles.barcodeBox}>
-                <Barcode value="0192381" format="CODE128" singleBarWidth={1.8} height={40} maxWidth={200} />
+                <Barcode
+                  value="0192381"
+                  format="CODE128"
+                  singleBarWidth={1.8}
+                  height={40}
+                  maxWidth={200}
+                />
                 <Text style={styles.barcodeText}>0192381</Text>
               </View>
             </ScrollView>
 
-            <TouchableOpacity 
-              style={styles.printActionBtn} 
+            <TouchableOpacity
+              style={styles.printActionBtn}
               activeOpacity={0.8}
               onPress={executePhysicalPrint}
             >
@@ -427,28 +436,28 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
   },
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -459,18 +468,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
-    position: "absolute",
+    position: 'absolute',
     left: 60,
     right: 60,
-    textAlign: "center",
+    textAlign: 'center',
   },
   scrollWrapper: {
     flex: 1,
@@ -485,16 +494,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: TOKENS.border,
     padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   pairedIconBox: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#E6F4EA",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#E6F4EA',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   pairedInfo: {
@@ -502,12 +511,12 @@ const styles = StyleSheet.create({
   },
   pairedTitle: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   onlineBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
     marginTop: 4,
   },
@@ -515,12 +524,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#137333",
+    backgroundColor: '#137333',
   },
   onlineText: {
     fontSize: 11,
-    color: "#137333",
-    fontWeight: "bold",
+    color: '#137333',
+    fontWeight: 'bold',
   },
   disconnectBtn: {
     paddingHorizontal: 12,
@@ -532,7 +541,7 @@ const styles = StyleSheet.create({
   disconnectBtnText: {
     color: TOKENS.error,
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   noPrinterCard: {
     backgroundColor: TOKENS.card,
@@ -540,26 +549,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: TOKENS.border,
     padding: 24,
-    alignItems: "center",
+    alignItems: 'center',
   },
   noPrinterIconBox: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
   },
   noPrinterTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   noPrinterSub: {
     fontSize: 12,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     marginTop: 8,
     lineHeight: 16,
   },
@@ -573,27 +582,27 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   actionRowBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 4,
   },
   actionIconCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   actionRowTitle: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   actionRowSub: {
@@ -610,14 +619,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   scanHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   scanBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     backgroundColor: TOKENS.primary,
     borderRadius: 10,
@@ -626,45 +635,45 @@ const styles = StyleSheet.create({
   scanBtnText: {
     color: TOKENS.card,
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   scanningBox: {
-    alignItems: "center",
+    alignItems: 'center',
     paddingVertical: 24,
   },
   scanningText: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
     color: TOKENS.dark,
   },
   scanningSub: {
     fontSize: 11,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     marginTop: 6,
   },
   deviceList: {
     gap: 12,
   },
   deviceRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: '#F3F4F6',
   },
   deviceIconCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
     backgroundColor: TOKENS.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   deviceName: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   deviceDetails: {
@@ -674,13 +683,13 @@ const styles = StyleSheet.create({
   },
   connectLink: {
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.primary,
   },
   rescanBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     paddingVertical: 8,
     marginTop: 4,
@@ -688,28 +697,28 @@ const styles = StyleSheet.create({
   rescanText: {
     color: TOKENS.primary,
     fontSize: 13,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   // Preview modal styles
   previewOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 24,
   },
   previewCard: {
     backgroundColor: TOKENS.card,
-    width: "100%",
+    width: '100%',
     borderRadius: 24,
     padding: 20,
-    maxHeight: "85%",
-    boxShadow: "0px 10px 15px 0px rgba(0, 0, 0, 0.25)",
+    maxHeight: '85%',
+    boxShadow: '0px 10px 15px 0px rgba(0, 0, 0, 0.25)',
   },
   previewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: TOKENS.border,
     paddingBottom: 12,
@@ -717,119 +726,119 @@ const styles = StyleSheet.create({
   },
   previewTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   receiptScroll: {
-    backgroundColor: "#FDFDFD",
+    backgroundColor: '#FDFDFD',
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     padding: 16,
     flexGrow: 0,
   },
   receiptContent: {
-    alignItems: "stretch",
+    alignItems: 'stretch',
     paddingBottom: 24,
   },
   receiptLogoWrapper: {
-    alignSelf: "center",
+    alignSelf: 'center',
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   receiptLogoImg: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
     borderRadius: 30,
   },
   receiptInitialsText: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
+    fontWeight: 'bold',
+    color: '#000',
   },
   receiptLogoText: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#000",
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#000',
     marginBottom: 8,
     letterSpacing: 2,
   },
   receiptStoreName: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 16,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#000",
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#000',
   },
   receiptStoreSub: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 12,
-    textAlign: "center",
-    color: "#444",
+    textAlign: 'center',
+    color: '#444',
     marginTop: 2,
   },
   dashedSeparator: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 12,
-    textAlign: "center",
-    color: "#000",
+    textAlign: 'center',
+    color: '#000',
     marginVertical: 8,
   },
   receiptItemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginVertical: 2,
   },
   receiptItemName: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 12,
-    color: "#000",
+    color: '#000',
   },
   receiptItemPrice: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 12,
-    color: "#000",
+    color: '#000',
   },
   receiptTotalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginVertical: 2,
   },
   receiptTotalLabel: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 12,
-    color: "#000",
+    color: '#000',
   },
   receiptTotalVal: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 12,
-    color: "#000",
+    color: '#000',
   },
   barcodeBox: {
-    alignItems: "center",
+    alignItems: 'center',
     marginTop: 20,
     gap: 4,
   },
 
   barcodeText: {
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontSize: 10,
-    color: "#666",
+    color: '#666',
   },
   printActionBtn: {
     backgroundColor: TOKENS.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     borderRadius: 12,
     paddingVertical: 14,
@@ -837,7 +846,7 @@ const styles = StyleSheet.create({
   },
   printActionBtnText: {
     color: TOKENS.card,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     fontSize: 14,
   },
 });

@@ -34,9 +34,9 @@ describe('Supabase Sync Service', () => {
 
     const mockPullRes = {
       changes: {
-        businesses: { created: [{ id: 'b-1', name: 'Biz 1' }], updated: [], deleted: [] }
+        businesses: { created: [{ id: 'b-1', name: 'Biz 1' }], updated: [], deleted: [] },
       },
-      timestamp: 123456789
+      timestamp: 123456789,
     };
 
     const rpcMock = vi.fn().mockImplementation((fnName) => {
@@ -59,7 +59,7 @@ describe('Supabase Sync Service', () => {
         changes: {
           businesses: { created: [{ id: 'b-1' }], updated: [], deleted: [] },
           products: { created: [], updated: [], deleted: [] },
-        }
+        },
       });
     });
 
@@ -89,7 +89,9 @@ describe('Supabase Sync Service', () => {
     // Simulate pull failing: synchronize throws because pullChanges rejects
     mockSynchronize.mockImplementationOnce(async (config: any) => {
       // pullChanges throws when RPC returns an error
-      supabase.rpc = vi.fn().mockResolvedValue({ data: null, error: { message: 'Pull RPC failed' } });
+      supabase.rpc = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: { message: 'Pull RPC failed' } });
       await config.pullChanges({ lastPulledAt: 0 }); // this throws 'Pull RPC failed'
     });
 
@@ -108,7 +110,10 @@ describe('Supabase Sync Service', () => {
       supabase.rpc = vi.fn().mockImplementation((fnName) => {
         if (fnName === 'pull_watermelondb_changes') {
           return Promise.resolve({
-            data: { changes: { businesses: { created: [], updated: [], deleted: [] } }, timestamp: 0 },
+            data: {
+              changes: { businesses: { created: [], updated: [], deleted: [] } },
+              timestamp: 0,
+            },
             error: null,
           });
         }
@@ -151,6 +156,8 @@ describe('Supabase Sync Service', () => {
     });
     (supabase.storage.from as any) = mockStorageFrom;
 
-    await expect(uploadBusinessLogo(mockFile, 'biz-fail')).rejects.toEqual({ message: 'Upload failed' });
+    await expect(uploadBusinessLogo(mockFile, 'biz-fail')).rejects.toEqual({
+      message: 'Upload failed',
+    });
   });
 });

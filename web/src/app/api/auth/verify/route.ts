@@ -6,14 +6,14 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     };
     if (authHeader) {
-      headers["Authorization"] = authHeader;
+      headers['Authorization'] = authHeader;
     }
 
-    const response = await fetch("https://mini-pos-sync-server.vercel.app/api/v1/auth/verify", {
-      method: "POST",
+    const response = await fetch('https://mini-pos-sync-server.vercel.app/api/v1/auth/verify', {
+      method: 'POST',
       headers,
       body: JSON.stringify(body),
     });

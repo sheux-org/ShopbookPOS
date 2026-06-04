@@ -1,16 +1,16 @@
-import React, { useRef, useState } from "react";
-import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { styles } from "./styles";
-import { TOKENS } from "../../constants/tokens";
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { styles } from './styles';
+import { TOKENS } from '../../constants/tokens';
 
 const CATEGORIES = [
-  { label: "Grocery", icon: "🛒" },
-  { label: "Dairy", icon: "🥛" },
-  { label: "Drinks", icon: "🥤" },
-  { label: "Snacks", icon: "🍪" },
-  { label: "Household", icon: "🏠" },
-  { label: "Other", icon: "✨" },
+  { label: 'Grocery', icon: '🛒' },
+  { label: 'Dairy', icon: '🥛' },
+  { label: 'Drinks', icon: '🥤' },
+  { label: 'Snacks', icon: '🍪' },
+  { label: 'Household', icon: '🏠' },
+  { label: 'Other', icon: '✨' },
 ];
 
 interface RegisterBusinessPanelProps {
@@ -25,7 +25,7 @@ interface RegisterBusinessPanelProps {
   setRegisterStep: (step: 1 | 2 | 3) => void;
   isLoading: boolean;
   handleRegister: () => void;
-  setStep: (step: "phone" | "otp" | "register") => void;
+  setStep: (step: 'phone' | 'otp' | 'register') => void;
 }
 
 export function RegisterBusinessPanel({
@@ -53,7 +53,7 @@ export function RegisterBusinessPanel({
         style={styles.backBtn}
         onPress={() => {
           if (registerStep === 1) {
-            setStep("otp");
+            setStep('otp');
           } else {
             setRegisterStep((registerStep - 1) as 1 | 2 | 3);
           }
@@ -62,7 +62,7 @@ export function RegisterBusinessPanel({
       >
         <Feather name="arrow-left" size={16} color={TOKENS.primary} />
         <Text style={styles.backBtnText}>
-          {registerStep === 1 ? "Back to OTP" : "Previous step"}
+          {registerStep === 1 ? 'Back to OTP' : 'Previous step'}
         </Text>
       </TouchableOpacity>
 
@@ -78,11 +78,16 @@ export function RegisterBusinessPanel({
       {registerStep === 1 && (
         <View>
           <Text style={styles.onboardingTitle}>Tell us your Business Name</Text>
-          <Text style={styles.onboardingSubtitle}>This will be displayed on your invoices and profile.</Text>
+          <Text style={styles.onboardingSubtitle}>
+            This will be displayed on your invoices and profile.
+          </Text>
 
           <TouchableOpacity
             activeOpacity={1}
-            style={[styles.premiumInputWrapper, isInputFocused && styles.premiumInputWrapperFocused]}
+            style={[
+              styles.premiumInputWrapper,
+              isInputFocused && styles.premiumInputWrapperFocused,
+            ]}
             onPress={() => nameInputRef.current?.focus()}
           >
             <TextInput
@@ -95,19 +100,24 @@ export function RegisterBusinessPanel({
               onFocus={() => setIsInputFocused(true)}
               onBlur={() => setIsInputFocused(false)}
             />
-            {businessName.trim() !== "" && (
-              <Feather name="check" size={18} color={TOKENS.primary} style={styles.inputCheckmark} />
+            {businessName.trim() !== '' && (
+              <Feather
+                name="check"
+                size={18}
+                color={TOKENS.primary}
+                style={styles.inputCheckmark}
+              />
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.premiumNextBtn,
-              businessName.trim() !== "" && styles.premiumNextBtnShadow,
-              businessName.trim() === "" && styles.premiumNextBtnDisabled,
+              businessName.trim() !== '' && styles.premiumNextBtnShadow,
+              businessName.trim() === '' && styles.premiumNextBtnDisabled,
             ]}
             onPress={() => setRegisterStep(2)}
-            disabled={businessName.trim() === ""}
+            disabled={businessName.trim() === ''}
             activeOpacity={0.8}
           >
             <Text style={styles.premiumNextBtnText}>Next</Text>
@@ -120,7 +130,9 @@ export function RegisterBusinessPanel({
       {registerStep === 2 && (
         <View>
           <Text style={styles.onboardingTitle}>Tell us your Business Type</Text>
-          <Text style={styles.onboardingSubtitle}>Select your primary retail store sector for tailored presets.</Text>
+          <Text style={styles.onboardingSubtitle}>
+            Select your primary retail store sector for tailored presets.
+          </Text>
 
           <View style={styles.chipsContainer}>
             {CATEGORIES.map((item) => {
@@ -137,7 +149,12 @@ export function RegisterBusinessPanel({
                     {item.label}
                   </Text>
                   {isSelected && (
-                    <Feather name="check" size={12} color={TOKENS.primary} style={styles.chipCheck} />
+                    <Feather
+                      name="check"
+                      size={12}
+                      color={TOKENS.primary}
+                      style={styles.chipCheck}
+                    />
                   )}
                 </TouchableOpacity>
               );
@@ -147,11 +164,11 @@ export function RegisterBusinessPanel({
           <TouchableOpacity
             style={[
               styles.premiumNextBtn,
-              newCategory !== "" && styles.premiumNextBtnShadow,
-              newCategory === "" && styles.premiumNextBtnDisabled,
+              newCategory !== '' && styles.premiumNextBtnShadow,
+              newCategory === '' && styles.premiumNextBtnDisabled,
             ]}
             onPress={() => setRegisterStep(3)}
-            disabled={newCategory === ""}
+            disabled={newCategory === ''}
             activeOpacity={0.8}
           >
             <Text style={styles.premiumNextBtnText}>Next</Text>
@@ -164,11 +181,16 @@ export function RegisterBusinessPanel({
       {registerStep === 3 && (
         <View>
           <Text style={styles.onboardingTitle}>Tell us your Store Address</Text>
-          <Text style={styles.onboardingSubtitle}>Where is your main retail store outlet located?</Text>
+          <Text style={styles.onboardingSubtitle}>
+            Where is your main retail store outlet located?
+          </Text>
 
           <TouchableOpacity
             activeOpacity={1}
-            style={[styles.premiumInputWrapper, isInputFocused && styles.premiumInputWrapperFocused]}
+            style={[
+              styles.premiumInputWrapper,
+              isInputFocused && styles.premiumInputWrapperFocused,
+            ]}
             onPress={() => addressInputRef.current?.focus()}
           >
             <TextInput
@@ -181,19 +203,24 @@ export function RegisterBusinessPanel({
               onFocus={() => setIsInputFocused(true)}
               onBlur={() => setIsInputFocused(false)}
             />
-            {businessAddress.trim() !== "" && (
-              <Feather name="check" size={18} color={TOKENS.primary} style={styles.inputCheckmark} />
+            {businessAddress.trim() !== '' && (
+              <Feather
+                name="check"
+                size={18}
+                color={TOKENS.primary}
+                style={styles.inputCheckmark}
+              />
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.premiumNextBtn,
-              businessAddress.trim() !== "" && !isLoading && styles.premiumNextBtnShadow,
-              businessAddress.trim() === "" && styles.premiumNextBtnDisabled,
+              businessAddress.trim() !== '' && !isLoading && styles.premiumNextBtnShadow,
+              businessAddress.trim() === '' && styles.premiumNextBtnDisabled,
             ]}
             onPress={handleRegister}
-            disabled={businessAddress.trim() === "" || isLoading}
+            disabled={businessAddress.trim() === '' || isLoading}
             activeOpacity={0.8}
           >
             {isLoading ? (

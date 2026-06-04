@@ -1,6 +1,6 @@
-import React from "react";
-import { Stack } from "expo-router";
-import { PaymentTenderScreen } from "@/components/screens/PaymentTenderScreen";
+import React from 'react';
+import { Stack } from 'expo-router';
+import { PaymentTenderScreen } from '@/components/screens/PaymentTenderScreen';
 
 export default function PaymentTenderRoute() {
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,31 +8,30 @@ import {
   Platform,
   Alert,
   Linking,
-} from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import * as Clipboard from "expo-clipboard";
-import { ScreenWrapper } from "../../../components/common/ScreenWrapper";
-import { TOKENS } from "../../../constants/tokens";
-import { useSettingsStore } from "../../../stores/useSettingsStore";
-import { hapticFeedback } from "../../../utils/haptics";
-import { PoweredBy } from "../../../components/common/PoweredBy";
-
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Clipboard from 'expo-clipboard';
+import { ScreenWrapper } from '../../../components/common/ScreenWrapper';
+import { TOKENS } from '../../../constants/tokens';
+import { useSettingsStore } from '../../../stores/useSettingsStore';
+import { hapticFeedback } from '../../../utils/haptics';
+import { PoweredBy } from '../../../components/common/PoweredBy';
 
 export default function PaymentSelectRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
-  
+
   const setPremium = useSettingsStore((s) => s.setPremium);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"bank" | "card" | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'bank' | 'card' | null>(null);
 
-  const planTitle = (params.planTitle as string) || "Pro Access";
-  const planPrice = (params.price as string) || "Rs. 3,500";
-  const planBilling = (params.billing as string) || "billed monthly";
+  const planTitle = (params.planTitle as string) || 'Pro Access';
+  const planPrice = (params.price as string) || 'Rs. 3,500';
+  const planBilling = (params.billing as string) || 'billed monthly';
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -42,19 +41,19 @@ export default function PaymentSelectRoute() {
   const handleCardPayment = () => {
     hapticFeedback.impactMedium();
     Alert.alert(
-      "Pay with Credit/Debit Card",
+      'Pay with Credit/Debit Card',
       `Initiate secure card payment for ${planPrice} through RevenueCat?`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Pay & Activate",
+          text: 'Pay & Activate',
           onPress: () => {
             setPremium(true);
             hapticFeedback.notificationSuccess();
-            triggerToast("Payment successful via RevenueCat! 🎉");
+            triggerToast('Payment successful via RevenueCat! 🎉');
             setTimeout(() => {
               router.dismissAll();
-              router.push("/profile");
+              router.push('/profile');
             }, 1500);
           },
         },
@@ -64,8 +63,8 @@ export default function PaymentSelectRoute() {
 
   const handleWhatsAppPay = () => {
     hapticFeedback.impactMedium();
-    const msg = "Hey Mini POS Bill";
-    const phone = "94782470168";
+    const msg = 'Hey Mini POS Bill';
+    const phone = '94782470168';
     Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
   };
 
@@ -86,7 +85,7 @@ export default function PaymentSelectRoute() {
       )}
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: Platform.OS === "ios" ? 10 : 12 }]}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 10 : 12 }]}>
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
@@ -101,15 +100,12 @@ export default function PaymentSelectRoute() {
 
       <ScrollView
         style={styles.scrollWrapper}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 40 }
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Selected Plan Summary Card - High-End Slate Premium Design */}
         <LinearGradient
-          colors={["#0F172A", "#1E293B"]}
+          colors={['#0F172A', '#1E293B']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.planSummaryCard}
@@ -133,59 +129,70 @@ export default function PaymentSelectRoute() {
         <View style={styles.methodsContainer}>
           {/* Card Option */}
           <TouchableOpacity
-            style={[
-              styles.methodCard,
-              paymentMethod === "card" && styles.methodCardActive
-            ]}
+            style={[styles.methodCard, paymentMethod === 'card' && styles.methodCardActive]}
             onPress={() => {
-              setPaymentMethod("card");
+              setPaymentMethod('card');
               hapticFeedback.impactLight();
             }}
           >
-            <View style={[styles.iconContainer, paymentMethod === "card" && styles.iconContainerActive]}>
-              <Feather name="credit-card" size={22} color={paymentMethod === "card" ? TOKENS.primary : TOKENS.muted} />
+            <View
+              style={[styles.iconContainer, paymentMethod === 'card' && styles.iconContainerActive]}
+            >
+              <Feather
+                name="credit-card"
+                size={22}
+                color={paymentMethod === 'card' ? TOKENS.primary : TOKENS.muted}
+              />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.methodTitle}>Credit / Debit Card</Text>
-              <Text style={styles.methodDesc}>Instant activation via secure gateway (RevenueCat)</Text>
+              <Text style={styles.methodDesc}>
+                Instant activation via secure gateway (RevenueCat)
+              </Text>
             </View>
-            <View style={[styles.radio, paymentMethod === "card" && styles.radioActive]}>
-              {paymentMethod === "card" && <View style={styles.radioInner} />}
+            <View style={[styles.radio, paymentMethod === 'card' && styles.radioActive]}>
+              {paymentMethod === 'card' && <View style={styles.radioInner} />}
             </View>
           </TouchableOpacity>
 
           {/* Bank Option */}
           <TouchableOpacity
-            style={[
-              styles.methodCard,
-              paymentMethod === "bank" && styles.methodCardActive
-            ]}
+            style={[styles.methodCard, paymentMethod === 'bank' && styles.methodCardActive]}
             onPress={() => {
-              setPaymentMethod("bank");
+              setPaymentMethod('bank');
               hapticFeedback.impactLight();
             }}
           >
-            <View style={[styles.iconContainer, paymentMethod === "bank" && styles.iconContainerActive]}>
-              <Feather name="home" size={22} color={paymentMethod === "bank" ? TOKENS.primary : TOKENS.muted} />
+            <View
+              style={[styles.iconContainer, paymentMethod === 'bank' && styles.iconContainerActive]}
+            >
+              <Feather
+                name="home"
+                size={22}
+                color={paymentMethod === 'bank' ? TOKENS.primary : TOKENS.muted}
+              />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.methodTitle}>Bank Transfer / Deposit</Text>
-              <Text style={styles.methodDesc}>Offline bank deposit slip upload & manual activation</Text>
+              <Text style={styles.methodDesc}>
+                Offline bank deposit slip upload & manual activation
+              </Text>
             </View>
-            <View style={[styles.radio, paymentMethod === "bank" && styles.radioActive]}>
-              {paymentMethod === "bank" && <View style={styles.radioInner} />}
+            <View style={[styles.radio, paymentMethod === 'bank' && styles.radioActive]}>
+              {paymentMethod === 'bank' && <View style={styles.radioInner} />}
             </View>
           </TouchableOpacity>
         </View>
 
         {/* Conditional Content based on selection */}
-        {paymentMethod === "card" && (
+        {paymentMethod === 'card' && (
           <View style={styles.detailContainer}>
             <Text style={styles.detailSectionTitle}>💳 Secure Card Payment</Text>
             <Text style={styles.detailText}>
-              Your transaction is encrypted and processed via RevenueCat billing framework. All major Visa, Mastercard, and Amex cards are supported.
+              Your transaction is encrypted and processed via RevenueCat billing framework. All
+              major Visa, Mastercard, and Amex cards are supported.
             </Text>
-            
+
             <TouchableOpacity
               style={styles.payButton}
               activeOpacity={0.85}
@@ -197,7 +204,7 @@ export default function PaymentSelectRoute() {
           </View>
         )}
 
-        {paymentMethod === "bank" && (
+        {paymentMethod === 'bank' && (
           <View style={styles.bankTransferSection}>
             <Text style={styles.bankTransferTitle}>How to complete your bank payment</Text>
 
@@ -221,7 +228,9 @@ export default function PaymentSelectRoute() {
                 <View style={styles.stepCircle}>
                   <Text style={styles.stepCircleText}>3</Text>
                 </View>
-                <Text style={styles.stepText}>We&apos;ll confirm and activate your Premium features promptly.</Text>
+                <Text style={styles.stepText}>
+                  We&apos;ll confirm and activate your Premium features promptly.
+                </Text>
               </View>
             </View>
 
@@ -234,10 +243,10 @@ export default function PaymentSelectRoute() {
                 <Text style={styles.fieldLabel}>Bank</Text>
                 <View style={styles.fieldBox}>
                   <Text style={styles.fieldValueBlue}>Seylan Bank</Text>
-                  <TouchableOpacity 
-                    style={styles.fieldCopyBtn} 
+                  <TouchableOpacity
+                    style={styles.fieldCopyBtn}
                     activeOpacity={0.7}
-                    onPress={() => handleCopy("Bank Name", "Seylan Bank")}
+                    onPress={() => handleCopy('Bank Name', 'Seylan Bank')}
                   >
                     <Feather name="copy" size={12} color="#2563EB" />
                     <Text style={styles.fieldCopyBtnText}>Copy</Text>
@@ -250,10 +259,10 @@ export default function PaymentSelectRoute() {
                 <Text style={styles.fieldLabel}>Account No.</Text>
                 <View style={styles.fieldBox}>
                   <Text style={styles.fieldValueBlue}>008013639890001</Text>
-                  <TouchableOpacity 
-                    style={styles.fieldCopyBtn} 
+                  <TouchableOpacity
+                    style={styles.fieldCopyBtn}
                     activeOpacity={0.7}
-                    onPress={() => handleCopy("Account Number", "008013639890001")}
+                    onPress={() => handleCopy('Account Number', '008013639890001')}
                   >
                     <Feather name="copy" size={12} color="#2563EB" />
                     <Text style={styles.fieldCopyBtnText}>Copy</Text>
@@ -268,10 +277,10 @@ export default function PaymentSelectRoute() {
                   <Text style={styles.fieldValueBlue} numberOfLines={1} ellipsizeMode="tail">
                     SHOPBOOK TECHNOLOGIES (PVT) LTD
                   </Text>
-                  <TouchableOpacity 
-                    style={styles.fieldCopyBtn} 
+                  <TouchableOpacity
+                    style={styles.fieldCopyBtn}
                     activeOpacity={0.7}
-                    onPress={() => handleCopy("Account Name", "SHOPBOOK TECHNOLOGIES (PVT) LTD")}
+                    onPress={() => handleCopy('Account Name', 'SHOPBOOK TECHNOLOGIES (PVT) LTD')}
                   >
                     <Feather name="copy" size={12} color="#2563EB" />
                     <Text style={styles.fieldCopyBtnText}>Copy</Text>
@@ -284,10 +293,10 @@ export default function PaymentSelectRoute() {
                 <Text style={styles.fieldLabel}>Branch</Text>
                 <View style={styles.fieldBox}>
                   <Text style={styles.fieldValueBlue}>Kollupitiya</Text>
-                  <TouchableOpacity 
-                    style={styles.fieldCopyBtn} 
+                  <TouchableOpacity
+                    style={styles.fieldCopyBtn}
                     activeOpacity={0.7}
-                    onPress={() => handleCopy("Branch Name", "Kollupitiya")}
+                    onPress={() => handleCopy('Branch Name', 'Kollupitiya')}
                   >
                     <Feather name="copy" size={12} color="#2563EB" />
                     <Text style={styles.fieldCopyBtnText}>Copy</Text>
@@ -319,19 +328,18 @@ export default function PaymentSelectRoute() {
   );
 }
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: TOKENS.background,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -341,12 +349,12 @@ const styles = StyleSheet.create({
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -358,13 +366,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   placeholderWidth: {
@@ -382,51 +390,51 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 8,
     borderWidth: 1.5,
-    borderColor: "#D97706",
-    boxShadow: "0px 6px 10px 0px rgba(15, 23, 42, 0.2)",
+    borderColor: '#D97706',
+    boxShadow: '0px 6px 10px 0px rgba(15, 23, 42, 0.2)',
   },
   summaryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   vipBadgeSmall: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   vipBadgeTextSmall: {
     fontSize: 9,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    fontWeight: 'bold',
+    color: '#FFFFFF',
     letterSpacing: 0.8,
   },
   summaryTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   priceRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
+    flexDirection: 'row',
+    alignItems: 'baseline',
     gap: 4,
   },
   summaryPrice: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFFFFF",
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   summaryBilling: {
     fontSize: 13,
-    color: "#F59E0B",
-    fontWeight: "600",
+    color: '#F59E0B',
+    fontWeight: '600',
   },
   sectionHeader: {
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     letterSpacing: 1,
     marginLeft: 2,
     marginTop: 4,
@@ -435,35 +443,35 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   methodCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: TOKENS.card,
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 16,
     padding: 16,
     gap: 14,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.02)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.02)',
   },
   methodCardActive: {
     borderColor: TOKENS.primary,
     borderWidth: 1.5,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: '#EFF6FF',
   },
   iconContainer: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconContainerActive: {
-    backgroundColor: "#DBEAFE",
+    backgroundColor: '#DBEAFE',
   },
   methodTitle: {
     fontSize: 14.5,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   methodDesc: {
@@ -477,8 +485,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: TOKENS.border,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   radioActive: {
     borderColor: TOKENS.primary,
@@ -496,11 +504,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: TOKENS.border,
     gap: 16,
-    boxShadow: "0px 4px 8px 0px rgba(0, 0, 0, 0.02)",
+    boxShadow: '0px 4px 8px 0px rgba(0, 0, 0, 0.02)',
   },
   detailSectionTitle: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   detailText: {
@@ -512,26 +520,26 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: TOKENS.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
     marginTop: 8,
   },
   payButtonText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   bankTransferSection: {
     gap: 14,
-    width: "100%",
+    width: '100%',
     marginTop: 4,
   },
   bankTransferTitle: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
     marginLeft: 2,
     marginBottom: 4,
@@ -541,8 +549,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   instructionStepRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     paddingHorizontal: 4,
   },
@@ -550,36 +558,36 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stepCircleText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   stepText: {
     flex: 1,
     fontSize: 13,
     color: TOKENS.dark,
-    fontWeight: "500",
+    fontWeight: '500',
     lineHeight: 17,
   },
   bankDetailsFormCard: {
     backgroundColor: TOKENS.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: '#E2E8F0',
     padding: 16,
     gap: 10,
-    boxShadow: "0px 4px 6px 0px rgba(0, 0, 0, 0.01)",
+    boxShadow: '0px 4px 6px 0px rgba(0, 0, 0, 0.01)',
   },
   bankCardHeaderTitle: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
-    textAlign: "center",
+    textAlign: 'center',
     marginBottom: 2,
   },
   fieldGroup: {
@@ -588,47 +596,47 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 11,
     color: TOKENS.muted,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   fieldBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: '#E2E8F0',
     borderRadius: 10,
     paddingLeft: 12,
     paddingRight: 4,
     height: 44,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
   },
   fieldValueBlue: {
     fontSize: 13.5,
-    fontWeight: "600",
-    color: "#2563EB",
+    fontWeight: '600',
+    color: '#2563EB',
     flex: 1,
   },
   fieldCopyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: '#EFF6FF',
     borderWidth: 1,
-    borderColor: "#DBEAFE",
+    borderColor: '#DBEAFE',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   fieldCopyBtnText: {
     fontSize: 11,
-    fontWeight: "bold",
-    color: "#2563EB",
+    fontWeight: 'bold',
+    color: '#2563EB',
   },
   amountDisplayBox: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#EFF6FF",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -636,28 +644,28 @@ const styles = StyleSheet.create({
   },
   amountLabelText: {
     fontSize: 13,
-    color: "#1E3A8A",
-    fontWeight: "600",
+    color: '#1E3A8A',
+    fontWeight: '600',
   },
   amountValueText: {
     fontSize: 14.5,
-    color: "#2563EB",
-    fontWeight: "bold",
+    color: '#2563EB',
+    fontWeight: 'bold',
   },
   confirmWhatsAppButton: {
     height: 48,
     borderRadius: 24,
     backgroundColor: TOKENS.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}26`,
     marginTop: 4,
   },
   confirmWhatsAppButtonText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
 });

@@ -1,6 +1,6 @@
-import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
   Alert,
   Platform,
@@ -10,20 +10,20 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BottomSheet } from "../../../components/common/BottomSheet";
-import { Business, cartState } from "../../../components/data/cartState";
-import { TOKENS } from "../../../constants/tokens";
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomSheet } from '../../../components/common/BottomSheet';
+import { Business, cartState } from '../../../components/data/cartState';
+import { TOKENS } from '../../../constants/tokens';
 import {
   useBusinesses,
   useDeleteBusiness,
   useRegisterBusiness,
   useUpdateBusiness,
-} from "../../../hooks/useBusinesses";
-import { useUserPermissions } from "../../../hooks/useUserPermissions";
-import { useAuthStore } from "../../../stores/useAuthStore";
-import { useBusinessStore } from "../../../stores/useBusinessStore";
+} from '../../../hooks/useBusinesses';
+import { useUserPermissions } from '../../../hooks/useUserPermissions';
+import { useAuthStore } from '../../../stores/useAuthStore';
+import { useBusinessStore } from '../../../stores/useBusinessStore';
 
 export default function ManageBusinessesRoute() {
   const insets = useSafeAreaInsets();
@@ -40,17 +40,17 @@ export default function ManageBusinessesRoute() {
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newCategory, setNewCategory] = useState("");
-  const [newAddress, setNewAddress] = useState("");
-  const [newPhone, setNewPhone] = useState("");
+  const [newName, setNewName] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [newAddress, setNewAddress] = useState('');
+  const [newPhone, setNewPhone] = useState('');
 
   // Edit Modal states
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editCategory, setEditCategory] = useState("");
-  const [editAddress, setEditAddress] = useState("");
-  const [editPhone, setEditPhone] = useState("");
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -71,13 +71,8 @@ export default function ManageBusinessesRoute() {
 
   const handleSaveEditBusiness = () => {
     if (!editingBusiness) return;
-    if (
-      !editName.trim() ||
-      !editCategory.trim() ||
-      !editAddress.trim() ||
-      !editPhone.trim()
-    ) {
-      triggerToast("All fields are required!");
+    if (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) {
+      triggerToast('All fields are required!');
       return;
     }
 
@@ -95,69 +90,67 @@ export default function ManageBusinessesRoute() {
         onSuccess: () => {
           setIsEditModalOpen(false);
           setEditingBusiness(null);
-          triggerToast("Business details updated successfully! 🚀");
+          triggerToast('Business details updated successfully! 🚀');
         },
         onError: () => {
-          triggerToast("Failed to update business details.");
+          triggerToast('Failed to update business details.');
         },
-      },
+      }
     );
   };
 
   const handleConfirmDelete = (biz: Business) => {
     if (businesses.length <= 1) {
       Alert.alert(
-        "Action Restricted",
-        "You cannot delete the only business in the catalog. You must have at least one active store branch.",
+        'Action Restricted',
+        'You cannot delete the only business in the catalog. You must have at least one active store branch.'
       );
       return;
     }
 
     Alert.alert(
-      "Delete Business Branch",
+      'Delete Business Branch',
       `Are you sure you want to permanently delete "${biz.name}"? This action cannot be undone.`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Delete Branch",
-          style: "destructive",
+          text: 'Delete Branch',
+          style: 'destructive',
           onPress: () => {
             deleteMutation.mutate(biz.id, {
               onSuccess: () => {
-                triggerToast("Business branch deleted successfully! 🗑️");
+                triggerToast('Business branch deleted successfully! 🗑️');
               },
               onError: () => {
-                triggerToast("Failed to delete business branch.");
+                triggerToast('Failed to delete business branch.');
               },
             });
           },
         },
-      ],
+      ]
     );
   };
 
   const handleCreateBusiness = () => {
-    if (!canPerform("create", "settings")) {
-      triggerToast(
-        "Access Denied: Cashiers are not authorized to create branches.",
-      );
+    if (!canPerform('create', 'settings')) {
+      triggerToast('Access Denied: Cashiers are not authorized to create branches.');
       return;
     }
 
     if (!newName.trim()) {
-      triggerToast("Please enter business name!");
+      triggerToast('Please enter business name!');
       return;
     }
     if (!newCategory.trim()) {
-      triggerToast("Please enter business type/category!");
+      triggerToast('Please enter business type/category!');
       return;
     }
     if (!newAddress.trim()) {
-      triggerToast("Please enter business address!");
+      triggerToast('Please enter business address!');
       return;
     }
     if (!newPhone.trim()) {
-      triggerToast("Please enter phone number!");
+      triggerToast('Please enter phone number!');
       return;
     }
 
@@ -171,22 +164,22 @@ export default function ManageBusinessesRoute() {
       {
         onSuccess: (newBiz) => {
           setIsModalOpen(false);
-          setNewName("");
-          setNewCategory("");
-          setNewAddress("");
-          setNewPhone("");
-          triggerToast("Business store created successfully! 🎉");
+          setNewName('');
+          setNewCategory('');
+          setNewAddress('');
+          setNewPhone('');
+          triggerToast('Business store created successfully! 🎉');
 
           Alert.alert(
-            "Activate New Branch",
+            'Activate New Branch',
             `Would you like to set "${newBiz.name}" as your active business branch immediately?`,
             [
               {
-                text: "No",
-                style: "cancel",
+                text: 'No',
+                style: 'cancel',
               },
               {
-                text: "Yes, Activate",
+                text: 'Yes, Activate',
                 onPress: () => {
                   useBusinessStore.setState({
                     activeBusiness: {
@@ -199,48 +192,37 @@ export default function ManageBusinessesRoute() {
                   });
 
                   useAuthStore.getState().setActiveBusinessId(newBiz.id);
-                  triggerToast(
-                    `Switched active business to "${newBiz.name}"! 🚀`,
-                  );
+                  triggerToast(`Switched active business to "${newBiz.name}"! 🚀`);
                 },
               },
-            ],
+            ]
           );
         },
         onError: () => {
-          triggerToast("Failed to register business.");
+          triggerToast('Failed to register business.');
         },
-      },
+      }
     );
   };
 
   const getCategoryColor = (cat: string) => {
     const lower = cat.toLowerCase();
-    if (lower.includes("elect")) return { bg: "#FEF7E0", text: "#B06000" };
-    if (
-      lower.includes("cloth") ||
-      lower.includes("apparel") ||
-      lower.includes("fashion")
-    )
-      return { bg: "#E6F4EA", text: "#137333" };
-    if (lower.includes("groc") || lower.includes("super"))
-      return { bg: "#FCE8E6", text: "#C5221F" };
-    return { bg: "#E8F0FE", text: TOKENS.primary };
+    if (lower.includes('elect')) return { bg: '#FEF7E0', text: '#B06000' };
+    if (lower.includes('cloth') || lower.includes('apparel') || lower.includes('fashion'))
+      return { bg: '#E6F4EA', text: '#137333' };
+    if (lower.includes('groc') || lower.includes('super'))
+      return { bg: '#FCE8E6', text: '#C5221F' };
+    return { bg: '#E8F0FE', text: TOKENS.primary };
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        { paddingTop: Platform.OS === "ios" ? insets.top : 10 },
-      ]}
-    >
+    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top : 10 }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
-          onPress={() => router.push("/profile")}
+          onPress={() => router.push('/profile')}
         >
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
@@ -248,7 +230,7 @@ export default function ManageBusinessesRoute() {
         <Text style={styles.headerTitle}>Business Management</Text>
 
         {(() => {
-          if (!canPerform("create", "settings")) return null;
+          if (!canPerform('create', 'settings')) return null;
 
           return (
             <TouchableOpacity
@@ -271,10 +253,7 @@ export default function ManageBusinessesRoute() {
       )}
 
       {/* Scrollable list */}
-      <ScrollView
-        style={styles.scrollWrapper}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.groupLabel}>Registered Business Categories</Text>
 
         {businesses.map((biz) => {
@@ -291,9 +270,7 @@ export default function ManageBusinessesRoute() {
               }}
             >
               <View style={styles.bizCardLeft}>
-                <View
-                  style={[styles.iconBox, isActive && styles.iconBoxActive]}
-                >
+                <View style={[styles.iconBox, isActive && styles.iconBoxActive]}>
                   <Feather
                     name="briefcase"
                     size={20}
@@ -303,18 +280,8 @@ export default function ManageBusinessesRoute() {
                 <View style={styles.bizDetails}>
                   <View style={styles.bizNameRow}>
                     <Text style={styles.bizName}>{biz.name}</Text>
-                    <View
-                      style={[
-                        styles.categoryBadge,
-                        { backgroundColor: badge.bg },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.categoryBadgeText,
-                          { color: badge.text },
-                        ]}
-                      >
+                    <View style={[styles.categoryBadge, { backgroundColor: badge.bg }]}>
+                      <Text style={[styles.categoryBadgeText, { color: badge.text }]}>
                         {biz.category}
                       </Text>
                     </View>
@@ -323,9 +290,7 @@ export default function ManageBusinessesRoute() {
                   <Text style={styles.bizSub}>📞 {biz.phone}</Text>
                 </View>
               </View>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
-              >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 {isActive && (
                   <Feather
                     name="check-circle"
@@ -335,11 +300,11 @@ export default function ManageBusinessesRoute() {
                   />
                 )}
 
-                {canPerform("delete", "settings") && (
+                {canPerform('delete', 'settings') && (
                   <View
                     style={{
-                      flexDirection: "row",
-                      alignItems: "center",
+                      flexDirection: 'row',
+                      alignItems: 'center',
                       gap: 10,
                     }}
                   >
@@ -349,9 +314,9 @@ export default function ManageBusinessesRoute() {
                         width: 32,
                         height: 32,
                         borderRadius: 16,
-                        backgroundColor: "#E8F0FE",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        backgroundColor: '#E8F0FE',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                       onPress={(e) => {
                         e.stopPropagation();
@@ -367,9 +332,9 @@ export default function ManageBusinessesRoute() {
                         width: 32,
                         height: 32,
                         borderRadius: 16,
-                        backgroundColor: "#FCE8E6",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        backgroundColor: '#FCE8E6',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                       onPress={(e) => {
                         e.stopPropagation();
@@ -381,12 +346,8 @@ export default function ManageBusinessesRoute() {
                   </View>
                 )}
 
-                {!canPerform("delete", "settings") && !isActive && (
-                  <Feather
-                    name="chevron-right"
-                    size={16}
-                    color={TOKENS.muted}
-                  />
+                {!canPerform('delete', 'settings') && !isActive && (
+                  <Feather name="chevron-right" size={16} color={TOKENS.muted} />
                 )}
               </View>
             </TouchableOpacity>
@@ -454,24 +415,16 @@ export default function ManageBusinessesRoute() {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!newName.trim() ||
-              !newCategory.trim() ||
-              !newAddress.trim() ||
-              !newPhone.trim()) &&
+            (!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()) &&
               styles.submitButtonDisabled,
           ]}
           activeOpacity={0.8}
           onPress={handleCreateBusiness}
           disabled={
-            !newName.trim() ||
-            !newCategory.trim() ||
-            !newAddress.trim() ||
-            !newPhone.trim()
+            !newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()
           }
         >
-          <Text style={styles.submitButtonText}>
-            Create & Activate Business
-          </Text>
+          <Text style={styles.submitButtonText}>Create & Activate Business</Text>
           <Feather name="plus-circle" size={16} color={TOKENS.card} />
         </TouchableOpacity>
       </BottomSheet>
@@ -548,10 +501,7 @@ export default function ManageBusinessesRoute() {
           activeOpacity={0.8}
           onPress={handleSaveEditBusiness}
           disabled={
-            !editName.trim() ||
-            !editCategory.trim() ||
-            !editAddress.trim() ||
-            !editPhone.trim()
+            !editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()
           }
         >
           <Text style={styles.submitButtonText}>Update Business Details</Text>
@@ -568,9 +518,9 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -581,34 +531,34 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
-    position: "absolute",
+    position: 'absolute',
     left: 60,
     right: 60,
-    textAlign: "center",
+    textAlign: 'center',
   },
   createHeaderBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: TOKENS.lightBlue,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 70,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.dark,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -618,7 +568,7 @@ const styles = StyleSheet.create({
   toastText: {
     color: TOKENS.card,
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   scrollWrapper: {
     flex: 1,
@@ -629,16 +579,16 @@ const styles = StyleSheet.create({
   },
   groupLabel: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.muted,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   bizCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: TOKENS.card,
     borderRadius: 16,
     borderWidth: 1,
@@ -647,11 +597,11 @@ const styles = StyleSheet.create({
   },
   bizCardActive: {
     borderColor: TOKENS.primary,
-    backgroundColor: "#F4F7FF",
+    backgroundColor: '#F4F7FF',
   },
   bizCardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
     marginRight: 12,
   },
@@ -660,8 +610,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 10,
     backgroundColor: TOKENS.background,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   iconBoxActive: {
@@ -672,14 +622,14 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   bizNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 6,
   },
   bizName: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   categoryBadge: {
@@ -689,7 +639,7 @@ const styles = StyleSheet.create({
   },
   categoryBadgeText: {
     fontSize: 9,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   bizSub: {
     fontSize: 11,
@@ -697,8 +647,8 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "flex-end",
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
   },
   dismissArea: {
     flex: 1,
@@ -707,7 +657,7 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: "80%",
+    maxHeight: '80%',
     paddingBottom: 32,
   },
   modalHandle: {
@@ -715,13 +665,13 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: TOKENS.border,
     borderRadius: 2,
-    alignSelf: "center",
+    alignSelf: 'center',
     marginTop: 10,
   },
   modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
@@ -730,7 +680,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   modalCloseBtn: {
@@ -747,7 +697,7 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.dark,
   },
   formInput: {
@@ -758,28 +708,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
     color: TOKENS.dark,
-    backgroundColor: "#F9FAFB",
-    fontWeight: "500",
+    backgroundColor: '#F9FAFB',
+    fontWeight: '500',
   },
   submitButton: {
-    flexDirection: "row",
+    flexDirection: 'row',
     height: 48,
     backgroundColor: TOKENS.primary,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     marginTop: 8,
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
   },
   submitButtonDisabled: {
-    backgroundColor: "#E5E7EB",
+    backgroundColor: '#E5E7EB',
     shadowOpacity: 0,
     elevation: 0,
   },
   submitButtonText: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.card,
   },
 });

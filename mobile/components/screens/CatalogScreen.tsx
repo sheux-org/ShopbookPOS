@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,17 +7,17 @@ import {
   ScrollView,
   useWindowDimensions,
   ActivityIndicator,
-} from "react-native";
-import { FlashList } from "@shopify/flash-list";
-import { useRouter } from "expo-router";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { ScreenWrapper } from "../common/ScreenWrapper";
-import { HeaderCartButton } from "../common/HeaderCartButton";
-import { TOKENS } from "../../constants/tokens";
-import { cartState } from "../data/cartState";
-import { useProducts } from "../../hooks/useProducts";
-import { ProductImage } from "../common/ProductImage";
-import { hapticFeedback } from "../../utils/haptics";
+} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useRouter } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { ScreenWrapper } from '../common/ScreenWrapper';
+import { HeaderCartButton } from '../common/HeaderCartButton';
+import { TOKENS } from '../../constants/tokens';
+import { cartState } from '../data/cartState';
+import { useProducts } from '../../hooks/useProducts';
+import { ProductImage } from '../common/ProductImage';
+import { hapticFeedback } from '../../utils/haptics';
 
 interface CatalogProduct {
   id: string;
@@ -26,7 +26,7 @@ interface CatalogProduct {
   category: string;
   icon: string;
   stockText: string;
-  stockType: "normal" | "low" | "out";
+  stockType: 'normal' | 'low' | 'out';
   stockCount?: number;
 }
 
@@ -38,12 +38,12 @@ interface CategoryItem {
 }
 
 const CATEGORIES: CategoryItem[] = [
-  { id: "all", label: "All", icon: "archive-outline", count: 240 },
-  { id: "grocery", label: "Grocery", icon: "cart-outline", count: 84 },
-  { id: "dairy", label: "Dairy", icon: "water-outline", count: 22 },
-  { id: "drinks", label: "Drinks", icon: "wine-outline", count: 31 },
-  { id: "snacks", label: "Snacks", icon: "fast-food-outline", count: 47 },
-  { id: "household", label: "Household", icon: "home-outline", count: 38 },
+  { id: 'all', label: 'All', icon: 'archive-outline', count: 240 },
+  { id: 'grocery', label: 'Grocery', icon: 'cart-outline', count: 84 },
+  { id: 'dairy', label: 'Dairy', icon: 'water-outline', count: 22 },
+  { id: 'drinks', label: 'Drinks', icon: 'wine-outline', count: 31 },
+  { id: 'snacks', label: 'Snacks', icon: 'fast-food-outline', count: 47 },
+  { id: 'household', label: 'Household', icon: 'home-outline', count: 38 },
 ];
 
 export const CatalogScreen: React.FC = () => {
@@ -51,7 +51,7 @@ export const CatalogScreen: React.FC = () => {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
 
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const {
@@ -68,9 +68,9 @@ export const CatalogScreen: React.FC = () => {
 
   const handleAddProduct = useCallback(
     (prod: CatalogProduct) => {
-      if (prod.stockType === "out") {
+      if (prod.stockType === 'out') {
         hapticFeedback.notificationWarning();
-        triggerToast("Product is out of stock!");
+        triggerToast('Product is out of stock!');
         return;
       }
 
@@ -80,11 +80,11 @@ export const CatalogScreen: React.FC = () => {
         prod.price,
         prod.icon,
         `SKU 23400${prod.id}`,
-        prod.stockCount,
+        prod.stockCount
       );
       triggerToast(`Added ${prod.name} to active invoice`);
     },
-    [triggerToast],
+    [triggerToast]
   );
 
   return (
@@ -96,8 +96,7 @@ export const CatalogScreen: React.FC = () => {
         </View>
       )}
 
-      <View style={styles.header}
-      >
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}
@@ -106,7 +105,7 @@ export const CatalogScreen: React.FC = () => {
             if (router.canGoBack()) {
               router.back();
             } else {
-              router.replace("/(tabs)");
+              router.replace('/(tabs)');
             }
           }}
         >
@@ -123,7 +122,7 @@ export const CatalogScreen: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => {
               hapticFeedback.selection();
-              router.push("/pos/search");
+              router.push('/pos/search');
             }}
           >
             <Feather name="search" size={22} color={TOKENS.dark} />
@@ -197,12 +196,12 @@ export const CatalogScreen: React.FC = () => {
                       <TouchableOpacity
                         activeOpacity={0.9}
                         onPress={() => handleAddProduct(item)}
-                        style={{ width: "100%", height: 100 }}
+                        style={{ width: '100%', height: 100 }}
                       >
                         <ProductImage
                           icon={item.icon}
                           category={item.category}
-                          style={{ width: "100%", height: 100, borderRadius: 0 }}
+                          style={{ width: '100%', height: 100, borderRadius: 0 }}
                         />
                       </TouchableOpacity>
                     </View>
@@ -223,8 +222,8 @@ export const CatalogScreen: React.FC = () => {
                             <Text
                               style={[
                                 styles.stockText,
-                                item.stockType === "low" && styles.stockTextLow,
-                                item.stockType === "out" && styles.stockTextOut,
+                                item.stockType === 'low' && styles.stockTextLow,
+                                item.stockType === 'out' && styles.stockTextOut,
                               ]}
                             >
                               {item.stockText}
@@ -233,18 +232,18 @@ export const CatalogScreen: React.FC = () => {
                             <View
                               style={[
                                 styles.plusIconBadge,
-                                item.stockType === "out" && styles.plusIconBadgeOut,
+                                item.stockType === 'out' && styles.plusIconBadgeOut,
                               ]}
                             >
                               <Feather
                                 name="plus"
                                 size={16}
-                                color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                                color={item.stockType === 'out' ? TOKENS.muted : TOKENS.card}
                               />
                               <Text
                                 style={[
                                   styles.plusIconBadgeText,
-                                  item.stockType === "out" && styles.plusIconBadgeTextOut,
+                                  item.stockType === 'out' && styles.plusIconBadgeTextOut,
                                 ]}
                               >
                                 Add
@@ -256,8 +255,8 @@ export const CatalogScreen: React.FC = () => {
                             <Text
                               style={[
                                 styles.stockText,
-                                item.stockType === "low" && styles.stockTextLow,
-                                item.stockType === "out" && styles.stockTextOut,
+                                item.stockType === 'low' && styles.stockTextLow,
+                                item.stockType === 'out' && styles.stockTextOut,
                               ]}
                             >
                               {item.stockText}
@@ -266,18 +265,18 @@ export const CatalogScreen: React.FC = () => {
                             <View
                               style={[
                                 styles.mobilePlusIconBadge,
-                                item.stockType === "out" && styles.mobilePlusIconBadgeOut,
+                                item.stockType === 'out' && styles.mobilePlusIconBadgeOut,
                               ]}
                             >
                               <Feather
                                 name="plus"
                                 size={15}
-                                color={item.stockType === "out" ? TOKENS.muted : TOKENS.card}
+                                color={item.stockType === 'out' ? TOKENS.muted : TOKENS.card}
                               />
                               <Text
                                 style={[
                                   styles.mobilePlusIconBadgeText,
-                                  item.stockType === "out" && styles.mobilePlusIconBadgeTextOut,
+                                  item.stockType === 'out' && styles.mobilePlusIconBadgeTextOut,
                                 ]}
                               >
                                 Add
@@ -313,28 +312,28 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.background,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
   },
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -345,28 +344,28 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   searchHeaderButton: {
     width: 36,
     height: 36,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bodyWrapper: {
     flex: 1,
-    flexDirection: "row",
+    flexDirection: 'row',
   },
   sidebar: {
     width: 96,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
     borderRightWidth: 1,
     borderRightColor: TOKENS.border,
   },
@@ -374,17 +373,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   sidebarTab: {
-    width: "100%",
+    width: '100%',
     paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
   sidebarTabActive: {
     backgroundColor: TOKENS.card,
   },
   activeStrip: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     top: 12,
     bottom: 12,
@@ -399,11 +398,11 @@ const styles = StyleSheet.create({
   sidebarLabel: {
     fontSize: 11,
     color: TOKENS.muted,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   sidebarLabelActive: {
     color: TOKENS.primary,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   sidebarCount: {
     fontSize: 10,
@@ -426,15 +425,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    justifyContent: "space-between",
-    overflow: "hidden",
-    boxShadow: "0px 2px 3px 0px rgba(0, 0, 0, 0.04)",
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    boxShadow: '0px 2px 3px 0px rgba(0, 0, 0, 0.04)',
   },
   imageContainer: {
-    position: "relative",
-    width: "100%",
+    position: 'relative',
+    width: '100%',
     height: 100,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
   },
   productDetails: {
     padding: 10,
@@ -442,7 +441,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TOKENS.dark,
     lineHeight: 14,
   },
@@ -452,13 +451,13 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 13,
-    fontWeight: "800",
+    fontWeight: '800',
     color: TOKENS.primary,
   },
   stockPlusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 4,
   },
   stockText: {
@@ -467,33 +466,33 @@ const styles = StyleSheet.create({
   },
   stockTextLow: {
     color: TOKENS.warning,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   stockTextOut: {
     color: TOKENS.error,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   plusIconBadge: {
-    flexDirection: "row",
+    flexDirection: 'row',
     height: 30,
     borderRadius: 15,
     paddingHorizontal: 12,
     backgroundColor: TOKENS.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     boxShadow: `0px 2px 4px 0px ${TOKENS.primary}59`,
   },
   plusIconBadgeText: {
     fontSize: 12,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.card,
   },
   plusIconBadgeTextOut: {
     color: TOKENS.muted,
   },
   plusIconBadgeOut: {
-    backgroundColor: "#E5E7EB",
+    backgroundColor: '#E5E7EB',
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -502,38 +501,38 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   mobilePlusIconBadge: {
-    flexDirection: "row",
-    width: "100%",
+    flexDirection: 'row',
+    width: '100%',
     height: 28,
     borderRadius: 14,
     backgroundColor: TOKENS.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 4,
     gap: 4,
     boxShadow: `0px 2px 3px 0px ${TOKENS.primary}33`,
   },
   mobilePlusIconBadgeText: {
     fontSize: 11,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.card,
   },
   mobilePlusIconBadgeTextOut: {
     color: TOKENS.muted,
   },
   mobilePlusIconBadgeOut: {
-    backgroundColor: "#E5E7EB",
+    backgroundColor: '#E5E7EB',
     shadowOpacity: 0,
     elevation: 0,
   },
   headerRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   emptyGridState: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 64,
     paddingHorizontal: 16,
     marginTop: 32,
@@ -541,7 +540,7 @@ const styles = StyleSheet.create({
   },
   emptyGridTitle: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
     marginTop: 12,
     marginBottom: 4,
@@ -549,7 +548,7 @@ const styles = StyleSheet.create({
   emptyGridSub: {
     fontSize: 11,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 16,
   },
 });

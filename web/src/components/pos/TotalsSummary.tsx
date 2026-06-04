@@ -57,11 +57,11 @@ export const TotalsSummary: React.FC<TotalsSummaryProps> = ({
         <span>Subtotal:</span>
         <span>Rs. {subtotal.toLocaleString()}</span>
       </div>
-      
+
       <div style={styles.denseSumRow}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span>Discount:</span>
-          <button 
+          <button
             onClick={() => {
               setTempDiscount(discountVal.toString());
               setTempDiscountType(discountType === 'none' ? 'flat' : discountType);
@@ -75,8 +75,8 @@ export const TotalsSummary: React.FC<TotalsSummaryProps> = ({
         </div>
         {isEditingDiscount ? (
           <div style={styles.inlineEditInputBox}>
-            <select 
-              value={tempDiscountType} 
+            <select
+              value={tempDiscountType}
               onChange={(e) => setTempDiscountType(e.target.value as 'flat' | 'percent')}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -107,8 +107,18 @@ export const TotalsSummary: React.FC<TotalsSummaryProps> = ({
               }}
               style={styles.inlineInput}
             />
-            <button onClick={handleSaveDiscount} style={{ ...styles.inlineIconBtn, color: 'var(--success)' }}>✓</button>
-            <button onClick={() => setIsEditingDiscount(false)} style={{ ...styles.inlineIconBtn, color: 'var(--error)' }}>✗</button>
+            <button
+              onClick={handleSaveDiscount}
+              style={{ ...styles.inlineIconBtn, color: 'var(--success)' }}
+            >
+              ✓
+            </button>
+            <button
+              onClick={() => setIsEditingDiscount(false)}
+              style={{ ...styles.inlineIconBtn, color: 'var(--error)' }}
+            >
+              ✗
+            </button>
           </div>
         ) : (
           <span style={discountAmount > 0 ? { color: 'var(--success)', fontWeight: 'bold' } : {}}>
@@ -120,7 +130,7 @@ export const TotalsSummary: React.FC<TotalsSummaryProps> = ({
       <div style={styles.denseSumRow}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span>VAT / Taxes ({taxRate}%):</span>
-          <button 
+          <button
             onClick={() => {
               setTempTaxRate(taxRate.toString());
               setIsEditingTax(true);
@@ -138,12 +148,24 @@ export const TotalsSummary: React.FC<TotalsSummaryProps> = ({
               type="number"
               value={tempTaxRate}
               onChange={(e) => setTempTaxRate(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTax(); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveTax();
+              }}
               style={{ ...styles.inlineInput, width: '40px' }}
             />
             <span style={{ fontSize: '10px', margin: '0 2px' }}>%</span>
-            <button onClick={handleSaveTax} style={{ ...styles.inlineIconBtn, color: 'var(--success)' }}>✓</button>
-            <button onClick={() => setIsEditingTax(false)} style={{ ...styles.inlineIconBtn, color: 'var(--error)' }}>✗</button>
+            <button
+              onClick={handleSaveTax}
+              style={{ ...styles.inlineIconBtn, color: 'var(--success)' }}
+            >
+              ✓
+            </button>
+            <button
+              onClick={() => setIsEditingTax(false)}
+              style={{ ...styles.inlineIconBtn, color: 'var(--error)' }}
+            >
+              ✗
+            </button>
           </div>
         ) : (
           <span>Rs. {taxAmount.toLocaleString()}</span>

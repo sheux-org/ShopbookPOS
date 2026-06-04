@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,30 +6,30 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-} from "react-native";
-import { FlashList } from "@shopify/flash-list";
-import { BarcodeScannerModal } from "../common/BarcodeScannerModal";
-import { usePermission } from "../../hooks/usePermissionHandler";
-import { useRouter } from "expo-router";
-import { Feather } from "@expo/vector-icons";
-import { SearchInput } from "../common/SearchInput";
-import { ScreenWrapper } from "../common/ScreenWrapper";
-import { TOKENS } from "../../constants/tokens";
-import { cartState, CatalogProduct } from "../data/cartState";
-import { HeaderCartButton } from "../common/HeaderCartButton";
-import { useProducts } from "../../hooks/useProducts";
-import { ProductImage } from "../common/ProductImage";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSettingsStore } from "../../stores/useSettingsStore";
-import { PremiumUpgradeModal } from "../common/PremiumUpgradeModal";
+} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { BarcodeScannerModal } from '../common/BarcodeScannerModal';
+import { usePermission } from '../../hooks/usePermissionHandler';
+import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { SearchInput } from '../common/SearchInput';
+import { ScreenWrapper } from '../common/ScreenWrapper';
+import { TOKENS } from '../../constants/tokens';
+import { cartState, CatalogProduct } from '../data/cartState';
+import { HeaderCartButton } from '../common/HeaderCartButton';
+import { useProducts } from '../../hooks/useProducts';
+import { ProductImage } from '../common/ProductImage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSettingsStore } from '../../stores/useSettingsStore';
+import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 
 export const SearchScreen: React.FC = () => {
   const router = useRouter();
   const { requestCameraAccess } = usePermission();
   const insets = useSafeAreaInsets();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeChip, setActiveChip] = useState("All");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeChip, setActiveChip] = useState('All');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
@@ -42,7 +42,6 @@ export const SearchScreen: React.FC = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useProducts(undefined, searchQuery, activeChip);
-
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -65,7 +64,7 @@ export const SearchScreen: React.FC = () => {
     triggerToast(`Added ${prod.name} to active invoice`);
   };
 
-  const filterChips = ["All", "In Stock", "Under Rs. 1000", "Low Stock", "Out of Stock"];
+  const filterChips = ['All', 'In Stock', 'Under Rs. 1000', 'Low Stock', 'Out of Stock'];
 
   // Direct queries are executed inside WatermelonDB
   const filteredProducts = productsList;
@@ -116,10 +115,7 @@ export const SearchScreen: React.FC = () => {
             return (
               <TouchableOpacity
                 key={chip}
-                style={[
-                  styles.chip,
-                  isActive ? styles.chipActive : styles.chipInactive,
-                ]}
+                style={[styles.chip, isActive ? styles.chipActive : styles.chipInactive]}
                 activeOpacity={0.85}
                 onPress={() => setActiveChip(chip)}
               >
@@ -140,7 +136,7 @@ export const SearchScreen: React.FC = () => {
       {/* Title Count Subheader */}
       <View style={styles.subheader}>
         <Text style={styles.subheaderText}>
-          {filteredProducts.length} {filteredProducts.length === 1 ? "RESULT" : "RESULTS"}
+          {filteredProducts.length} {filteredProducts.length === 1 ? 'RESULT' : 'RESULTS'}
         </Text>
       </View>
 
@@ -187,9 +183,9 @@ export const SearchScreen: React.FC = () => {
                     <Text style={styles.dividerDot}>·</Text>
                   </>
                 ) : null}
-                {item.stockType === "low" ? (
+                {item.stockType === 'low' ? (
                   <Text style={styles.stockLowText}>{item.stockText}</Text>
-                ) : item.stockType === "out" ? (
+                ) : item.stockType === 'out' ? (
                   <Text style={styles.stockOutText}>{item.stockText}</Text>
                 ) : (
                   <Text style={styles.stockNormalText}>{item.stockText}</Text>
@@ -200,28 +196,25 @@ export const SearchScreen: React.FC = () => {
             {/* Right Row Actions & Price */}
             <View style={styles.rightActionsCol}>
               <Text style={styles.itemPrice}>Rs. {item.price.toLocaleString()}</Text>
-              
+
               <TouchableOpacity
-                style={[
-                  styles.addButton,
-                  item.stockType === "out" && styles.addButtonDisabled
-                ]}
-                activeOpacity={item.stockType === "out" ? 1 : 0.8}
-                onPress={() => item.stockType !== "out" && handleAddProduct(item)}
+                style={[styles.addButton, item.stockType === 'out' && styles.addButtonDisabled]}
+                activeOpacity={item.stockType === 'out' ? 1 : 0.8}
+                onPress={() => item.stockType !== 'out' && handleAddProduct(item)}
               >
                 <Feather
-                  name={item.stockType === "out" ? "alert-circle" : "plus"}
+                  name={item.stockType === 'out' ? 'alert-circle' : 'plus'}
                   size={12}
-                  color={item.stockType === "out" ? TOKENS.muted : TOKENS.primary}
+                  color={item.stockType === 'out' ? TOKENS.muted : TOKENS.primary}
                   style={styles.plusIcon}
                 />
                 <Text
                   style={[
                     styles.addButtonText,
-                    item.stockType === "out" && styles.addButtonTextDisabled
+                    item.stockType === 'out' && styles.addButtonTextDisabled,
                   ]}
                 >
-                  {item.stockType === "out" ? "Out" : "Add"}
+                  {item.stockType === 'out' ? 'Out' : 'Add'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -266,27 +259,27 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
   },
   toastContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 90,
-    alignSelf: "center",
+    alignSelf: 'center',
     backgroundColor: TOKENS.success,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 8,
     zIndex: 999,
-    boxShadow: "0px 2px 4px 0px rgba(0, 0, 0, 0.15)",
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.15)',
   },
   toastText: {
     color: TOKENS.card,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
@@ -298,37 +291,37 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scanHeaderButton: {
     width: 38,
     height: 38,
     borderRadius: 10,
     backgroundColor: TOKENS.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     boxShadow: `0px 2px 3px 0px ${TOKENS.primary}33`,
   },
   chipsWrapper: {
     height: 52,
-    justifyContent: "center",
+    justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: TOKENS.border,
     backgroundColor: TOKENS.card,
   },
   chipsScrollContent: {
     paddingHorizontal: 16,
-    alignItems: "center",
+    alignItems: 'center',
     gap: 8,
   },
   chip: {
     paddingHorizontal: 16,
     height: 34,
     borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   chipActive: {
     backgroundColor: TOKENS.primary,
@@ -340,11 +333,11 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   chipTextActive: {
     color: TOKENS.card,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   chipTextInactive: {
     color: TOKENS.primary,
@@ -352,11 +345,11 @@ const styles = StyleSheet.create({
   subheader: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: '#F9FAFB',
   },
   subheaderText: {
     fontSize: 11,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.muted,
     letterSpacing: 0.5,
   },
@@ -365,8 +358,8 @@ const styles = StyleSheet.create({
     backgroundColor: TOKENS.card,
   },
   resultItemRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
@@ -376,9 +369,9 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 8,
-    backgroundColor: "#F9FAFB",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
@@ -392,12 +385,12 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   skuStockRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 4,
     gap: 6,
   },
@@ -416,26 +409,26 @@ const styles = StyleSheet.create({
   stockLowText: {
     fontSize: 12,
     color: TOKENS.warning,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   stockOutText: {
     fontSize: 12,
     color: TOKENS.error,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   rightActionsCol: {
-    alignItems: "flex-end",
+    alignItems: 'flex-end',
     gap: 6,
   },
   itemPrice: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
   },
   addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: TOKENS.lightBlue,
     borderWidth: 1,
     borderColor: TOKENS.accentBlue,
@@ -445,7 +438,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   addButtonDisabled: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F3F4F6',
     borderColor: TOKENS.border,
   },
   plusIcon: {
@@ -454,19 +447,19 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 11,
     color: TOKENS.primary,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   addButtonTextDisabled: {
     color: TOKENS.muted,
   },
   headerRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
   },
   emptySearchState: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 64,
     paddingHorizontal: 24,
     marginTop: 32,
@@ -474,7 +467,7 @@ const styles = StyleSheet.create({
   },
   emptySearchTitle: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     color: TOKENS.dark,
     marginTop: 12,
     marginBottom: 4,
@@ -482,7 +475,7 @@ const styles = StyleSheet.create({
   emptySearchSub: {
     fontSize: 12,
     color: TOKENS.muted,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 18,
   },
 });

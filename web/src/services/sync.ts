@@ -4,7 +4,6 @@ import database from '../db/database';
 import { schema } from '../db/schema';
 import { useAuthStore } from '../stores/authStore';
 
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
@@ -97,21 +96,19 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
 export async function uploadBusinessLogo(file: File, businessId: string): Promise<string> {
   const fileExt = file.name.split('.').pop() || 'jpg';
   const fileName = `${businessId}/logo_${Date.now()}.${fileExt}`;
-  
-  const { error } = await supabase.storage
-    .from('business-logos')
-    .upload(fileName, file, {
-      contentType: file.type,
-      upsert: true,
-    });
-    
+
+  const { error } = await supabase.storage.from('business-logos').upload(fileName, file, {
+    contentType: file.type,
+    upsert: true,
+  });
+
   if (error) {
     throw error;
   }
-  
-  const { data: { publicUrl } } = supabase.storage
-    .from('business-logos')
-    .getPublicUrl(fileName);
-    
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from('business-logos').getPublicUrl(fileName);
+
   return publicUrl;
 }

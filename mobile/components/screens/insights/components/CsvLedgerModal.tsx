@@ -1,9 +1,17 @@
-import React from "react";
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { TOKENS } from "../../../../constants/tokens";
-import { ReportType } from "../../../../utils/reportTemplates";
-import { styles } from "../styles";
+import React from 'react';
+import {
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { TOKENS } from '../../../../constants/tokens';
+import { ReportType } from '../../../../utils/reportTemplates';
+import { styles } from '../styles';
 
 interface CsvLedgerModalProps {
   visible: boolean;
@@ -15,44 +23,44 @@ interface CsvLedgerModalProps {
 
 const REPORT_OPTIONS = [
   {
-    id: "best_sellers",
-    title: "Best Selling Products",
-    desc: "Sales ranking, units sold, and revenue shares.",
-    icon: "trending-up",
-    color: "#10B981",
-    bgColor: "#E8FDF0",
+    id: 'best_sellers',
+    title: 'Best Selling Products',
+    desc: 'Sales ranking, units sold, and revenue shares.',
+    icon: 'trending-up',
+    color: '#10B981',
+    bgColor: '#E8FDF0',
   },
   {
-    id: "slow_movers",
-    title: "Slow Moving Inventory",
-    desc: "Identify stagnant stock items with low sales.",
-    icon: "clock",
-    color: "#F59E0B",
-    bgColor: "#FEF7E0",
+    id: 'slow_movers',
+    title: 'Slow Moving Inventory',
+    desc: 'Identify stagnant stock items with low sales.',
+    icon: 'clock',
+    color: '#F59E0B',
+    bgColor: '#FEF7E0',
   },
   {
-    id: "orders_ledger",
-    title: "Orders History Ledger",
-    desc: "Chronological transaction database logs.",
-    icon: "list",
-    color: "#3B82F6",
-    bgColor: "#EFF6FF",
+    id: 'orders_ledger',
+    title: 'Orders History Ledger',
+    desc: 'Chronological transaction database logs.',
+    icon: 'list',
+    color: '#3B82F6',
+    bgColor: '#EFF6FF',
   },
   {
-    id: "item_sales",
-    title: "Item-Wise Sales Summary",
-    desc: "Total quantities and revenues per catalog product.",
-    icon: "package",
-    color: "#7C3AED",
-    bgColor: "#EDE9FE",
+    id: 'item_sales',
+    title: 'Item-Wise Sales Summary',
+    desc: 'Total quantities and revenues per catalog product.',
+    icon: 'package',
+    color: '#7C3AED',
+    bgColor: '#EDE9FE',
   },
   {
-    id: "branch_performance",
-    title: "Branch Audit & Low Stock",
-    desc: "Cashier checkout ranks and critical stock alerts.",
-    icon: "activity",
-    color: "#EF4444",
-    bgColor: "#FCE8E6",
+    id: 'branch_performance',
+    title: 'Branch Audit & Low Stock',
+    desc: 'Cashier checkout ranks and critical stock alerts.',
+    icon: 'activity',
+    color: '#EF4444',
+    bgColor: '#FCE8E6',
   },
 ];
 
@@ -66,12 +74,7 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
   const { height: windowHeight } = useWindowDimensions();
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
       <View style={styles.premiumModalOverlay}>
         {/* Backdrop Touch Dismiss */}
         <TouchableOpacity
@@ -80,12 +83,11 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
           onPress={onClose}
         />
 
-        <View style={[styles.premiumModalContainer, { height: Math.min(windowHeight * 0.82, 580) }]}>
+        <View
+          style={[styles.premiumModalContainer, { height: Math.min(windowHeight * 0.82, 580) }]}
+        >
           {/* Close button */}
-          <TouchableOpacity
-            style={styles.absoluteCloseBtn}
-            onPress={onClose}
-          >
+          <TouchableOpacity style={styles.absoluteCloseBtn} onPress={onClose}>
             <Feather name="x" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
 
@@ -110,18 +112,10 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
                 <TouchableOpacity
                   key={opt.id}
                   activeOpacity={0.8}
-                  style={[
-                    styles.pdfOptionCard,
-                    isSelected && styles.pdfOptionCardSelected,
-                  ]}
+                  style={[styles.pdfOptionCard, isSelected && styles.pdfOptionCardSelected]}
                   onPress={() => onSelectReportType(opt.id as ReportType)}
                 >
-                  <View
-                    style={[
-                      styles.pdfOptionIconBox,
-                      { backgroundColor: opt.bgColor },
-                    ]}
-                  >
+                  <View style={[styles.pdfOptionIconBox, { backgroundColor: opt.bgColor }]}>
                     <Feather name={opt.icon as any} size={15} color={opt.color} />
                   </View>
                   <View style={styles.pdfOptionTextCol}>
@@ -129,10 +123,7 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
                     <Text style={styles.pdfOptionDesc}>{opt.desc}</Text>
                   </View>
                   <View
-                    style={[
-                      styles.pdfOptionRadio,
-                      isSelected && styles.pdfOptionRadioSelected,
-                    ]}
+                    style={[styles.pdfOptionRadio, isSelected && styles.pdfOptionRadioSelected]}
                   >
                     {isSelected && <View style={styles.pdfOptionRadioInner} />}
                   </View>
@@ -151,11 +142,7 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
               <Text style={styles.pdfGenerateBtnText}>Generate CSV Report</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.pdfCancelBtn}
-              activeOpacity={0.8}
-              onPress={onClose}
-            >
+            <TouchableOpacity style={styles.pdfCancelBtn} activeOpacity={0.8} onPress={onClose}>
               <Text style={styles.pdfCancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>

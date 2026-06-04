@@ -42,45 +42,52 @@ export default function StocksPage() {
 
   if (!canPerform('update', 'products')) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        padding: '24px',
-        fontFamily: 'Inter, system-ui, sans-serif'
-      }}>
-        <div style={{
-          backgroundColor: '#ffffff',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-lg)',
-          boxShadow: 'var(--shadow-lg)',
-          padding: '48px 32px',
-          maxWidth: '480px',
-          width: '100%',
-          textAlign: 'center',
+      <div
+        style={{
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px'
-        }}>
-          <div style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '50%',
-            backgroundColor: '#fee2e2',
+          justifyContent: 'center',
+          height: '100%',
+          padding: '24px',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)',
+            padding: '48px 32px',
+            maxWidth: '480px',
+            width: '100%',
+            textAlign: 'center',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid #fecaca'
-          }}>
+            gap: '16px',
+          }}
+        >
+          <div
+            style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: '#fee2e2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid #fecaca',
+            }}
+          >
             <Lock size={28} color="var(--error)" />
           </div>
           <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--dark)', margin: 0 }}>
             Inventory Operations Restricted
           </h3>
           <p style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: '1.6', margin: 0 }}>
-            Cashier profiles are not authorized to create, update, or edit products in the catalog list.
+            Cashier profiles are not authorized to create, update, or edit products in the catalog
+            list.
           </p>
         </div>
       </div>
@@ -125,7 +132,11 @@ export default function StocksPage() {
     }
   };
 
-  const handleAdjustSubmit = async (adjustType: 'in' | 'out', qtyNum: number, adjustReason: string) => {
+  const handleAdjustSubmit = async (
+    adjustType: 'in' | 'out',
+    qtyNum: number,
+    adjustReason: string
+  ) => {
     if (!selectedProduct) return;
 
     adjustStockMutation.mutate(
@@ -160,14 +171,14 @@ export default function StocksPage() {
 
       {/* Segmented tab navigation shown only on mobile/tablet viewports (< 1024px) */}
       <div className="stocks-tab-bar">
-        <button 
+        <button
           onClick={() => setActiveTab('inventory')}
           className={`stocks-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
         >
           <Package size={16} />
           <span>Product Inventory</span>
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('audit')}
           className={`stocks-tab-btn ${activeTab === 'audit' ? 'active' : ''}`}
         >
@@ -178,7 +189,7 @@ export default function StocksPage() {
 
       <div style={styles.workspace} className="stocks-workspace">
         <div style={styles.tableSection}>
-          <StocksTable 
+          <StocksTable
             filteredProducts={products}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -202,13 +213,10 @@ export default function StocksPage() {
           )}
         </div>
 
-        <AuditLogScroller 
-          logs={logs}
-          activeTab={activeTab}
-        />
+        <AuditLogScroller logs={logs} activeTab={activeTab} />
       </div>
 
-      <AdjustStockModal 
+      <AdjustStockModal
         isOpen={showAdjustModal}
         product={selectedProduct}
         onClose={() => {

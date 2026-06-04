@@ -1,4 +1,4 @@
-import { supabase } from "./sync";
+import { supabase } from './sync';
 
 export interface AppConfig {
   force_update: boolean;
@@ -14,19 +14,19 @@ export interface AppConfig {
 export async function fetchAppConfig(): Promise<AppConfig | null> {
   try {
     const { data, error } = await supabase
-      .from("app_config")
-      .select("force_update, min_version, android_url, ios_url")
-      .eq("id", 1)
+      .from('app_config')
+      .select('force_update, min_version, android_url, ios_url')
+      .eq('id', 1)
       .single();
 
     if (error) {
-      console.error("Error fetching app configuration:", error.message);
+      console.error('Error fetching app configuration:', error.message);
       return null;
     }
 
     return data as AppConfig;
   } catch (err) {
-    console.error("Failed to fetch app config due to connection/unexpected error:", err);
+    console.error('Failed to fetch app config due to connection/unexpected error:', err);
     return null;
   }
 }

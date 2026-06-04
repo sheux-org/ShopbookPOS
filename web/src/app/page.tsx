@@ -100,7 +100,7 @@ export default function PosBillingPage() {
         {/* Left Panel: Catalog OR Dense Scanned Cart Table */}
         <div className="pos-left-pane">
           {posMode === 'tablet' ? (
-            <CatalogView 
+            <CatalogView
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               viewMode={viewMode}
@@ -116,7 +116,7 @@ export default function PosBillingPage() {
               isFetchingNextPage={isFetchingNextPage}
             />
           ) : (
-            <DenseCartTable 
+            <DenseCartTable
               cart={cart}
               selectedRowIndex={selectedRowIndex}
               setSelectedRowIndex={setSelectedRowIndex}
@@ -131,10 +131,17 @@ export default function PosBillingPage() {
         {/* Right Panel: Persistent Invoice summaries & payment settlement details */}
         <div className="pos-right-pane">
           <div className="pane-title-bar">
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                width: '100%',
+                alignItems: 'center',
+              }}
+            >
               <h3 className="pane-title">Checkout Summary</h3>
               {cart.length > 0 && (
-                <button 
+                <button
                   onClick={() => {
                     if (confirm('Clear entire cart invoice?')) {
                       resetAllState();
@@ -152,10 +159,7 @@ export default function PosBillingPage() {
           <div className="right-body-container">
             <div className="right-body-scrollable">
               {posMode === 'tablet' && (
-                <TabletCartScroller 
-                  cart={cart}
-                  updateQuantity={updateQuantity}
-                />
+                <TabletCartScroller cart={cart} updateQuantity={updateQuantity} />
               )}
 
               {/* Customer Lookup Profile */}
@@ -164,23 +168,25 @@ export default function PosBillingPage() {
                   <div className="customer-status-card">
                     <div>
                       <h4 style={{ margin: 0, fontSize: '13px' }}>{customer.name}</h4>
-                      <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{customer.phone}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                        {customer.phone}
+                      </span>
                     </div>
-                    <button 
-                      onClick={() => setCustomer(null)} 
-                      className="remove-customer-btn"
-                    >
+                    <button onClick={() => setCustomer(null)} className="remove-customer-btn">
                       Remove
                     </button>
                   </div>
                 ) : (
-                  <button onClick={() => setShowCustModal(true)} className="attach-cust-btn-compact">
+                  <button
+                    onClick={() => setShowCustModal(true)}
+                    className="attach-cust-btn-compact"
+                  >
                     <span>Attach Customer {posMode === 'normal' ? '[F3]' : ''}</span>
                   </button>
                 )}
               </div>
 
-              <TotalsSummary 
+              <TotalsSummary
                 subtotal={subtotal}
                 discountAmount={discountAmount}
                 discountVal={discountVal}
@@ -233,7 +239,7 @@ export default function PosBillingPage() {
                   Proceed to Payment (Rs. {totalAmount.toLocaleString()})
                 </button>
               ) : (
-                <SettlementCard 
+                <SettlementCard
                   paymentMethod={paymentMethod}
                   handlePaymentMethodChange={handlePaymentMethodChange}
                   cashReceived={cashReceived}
@@ -264,7 +270,7 @@ export default function PosBillingPage() {
         </div>
       </div>
 
-      <CustomerModal 
+      <CustomerModal
         isOpen={showCustModal}
         onClose={() => setShowCustModal(false)}
         customers={customCustomers}
@@ -302,7 +308,7 @@ export default function PosBillingPage() {
         settleBtnRef={settleBtnRef}
       />
 
-      <ReceiptModal 
+      <ReceiptModal
         isOpen={showReceipt}
         order={latestOrder}
         items={cart}

@@ -8,10 +8,7 @@ interface HelpSupportModalProps {
   onClose: () => void;
 }
 
-export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({
-  isOpen,
-  onClose,
-}) => {
+export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const contactOptions = [
@@ -23,7 +20,7 @@ export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({
       icon: MessageCircle,
       bg: '#E8FDF0',
       color: '#10B981',
-      border: '#a7f3d0'
+      border: '#a7f3d0',
     },
     {
       name: '24/7 Telephone Helpline',
@@ -33,7 +30,7 @@ export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({
       icon: Phone,
       bg: '#EFF6FF',
       color: '#2563EB',
-      border: '#bfdbfe'
+      border: '#bfdbfe',
     },
     {
       name: 'WhatsApp Merchant Community',
@@ -43,8 +40,8 @@ export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({
       icon: Users,
       bg: '#FAF5FF',
       color: '#8B5CF6',
-      border: '#e9d5ff'
-    }
+      border: '#e9d5ff',
+    },
   ];
 
   return (
@@ -55,17 +52,22 @@ export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({
             <Sparkles size={16} color="var(--yellow)" />
             <h3>Shopbook Support Portal</h3>
           </div>
-          <button onClick={onClose} className="modal-close-btn"><X size={16} /></button>
+          <button onClick={onClose} className="modal-close-btn">
+            <X size={16} />
+          </button>
         </div>
         <div className="modal-body" style={{ padding: '20px 24px' }}>
-          <p style={{ 
-            fontSize: '13px', 
-            color: 'var(--muted)', 
-            lineHeight: '1.6', 
-            margin: '0 0 20px 0', 
-            textAlign: 'center' 
-          }}>
-            Need assistance with your Shopbook POS terminal? Get priority 24/7 support from our customer success engineers.
+          <p
+            style={{
+              fontSize: '13px',
+              color: 'var(--muted)',
+              lineHeight: '1.6',
+              margin: '0 0 20px 0',
+              textAlign: 'center',
+            }}
+          >
+            Need assistance with your Shopbook POS terminal? Get priority 24/7 support from our
+            customer success engineers.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -90,41 +92,59 @@ export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({
                     cursor: 'pointer',
                   }}
                 >
-                  <div style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '50%',
-                    backgroundColor: opt.bg,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: '14px',
-                    flexShrink: 0
-                  }}>
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '50%',
+                      backgroundColor: opt.bg,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: '14px',
+                      flexShrink: 0,
+                    }}
+                  >
                     <Icon size={18} color={opt.color} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <h4 style={{ 
-                      fontSize: '13.5px', 
-                      fontWeight: '800', 
-                      color: 'var(--dark)', 
-                      margin: 0 
-                    }}>{opt.name}</h4>
-                    <p style={{ 
-                      fontSize: '11px', 
-                      color: 'var(--muted)', 
-                      margin: '2px 0 0 0',
-                      lineHeight: '1.3'
-                    }}>{opt.description}</p>
-                    <span style={{
-                      display: 'inline-block',
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      color: opt.color,
-                      marginTop: '4px'
-                    }}>{opt.value}</span>
+                    <h4
+                      style={{
+                        fontSize: '13.5px',
+                        fontWeight: '800',
+                        color: 'var(--dark)',
+                        margin: 0,
+                      }}
+                    >
+                      {opt.name}
+                    </h4>
+                    <p
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--muted)',
+                        margin: '2px 0 0 0',
+                        lineHeight: '1.3',
+                      }}
+                    >
+                      {opt.description}
+                    </p>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        color: opt.color,
+                        marginTop: '4px',
+                      }}
+                    >
+                      {opt.value}
+                    </span>
                   </div>
-                  <ExternalLink size={14} color="var(--muted)" style={{ flexShrink: 0, marginLeft: '8px' }} />
+                  <ExternalLink
+                    size={14}
+                    color="var(--muted)"
+                    style={{ flexShrink: 0, marginLeft: '8px' }}
+                  />
                 </a>
               );
             })}

@@ -19,7 +19,7 @@ export const BusinessAvatar: React.FC<BusinessAvatarProps> = ({
   const radius = size / 2;
   const initials = getBusinessInitials(name);
   const [imageError, setImageError] = useState(false);
-  
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // Reset state and opacity on logoUri change
@@ -47,7 +47,12 @@ export const BusinessAvatar: React.FC<BusinessAvatarProps> = ({
   };
 
   return (
-    <View style={[styles.avatarCircle, { width: size, height: size, borderRadius: radius, overflow: 'hidden' }]}>
+    <View
+      style={[
+        styles.avatarCircle,
+        { width: size, height: size, borderRadius: radius, overflow: 'hidden' },
+      ]}
+    >
       {/* Background Initials (always rendered behind/underneath the image) */}
       <Text style={[styles.avatarInitials, { fontSize: size * 0.46 }]}>
         {logoUri && logoUri.length <= 2 ? logoUri : initials}
@@ -85,4 +90,3 @@ const styles = StyleSheet.create({
     color: TOKENS.primary,
   },
 });
-

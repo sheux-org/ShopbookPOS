@@ -11,9 +11,12 @@ if (typeof process !== 'undefined' && process.env) {
 export function getEndpointUrl(): string {
   const envUrl = process.env.EXPO_PUBLIC_UPLOADTHING_URL;
   const debuggerHost = Constants.expoConfig?.hostUri;
-  const baseUrl = (envUrl && !envUrl.includes('localhost'))
-    ? envUrl
-    : (debuggerHost ? `http://${debuggerHost}` : (envUrl || 'http://localhost:8081'));
+  const baseUrl =
+    envUrl && !envUrl.includes('localhost')
+      ? envUrl
+      : debuggerHost
+        ? `http://${debuggerHost}`
+        : envUrl || 'http://localhost:8081';
 
   return baseUrl.endsWith('/api/uploadthing') ? baseUrl : `${baseUrl}/api/uploadthing`;
 }

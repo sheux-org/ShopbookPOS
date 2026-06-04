@@ -18,7 +18,7 @@ Replication is handled by the **`syncDatabase`** function inside [sync.ts](../sr
 +--------┬---------+                   +----------┬-----------+
          │                                        │
          │ 1. pullChanges(lastPulledAt)           │
-         ├───────────────────────────────────────>│ 
+         ├───────────────────────────────────────>│
          │                                        │ RPC: pull_watermelondb_changes
          │ 2. Return JSON changes & timestamp     │ Filtered by client_business_id
          │<───────────────────────────────────────┤
@@ -38,13 +38,17 @@ Replication is handled by the **`syncDatabase`** function inside [sync.ts](../sr
 The database uses raw SQL PL/pgSQL Remote Procedure Calls (RPCs) to perform mutations and selections to prevent direct table manipulation via REST endpoints. The schema of these RPCs is defined in [20260603000000_secure_tenant_isolation.sql](../../supabase/migrations/20260603000000_secure_tenant_isolation.sql).
 
 ### 1. `pull_watermelondb_changes(last_pulled_at, client_business_id)`
+
 Fetches server updates for all 6 tables.
+
 - **Tenant Filtering**: The query automatically appends a filter: `business_id = client_business_id` (or `id = client_business_id` for the `businesses` table).
 - **Time Window**: Evaluates records with a `server_updated_at > last_pulled_at` timestamp.
 - **Deletion Tracking**: Retrieves deleted records from a dedicated `deleted_records` tracking table.
 
 ### 2. `push_watermelondb_changes(changes, client_business_id)`
+
 Saves client-side modifications back to Supabase.
+
 - **Table Batches**: Processes changes sequentially. The order is strictly defined by `PUSH_TABLE_ORDER` to prevent foreign key errors:
   1. `businesses`
   2. `employees`
@@ -80,7 +84,8 @@ The database security model enforces **Zero Trust Direct REST access** to ensure
 
 ## Deletion Logging
 
-Since deleted records are physically removed from primary tables, client terminals must know which records were deleted to update their local IndexedDB. 
+Since deleted records are physically removed from primary tables, client terminals must know which records were deleted to update their local IndexedDB.
+
 - A PostgreSQL database trigger function `record_deletion()` ([20260603000000_secure_tenant_isolation.sql:L10-L32](../../supabase/migrations/20260603000000_secure_tenant_isolation.sql#L10-L32)) intercepts `DELETE` events on all core tables.
 - It extracts the `business_id` and records the deletion event in the `deleted_records` table:
   ```sql
@@ -93,6 +98,7 @@ Since deleted records are physically removed from primary tables, client termina
 ## Image Upload Queue
 
 Product and business logo files are hosted on Supabase Storage within the `business-logos` bucket.
+
 - **Upload Controller**: [sync.ts](../src/services/sync.ts#L97-L117)
 - **Local Upload Queue**: [uploadQueue.ts](../src/services/uploadQueue.ts)
   To ensure offline operation, image uploads are queued locally if the terminal is offline. They are processed sequentially when the browser detects that connection is restored.

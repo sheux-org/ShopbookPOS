@@ -45,11 +45,16 @@ const UNIT_TYPES = ['Pieces', 'kg', 'Liters', 'Packets'];
 // Helper to get category default emoji if no image is uploaded
 const getCategoryEmoji = (cat: string) => {
   switch (cat.toLowerCase()) {
-    case 'dairy': return '🥛';
-    case 'drinks': return '🍹';
-    case 'snacks': return '🍪';
-    case 'household': return '🧼';
-    default: return '📦';
+    case 'dairy':
+      return '🥛';
+    case 'drinks':
+      return '🍹';
+    case 'snacks':
+      return '🍪';
+    case 'household':
+      return '🧼';
+    default:
+      return '📦';
   }
 };
 
@@ -195,10 +200,16 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
       <div style={{ ...styles.modalContent, maxWidth: '580px' }}>
         <div style={styles.modalHeader}>
           <div>
-            <h3 style={styles.modalTitle}>{mode === 'create' ? 'Register New Product' : 'Edit Catalog Product'}</h3>
-            <p style={styles.modalSubtitle}>Manage item metadata, pricing, inventory alerts, and image representation.</p>
+            <h3 style={styles.modalTitle}>
+              {mode === 'create' ? 'Register New Product' : 'Edit Catalog Product'}
+            </h3>
+            <p style={styles.modalSubtitle}>
+              Manage item metadata, pricing, inventory alerts, and image representation.
+            </p>
           </div>
-          <button onClick={onClose} style={styles.modalCloseBtn}><X size={18} /></button>
+          <button onClick={onClose} style={styles.modalCloseBtn}>
+            <X size={18} />
+          </button>
         </div>
         <form onSubmit={handleSubmit} style={styles.modalForm}>
           <div style={styles.modalBody}>
@@ -209,9 +220,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                 {/* Row 1: Product Name */}
                 <div style={styles.modalInputGroup}>
                   <label style={styles.modalLabel}>Product Name *</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Anchor Milk Powder 400g" 
+                  <input
+                    type="text"
+                    placeholder="e.g. Anchor Milk Powder 400g"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     style={styles.modalInput}
@@ -224,9 +235,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                   <div style={styles.modalInputGroup}>
                     <label style={styles.modalLabel}>Barcode</label>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. 47900101" 
+                      <input
+                        type="text"
+                        placeholder="e.g. 47900101"
                         value={barcode}
                         onChange={(e) => setBarcode(e.target.value)}
                         style={{ ...styles.modalInput, paddingRight: '40px' }}
@@ -244,9 +255,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
 
                   <div style={styles.modalInputGroup}>
                     <label style={styles.modalLabel}>Quick Code</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. 2016" 
+                    <input
+                      type="text"
+                      placeholder="e.g. 2016"
                       value={quickCode}
                       onChange={(e) => setQuickCode(e.target.value)}
                       style={styles.modalInput}
@@ -258,25 +269,27 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               {/* Right Column (Image) */}
               <div style={styles.topRightCol}>
                 <label style={styles.modalLabel}>Product Image</label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  ref={fileInputRef} 
-                  onChange={handleImageChange} 
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
                   style={{ display: 'none' }}
                 />
-                
+
                 {icon ? (
                   <div style={styles.compactImagePreviewContainer}>
-                    {icon.startsWith('http') || icon.startsWith('data:') || icon.startsWith('blob:') ? (
+                    {icon.startsWith('http') ||
+                    icon.startsWith('data:') ||
+                    icon.startsWith('blob:') ? (
                       <img src={icon} alt="Preview" style={styles.compactImagePreview} />
                     ) : (
                       <div style={styles.compactEmojiFallbackPreview}>{icon}</div>
                     )}
-                    
-                    <button 
-                      type="button" 
-                      onClick={handleRemoveImage} 
+
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
                       style={styles.compactRemoveBtn}
                       title="Remove Image"
                     >
@@ -290,14 +303,25 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                     )}
                   </div>
                 ) : (
-                  <div 
-                    onClick={() => !uploadingImage && fileInputRef.current?.click()} 
+                  <div
+                    onClick={() => !uploadingImage && fileInputRef.current?.click()}
                     style={styles.compactUploadPlaceholder}
                     title="Upload Product Image"
                   >
                     <UploadCloud size={20} color="var(--primary)" />
-                    <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '600', marginTop: '4px' }}>Upload Image</span>
-                    <span style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '2px' }}>(Max 4MB)</span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--muted)',
+                        fontWeight: '600',
+                        marginTop: '4px',
+                      }}
+                    >
+                      Upload Image
+                    </span>
+                    <span style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '2px' }}>
+                      (Max 4MB)
+                    </span>
 
                     {uploadingImage && (
                       <div style={styles.compactUploadingOverlay}>
@@ -315,12 +339,12 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
             <div style={styles.gridTwo}>
               <div style={styles.modalInputGroup}>
                 <label style={styles.modalLabel}>Category</label>
-                <select 
-                  value={category} 
-                  onChange={(e) => setCategory(e.target.value)} 
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
                   style={styles.select}
                 >
-                  {CATEGORIES.map(cat => (
+                  {CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat.charAt(0).toUpperCase() + cat.slice(1)}
                     </option>
@@ -330,13 +354,15 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
 
               <div style={styles.modalInputGroup}>
                 <label style={styles.modalLabel}>Unit Type</label>
-                <select 
-                  value={unitType} 
-                  onChange={(e) => setUnitType(e.target.value)} 
+                <select
+                  value={unitType}
+                  onChange={(e) => setUnitType(e.target.value)}
                   style={styles.select}
                 >
-                  {UNIT_TYPES.map(unit => (
-                    <option key={unit} value={unit}>{unit}</option>
+                  {UNIT_TYPES.map((unit) => (
+                    <option key={unit} value={unit}>
+                      {unit}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -346,10 +372,10 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
             <div style={styles.gridTwo}>
               <div style={styles.modalInputGroup}>
                 <label style={styles.modalLabel}>Selling Price (Rs.) *</label>
-                <input 
-                  type="number" 
-                  step="0.01" 
-                  placeholder="0.00" 
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   style={styles.modalInput}
@@ -359,10 +385,10 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
 
               <div style={styles.modalInputGroup}>
                 <label style={styles.modalLabel}>Cost Price (Rs.)</label>
-                <input 
-                  type="number" 
-                  step="0.01" 
-                  placeholder="0.00" 
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
                   value={costPrice}
                   onChange={(e) => setCostPrice(e.target.value)}
                   style={styles.modalInput}
@@ -374,9 +400,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
             <div style={styles.gridTwo}>
               <div style={styles.modalInputGroup}>
                 <label style={styles.modalLabel}>Stock Quantity *</label>
-                <input 
-                  type="number" 
-                  placeholder="e.g. 50" 
+                <input
+                  type="number"
+                  placeholder="e.g. 50"
                   value={stockCount}
                   onChange={(e) => setStockCount(e.target.value)}
                   style={styles.modalInput}
@@ -386,9 +412,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
 
               <div style={styles.modalInputGroup}>
                 <label style={styles.modalLabel}>Low Alert Level</label>
-                <input 
-                  type="number" 
-                  placeholder="e.g. 5" 
+                <input
+                  type="number"
+                  placeholder="e.g. 5"
                   value={lowStockAlert}
                   onChange={(e) => setLowStockAlert(e.target.value)}
                   style={styles.modalInput}
@@ -398,8 +424,16 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
           </div>
 
           <div style={styles.modalFooter}>
-            <button type="submit" disabled={submitting || uploadingImage} style={styles.modalSubmitBtn}>
-              {submitting ? 'Saving changes...' : mode === 'create' ? 'Save Product to Catalog' : 'Update Catalog details'}
+            <button
+              type="submit"
+              disabled={submitting || uploadingImage}
+              style={styles.modalSubmitBtn}
+            >
+              {submitting
+                ? 'Saving changes...'
+                : mode === 'create'
+                  ? 'Save Product to Catalog'
+                  : 'Update Catalog details'}
             </button>
           </div>
         </form>
@@ -655,4 +689,3 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'background-color 0.2s',
   },
 };
-

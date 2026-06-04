@@ -28,7 +28,9 @@ export default function InsightsPage() {
   const { role } = useUserPermissions();
 
   // Filter & period state
-  const [period, setPeriod] = useState<'daily' | 'yesterday' | 'weekly' | 'monthly' | 'yearly' | 'custom'>('monthly');
+  const [period, setPeriod] = useState<
+    'daily' | 'yesterday' | 'weekly' | 'monthly' | 'yearly' | 'custom'
+  >('monthly');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
   const [selectedReport, setSelectedReport] = useState<ReportType>('best_sellers');
@@ -39,32 +41,42 @@ export default function InsightsPage() {
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
 
   const monthsNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11);
-      setViewYear(prev => prev - 1);
+      setViewYear((prev) => prev - 1);
     } else {
-      setViewMonth(prev => prev - 1);
+      setViewMonth((prev) => prev - 1);
     }
   };
 
   const handleNextMonth = () => {
     if (viewMonth === 11) {
       setViewMonth(0);
-      setViewYear(prev => prev + 1);
+      setViewYear((prev) => prev + 1);
     } else {
-      setViewMonth(prev => prev + 1);
+      setViewMonth((prev) => prev + 1);
     }
   };
 
   const handleDateClick = (dateStr: string) => {
     if (!customStart || (customStart && customEnd)) {
       setCustomStart(dateStr);
-      setCustomEnd("");
+      setCustomEnd('');
     } else {
       if (dateStr < customStart) {
         setCustomStart(dateStr);
@@ -75,8 +87,8 @@ export default function InsightsPage() {
   };
 
   const handleClearDates = () => {
-    setCustomStart("");
-    setCustomEnd("");
+    setCustomStart('');
+    setCustomEnd('');
   };
 
   // Compute days in current month grid (42 days)
@@ -173,13 +185,16 @@ export default function InsightsPage() {
     return {
       grossRevenue,
       count,
-      avgVal
+      avgVal,
     };
   }, [orders]);
 
   const receiptSubtotal = useMemo(() => {
     if (!selectedReceipt || !selectedReceipt.items) return 0;
-    return selectedReceipt.items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+    return selectedReceipt.items.reduce(
+      (sum: number, item: any) => sum + item.price * item.quantity,
+      0
+    );
   }, [selectedReceipt]);
 
   // Handlers for exporting reports
@@ -196,7 +211,7 @@ export default function InsightsPage() {
         }, 500);
       }
     } catch (err: any) {
-      alert("Failed to generate PDF report: " + err.message);
+      alert('Failed to generate PDF report: ' + err.message);
     }
   };
 
@@ -206,56 +221,73 @@ export default function InsightsPage() {
       const csv = buildReportCsv(selectedReport, data);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `${selectedReport}_report_${new Date().toISOString().slice(0, 10)}.csv`);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute(
+        'download',
+        `${selectedReport}_report_${new Date().toISOString().slice(0, 10)}.csv`
+      );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err: any) {
-      alert("Failed to generate CSV report: " + err.message);
+      alert('Failed to generate CSV report: ' + err.message);
     }
   };
 
   if (role === 'cashier') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontFamily: 'Inter, sans-serif' }}>
-        <div style={{ 
-          textAlign: 'center', 
-          maxWidth: '360px', 
-          padding: '32px', 
-          backgroundColor: '#ffffff', 
-          borderRadius: 'var(--radius-lg)', 
-          boxShadow: 'var(--shadow)',
+      <div
+        style={{
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
-          gap: '16px'
-        }}>
-          <div style={{ 
-            width: '56px', 
-            height: '56px', 
-            borderRadius: '50%', 
-            backgroundColor: '#fee2e2', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            border: '1px solid #fecaca'
-          }}>
+          justifyContent: 'center',
+          height: '100%',
+          fontFamily: 'Inter, sans-serif',
+        }}
+      >
+        <div
+          style={{
+            textAlign: 'center',
+            maxWidth: '360px',
+            padding: '32px',
+            backgroundColor: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+          }}
+        >
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: '#fee2e2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid #fecaca',
+            }}
+          >
             <Lock size={28} color="var(--error)" />
           </div>
           <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--dark)', margin: 0 }}>
             Analytics Insights Restricted
           </h3>
           <p style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: '1.6', margin: 0 }}>
-            Cashier profiles are not authorized to view business analytics reports and revenue graphs.
+            Cashier profiles are not authorized to view business analytics reports and revenue
+            graphs.
           </p>
         </div>
       </div>
     );
   }
 
-  const maxChartVal = chartData.length > 0 ? Math.max(...chartData.map((c: any) => c.value), 1000) : 1000;
+  const maxChartVal =
+    chartData.length > 0 ? Math.max(...chartData.map((c: any) => c.value), 1000) : 1000;
 
   return (
     <div className="insights-container fade-in">
@@ -264,7 +296,18 @@ export default function InsightsPage() {
         <div className="metrics-pane">
           {isLoading && (
             <div className="pane-loading-overlay">
-              <span className="pane-loading-spinner" style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <span
+                className="pane-loading-spinner"
+                style={{
+                  display: 'inline-block',
+                  width: '24px',
+                  height: '24px',
+                  border: '3px solid #2563eb',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite',
+                }}
+              />
             </div>
           )}
           {/* Period selector tabs */}
@@ -289,9 +332,19 @@ export default function InsightsPage() {
           )}
 
           {/* Scrollable contents inside metrics pane */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', flex: 1, margin: '0 -20px', padding: '0 20px' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              overflowY: 'auto',
+              flex: 1,
+              margin: '0 -20px',
+              padding: '0 20px',
+            }}
+          >
             {/* KPI Cards Grid */}
-            <KPICards 
+            <KPICards
               grossRevenue={kpiMetrics.grossRevenue}
               ordersCount={kpiMetrics.count}
               avgTicket={kpiMetrics.avgVal}
@@ -300,11 +353,7 @@ export default function InsightsPage() {
             />
 
             {/* SVG Distribution Chart */}
-            <RevenueChart 
-              chartData={chartData}
-              chartTitle={chartTitle}
-              maxChartVal={maxChartVal}
-            />
+            <RevenueChart chartData={chartData} chartTitle={chartTitle} maxChartVal={maxChartVal} />
 
             {/* Listings vertically stacked */}
             <div className="lists-grid-row">
@@ -317,14 +366,14 @@ export default function InsightsPage() {
 
         {/* Right Side: Exporter section & Transaction Ledger */}
         <div className="ledger-pane">
-          <ReportExporter 
+          <ReportExporter
             selectedReport={selectedReport}
             setSelectedReport={setSelectedReport}
             handleDownloadPdf={handleDownloadPdf}
             handleDownloadCsv={handleDownloadCsv}
           />
 
-          <TransactionLedger 
+          <TransactionLedger
             orders={orders}
             onViewReceipt={(o: any) => {
               setSelectedReceipt(o);
@@ -336,7 +385,7 @@ export default function InsightsPage() {
       </div>
 
       {/* Printable Receipt Modal */}
-      <ReceiptModal 
+      <ReceiptModal
         isOpen={showReceipt}
         onClose={() => setShowReceipt(false)}
         selectedReceipt={selectedReceipt}
