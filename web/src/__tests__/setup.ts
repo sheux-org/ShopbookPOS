@@ -137,6 +137,12 @@ vi.mock('@supabase/supabase-js', () => {
     createClient: vi.fn().mockReturnValue({
       from: mockFrom,
       rpc: vi.fn().mockResolvedValue({ data: { exists: false }, error: null }),
+      channel: vi.fn().mockReturnValue({
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+        send: vi.fn().mockResolvedValue({}),
+      }),
+      removeChannel: vi.fn().mockResolvedValue({}),
       storage: {
         from: vi.fn().mockReturnValue({
           upload: vi.fn().mockResolvedValue({ error: null }),

@@ -15,6 +15,9 @@ This project is configured as a `pnpm` workspace monorepo. Dependencies and comm
 
 ```text
 shopbook-pos/
+├── docs/                        # Project-wide documentation and guides
+│   └── synchronization_broadcast.md # Real-time Sync & Conflict Resolution Guide
+│
 ├── mobile/                      # Expo / React Native POS Application
 │   ├── app/                     # File-based router files (Expo Router)
 │   ├── components/              # Native layout & form components
@@ -32,6 +35,14 @@ shopbook-pos/
 ├── package.json                 # Root monorepo commands and scripts
 └── pnpm-workspace.yaml          # Monorepo workspace routing configuration
 ```
+
+---
+
+## 🔄 Real-Time Database Synchronization
+
+Both the Web Terminal and Mobile App feature a robust offline-first synchronization engine powered by WatermelonDB and real-time reactive sync triggers over Supabase Broadcast channels.
+
+For full details on the synchronization architecture, loop-prevention strategies, connection monitoring, and conflict resolution rules, see the [Real-Time Database Synchronization Guide](docs/synchronization_broadcast.md).
 
 ---
 
