@@ -43,6 +43,7 @@ export function usePosBilling() {
   const { findProductByCodeOrName, findProductByBarcode } = useFindProduct();
 
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const employeeName = useAuthStore((s) => s.employeeName);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const posMode = useSettingsStore((s) => s.posMode);
 
@@ -342,6 +343,19 @@ export function usePosBilling() {
         })),
       });
 
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const timeStr = now.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      const formattedDateStr = `${day}/${month}/${year} ${timeStr}`;
+      const cashTendered =
+        paymentMethod === 'cash' ? parseFloat(cashReceived) || totalAmount : undefined;
+
       setLatestOrder({
         invoiceNumber: res.invoiceNumber,
         totalAmount,
@@ -350,13 +364,17 @@ export function usePosBilling() {
         cardLastFour: paymentMethod === 'card' ? cardDigits.slice(-4) : undefined,
         subtotal,
         discountAmount,
+        discountValue: discountAmount,
         taxAmount,
+        taxValue: taxAmount,
+        taxRate,
         customer: customer ? { ...customer } : null,
         items: [...cart],
-        date:
-          new Date().toLocaleDateString() +
-          ' ' +
-          new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        dateStr: formattedDateStr,
+        date: formattedDateStr,
+        cashierName: employeeName || 'Cashier',
+        cashReceived: cashTendered,
+        changeDue: changeDue,
       });
 
       triggerToast('Invoice completed successfully! 📑');

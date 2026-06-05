@@ -311,9 +311,10 @@ export default function PosBillingPage() {
       <ReceiptModal
         isOpen={showReceipt}
         order={latestOrder}
-        items={cart}
+        items={latestOrder?.items || []}
         activeBusiness={activeBusiness}
-        changeDue={changeDue}
+        changeDue={latestOrder?.changeDue || 0}
+        posMode={posMode}
         onClose={() => {
           setShowReceipt(false);
           resetAllState();
