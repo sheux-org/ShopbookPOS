@@ -371,13 +371,17 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
       </div>
     `;
 
-    // Map order items to orders
-    const itemsByOrder: Record<string, string[]> = {};
+    // Map order items to orders — store full item objects to render price per line
+    const itemsByOrder: Record<string, { name: string; qty: number; price: number }[]> = {};
     for (const item of orderItems) {
       const orderId = item.order?.id || item._raw?.order_id || item.orderId;
       if (orderId) {
         if (!itemsByOrder[orderId]) itemsByOrder[orderId] = [];
-        itemsByOrder[orderId].push(`${item.quantity}x ${item.name}`);
+        itemsByOrder[orderId].push({
+          name: item.name || 'Unknown Item',
+          qty: item.quantity || 1,
+          price: (item.price || 0) * (item.quantity || 1),
+        });
       }
     }
 
@@ -398,9 +402,22 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
                   ? o.invoiceNumber.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() ||
                     'Cashier'
                   : 'Cashier');
-              const itemLines = itemsByOrder[o.id]
-                ? itemsByOrder[o.id].map((i) => `<div>${escapeHtml(i)}</div>`).join('')
-                : '<div>—</div>';
+
+              const orderItemObjs = itemsByOrder[o.id] || [];
+              const itemsGrossTotal = orderItemObjs.reduce((s, i) => s + i.price, 0);
+              const itemLines =
+                orderItemObjs.length > 0
+                  ? orderItemObjs
+                      .map(
+                        (i) =>
+                          `<div class="item-price-row">
+                        <span class="item-name">${escapeHtml(i.qty + 'x ' + i.name)}</span>
+                        <span class="item-price">Rs. ${i.price.toFixed(2)}</span>
+                      </div>`
+                      )
+                      .join('')
+                  : '<div class="item-price-row"><span class="item-name">&mdash;</span></div>';
+
               const tax = o.taxValue || o.tax_value || 0;
               const discount = o.discountValue || o.discount_value || 0;
               const total = o.totalAmount || o.total_amount || 0;
@@ -413,12 +430,38 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
               const rowClass = isVoided ? 'voided' : '';
               const statusClass = isVoided ? 'status-indicator error' : 'status-indicator active';
 
+              const breakdownHtml = `
+                <div class="items-breakdown">
+                  <div class="items-breakdown-row">
+                    <span>Items Total</span><span>Rs. ${itemsGrossTotal.toFixed(2)}</span>
+                  </div>
+                  ${
+                    discount > 0
+                      ? `<div class="items-breakdown-row discount-row">
+                    <span>Discount</span><span>-Rs. ${discount.toFixed(2)}</span>
+                  </div>`
+                      : ''
+                  }
+                  ${
+                    tax > 0
+                      ? `<div class="items-breakdown-row tax-row">
+                    <span>Tax (VAT)</span><span>+Rs. ${tax.toFixed(2)}</span>
+                  </div>`
+                      : ''
+                  }
+                  <div class="items-breakdown-row total-row">
+                    <span>Total</span><span>Rs. ${total.toFixed(2)}</span>
+                  </div>
+                </div>
+              `;
+              const itemsCellHtml = `<div class="items-list">${itemLines}</div>${breakdownHtml}`;
+
               return `
             <tr class="${rowClass}">
               <td><strong>#${escapeHtml(o.invoiceNumber?.split(' ')[0] || o.id.slice(-6).toUpperCase())}</strong></td>
               <td>${date}</td>
               <td>${escapeHtml(cashierLabel)}</td>
-              <td><div class="items-list">${itemLines}</div></td>
+              <td>${itemsCellHtml}</td>
               <td>
                 <span class="badge-method-text">${method.toUpperCase()}</span>
                 ${
@@ -738,7 +781,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
           }
 
           .brand-logo {
-            height: 38px;
+            height: 54px;
             width: auto;
             object-fit: contain;
           }
@@ -982,6 +1025,56 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
 
           .items-list div {
             padding: 1px 0;
+          }
+
+          .item-price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+            padding: 1px 0;
+          }
+
+          .item-name {
+            color: #334155;
+            font-size: 11px;
+          }
+
+          .item-price {
+            color: #0f172a;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+
+          .items-breakdown {
+            margin-top: 6px;
+            padding-top: 5px;
+            border-top: 1px dashed #cbd5e1;
+            font-size: 10px;
+          }
+
+          .items-breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            color: #64748b;
+            padding: 1px 0;
+          }
+
+          .items-breakdown-row.discount-row {
+            color: #dc2626;
+          }
+
+          .items-breakdown-row.tax-row {
+            color: #16a34a;
+          }
+
+          .items-breakdown-row.total-row {
+            color: #0f172a;
+            font-weight: 700;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 2px;
+            padding-top: 2px;
           }
 
           footer {
