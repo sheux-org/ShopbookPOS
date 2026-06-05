@@ -28,6 +28,7 @@ export default function ReceiptModal({
       totalAmount: selectedReceipt.totalAmount,
       paymentMethod: selectedReceipt.paymentMethod,
       discountValue: selectedReceipt.discountValue || 0,
+      discountType: selectedReceipt.discountType || 'none',
       taxValue: selectedReceipt.taxValue || 0,
       taxRate: selectedReceipt.taxRate || 8,
       dateStr: selectedReceipt.date || '',

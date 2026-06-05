@@ -21,6 +21,7 @@ interface ReceiptModalProps {
     totalAmount: number;
     paymentMethod: string;
     discountValue: number;
+    discountType?: string;
     taxValue: number;
     taxRate: number;
     dateStr: string;

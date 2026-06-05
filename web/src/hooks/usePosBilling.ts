@@ -362,6 +362,7 @@ export function usePosBilling() {
         paymentMethod,
         bankName: paymentMethod === 'card' || paymentMethod === 'bank' ? bankName : undefined,
         cardLastFour: paymentMethod === 'card' ? cardDigits.slice(-4) : undefined,
+        discountType,
         subtotal,
         discountAmount,
         discountValue: discountAmount,

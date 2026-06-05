@@ -15,6 +15,7 @@ interface ReceiptPaperProps {
     totalAmount: number;
     paymentMethod: string;
     discountValue: number;
+    discountType?: string;
     taxValue: number;
     taxRate: number;
     dateStr: string;
@@ -196,8 +197,12 @@ export const printThermalReceipt = (
               discountVal > 0
                 ? `
               <div class="receipt-totals-row">
-                <span>Discount</span>
+                <span>${order.discountType === 'percent' ? `Discount (${Math.round((discountVal / subtotal) * 100)}%)` : 'Discount'}</span>
                 <span>- Rs. ${discountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div class="receipt-totals-row">
+                <span>Net Subtotal</span>
+                <span>Rs. ${(subtotal - discountVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             `
                 : ''
@@ -415,16 +420,32 @@ export const ReceiptPaper: React.FC<ReceiptPaperProps> = ({
             </span>
           </div>
           {discountVal > 0 && (
-            <div style={styles.receiptTotalsRow}>
-              <span>Discount</span>
-              <span>
-                - Rs.{' '}
-                {discountVal.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
+            <>
+              <div style={styles.receiptTotalsRow}>
+                <span>
+                  {order.discountType === 'percent'
+                    ? `Discount (${Math.round((discountVal / subtotal) * 100)}%)`
+                    : 'Discount'}
+                </span>
+                <span>
+                  - Rs.{' '}
+                  {discountVal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+              <div style={styles.receiptTotalsRow}>
+                <span>Net Subtotal</span>
+                <span>
+                  Rs.{' '}
+                  {(subtotal - discountVal).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+            </>
           )}
           {(taxRateVal > 0 || taxVal > 0) && (
             <div style={styles.receiptTotalsRow}>
