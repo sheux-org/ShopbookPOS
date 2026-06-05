@@ -261,7 +261,9 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
                   ? o.invoiceNumber.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() ||
                     'Cashier'
                   : 'Cashier';
-              const itemsDesc = itemsByOrder[o.id] ? itemsByOrder[o.id].join(', ') : '—';
+              const itemLines = itemsByOrder[o.id]
+                ? itemsByOrder[o.id].map((i) => `<div>${escapeHtml(i)}</div>`).join('')
+                : '<div>—</div>';
               const tax = o.taxValue || o.tax_value || 0;
               const discount = o.discountValue || o.discount_value || 0;
               const total = o.totalAmount || o.total_amount || 0;
@@ -279,7 +281,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
               <td><strong>#${escapeHtml(o.invoiceNumber?.split(' ')[0] || o.id.slice(-6).toUpperCase())}</strong></td>
               <td>${date}</td>
               <td>${escapeHtml(cashierLabel)}</td>
-              <td><div class="compact-text">${escapeHtml(itemsDesc)}</div></td>
+              <td><div class="items-list">${itemLines}</div></td>
               <td>
                 <span class="badge-method-text">${method.toUpperCase()}</span>
                 ${
@@ -396,7 +398,9 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
                   ? o.invoiceNumber.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() ||
                     'Cashier'
                   : 'Cashier');
-              const itemsDesc = itemsByOrder[o.id] ? itemsByOrder[o.id].join(', ') : '—';
+              const itemLines = itemsByOrder[o.id]
+                ? itemsByOrder[o.id].map((i) => `<div>${escapeHtml(i)}</div>`).join('')
+                : '<div>—</div>';
               const tax = o.taxValue || o.tax_value || 0;
               const discount = o.discountValue || o.discount_value || 0;
               const total = o.totalAmount || o.total_amount || 0;
@@ -414,7 +418,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
               <td><strong>#${escapeHtml(o.invoiceNumber?.split(' ')[0] || o.id.slice(-6).toUpperCase())}</strong></td>
               <td>${date}</td>
               <td>${escapeHtml(cashierLabel)}</td>
-              <td><div class="compact-text">${escapeHtml(itemsDesc)}</div></td>
+              <td><div class="items-list">${itemLines}</div></td>
               <td>
                 <span class="badge-method-text">${method.toUpperCase()}</span>
                 ${
@@ -968,6 +972,16 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+          }
+
+          .items-list {
+            font-size: 11px;
+            color: #334155;
+            line-height: 1.6;
+          }
+
+          .items-list div {
+            padding: 1px 0;
           }
 
           footer {

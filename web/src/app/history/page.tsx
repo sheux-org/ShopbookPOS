@@ -50,6 +50,7 @@ export default function OrderHistoryPage() {
   // States
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Detail Modal States
   const [showReceipt, setShowReceipt] = useState(false);
@@ -174,7 +175,9 @@ Thank you for shopping with us!
   };
 
   const handleExportExcel = async () => {
+    if (isExporting) return;
     try {
+      setIsExporting(true);
       const data = await fetchAllOrders(searchQuery);
       if (data.orders.length === 0) {
         alert('No transaction records to export.');
@@ -229,13 +232,20 @@ Thank you for shopping with us!
     } catch (err: any) {
       console.error('Failed to export Excel:', err);
       alert('Failed to generate Excel export: ' + err.message);
+    } finally {
+      setIsExporting(false);
     }
   };
 
   const handleExportPDF = async () => {
-    if (!activeBusiness || activeBusiness.id === '0') return;
+    if (isExporting) return;
+    if (!activeBusiness || activeBusiness.id === '0') {
+      alert('No active business found. Please select a business branch first.');
+      return;
+    }
 
     try {
+      setIsExporting(true);
       const data = await fetchAllOrders(searchQuery);
       if (data.orders.length === 0) {
         alert('No transaction records to export.');
@@ -272,12 +282,18 @@ Thank you for shopping with us!
         setTimeout(() => {
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
-          document.body.removeChild(iframe);
-        }, 150);
+          setIsExporting(false);
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 1000);
+        }, 600);
       }
     } catch (err: any) {
       console.error('Failed to export PDF:', err);
       alert('Failed to generate PDF report: ' + err.message);
+      setIsExporting(false);
     }
   };
 
@@ -318,13 +334,29 @@ Thank you for shopping with us!
           )}
           {canExport && (
             <>
-              <button onClick={handleExportExcel} style={styles.actionBtn}>
+              <button
+                onClick={handleExportExcel}
+                style={{
+                  ...styles.actionBtn,
+                  opacity: isExporting ? 0.6 : 1,
+                  cursor: isExporting ? 'not-allowed' : 'pointer',
+                }}
+                disabled={isExporting}
+              >
                 <FileSpreadsheet size={15} />
-                <span>Excel Export</span>
+                <span>{isExporting ? 'Exporting...' : 'Excel Export'}</span>
               </button>
-              <button onClick={handleExportPDF} style={styles.actionBtn}>
+              <button
+                onClick={handleExportPDF}
+                style={{
+                  ...styles.actionBtn,
+                  opacity: isExporting ? 0.6 : 1,
+                  cursor: isExporting ? 'not-allowed' : 'pointer',
+                }}
+                disabled={isExporting}
+              >
                 <FileText size={15} />
-                <span>PDF Report</span>
+                <span>{isExporting ? 'Preparing PDF...' : 'PDF Report'}</span>
               </button>
             </>
           )}
