@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,7 +20,7 @@ import { useGetPeriodOrders } from '../../../hooks/useOrders';
 import { syncDatabase } from '../../../services/sync';
 import { BottomSheet } from '../../common/BottomSheet';
 import { ScreenWrapper } from '../../common/ScreenWrapper';
-import { cartState } from '../../data/cartState';
+import { useActiveBusiness } from '../../../hooks/useActiveBusiness';
 import { useSettingsStore } from '../../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../../common/PremiumUpgradeModal';
 import * as Print from 'expo-print';
@@ -36,7 +36,7 @@ export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const activeBusiness = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
 
   const isPremium = useSettingsStore((s) => s.isPremium);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
@@ -68,16 +68,6 @@ export const InsightsScreen: React.FC = () => {
 
   // Reports Drawer states
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
-
-  // Active business details sync
-  const [activeBiz, setActiveBiz] = useState(activeBusiness);
-
-  useEffect(() => {
-    const updateBiz = () => {
-      setActiveBiz(cartState.getActiveBusiness());
-    };
-    return cartState.subscribe(updateBiz);
-  }, []);
 
   const { data: stats, isLoading } = useBusinessInsights(
     activeBiz.id,

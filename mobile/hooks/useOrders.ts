@@ -2,6 +2,7 @@ import { Q } from '@nozbe/watermelondb';
 import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { cartState } from '../components/data/cartState';
 import database from '../components/data/db';
+import { useActiveBusiness } from './useActiveBusiness';
 import { syncDatabase } from '../services/sync';
 
 export interface DBOrder {
@@ -28,7 +29,7 @@ export interface DBOrderItem {
 }
 
 export function useGetOrders() {
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   const PAGE_SIZE = 30;
 
   const result = useInfiniteQuery<DBOrder[]>({
@@ -225,7 +226,7 @@ export function useGetPeriodOrders(
   startDate: Date | null,
   endDate: Date | null
 ) {
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   const PAGE_SIZE = 20;
 
   const result = useInfiniteQuery<DBOrder[]>({

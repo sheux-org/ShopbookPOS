@@ -22,7 +22,9 @@ import { ScreenWrapper } from '../common/ScreenWrapper';
 import { SearchInput } from '../common/SearchInput';
 import { BarcodeScannerModal } from '../common/BarcodeScannerModal';
 import { HeaderCartButton } from '../common/HeaderCartButton';
-import { Business, cartState } from '../data/cartState';
+import { cartState } from '../data/cartState';
+import { useActiveBusiness } from '../../hooks/useActiveBusiness';
+import { useBusinessStore } from '../../stores/useBusinessStore';
 import { hapticFeedback } from '../../utils/haptics';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
@@ -69,7 +71,8 @@ export const HomeScreen: React.FC = () => {
   } = useProducts(selectedCategory, searchQuery);
   const toggleFavoriteMutation = useToggleFavoriteProduct();
 
-  const [activeBusiness, setActiveBusiness] = useState<Business>(cartState.getActiveBusiness());
+  const activeBusiness = useActiveBusiness();
+  const businesses = useBusinessStore((s) => s.businesses);
   const [isBusinessSheetOpen, setIsBusinessSheetOpen] = useState(false);
 
   const { tabBarVisible, setTabBarVisible } = useTabBarVisible();
@@ -130,15 +133,6 @@ export const HomeScreen: React.FC = () => {
 
     lastScrollY.current = currentY;
   };
-
-  useEffect(() => {
-    const syncCart = () => {
-      setActiveBusiness(cartState.getActiveBusiness());
-    };
-
-    syncCart();
-    return cartState.subscribe(syncCart);
-  }, []);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -441,7 +435,7 @@ export const HomeScreen: React.FC = () => {
           style={{ maxHeight: 400 }}
           showsVerticalScrollIndicator={false}
         >
-          {cartState.getBusinesses().map((biz) => {
+          {businesses.map((biz) => {
             const isSelected = activeBusiness.id === biz.id;
             return (
               <TouchableOpacity

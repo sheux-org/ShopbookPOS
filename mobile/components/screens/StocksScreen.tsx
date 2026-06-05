@@ -21,6 +21,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { TOKENS } from '../../constants/tokens';
+import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { cartState } from '../data/cartState';
 import { HeaderCartButton } from '../common/HeaderCartButton';
 import { useAddProduct, useProducts, useToggleFavoriteProduct } from '../../hooks/useProducts';
@@ -29,6 +30,7 @@ import { ProductImage } from '../common/ProductImage';
 import { hapticFeedback } from '../../utils/haptics';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
+import { getBusinessTypeConfig } from '../../utils/businessTypeConfig';
 
 function getRelativeTimeAgo(timestamp?: number): string {
   if (!timestamp) return 'Just now';
@@ -45,12 +47,14 @@ function getRelativeTimeAgo(timestamp?: number): string {
   return `${diffDays}d ago`;
 }
 
-const CATEGORIES_LIST = ['grocery', 'dairy', 'drinks', 'snacks', 'household'];
-const UNIT_TYPES = ['Pieces', 'kg', 'Liters', 'Packets'];
-
 export const StocksScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+
+  const activeBiz = useActiveBusiness();
+  const config = getBusinessTypeConfig(activeBiz?.category);
+  const CATEGORIES_LIST = config.categories;
+  const UNIT_TYPES = config.unitTypes;
 
   const addProductMutation = useAddProduct();
   const { data: favoriteProducts = [] } = useProducts(undefined, undefined, 'Favorites');
@@ -84,8 +88,8 @@ export const StocksScreen: React.FC = () => {
   };
 
   const [formName, setFormName] = useState('');
-  const [formCategory, setFormCategory] = useState('grocery');
-  const [formUnitType, setFormUnitType] = useState('Pieces');
+  const [formCategory, setFormCategory] = useState(config.defaultCategory);
+  const [formUnitType, setFormUnitType] = useState(config.defaultUnitType);
   const [formCostPrice, setFormCostPrice] = useState('');
   const [formSalesPrice, setFormSalesPrice] = useState('');
   const [formStockIn, setFormStockIn] = useState('');

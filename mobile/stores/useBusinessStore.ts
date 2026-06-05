@@ -68,6 +68,7 @@ export const useBusinessStore = create<BusinessState>()(
         const found = get().businesses.find((b) => b.id === id);
         if (found) {
           set({ activeBusiness: found });
+          useAuthStore.getState().setActiveBusinessId(id);
         }
       },
       loadBusinessesFromDb: async () => {
@@ -228,11 +229,13 @@ export const useBusinessStore = create<BusinessState>()(
               businesses: list,
               activeBusiness: selectedBiz,
             });
+            useAuthStore.getState().setActiveBusinessId(selectedBiz.id);
           } else {
             set({
               businesses: [PLACEHOLDER_BUSINESS],
               activeBusiness: PLACEHOLDER_BUSINESS,
             });
+            useAuthStore.getState().setActiveBusinessId(null);
           }
         } catch (err) {
           console.error('Failed to load businesses from SQLite:', err);
@@ -294,6 +297,7 @@ export const useBusinessStore = create<BusinessState>()(
             const found = get().businesses.find((b) => b.name === name);
             if (found) {
               set({ activeBusiness: found });
+              useAuthStore.getState().setActiveBusinessId(found.id);
             }
           }
         } catch (err) {
@@ -379,6 +383,9 @@ export const useBusinessStore = create<BusinessState>()(
             const remaining = get().businesses;
             if (remaining.length > 0) {
               set({ activeBusiness: remaining[0] });
+              useAuthStore.getState().setActiveBusinessId(remaining[0].id);
+            } else {
+              useAuthStore.getState().setActiveBusinessId(null);
             }
           }
         } catch (err) {

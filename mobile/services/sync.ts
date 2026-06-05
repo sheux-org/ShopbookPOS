@@ -79,9 +79,16 @@ async function prepareSupabaseForSync(): Promise<void> {
   // Client runs anonymously with anon key. Authentication is enforced at the RPC layer by passing client_business_id.
 }
 
+let isSyncing = false;
+
 export async function syncDatabase(): Promise<boolean> {
   const isBackupEnabled = useSettingsStore.getState().isBackupEnabled;
   if (!isBackupEnabled) {
+    return false;
+  }
+
+  if (isSyncing) {
+    console.log('[Sync] Synchronization already in progress. Aborting concurrent call.');
     return false;
   }
 
@@ -98,6 +105,7 @@ export async function syncDatabase(): Promise<boolean> {
     return false;
   }
 
+  isSyncing = true;
   try {
     await synchronize({
       database,
@@ -139,5 +147,7 @@ export async function syncDatabase(): Promise<boolean> {
   } catch (error) {
     console.error('Failed to sync database:', error);
     return false;
+  } finally {
+    isSyncing = false;
   }
 }

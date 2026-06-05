@@ -33,9 +33,8 @@ import {
 import { deleteUploadThingFile, uploadToUploadThing } from '../../services/uploadQueue';
 import { ProductImage } from '../common/ProductImage';
 import { ScreenWrapper } from '../common/ScreenWrapper';
-
-const CATEGORIES_LIST = ['grocery', 'dairy', 'drinks', 'snacks', 'household'];
-const UNIT_TYPES = ['Pieces', 'kg', 'Liters', 'Packets'];
+import { useActiveBusiness } from '../../hooks/useActiveBusiness';
+import { getBusinessTypeConfig, getCategoryLabel } from '../../utils/businessTypeConfig';
 
 export const ManageItemsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -43,6 +42,11 @@ export const ManageItemsScreen: React.FC = () => {
   const { requestCameraAccess } = usePermission();
   const isPremium = useSettingsStore((s) => s.isPremium);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+
+  const activeBiz = useActiveBusiness();
+  const config = getBusinessTypeConfig(activeBiz?.category);
+  const CATEGORIES_LIST = config.categories;
+  const UNIT_TYPES = config.unitTypes;
 
   // Search input state
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,8 +85,8 @@ export const ManageItemsScreen: React.FC = () => {
 
   // Edit form state
   const [editName, setEditName] = useState('');
-  const [editCategory, setEditCategory] = useState('grocery');
-  const [editUnitType, setEditUnitType] = useState('Pieces');
+  const [editCategory, setEditCategory] = useState(config.defaultCategory);
+  const [editUnitType, setEditUnitType] = useState(config.defaultUnitType);
   const [editCostPrice, setEditCostPrice] = useState('');
   const [editSalesPrice, setEditSalesPrice] = useState('');
   const [editStockCount, setEditStockCount] = useState('');
@@ -128,8 +132,8 @@ export const ManageItemsScreen: React.FC = () => {
   const handleEditPress = (prod: any) => {
     setEditingProduct(prod);
     setEditName(prod.name);
-    setEditCategory(prod.category || 'grocery');
-    setEditUnitType(prod.unitType || 'Pieces');
+    setEditCategory(prod.category || config.defaultCategory);
+    setEditUnitType(prod.unitType || config.defaultUnitType);
     setEditCostPrice(prod.costPrice ? prod.costPrice.toString() : '');
     setEditSalesPrice(prod.price ? prod.price.toString() : '');
     setEditStockCount(prod.stockCount ? prod.stockCount.toString() : '0');
@@ -555,7 +559,7 @@ export const ManageItemsScreen: React.FC = () => {
                           isSelected && styles.selectorChipTextActive,
                         ]}
                       >
-                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        {getCategoryLabel(cat, activeBiz?.category)}
                       </Text>
                     </TouchableOpacity>
                   );

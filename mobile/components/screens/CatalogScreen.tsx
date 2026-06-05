@@ -14,10 +14,15 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { HeaderCartButton } from '../common/HeaderCartButton';
 import { TOKENS } from '../../constants/tokens';
+import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { cartState } from '../data/cartState';
 import { useProducts } from '../../hooks/useProducts';
 import { ProductImage } from '../common/ProductImage';
 import { hapticFeedback } from '../../utils/haptics';
+import { getBusinessTypeConfig, getCategoryLabel } from '../../utils/businessTypeConfig';
+import { useQuery } from '@tanstack/react-query';
+import database from '../data/db';
+import { Q } from '@nozbe/watermelondb';
 
 interface CatalogProduct {
   id: string;
@@ -37,19 +42,81 @@ interface CategoryItem {
   count: number;
 }
 
-const CATEGORIES: CategoryItem[] = [
-  { id: 'all', label: 'All', icon: 'archive-outline', count: 240 },
-  { id: 'grocery', label: 'Grocery', icon: 'cart-outline', count: 84 },
-  { id: 'dairy', label: 'Dairy', icon: 'water-outline', count: 22 },
-  { id: 'drinks', label: 'Drinks', icon: 'wine-outline', count: 31 },
-  { id: 'snacks', label: 'Snacks', icon: 'fast-food-outline', count: 47 },
-  { id: 'household', label: 'Household', icon: 'home-outline', count: 38 },
-];
+function getCategoryIcon(category: string): string {
+  const cat = category.toLowerCase().trim();
+  if (cat === 'all') return 'archive-outline';
+  if (cat.includes('grocer')) return 'cart-outline';
+  if (cat.includes('dai')) return 'water-outline';
+  if (cat.includes('drink') || cat.includes('bev')) return 'wine-outline';
+  if (cat.includes('snack') || cat.includes('dessert') || cat.includes('bake'))
+    return 'fast-food-outline';
+  if (cat.includes('house') || cat.includes('clean') || cat.includes('personal'))
+    return 'home-outline';
+  if (cat.includes('cloth') || cat.includes('foot') || cat.includes('bouti'))
+    return 'shirt-outline';
+  if (
+    cat.includes('tool') ||
+    cat.includes('hard') ||
+    cat.includes('elect') ||
+    cat.includes('plumb')
+  )
+    return 'construct-outline';
+  if (cat.includes('med') || cat.includes('phar') || cat.includes('vit')) return 'bandage-outline';
+  if (
+    cat.includes('salon') ||
+    cat.includes('cut') ||
+    cat.includes('style') ||
+    cat.includes('treat') ||
+    cat.includes('mani') ||
+    cat.includes('pedi')
+  )
+    return 'cut-outline';
+  if (cat.includes('coffee') || cat.includes('tea')) return 'cafe-outline';
+  return 'cube-outline';
+}
 
 export const CatalogScreen: React.FC = () => {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
+
+  const activeBiz = useActiveBusiness();
+  const config = getBusinessTypeConfig(activeBiz?.category);
+
+  // Fetch all products to compute counts dynamically
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['all-products-for-count', activeBiz?.id],
+    queryFn: async () => {
+      if (!activeBiz?.id) return [];
+      return database.get('products').query(Q.where('business_id', activeBiz.id)).fetch();
+    },
+  });
+
+  const categoryCounts = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    let total = 0;
+    allProducts.forEach((p: any) => {
+      const cat = (p.category || '').toLowerCase().trim();
+      map[cat] = (map[cat] || 0) + 1;
+      total++;
+    });
+    return { map, total };
+  }, [allProducts]);
+
+  const CATEGORIES = React.useMemo(() => {
+    const list: CategoryItem[] = [
+      { id: 'all', label: 'All', icon: 'archive-outline', count: categoryCounts.total },
+    ];
+    config.categories.forEach((cat) => {
+      list.push({
+        id: cat,
+        label: getCategoryLabel(cat, activeBiz?.category),
+        icon: getCategoryIcon(cat),
+        count: categoryCounts.map[cat.toLowerCase().trim()] || 0,
+      });
+    });
+    return list;
+  }, [config, categoryCounts, activeBiz]);
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);

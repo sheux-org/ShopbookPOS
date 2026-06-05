@@ -3,6 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, UploadCloud, Trash2, Image, Loader2, Scan } from 'lucide-react';
 import { deleteUploadThingFile } from '../../services/uploadQueue';
+import { useBusinessStore } from '../../stores/businessStore';
+import {
+  getBusinessTypeConfig,
+  getCategoryEmoji,
+  getCategoryLabel,
+} from '../../utils/businessTypeConfig';
 import { Scanner } from '../Scanner';
 
 interface DBProduct {
@@ -39,25 +45,6 @@ interface RegisterProductModalProps {
   }) => Promise<void>;
 }
 
-const CATEGORIES = ['grocery', 'dairy', 'drinks', 'snacks', 'household'];
-const UNIT_TYPES = ['Pieces', 'kg', 'Liters', 'Packets'];
-
-// Helper to get category default emoji if no image is uploaded
-const getCategoryEmoji = (cat: string) => {
-  switch (cat.toLowerCase()) {
-    case 'dairy':
-      return '🥛';
-    case 'drinks':
-      return '🍹';
-    case 'snacks':
-      return '🍪';
-    case 'household':
-      return '🧼';
-    default:
-      return '📦';
-  }
-};
-
 export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
   isOpen,
   mode,
@@ -65,13 +52,18 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const activeBusiness = useBusinessStore((s) => s.activeBusiness);
+  const config = getBusinessTypeConfig(activeBusiness?.category);
+  const CATEGORIES = config.categories;
+  const UNIT_TYPES = config.unitTypes;
+
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [costPrice, setCostPrice] = useState('');
   const [stockCount, setStockCount] = useState('');
   const [lowStockAlert, setLowStockAlert] = useState('5');
-  const [unitType, setUnitType] = useState('Pieces');
-  const [category, setCategory] = useState('grocery');
+  const [unitType, setUnitType] = useState(config.defaultUnitType);
+  const [category, setCategory] = useState(config.defaultCategory);
   const [quickCode, setQuickCode] = useState('');
   const [barcode, setBarcode] = useState('');
   const [icon, setIcon] = useState('');
@@ -90,8 +82,8 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
         setCostPrice(product.costPrice ? product.costPrice.toString() : '');
         setStockCount(product.stockCount.toString());
         setLowStockAlert(product.lowStockAlert ? product.lowStockAlert.toString() : '5');
-        setUnitType(product.unitType || 'Pieces');
-        setCategory(product.category || 'grocery');
+        setUnitType(product.unitType || config.defaultUnitType);
+        setCategory(product.category || config.defaultCategory);
         setQuickCode(product.quickCode || '');
         setBarcode(product.barcode || '');
         setIcon(product.icon || '');
@@ -101,8 +93,8 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
         setCostPrice('');
         setStockCount('');
         setLowStockAlert('5');
-        setUnitType('Pieces');
-        setCategory('grocery');
+        setUnitType(config.defaultUnitType);
+        setCategory(config.defaultCategory);
         setQuickCode('');
         setBarcode('');
         setIcon('');
@@ -110,7 +102,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
       setSubmitting(false);
       setUploadingImage(false);
     }
-  }, [isOpen, mode, product]);
+  }, [isOpen, mode, product, config.defaultCategory, config.defaultUnitType]);
 
   if (!isOpen) return null;
 
@@ -173,7 +165,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
     setSubmitting(true);
     try {
       // Use icon url/base64 if available, otherwise get category default emoji
-      const finalIcon = icon || getCategoryEmoji(category);
+      const finalIcon = icon || getCategoryEmoji(category, activeBusiness?.category);
 
       await onSubmit({
         name,
@@ -346,7 +338,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      {getCategoryLabel(cat, activeBusiness?.category)}
                     </option>
                   ))}
                 </select>

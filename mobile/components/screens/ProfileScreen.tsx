@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { TOKENS } from '../../constants/tokens';
 import { cartState } from '../data/cartState';
+import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { syncDatabase } from '../../services/sync';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
@@ -58,20 +59,11 @@ export const ProfileScreen: React.FC = () => {
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
   const [premiumFeatureName, setPremiumFeatureName] = useState('');
 
-  // Real business details from local SQLite database
-  const [activeBusiness, setActiveBusiness] = useState(cartState.getActiveBusiness());
+  const activeBusiness = useActiveBusiness();
 
   // Help & Support Modal state
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    const updateBusiness = () => {
-      setActiveBusiness(cartState.getActiveBusiness());
-    };
-    updateBusiness();
-    return cartState.subscribe(updateBusiness);
-  }, []);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
