@@ -26,11 +26,10 @@ export function useBusinessSwitchSync() {
     if (businessChanged) {
       useCart.getState().clearCart();
       queryClient.invalidateQueries();
+      useSettingsStore.getState().setBackupEnabled(true);
+      syncDatabase().catch((err) => console.error('[BusinessSwitch] Sync failed:', err));
     }
 
     prevBizIdRef.current = activeBusinessId;
-
-    useSettingsStore.getState().setBackupEnabled(true);
-    syncDatabase().catch((err) => console.error('[BusinessSwitch] Sync failed:', err));
   }, [activeBusinessId, queryClient]);
 }

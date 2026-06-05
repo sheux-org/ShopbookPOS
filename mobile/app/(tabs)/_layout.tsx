@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
-import { Animated } from 'react-native';
+import React, { useEffect } from 'react';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { BottomTabBar } from '../../components/common/BottomTabBar';
 import { useTabBarVisible } from '../../hooks/useTabBarVisible';
 import { useActiveDeviceTracker } from '../../hooks/useActiveDeviceTracker';
@@ -15,7 +15,7 @@ export default function TabLayout() {
   useWatermelonSync(); // Enable periodic background database sync
 
   const { tabBarVisible } = useTabBarVisible();
-  const translateYAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useSharedValue(0);
   const activeBusinessId = useAuthStore((s) => s.activeBusinessId);
 
   // Subscribe to real-time sync trigger broadcasts for active business
@@ -48,13 +48,15 @@ export default function TabLayout() {
   }, [activeBusinessId]);
 
   useEffect(() => {
-    Animated.spring(translateYAnim, {
-      toValue: tabBarVisible ? 0 : 130, // Animates completely off-screen (accounting for safe area padding)
-      useNativeDriver: true,
-      friction: 8,
-      tension: 50,
-    }).start();
-  }, [tabBarVisible]);
+    translateY.value = withSpring(tabBarVisible ? 0 : 130, {
+      damping: 15,
+      stiffness: 120,
+    });
+  }, [tabBarVisible, translateY]);
+
+  const tabBarAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const mapRouteToTab = (routeName: string): any => {
     if (routeName === 'index') return 'home';
@@ -68,14 +70,16 @@ export default function TabLayout() {
         const activeTab = mapRouteToTab(routeName);
         return (
           <Animated.View
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              transform: [{ translateY: translateYAnim }],
-              zIndex: 100,
-            }}
+            style={[
+              {
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 100,
+              },
+              tabBarAnimatedStyle,
+            ]}
           >
             <BottomTabBar
               activeTab={activeTab}
