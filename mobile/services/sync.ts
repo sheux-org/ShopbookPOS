@@ -81,6 +81,12 @@ async function prepareSupabaseForSync(): Promise<void> {
 
 let isSyncInProgress = false;
 let hasPendingSyncRequest = false;
+let forceFullPullBusinessId: string | null = null;
+
+/** Request a full pull for a business (e.g. after switching branches). */
+export function requestFullPullForBusiness(businessId: string) {
+  forceFullPullBusinessId = businessId;
+}
 
 export async function syncDatabase(): Promise<boolean> {
   const isBackupEnabled = useSettingsStore.getState().isBackupEnabled;
@@ -113,9 +119,16 @@ export async function syncDatabase(): Promise<boolean> {
 
     await synchronize({
       database,
+      sendCreatedAsUpdated: true,
       pullChanges: async ({ lastPulledAt }) => {
+        let effectiveLastPulledAt = lastPulledAt ?? 0;
+        if (forceFullPullBusinessId === activeBusinessId) {
+          effectiveLastPulledAt = 0;
+          forceFullPullBusinessId = null;
+        }
+
         const { data, error } = await supabase.rpc('pull_watermelondb_changes', {
-          last_pulled_at: lastPulledAt ?? 0,
+          last_pulled_at: effectiveLastPulledAt,
           client_business_id: activeBusinessId,
         });
         if (error) throw new Error(error.message);
