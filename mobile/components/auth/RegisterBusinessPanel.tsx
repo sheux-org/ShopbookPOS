@@ -4,12 +4,15 @@ import { Feather } from '@expo/vector-icons';
 import { styles } from './styles';
 import { TOKENS } from '../../constants/tokens';
 
-const CATEGORIES = [
-  { label: 'Grocery', icon: '🛒' },
-  { label: 'Dairy', icon: '🥛' },
-  { label: 'Drinks', icon: '🥤' },
-  { label: 'Snacks', icon: '🍪' },
-  { label: 'Household', icon: '🏠' },
+const BUSINESS_TYPES = [
+  { label: 'Cafe', icon: '☕' },
+  { label: 'Restaurant', icon: '🍽️' },
+  { label: 'Boutique', icon: '👗' },
+  { label: 'Salon', icon: '✂️' },
+  { label: 'Supermarket', icon: '🛒' },
+  { label: 'Grocery Shop', icon: '🏪' },
+  { label: 'Pharmacy', icon: '💊' },
+  { label: 'Hardware', icon: '🔧' },
   { label: 'Other', icon: '✨' },
 ];
 
@@ -17,8 +20,8 @@ interface RegisterBusinessPanelProps {
   phone: string;
   businessName: string;
   setBusinessName: (val: string) => void;
-  newCategory: string;
-  setNewCategory: (val: string) => void;
+  businessType: string;
+  setBusinessType: (val: string) => void;
   businessAddress: string;
   setBusinessAddress: (val: string) => void;
   registerStep: 1 | 2 | 3;
@@ -32,8 +35,8 @@ export function RegisterBusinessPanel({
   phone,
   businessName,
   setBusinessName,
-  newCategory,
-  setNewCategory,
+  businessType,
+  setBusinessType,
   businessAddress,
   setBusinessAddress,
   registerStep,
@@ -135,13 +138,13 @@ export function RegisterBusinessPanel({
           </Text>
 
           <View style={styles.chipsContainer}>
-            {CATEGORIES.map((item) => {
-              const isSelected = newCategory === item.label;
+            {BUSINESS_TYPES.map((item) => {
+              const isSelected = businessType === item.label;
               return (
                 <TouchableOpacity
                   key={item.label}
                   style={[styles.chipBox, isSelected && styles.chipBoxSelected]}
-                  onPress={() => setNewCategory(item.label)}
+                  onPress={() => setBusinessType(item.label)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.chipEmoji}>{item.icon}</Text>
@@ -164,11 +167,11 @@ export function RegisterBusinessPanel({
           <TouchableOpacity
             style={[
               styles.premiumNextBtn,
-              newCategory !== '' && styles.premiumNextBtnShadow,
-              newCategory === '' && styles.premiumNextBtnDisabled,
+              businessType !== '' && styles.premiumNextBtnShadow,
+              businessType === '' && styles.premiumNextBtnDisabled,
             ]}
             onPress={() => setRegisterStep(3)}
-            disabled={newCategory === ''}
+            disabled={businessType === ''}
             activeOpacity={0.8}
           >
             <Text style={styles.premiumNextBtnText}>Next</Text>

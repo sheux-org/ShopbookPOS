@@ -16,7 +16,6 @@ interface BranchModalProps {
   setNewBranchCategory: (val: string) => void;
   newBranchAddress: string;
   setNewBranchAddress: (val: string) => void;
-  onLogoFileChange: (file: File | null) => void;
   onSubmit: (e: React.FormEvent) => void;
   triggerToast: (msg: string) => void;
 }
@@ -33,29 +32,10 @@ export const BranchModal: React.FC<BranchModalProps> = ({
   setNewBranchCategory,
   newBranchAddress,
   setNewBranchAddress,
-  onLogoFileChange,
   onSubmit,
   triggerToast,
 }) => {
   const { canPerform } = useUserPermissions();
-  const [logoPreview, setLogoPreview] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (!isOpen) {
-      setLogoPreview(null);
-    }
-  }, [isOpen]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    if (file) {
-      setLogoPreview(URL.createObjectURL(file));
-      onLogoFileChange(file);
-    } else {
-      setLogoPreview(null);
-      onLogoFileChange(null);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -63,18 +43,18 @@ export const BranchModal: React.FC<BranchModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content" style={{ maxWidth: '680px' }}>
         <div className="modal-header">
-          <h3>Multi-Branch & Locations Portal</h3>
+          <h3>Multi-Business & Branches Portal</h3>
           <button onClick={onClose} className="modal-close-btn">
             <X size={16} />
           </button>
         </div>
-        <div className="modal-body" style={{ flexDirection: 'row', gap: '24px' }}>
+        <div className="modal-body modal-body-split">
           {canPerform('create', 'settings') ? (
             <form
               onSubmit={onSubmit}
               style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}
             >
-              <h4 className="form-title">Initialize New Branch Location</h4>
+              <h4 className="form-title">Onboard New Business / Branch</h4>
 
               <div className="modal-input-group">
                 <label className="modal-label">Branch Name</label>
@@ -95,9 +75,15 @@ export const BranchModal: React.FC<BranchModalProps> = ({
                   onChange={(e) => setNewBranchCategory(e.target.value)}
                   className="modal-select"
                 >
-                  <option value="Restaurant / Cafe">Restaurant / Cafe</option>
-                  <option value="General Retail">General Retail</option>
-                  <option value="Grocery Store">Grocery Store</option>
+                  <option value="Cafe">Cafe</option>
+                  <option value="Restaurant">Restaurant</option>
+                  <option value="Boutique">Boutique</option>
+                  <option value="Salon">Salon</option>
+                  <option value="Supermarket">Supermarket</option>
+                  <option value="Grocery Shop">Grocery Shop</option>
+                  <option value="Pharmacy">Pharmacy</option>
+                  <option value="Hardware">Hardware</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
 
@@ -113,35 +99,9 @@ export const BranchModal: React.FC<BranchModalProps> = ({
                 />
               </div>
 
-              <div className="modal-input-group">
-                <label className="modal-label">Store Logo Image (Optional)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="modal-input"
-                    style={{ flex: 1 }}
-                  />
-                  {logoPreview && (
-                    <img
-                      src={logoPreview}
-                      alt="Preview"
-                      style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '8px',
-                        objectFit: 'cover',
-                        border: '1px solid var(--border)',
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-
               <button type="submit" className="modal-submit-btn">
                 <PlusCircle size={16} />
-                <span>Onboard location</span>
+                <span>Onboard Business/Branch</span>
               </button>
             </form>
           ) : (
@@ -183,7 +143,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({
           )}
 
           <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <h4 className="form-title">Registered branches ({businesses.length})</h4>
+            <h4 className="form-title">Registered Businesses & Branches ({businesses.length})</h4>
             <div className="branch-scroller">
               {businesses.map((biz) => {
                 const isActive = biz.id === activeBusiness?.id;
@@ -193,7 +153,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({
                     onClick={() => {
                       if (biz.id === '0') return;
                       setActiveBusiness(biz.id);
-                      triggerToast(`Switched active branch to ${biz.name}! 🏬`);
+                      triggerToast(`Switched active context to ${biz.name}! 🏬`);
                       onClose();
                     }}
                     className={`branch-card ${isActive ? 'active' : ''}`}

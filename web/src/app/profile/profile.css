@@ -573,8 +573,9 @@
 }
 
 .modal-content {
-  width: 100%;
+  width: calc(100% - 32px);
   max-width: 460px;
+  max-height: calc(100vh - 32px);
   background-color: #ffffff;
   border-radius: 16px;
   box-shadow:
@@ -603,6 +604,7 @@
   justify-content: space-between;
   align-items: center;
   background-color: #f8fafc;
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -637,6 +639,20 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+}
+
+.modal-body-split {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .modal-body-split {
+    flex-direction: column;
+    gap: 20px;
+  }
 }
 
 .modal-input-group {
@@ -653,8 +669,7 @@
   letter-spacing: 0.5px;
 }
 
-.modal-input,
-.modal-select {
+.modal-input {
   width: 100%;
   padding: 10px 14px;
   border-radius: 8px;
@@ -664,6 +679,25 @@
   background-color: #f8fafc;
   color: var(--dark);
   transition: all 0.15s ease;
+}
+
+.modal-select {
+  width: 100%;
+  padding: 10px 36px 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 13.5px;
+  outline: none;
+  background-color: #f8fafc;
+  color: var(--dark);
+  transition: all 0.15s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
 }
 
 .modal-input:focus,

@@ -434,10 +434,10 @@ export default function ProfilePage() {
                   <MapPin size={20} />
                 </div>
                 <div className="profile-option-details">
-                  <h4 className="profile-option-title">Locations & Branches</h4>
+                  <h4 className="profile-option-title">Multi-Business & Branches</h4>
                   <p className="profile-option-sub">
-                    Registered branches: {businesses.length} · Initialize and swap active terminal
-                    contexts.
+                    Manage and swap active contexts between different registered businesses, branch
+                    locations, and checkout terminals.
                   </p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
@@ -595,7 +595,6 @@ export default function ProfilePage() {
         setNewBranchCategory={setNewBranchCategory}
         newBranchAddress={newBranchAddress}
         setNewBranchAddress={setNewBranchAddress}
-        onLogoFileChange={setNewBranchLogo}
         onSubmit={handleAddBranchSubmit}
         triggerToast={triggerToast}
       />

@@ -140,15 +140,24 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
           </div>
 
           <div className="modal-input-group">
-            <label className="modal-label">Store Category</label>
-            <input
-              type="text"
+            <label className="modal-label">Business Type</label>
+            <select
               value={editCategory}
               onChange={(e) => setEditCategory(e.target.value)}
               required
               disabled={!canUpdate}
-              className="modal-input"
-            />
+              className="modal-select"
+            >
+              <option value="Cafe">Cafe</option>
+              <option value="Restaurant">Restaurant</option>
+              <option value="Boutique">Boutique</option>
+              <option value="Salon">Salon</option>
+              <option value="Supermarket">Supermarket</option>
+              <option value="Grocery Shop">Grocery Shop</option>
+              <option value="Pharmacy">Pharmacy</option>
+              <option value="Hardware">Hardware</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
 
           <div className="modal-input-group">
@@ -178,7 +187,7 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
           {canUpdate ? (
             <button type="submit" className="modal-submit-btn">
               <Save size={16} />
-              <span>Save receipt details</span>
+              <span>Save store details</span>
             </button>
           ) : (
             <button

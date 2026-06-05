@@ -25,6 +25,18 @@ import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
 
+const BUSINESS_TYPES = [
+  { label: 'Cafe', icon: '☕' },
+  { label: 'Restaurant', icon: '🍽️' },
+  { label: 'Boutique', icon: '👗' },
+  { label: 'Salon', icon: '✂️' },
+  { label: 'Supermarket', icon: '🛒' },
+  { label: 'Grocery Shop', icon: '🏪' },
+  { label: 'Pharmacy', icon: '💊' },
+  { label: 'Hardware', icon: '🔧' },
+  { label: 'Other', icon: '✨' },
+];
+
 export default function ManageBusinessesRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -41,14 +53,14 @@ export default function ManageBusinessesRoute() {
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newCategory, setNewCategory] = useState('');
+  const [newBusinessType, setNewBusinessType] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [newPhone, setNewPhone] = useState('');
 
   // Edit Modal states
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [editName, setEditName] = useState('');
-  const [editCategory, setEditCategory] = useState('');
+  const [editBusinessType, setEditBusinessType] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -63,7 +75,7 @@ export default function ManageBusinessesRoute() {
   const handleOpenEditModal = (biz: Business) => {
     setEditingBusiness(biz);
     setEditName(biz.name);
-    setEditCategory(biz.category);
+    setEditBusinessType(biz.category);
     setEditAddress(biz.address);
     setEditPhone(biz.phone);
     setIsEditModalOpen(true);
@@ -71,7 +83,7 @@ export default function ManageBusinessesRoute() {
 
   const handleSaveEditBusiness = () => {
     if (!editingBusiness) return;
-    if (!editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()) {
+    if (!editName.trim() || !editBusinessType.trim() || !editAddress.trim() || !editPhone.trim()) {
       triggerToast('All fields are required!');
       return;
     }
@@ -81,7 +93,7 @@ export default function ManageBusinessesRoute() {
         id: editingBusiness.id,
         details: {
           name: editName.trim(),
-          category: editCategory.trim(),
+          category: editBusinessType.trim(),
           address: editAddress.trim(),
           phone: editPhone.trim(),
         },
@@ -141,8 +153,8 @@ export default function ManageBusinessesRoute() {
       triggerToast('Please enter business name!');
       return;
     }
-    if (!newCategory.trim()) {
-      triggerToast('Please enter business type/category!');
+    if (!newBusinessType.trim()) {
+      triggerToast('Please select business type!');
       return;
     }
     if (!newAddress.trim()) {
@@ -159,13 +171,13 @@ export default function ManageBusinessesRoute() {
         name: newName.trim(),
         address: newAddress.trim(),
         phone: newPhone.trim(),
-        category: newCategory.trim(),
+        category: newBusinessType.trim(),
       },
       {
         onSuccess: (newBiz) => {
           setIsModalOpen(false);
           setNewName('');
-          setNewCategory('');
+          setNewBusinessType('');
           setNewAddress('');
           setNewPhone('');
           triggerToast('Business store created successfully! 🎉');
@@ -363,7 +375,7 @@ export default function ManageBusinessesRoute() {
       >
         <ScrollView
           contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 280 }}
+          style={{ maxHeight: 350 }}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.formGroup}>
@@ -378,14 +390,41 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Business Category / Type</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Electronics, Clothing, Groceries"
-              placeholderTextColor="#9CA3AF"
-              value={newCategory}
-              onChangeText={setNewCategory}
-            />
+            <Text style={styles.formLabel}>Business Type</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+              {BUSINESS_TYPES.map((cat) => {
+                const isSelected = newBusinessType === cat.label;
+                return (
+                  <TouchableOpacity
+                    key={cat.label}
+                    onPress={() => setNewBusinessType(cat.label)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: isSelected ? TOKENS.primary : TOKENS.border,
+                      backgroundColor: isSelected ? '#F4F7FF' : '#F9FAFB',
+                      gap: 4,
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 12 }}>{cat.icon}</Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: isSelected ? '700' : '500',
+                        color: isSelected ? TOKENS.primary : TOKENS.dark,
+                      }}
+                    >
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           <View style={styles.formGroup}>
@@ -415,13 +454,16 @@ export default function ManageBusinessesRoute() {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()) &&
+            (!newName.trim() ||
+              !newBusinessType.trim() ||
+              !newAddress.trim() ||
+              !newPhone.trim()) &&
               styles.submitButtonDisabled,
           ]}
           activeOpacity={0.8}
           onPress={handleCreateBusiness}
           disabled={
-            !newName.trim() || !newCategory.trim() || !newAddress.trim() || !newPhone.trim()
+            !newName.trim() || !newBusinessType.trim() || !newAddress.trim() || !newPhone.trim()
           }
         >
           <Text style={styles.submitButtonText}>Create & Activate Business</Text>
@@ -440,7 +482,7 @@ export default function ManageBusinessesRoute() {
       >
         <ScrollView
           contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 280 }}
+          style={{ maxHeight: 350 }}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.formGroup}>
@@ -455,14 +497,41 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Business Category / Type</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. Electronics, Clothing, Groceries"
-              placeholderTextColor="#9CA3AF"
-              value={editCategory}
-              onChangeText={setEditCategory}
-            />
+            <Text style={styles.formLabel}>Business Type</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+              {BUSINESS_TYPES.map((cat) => {
+                const isSelected = editBusinessType === cat.label;
+                return (
+                  <TouchableOpacity
+                    key={cat.label}
+                    onPress={() => setEditBusinessType(cat.label)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: isSelected ? TOKENS.primary : TOKENS.border,
+                      backgroundColor: isSelected ? '#F4F7FF' : '#F9FAFB',
+                      gap: 4,
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 12 }}>{cat.icon}</Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: isSelected ? '700' : '500',
+                        color: isSelected ? TOKENS.primary : TOKENS.dark,
+                      }}
+                    >
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           <View style={styles.formGroup}>
@@ -493,7 +562,7 @@ export default function ManageBusinessesRoute() {
           style={[
             styles.submitButton,
             (!editName.trim() ||
-              !editCategory.trim() ||
+              !editBusinessType.trim() ||
               !editAddress.trim() ||
               !editPhone.trim()) &&
               styles.submitButtonDisabled,
@@ -501,7 +570,7 @@ export default function ManageBusinessesRoute() {
           activeOpacity={0.8}
           onPress={handleSaveEditBusiness}
           disabled={
-            !editName.trim() || !editCategory.trim() || !editAddress.trim() || !editPhone.trim()
+            !editName.trim() || !editBusinessType.trim() || !editAddress.trim() || !editPhone.trim()
           }
         >
           <Text style={styles.submitButtonText}>Update Business Details</Text>

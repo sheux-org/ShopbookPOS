@@ -26,7 +26,7 @@ export default function NumberInputRoute() {
   const [, setHasAccount] = useState<boolean>(true);
 
   const [businessName, setBusinessName] = useState<string>('');
-  const [newCategory, setNewCategory] = useState<string>('');
+  const [businessType, setBusinessType] = useState<string>('');
   const [businessAddress, setBusinessAddress] = useState<string>('');
   const [registerStep, setRegisterStep] = useState<1 | 2 | 3>(1);
 
@@ -132,8 +132,8 @@ export default function NumberInputRoute() {
       triggerToast('Please enter your Shop/Business Name!');
       return;
     }
-    if (!newCategory.trim()) {
-      triggerToast('Please enter business type/category!');
+    if (!businessType.trim()) {
+      triggerToast('Please select business type!');
       return;
     }
     if (!businessAddress.trim()) {
@@ -146,7 +146,7 @@ export default function NumberInputRoute() {
       {
         phone,
         businessName: businessName.trim(),
-        category: newCategory.trim(),
+        category: businessType.trim(),
         address: businessAddress.trim(),
       },
       {
@@ -230,8 +230,8 @@ export default function NumberInputRoute() {
               phone={phone}
               businessName={businessName}
               setBusinessName={setBusinessName}
-              newCategory={newCategory}
-              setNewCategory={setNewCategory}
+              businessType={businessType}
+              setBusinessType={setBusinessType}
               businessAddress={businessAddress}
               setBusinessAddress={setBusinessAddress}
               registerStep={registerStep}
