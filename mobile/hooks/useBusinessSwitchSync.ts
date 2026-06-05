@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import { syncDatabase } from '../services/sync';
+import { requestFullPullForBusiness, syncDatabase } from '../services/sync';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useCart } from '../stores/useCart';
 import { useSettingsStore } from '../stores/useSettingsStore';
@@ -26,11 +26,11 @@ export function useBusinessSwitchSync() {
     if (businessChanged) {
       useCart.getState().clearCart();
       queryClient.invalidateQueries();
+      useSettingsStore.getState().setBackupEnabled(true);
+      requestFullPullForBusiness(activeBusinessId);
+      syncDatabase().catch((err) => console.error('[BusinessSwitch] Sync failed:', err));
     }
 
     prevBizIdRef.current = activeBusinessId;
-
-    useSettingsStore.getState().setBackupEnabled(true);
-    syncDatabase().catch((err) => console.error('[BusinessSwitch] Sync failed:', err));
   }, [activeBusinessId, queryClient]);
 }

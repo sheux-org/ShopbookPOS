@@ -49,6 +49,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const sheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const activeAnimation = useRef<Animated.CompositeAnimation | null>(null);
+
+  const runAnimation = (animation: Animated.CompositeAnimation, onEnd?: () => void) => {
+    activeAnimation.current?.stop();
+    activeAnimation.current = animation;
+    animation.start(onEnd);
+  };
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
@@ -73,20 +80,49 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   useEffect(() => {
     if (visible) {
       setShowModal(true);
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 0.5,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.spring(sheetTranslateY, {
-          toValue: 0,
-          damping: 18,
-          stiffness: 120,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      runAnimation(
+        Animated.parallel([
+          Animated.timing(backdropOpacity, {
+            toValue: 0.5,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+          Animated.spring(sheetTranslateY, {
+            toValue: 0,
+            damping: 18,
+            stiffness: 120,
+            useNativeDriver: true,
+          }),
+        ])
+      );
     } else {
+      runAnimation(
+        Animated.parallel([
+          Animated.timing(backdropOpacity, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(sheetTranslateY, {
+            toValue: SCREEN_HEIGHT,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+        () => {
+          setShowModal(false);
+        }
+      );
+    }
+
+    return () => {
+      activeAnimation.current?.stop();
+      activeAnimation.current = null;
+    };
+  }, [visible]);
+
+  const handleClose = () => {
+    runAnimation(
       Animated.parallel([
         Animated.timing(backdropOpacity, {
           toValue: 0,
@@ -98,29 +134,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           duration: 200,
           useNativeDriver: true,
         }),
-      ]).start(() => {
+      ]),
+      () => {
         setShowModal(false);
-      });
-    }
-  }, [visible]);
-
-  const handleClose = () => {
-    // Animate closing before calling the parent onClose callback
-    Animated.parallel([
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(sheetTranslateY, {
-        toValue: SCREEN_HEIGHT,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowModal(false);
-      onClose();
-    });
+        onClose();
+      }
+    );
   };
 
   if (!showModal) return null;

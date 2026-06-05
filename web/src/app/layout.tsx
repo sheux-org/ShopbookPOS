@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '../stores/authStore';
 import { useBusinessStore } from '../stores/businessStore';
 import { useSettingsStore } from '../stores/settingsStore';
-import { syncDatabase, supabase, getClientId } from '../services/sync';
+import { requestFullPullForBusiness, syncDatabase, supabase, getClientId } from '../services/sync';
 import { startUploadQueueMonitor } from '@/services/uploadQueue';
 import './globals.css';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
@@ -235,6 +235,14 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
           releaseReservedStocks(cart, bizIdToRestore);
         } else {
           useCart.getState().clearCart();
+        }
+        if (
+          isLoggedIn &&
+          activeBusiness?.id &&
+          activeBusiness.id !== prevBizId &&
+          activeBusiness.id !== '0'
+        ) {
+          requestFullPullForBusiness(activeBusiness.id);
         }
       }
       setPrevBizId(activeBusiness?.id || null);

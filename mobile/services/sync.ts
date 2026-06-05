@@ -79,7 +79,14 @@ async function prepareSupabaseForSync(): Promise<void> {
   // Client runs anonymously with anon key. Authentication is enforced at the RPC layer by passing client_business_id.
 }
 
-let isSyncing = false;
+let isSyncInProgress = false;
+let hasPendingSyncRequest = false;
+let forceFullPullBusinessId: string | null = null;
+
+/** Request a full pull for a business (e.g. after switching branches). */
+export function requestFullPullForBusiness(businessId: string) {
+  forceFullPullBusinessId = businessId;
+}
 
 export async function syncDatabase(): Promise<boolean> {
   const isBackupEnabled = useSettingsStore.getState().isBackupEnabled;
@@ -87,8 +94,9 @@ export async function syncDatabase(): Promise<boolean> {
     return false;
   }
 
-  if (isSyncing) {
-    console.log('[Sync] Synchronization already in progress. Aborting concurrent call.');
+  if (isSyncInProgress) {
+    hasPendingSyncRequest = true;
+    console.log('[Sync] Synchronization already in progress. Request deferred.');
     return false;
   }
 
@@ -97,21 +105,30 @@ export async function syncDatabase(): Promise<boolean> {
     return false;
   }
 
-  await prepareSupabaseForSync();
+  isSyncInProgress = true;
+  hasPendingSyncRequest = false;
 
-  const activeBusinessId = useAuthStore.getState().activeBusinessId;
-  if (!activeBusinessId) {
-    console.warn('Sync skipped: No active business ID selected.');
-    return false;
-  }
+  const runSync = async (): Promise<boolean> => {
+    await prepareSupabaseForSync();
 
-  isSyncing = true;
-  try {
+    const activeBusinessId = useAuthStore.getState().activeBusinessId;
+    if (!activeBusinessId) {
+      console.warn('Sync skipped: No active business ID selected.');
+      return false;
+    }
+
     await synchronize({
       database,
+      sendCreatedAsUpdated: true,
       pullChanges: async ({ lastPulledAt }) => {
+        let effectiveLastPulledAt = lastPulledAt ?? 0;
+        if (forceFullPullBusinessId === activeBusinessId) {
+          effectiveLastPulledAt = 0;
+          forceFullPullBusinessId = null;
+        }
+
         const { data, error } = await supabase.rpc('pull_watermelondb_changes', {
-          last_pulled_at: lastPulledAt ?? 0,
+          last_pulled_at: effectiveLastPulledAt,
           client_business_id: activeBusinessId,
         });
         if (error) throw new Error(error.message);
@@ -144,10 +161,25 @@ export async function syncDatabase(): Promise<boolean> {
     });
     console.log('Database synced successfully');
     return true;
+  };
+
+  try {
+    const success = await runSync();
+    isSyncInProgress = false;
+
+    if (hasPendingSyncRequest) {
+      hasPendingSyncRequest = false;
+      console.log('[Sync] Running deferred synchronization request...');
+      setTimeout(() => {
+        syncDatabase();
+      }, 50);
+    }
+
+    return success;
   } catch (error) {
+    isSyncInProgress = false;
+    hasPendingSyncRequest = false;
     console.error('Failed to sync database:', error);
     return false;
-  } finally {
-    isSyncing = false;
   }
 }

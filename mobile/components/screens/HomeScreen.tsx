@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
@@ -86,33 +86,25 @@ export const HomeScreen: React.FC = () => {
     };
   }, []);
 
-  // Synchronized FAB animation values
-  const fabWidthAnim = useRef(new Animated.Value(115)).current;
-  const fabTextOpacityAnim = useRef(new Animated.Value(1)).current;
-  const fabTextScaleAnim = useRef(new Animated.Value(1)).current;
+  const fabWidth = useSharedValue(115);
+  const fabTextOpacity = useSharedValue(1);
+  const fabTextScale = useSharedValue(1);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(fabWidthAnim, {
-        toValue: tabBarVisible ? 115 : 48,
-        useNativeDriver: false,
-        friction: 8,
-        tension: 50,
-      }),
-      Animated.spring(fabTextOpacityAnim, {
-        toValue: tabBarVisible ? 1 : 0,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 50,
-      }),
-      Animated.spring(fabTextScaleAnim, {
-        toValue: tabBarVisible ? 1 : 0.5,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 50,
-      }),
-    ]).start();
-  }, [tabBarVisible]);
+    const springConfig = { damping: 15, stiffness: 120 };
+    fabWidth.value = withSpring(tabBarVisible ? 115 : 48, springConfig);
+    fabTextOpacity.value = withSpring(tabBarVisible ? 1 : 0, springConfig);
+    fabTextScale.value = withSpring(tabBarVisible ? 1 : 0.5, springConfig);
+  }, [tabBarVisible, fabWidth, fabTextOpacity, fabTextScale]);
+
+  const fabContainerStyle = useAnimatedStyle(() => ({
+    width: fabWidth.value,
+  }));
+
+  const fabTextStyle = useAnimatedStyle(() => ({
+    opacity: fabTextOpacity.value,
+    transform: [{ scale: fabTextScale.value }],
+  }));
 
   // Scroll handler for hiding/showing tab bar dynamically
   const handleScroll = (event: any) => {
@@ -391,13 +383,7 @@ export const HomeScreen: React.FC = () => {
 
       {/* Synchronized Animated FAB */}
       <Animated.View
-        style={[
-          styles.animatedFabContainer,
-          {
-            bottom: insets.bottom + 75,
-            width: fabWidthAnim,
-          },
-        ]}
+        style={[styles.animatedFabContainer, { bottom: insets.bottom + 75 }, fabContainerStyle]}
       >
         <TouchableOpacity
           style={styles.fabTouchable}
@@ -410,15 +396,7 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.fabIconWrapper}>
             <Ionicons name="qr-code-outline" size={18} color="#FFFFFF" />
           </View>
-          <Animated.View
-            style={[
-              styles.fabTextWrapper,
-              {
-                opacity: fabTextOpacityAnim,
-                transform: [{ scale: fabTextScaleAnim }],
-              },
-            ]}
-          >
+          <Animated.View style={[styles.fabTextWrapper, fabTextStyle]}>
             <Text style={styles.fabText}>Scan</Text>
           </Animated.View>
         </TouchableOpacity>
