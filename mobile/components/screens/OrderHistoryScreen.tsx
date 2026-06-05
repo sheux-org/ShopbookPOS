@@ -31,7 +31,7 @@ import {
 import { buildThermalReceiptHtml } from '../../utils/thermalReceiptHtml';
 import { printReceipt } from '../../utils/printThermalReceipt';
 import { BottomSheet } from '../common/BottomSheet';
-import { cartState } from '../data/cartState';
+import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 
@@ -56,7 +56,7 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
   const isPremium = useSettingsStore((s) => s.isPremium);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   const {
     data: orders = [],
     isLoading: ordersLoading,

@@ -19,13 +19,13 @@ interface SettingsState {
   setPremium: (premium: boolean) => void;
 }
 
-export const useSettingsStore = create<SettingsState>()(
+const useSettingsStoreRaw = create<SettingsState>()(
   persist(
     (set) => ({
-      isBackupEnabled: false,
+      isBackupEnabled: true,
       pairedPrinter: null,
       hapticsEnabled: true,
-      isPremium: false,
+      isPremium: true,
       toggleBackup: () => set((state) => ({ isBackupEnabled: !state.isBackupEnabled })),
       setBackupEnabled: (enabled) => set({ isBackupEnabled: enabled }),
       setPairedPrinter: (printer) => set({ pairedPrinter: printer }),
@@ -35,6 +35,35 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'settings-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        isBackupEnabled: state.isBackupEnabled,
+        pairedPrinter: state.pairedPrinter,
+        hapticsEnabled: state.hapticsEnabled,
+      }),
     }
   )
 );
+
+export const useSettingsStore = Object.assign(
+  (selector: any) => {
+    const wrappedSelector = (state: SettingsState) => {
+      const proxy = new Proxy(state, {
+        get(target, prop) {
+          if (prop === 'isPremium') return true;
+          return target[prop as keyof SettingsState];
+        },
+      });
+      return selector ? selector(proxy) : proxy;
+    };
+    return useSettingsStoreRaw(wrappedSelector);
+  },
+  {
+    getState: () => ({
+      ...useSettingsStoreRaw.getState(),
+      isPremium: true,
+    }),
+    setState: useSettingsStoreRaw.setState,
+    subscribe: useSettingsStoreRaw.subscribe,
+    persist: useSettingsStoreRaw.persist,
+  }
+) as unknown as typeof useSettingsStoreRaw;

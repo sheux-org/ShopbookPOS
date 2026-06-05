@@ -33,7 +33,7 @@ import {
 import { deleteUploadThingFile, uploadToUploadThing } from '../../services/uploadQueue';
 import { ProductImage } from '../common/ProductImage';
 import { ScreenWrapper } from '../common/ScreenWrapper';
-import { cartState } from '../data/cartState';
+import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { getBusinessTypeConfig, getCategoryLabel } from '../../utils/businessTypeConfig';
 
 export const ManageItemsScreen: React.FC = () => {
@@ -43,7 +43,7 @@ export const ManageItemsScreen: React.FC = () => {
   const isPremium = useSettingsStore((s) => s.isPremium);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   const config = getBusinessTypeConfig(activeBiz?.category);
   const CATEGORIES_LIST = config.categories;
   const UNIT_TYPES = config.unitTypes;

@@ -339,6 +339,7 @@ export function useDeleteBusiness() {
           useBusinessStore.getState().setActiveBusiness(list[0].id);
         } else {
           useBusinessStore.setState({ activeBusiness: PLACEHOLDER_BUSINESS });
+          useAuthStore.getState().setActiveBusinessId(null);
         }
       }
 

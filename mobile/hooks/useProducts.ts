@@ -5,6 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 import { cartState } from '../components/data/cartState';
 import database from '../components/data/db';
+import { useActiveBusiness } from './useActiveBusiness';
 import {
   deleteUploadThingFile,
   processUploadQueue,
@@ -32,7 +33,7 @@ export interface DBProduct {
 }
 
 export function useProducts(category?: string, search?: string, activeChip?: string) {
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   const PAGE_SIZE = 30;
 
   const result = useInfiniteQuery<DBProduct[]>({
@@ -147,7 +148,7 @@ export function useProducts(category?: string, search?: string, activeChip?: str
  * (icon starts with http:// or file://) — used in the image reuse gallery.
  */
 export function useUploadedProductImages() {
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   return useQuery<{ id: string; name: string; icon: string }[]>({
     queryKey: ['uploaded-images', activeBiz.id],
     queryFn: async () => {
@@ -547,7 +548,7 @@ export function useProduct(id?: string) {
 }
 
 export function useFindProductByBarcode() {
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   return async (barcode: string): Promise<DBProduct | null> => {
     const dbProducts = await database
       .get('products')
@@ -590,7 +591,7 @@ export function useFindProductByBarcode() {
 }
 
 export function useFindProductByCode() {
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   return async (code: string): Promise<DBProduct | null> => {
     const dbProducts = await database
       .get('products')

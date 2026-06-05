@@ -4,12 +4,14 @@ import { Animated } from 'react-native';
 import { BottomTabBar } from '../../components/common/BottomTabBar';
 import { useTabBarVisible } from '../../hooks/useTabBarVisible';
 import { useActiveDeviceTracker } from '../../hooks/useActiveDeviceTracker';
+import { useBusinessSwitchSync } from '../../hooks/useBusinessSwitchSync';
 import { useWatermelonSync } from '../../hooks/useWatermelonSync';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { syncDatabase, supabase, getClientId } from '../../services/sync';
 
 export default function TabLayout() {
   useActiveDeviceTracker();
+  useBusinessSwitchSync();
   useWatermelonSync(); // Enable periodic background database sync
 
   const { tabBarVisible } = useTabBarVisible();

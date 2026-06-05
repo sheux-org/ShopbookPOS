@@ -14,6 +14,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { HeaderCartButton } from '../common/HeaderCartButton';
 import { TOKENS } from '../../constants/tokens';
+import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { cartState } from '../data/cartState';
 import { useProducts } from '../../hooks/useProducts';
 import { ProductImage } from '../common/ProductImage';
@@ -79,7 +80,7 @@ export const CatalogScreen: React.FC = () => {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
 
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   const config = getBusinessTypeConfig(activeBiz?.category);
 
   // Fetch all products to compute counts dynamically

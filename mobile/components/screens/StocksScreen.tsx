@@ -21,6 +21,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { TOKENS } from '../../constants/tokens';
+import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { cartState } from '../data/cartState';
 import { HeaderCartButton } from '../common/HeaderCartButton';
 import { useAddProduct, useProducts, useToggleFavoriteProduct } from '../../hooks/useProducts';
@@ -50,7 +51,7 @@ export const StocksScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const activeBiz = cartState.getActiveBusiness();
+  const activeBiz = useActiveBusiness();
   const config = getBusinessTypeConfig(activeBiz?.category);
   const CATEGORIES_LIST = config.categories;
   const UNIT_TYPES = config.unitTypes;
