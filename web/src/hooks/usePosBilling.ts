@@ -11,6 +11,7 @@ import { useProducts, mapDBProduct, useFindProduct } from './useProducts';
 import { useCreateOrder } from './useOrders';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCartActions } from './useCartActions';
+import { getBusinessTypeConfig, getCategoryLabel } from '../utils/businessTypeConfig';
 
 export interface DBProduct {
   id: string;
@@ -51,6 +52,11 @@ export function usePosBilling() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'catalog'>('grid');
+
+  // Reset selected category to 'All' when business changes
+  useEffect(() => {
+    setSelectedCategory('All');
+  }, [activeBusiness?.id]);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Normal Mode scanner & table active index
@@ -230,8 +236,11 @@ export function usePosBilling() {
 
   useHardwareScanner(handleHardwareScan);
 
-  // Categories list
-  const categories = ['All', 'Grocery', 'Dairy', 'Drinks', 'Snacks', 'Household'];
+  // Categories list based on active business type
+  const categories = useMemo(() => {
+    const config = getBusinessTypeConfig(activeBusiness?.category);
+    return ['All', ...config.categories.map((c) => getCategoryLabel(c, activeBusiness?.category))];
+  }, [activeBusiness?.category]);
 
   // Query is already filtered at database level
   const filteredProducts = products;

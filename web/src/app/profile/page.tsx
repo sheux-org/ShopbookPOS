@@ -91,7 +91,7 @@ export default function ProfilePage() {
 
   // Form states - Branch add
   const [newBranchName, setNewBranchName] = useState('');
-  const [newBranchCategory, setNewBranchCategory] = useState('General Retail');
+  const [newBranchCategory, setNewBranchCategory] = useState('Cafe');
   const [newBranchAddress, setNewBranchAddress] = useState('');
 
   // React Query Hooks
@@ -252,6 +252,7 @@ export default function ProfilePage() {
       triggerToast(`Branch ${newBranchName} initialized! 🏢`);
       setNewBranchName('');
       setNewBranchAddress('');
+      setNewBranchCategory('Cafe');
       setNewBranchLogo(null);
       setActiveModal(null);
     } catch (err) {

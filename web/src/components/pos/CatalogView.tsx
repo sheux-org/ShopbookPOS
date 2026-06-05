@@ -3,6 +3,8 @@
 import React from 'react';
 import { Search, ShoppingBag, Plus } from 'lucide-react';
 import { ProductImage } from '../ProductImage';
+import { useBusinessStore } from '../../stores/businessStore';
+import { getCategoryEmoji } from '../../utils/businessTypeConfig';
 
 interface DBProduct {
   id: string;
@@ -49,6 +51,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   fetchNextPage,
   isFetchingNextPage,
 }) => {
+  const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   return (
     <div style={styles.catalogPane}>
       {/* Header query search panel */}
@@ -200,19 +203,7 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
             {categories.map((cat) => {
               const isActive = selectedCategory === cat;
               const catEmoji =
-                cat === 'All'
-                  ? '📦'
-                  : cat === 'Grocery'
-                    ? '🛒'
-                    : cat === 'Dairy'
-                      ? '🥛'
-                      : cat === 'Drinks'
-                        ? '🥤'
-                        : cat === 'Snacks'
-                          ? '🍿'
-                          : cat === 'Household'
-                            ? '🏠'
-                            : '📦';
+                cat === 'All' ? '📦' : getCategoryEmoji(cat, activeBusiness?.category);
               return (
                 <button
                   key={cat}
