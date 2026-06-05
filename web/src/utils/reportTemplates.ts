@@ -13,7 +13,8 @@ export type ReportType =
   | 'slow_movers'
   | 'orders_ledger'
   | 'item_sales'
-  | 'branch_performance';
+  | 'branch_performance'
+  | 'invoice_sales';
 
 export interface ReportData {
   business: {
@@ -238,7 +239,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
     // Map order items to orders
     const itemsByOrder: Record<string, string[]> = {};
     for (const item of orderItems) {
-      const orderId = item._raw?.order_id || item.orderId;
+      const orderId = item.order?.id || item._raw?.order_id || item.orderId;
       if (orderId) {
         if (!itemsByOrder[orderId]) itemsByOrder[orderId] = [];
         itemsByOrder[orderId].push(`${item.quantity}x ${item.name}`);
@@ -261,20 +262,50 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
                     'Cashier'
                   : 'Cashier';
               const itemsDesc = itemsByOrder[o.id] ? itemsByOrder[o.id].join(', ') : '—';
+              const tax = o.taxValue || o.tax_value || 0;
+              const discount = o.discountValue || o.discount_value || 0;
+              const total = o.totalAmount || o.total_amount || 0;
+              const subtotal = total - tax + discount;
+              const method = o.paymentMethod || o.payment_method || 'cash';
+              const bank = o.bankName || o.bank_name || '';
+              const cardLast4 = o.cardLastFour || o.card_last_four || '';
+
+              const isVoided = o.status === 'voided';
+              const rowClass = isVoided ? 'voided' : '';
+              const statusClass = isVoided ? 'status-indicator error' : 'status-indicator active';
 
               return `
-            <tr>
+            <tr class="${rowClass}">
               <td><strong>#${escapeHtml(o.invoiceNumber?.split(' ')[0] || o.id.slice(-6).toUpperCase())}</strong></td>
               <td>${date}</td>
               <td>${escapeHtml(cashierLabel)}</td>
-              <td><span class="status-indicator active">${escapeHtml(o.status || 'Paid')}</span></td>
               <td><div class="compact-text">${escapeHtml(itemsDesc)}</div></td>
-              <td class="text-right bold">Rs. ${(o.totalAmount || 0).toFixed(2)}</td>
+              <td>
+                <span class="badge-method-text">${method.toUpperCase()}</span>
+                ${
+                  (method === 'card' || method === 'bank') && bank
+                    ? `
+                  <div style="font-size: 10px; color: #64748b; margin-top: 2px;">
+                    ${escapeHtml(bank)} ${cardLast4 ? `(**** ${cardLast4})` : ''}
+                  </div>
+                `
+                    : ''
+                }
+              </td>
+              <td>
+                <span class="${statusClass}">
+                  ${(o.status || 'Paid').toUpperCase()}
+                </span>
+              </td>
+              <td class="text-right">Rs. ${subtotal.toFixed(2)}</td>
+              <td class="text-right text-error">${discount > 0 ? `-Rs. ${discount.toFixed(2)}` : 'Rs. 0.00'}</td>
+              <td class="text-right text-success">${tax > 0 ? `+Rs. ${tax.toFixed(2)}` : 'Rs. 0.00'}</td>
+              <td class="text-right bold">Rs. ${total.toFixed(2)}</td>
             </tr>
           `;
             })
             .join('')
-        : `<tr><td colspan="6" class="text-center">No orders recorded in the database.</td></tr>`;
+        : `<tr><td colspan="10" class="text-center">No orders recorded in the database.</td></tr>`;
 
     contentHtml = `
       <h3>Invoices Registry</h3>
@@ -284,8 +315,147 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
             <th>Invoice Num</th>
             <th>Date & Time</th>
             <th>Processed By</th>
+            <th style="width: 200px;">Items Summary</th>
+            <th>Payment Details</th>
             <th>Status</th>
-            <th style="width: 300px;">Items Summary</th>
+            <th class="text-right">Subtotal</th>
+            <th class="text-right">Discount</th>
+            <th class="text-right">Tax (VAT)</th>
+            <th class="text-right">Total Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    `;
+  } else if (type === 'invoice_sales') {
+    reportTitle = 'Store Invoice Sales Report';
+
+    const nonVoided = orders.filter((o) => o.status !== 'voided');
+    const totalSales = nonVoided.reduce(
+      (sum, o) => sum + (o.totalAmount || o.total_amount || 0),
+      0
+    );
+    const activeCount = nonVoided.length;
+
+    const cashSales = nonVoided
+      .filter((o) => (o.paymentMethod || o.payment_method) === 'cash')
+      .reduce((sum, o) => sum + (o.totalAmount || o.total_amount || 0), 0);
+    const cardSales = nonVoided
+      .filter((o) => (o.paymentMethod || o.payment_method) === 'card')
+      .reduce((sum, o) => sum + (o.totalAmount || o.total_amount || 0), 0);
+    const bankSales = nonVoided
+      .filter((o) => (o.paymentMethod || o.payment_method) === 'bank')
+      .reduce((sum, o) => sum + (o.totalAmount || o.total_amount || 0), 0);
+
+    // KPI Cards
+    kpiCardsHtml = `
+      <div class="kpi-card">
+        <div class="kpi-label">Net Sales Value</div>
+        <div class="kpi-value text-success">Rs. ${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cash Tendered</div>
+        <div class="kpi-value">Rs. ${cashSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Card & Bank Sales</div>
+        <div class="kpi-value">Rs. ${(cardSales + bankSales).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Paid vs. Voided Invoices</div>
+        <div class="kpi-value">${activeCount} / ${orders.length}</div>
+      </div>
+    `;
+
+    // Map order items to orders
+    const itemsByOrder: Record<string, string[]> = {};
+    for (const item of orderItems) {
+      const orderId = item.order?.id || item._raw?.order_id || item.orderId;
+      if (orderId) {
+        if (!itemsByOrder[orderId]) itemsByOrder[orderId] = [];
+        itemsByOrder[orderId].push(`${item.quantity}x ${item.name}`);
+      }
+    }
+
+    const sortedOrders = [...orders].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    let rowsHtml =
+      sortedOrders.length > 0
+        ? sortedOrders
+            .map((o) => {
+              const date = new Date(o.createdAt).toLocaleString();
+              // Extract cashier from invoice number or default
+              const cashierLabel =
+                o.cashierName ||
+                o.cashier_name ||
+                (o.invoiceNumber && o.invoiceNumber.includes('Staff:')
+                  ? o.invoiceNumber.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() ||
+                    'Cashier'
+                  : 'Cashier');
+              const itemsDesc = itemsByOrder[o.id] ? itemsByOrder[o.id].join(', ') : '—';
+              const tax = o.taxValue || o.tax_value || 0;
+              const discount = o.discountValue || o.discount_value || 0;
+              const total = o.totalAmount || o.total_amount || 0;
+              const subtotal = total - tax + discount;
+              const method = o.paymentMethod || o.payment_method || 'cash';
+              const bank = o.bankName || o.bank_name || '';
+              const cardLast4 = o.cardLastFour || o.card_last_four || '';
+
+              const isVoided = o.status === 'voided';
+              const rowClass = isVoided ? 'voided' : '';
+              const statusClass = isVoided ? 'status-indicator error' : 'status-indicator active';
+
+              return `
+            <tr class="${rowClass}">
+              <td><strong>#${escapeHtml(o.invoiceNumber?.split(' ')[0] || o.id.slice(-6).toUpperCase())}</strong></td>
+              <td>${date}</td>
+              <td>${escapeHtml(cashierLabel)}</td>
+              <td><div class="compact-text">${escapeHtml(itemsDesc)}</div></td>
+              <td>
+                <span class="badge-method-text">${method.toUpperCase()}</span>
+                ${
+                  (method === 'card' || method === 'bank') && bank
+                    ? `
+                  <div style="font-size: 10px; color: #64748b; margin-top: 2px;">
+                    ${escapeHtml(bank)} ${cardLast4 ? `(**** ${cardLast4})` : ''}
+                  </div>
+                `
+                    : ''
+                }
+              </td>
+              <td>
+                <span class="${statusClass}">
+                  ${(o.status || 'Paid').toUpperCase()}
+                </span>
+              </td>
+              <td class="text-right">Rs. ${subtotal.toFixed(2)}</td>
+              <td class="text-right text-error">${discount > 0 ? `-Rs. ${discount.toFixed(2)}` : 'Rs. 0.00'}</td>
+              <td class="text-right text-success">${tax > 0 ? `+Rs. ${tax.toFixed(2)}` : 'Rs. 0.00'}</td>
+              <td class="text-right bold">Rs. ${total.toFixed(2)}</td>
+            </tr>
+          `;
+            })
+            .join('')
+        : `<tr><td colspan="10" class="text-center">No orders recorded in the database.</td></tr>`;
+
+    contentHtml = `
+      <h3>Invoices Registry</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Invoice Num</th>
+            <th>Date & Time</th>
+            <th>Processed By</th>
+            <th style="width: 200px;">Items Summary</th>
+            <th>Payment Details</th>
+            <th>Status</th>
+            <th class="text-right">Subtotal</th>
+            <th class="text-right">Discount</th>
+            <th class="text-right">Tax (VAT)</th>
             <th class="text-right">Total Amount</th>
           </tr>
         </thead>
@@ -547,29 +717,40 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
             padding-bottom: 20px;
             margin-bottom: 24px;
             display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+            flex-direction: column;
+            gap: 16px;
           }
 
-          .biz-info h1 {
-            font-size: 26px;
+          .header-branding {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+
+          .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .brand-logo {
+            height: 38px;
+            width: auto;
+            object-fit: contain;
+          }
+
+          .brand-title {
+            font-size: 20px;
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.5px;
           }
 
-          .biz-info p {
-            font-size: 12px;
-            color: #64748b;
-            margin-top: 4px;
-            font-weight: 500;
-          }
-
-          .report-info {
+          .report-meta {
             text-align: right;
           }
 
-          .report-info h2 {
+          .report-meta h2 {
             font-size: 15px;
             font-weight: 700;
             color: #4f46e5;
@@ -578,10 +759,36 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
             margin-bottom: 4px;
           }
 
-          .report-info p {
+          .report-meta p {
             font-size: 11px;
             color: #64748b;
             font-weight: 500;
+          }
+
+          .header-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+
+          .biz-details h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #334155;
+            letter-spacing: -0.3px;
+          }
+
+          .biz-details p {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+          }
+
+          .report-scope {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 500;
+            text-align: right;
           }
 
           /* KPI summary cards row */
@@ -712,6 +919,18 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
           .badge.bronze { background-color: #f59e0b; }
           .badge.gray { background-color: #cbd5e1; color: #475569; }
 
+          .badge-method-text {
+            font-size: 9px;
+            font-weight: 700;
+            background-color: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            display: inline-block;
+          }
+
           /* Status Pill Indicators */
           .status-indicator {
             display: inline-block;
@@ -745,7 +964,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
           .compact-text {
             font-size: 11px;
             color: #64748b;
-            max-width: 320px;
+            max-width: 200px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -765,6 +984,16 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
           .footer-logo {
             font-weight: 700;
             color: #4f46e5;
+          }
+
+          .footer-powered {
+            font-weight: 600;
+          }
+
+          .footer-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 700;
           }
 
           @media print {
@@ -790,23 +1019,35 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
             .badge.silver { background-color: #9ca3af !important; }
             .badge.bronze { background-color: #f59e0b !important; }
             .badge.gray { background-color: #cbd5e1 !important; }
-            .status-indicator.active { background-color: #d1fae5 !important; color: #065f46 !important; }
-            .status-indicator.warning { background-color: #fef3c7 !important; color: #92400e !important; }
-            .status-indicator.inactive { background-color: #f3f4f6 !important; color: #4b5563 !important; }
-            .status-indicator.error { background-color: #fee2e2 !important; color: #991b1b !important; }
+            .badge-method-text { background-color: #eff6ff !important; color: #1e40af !important; border-color: #bfdbfe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .status-indicator.active { background-color: #d1fae5 !important; color: #065f46 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .status-indicator.warning { background-color: #fef3c7 !important; color: #92400e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .status-indicator.inactive { background-color: #f3f4f6 !important; color: #4b5563 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .status-indicator.error { background-color: #fee2e2 !important; color: #991b1b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .footer-link { color: #2563eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
         </style>
       </head>
       <body>
         <header>
-          <div class="biz-info">
-            <h1>${businessName}</h1>
-            <p>${businessCategory} | ${businessAddress} | Tel: ${businessPhone}</p>
+          <div class="header-branding">
+            <div class="logo-area">
+              <img src="/logo.png" alt="Shopbook Logo" class="brand-logo" />
+              <span class="brand-title">Mini POS</span>
+            </div>
+            <div class="report-meta">
+              <h2>${escapeHtml(reportTitle)}</h2>
+              <p>Generated: ${escapeHtml(generatedDate)}</p>
+            </div>
           </div>
-          <div class="report-info">
-            <h2>${escapeHtml(reportTitle)}</h2>
-            <p>Database Scope: All-Time History</p>
-            <p>Generated: ${escapeHtml(generatedDate)}</p>
+          <div class="header-details">
+            <div class="biz-details">
+              <h1>${businessName}</h1>
+              <p>${businessCategory} | ${businessAddress} | Tel: ${businessPhone}</p>
+            </div>
+            <div class="report-scope">
+              <p>Database Scope: Active Database logs</p>
+            </div>
           </div>
         </header>
 
@@ -820,7 +1061,9 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
 
         <footer>
           <div>Report generated in branch system database registry.</div>
-          <div><span class="footer-logo">Shopbook POS</span> Ledger statements</div>
+          <div class="footer-powered">
+            Powered by <a href="https://shopbook.lk" target="_blank" class="footer-link">Shopbook</a>
+          </div>
         </footer>
       </body>
     </html>
@@ -940,7 +1183,7 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
     // Map order items to orders
     const itemsByOrder: Record<string, string[]> = {};
     for (const item of orderItems) {
-      const orderId = item._raw?.order_id || item.orderId;
+      const orderId = item.order?.id || item._raw?.order_id || item.orderId;
       if (orderId) {
         if (!itemsByOrder[orderId]) itemsByOrder[orderId] = [];
         itemsByOrder[orderId].push(`${item.quantity}x ${item.name}`);

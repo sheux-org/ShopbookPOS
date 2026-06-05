@@ -321,3 +321,93 @@ export function useGetPeriodOrders(
     data: flattenedData,
   };
 }
+
+export function useGetAllOrders() {
+  const activeBiz = useBusinessStore((s) => s.activeBusiness);
+
+  return {
+    fetchAllOrders: async (searchQuery?: string) => {
+      if (!activeBiz || activeBiz.id === '0') {
+        return { orders: [], orderItems: [], products: [] };
+      }
+
+      // 1. Fetch matching orders directly from local database (no paging limit)
+      let query = database
+        .get('orders')
+        .query(Q.where('business_id', activeBiz.id), Q.sortBy('created_at', Q.desc));
+
+      const isSearchActive = searchQuery && searchQuery.trim() !== '';
+      if (isSearchActive) {
+        const sanitized = Q.sanitizeLikeString(searchQuery);
+        query = query.extend(
+          Q.or(
+            Q.where('invoice_number', Q.like(`%${sanitized}%`)),
+            Q.where('payment_method', Q.like(`%${sanitized}%`)),
+            Q.where('status', Q.like(`%${sanitized}%`))
+          )
+        );
+      }
+      const dbOrders = await query.fetch();
+
+      // Map DB orders to full records (matching hook structure + cashier extraction + date timestamp mapping)
+      const mappedOrders = dbOrders.map((o: any) => ({
+        id: o.id,
+        invoiceNumber: o.invoiceNumber,
+        totalAmount: o.totalAmount,
+        paymentMethod: o.paymentMethod || 'cash',
+        status: o.status || 'paid',
+        discountType: o.discountType || 'none',
+        discountValue: o.discountValue || 0,
+        taxValue: o.taxValue || 0,
+        taxRate: o.taxRate || 0,
+        createdAt:
+          o.createdAt instanceof Date
+            ? o.createdAt.getTime()
+            : typeof o.createdAt === 'number'
+              ? o.createdAt
+              : Date.now(),
+        dateStr:
+          o.createdAt instanceof Date
+            ? o.createdAt.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+            : new Date(o.createdAt || Date.now()).toLocaleString([], {
+                dateStyle: 'short',
+                timeStyle: 'short',
+              }),
+        cashierName:
+          o.invoiceNumber && o.invoiceNumber.includes('Staff:')
+            ? o.invoiceNumber.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() ||
+              'Cashier'
+            : 'Cashier',
+        bankName: o.bankName || '',
+        cardLastFour: o.cardLastFour || '',
+      }));
+
+      // 2. Fetch order items for these matched orders
+      let orderItems: any[] = [];
+      if (mappedOrders.length > 0) {
+        const orderIds = mappedOrders.map((o) => o.id);
+        const chunkSize = 100;
+        for (let i = 0; i < orderIds.length; i += chunkSize) {
+          const chunk = orderIds.slice(i, i + chunkSize);
+          const itemsChunk = await database
+            .get('order_items')
+            .query(Q.where('order_id', Q.oneOf(chunk)))
+            .fetch();
+          orderItems = [...orderItems, ...itemsChunk];
+        }
+      }
+
+      // 3. Fetch products
+      const products = await database
+        .get('products')
+        .query(Q.where('business_id', activeBiz.id))
+        .fetch();
+
+      return {
+        orders: mappedOrders,
+        orderItems,
+        products,
+      };
+    },
+  };
+}

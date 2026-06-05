@@ -7,8 +7,14 @@ import { Search, CheckCircle, FileSpreadsheet, FileText } from 'lucide-react';
 
 import { InvoiceListTable } from '../../components/history/InvoiceListTable';
 import { InvoiceDetailModal } from '../../components/history/InvoiceDetailModal';
-import { useGetOrders, useGetOrderItems, useVoidOrder } from '../../hooks/useOrders';
+import {
+  useGetOrders,
+  useGetOrderItems,
+  useVoidOrder,
+  useGetAllOrders,
+} from '../../hooks/useOrders';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { buildReportHtml } from '../../utils/reportTemplates';
 
 interface OrderRecord {
   id: string;
@@ -16,6 +22,7 @@ interface OrderRecord {
   totalAmount: number;
   paymentMethod: string;
   status: string; // paid / voided
+  discountType?: string;
   discountValue: number;
   taxValue: number;
   taxRate: number;
@@ -57,6 +64,8 @@ export default function OrderHistoryPage() {
     isFetchingNextPage,
   } = useGetOrders(searchQuery);
 
+  const { fetchAllOrders } = useGetAllOrders();
+
   const mappedOrders: OrderRecord[] = useMemo(() => {
     return orders.map((o) => ({
       id: o.id,
@@ -64,6 +73,7 @@ export default function OrderHistoryPage() {
       totalAmount: o.totalAmount,
       paymentMethod: o.paymentMethod || 'cash',
       status: o.status || 'paid',
+      discountType: o.discountType || 'none',
       discountValue: o.discountValue || 0,
       taxValue: o.taxValue || 0,
       taxRate: o.taxRate || 0,
@@ -163,286 +173,111 @@ Thank you for shopping with us!
     triggerToast('Receipt text copied to clipboard! 📋');
   };
 
-  const handleExportExcel = () => {
-    if (mappedOrders.length === 0) {
-      alert('No transaction records to export.');
-      return;
+  const handleExportExcel = async () => {
+    try {
+      const data = await fetchAllOrders(searchQuery);
+      if (data.orders.length === 0) {
+        alert('No transaction records to export.');
+        return;
+      }
+
+      const headers = [
+        'Invoice Number',
+        'Date & Time',
+        'Cashier',
+        'Payment Method',
+        'Bank/Brand',
+        'Card Last 4',
+        'Status',
+        'Discount Type',
+        'Discount Value (Rs.)',
+        'Tax Value (Rs.)',
+        'Total Amount (Rs.)',
+      ];
+
+      const rows = data.orders.map((o) => [
+        o.invoiceNumber,
+        o.dateStr,
+        o.cashierName,
+        o.paymentMethod.toUpperCase(),
+        o.bankName || '',
+        o.cardLastFour ? `'${o.cardLastFour}` : '',
+        o.status.toUpperCase(),
+        (o.discountType || 'NONE').toUpperCase(),
+        o.discountValue.toString(),
+        o.taxValue.toString(),
+        o.totalAmount.toString(),
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((row) => row.map((val) => `"${val.replace(/"/g, '""')}"`).join(',')),
+      ].join('\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute(
+        'download',
+        `Invoice_Sales_Report_${new Date().toISOString().slice(0, 10)}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      triggerToast('Sales ledger report exported to CSV/Excel! 📊');
+    } catch (err: any) {
+      console.error('Failed to export Excel:', err);
+      alert('Failed to generate Excel export: ' + err.message);
     }
-
-    const headers = [
-      'Invoice Number',
-      'Date & Time',
-      'Cashier',
-      'Payment Method',
-      'Bank/Brand',
-      'Card Last 4',
-      'Status',
-      'Discount Value (Rs.)',
-      'Tax Value (Rs.)',
-      'Total Amount (Rs.)',
-    ];
-
-    const rows = mappedOrders.map((o) => [
-      o.invoiceNumber,
-      o.dateStr,
-      o.cashierName,
-      o.paymentMethod.toUpperCase(),
-      o.bankName || '',
-      o.cardLastFour ? `'${o.cardLastFour}` : '',
-      o.status.toUpperCase(),
-      o.discountValue.toString(),
-      o.taxValue.toString(),
-      o.totalAmount.toString(),
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row) => row.map((val) => `"${val.replace(/"/g, '""')}"`).join(',')),
-    ].join('\n');
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute(
-      'download',
-      `Invoice_Sales_Report_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    triggerToast('Sales ledger report exported to CSV/Excel! 📊');
   };
 
-  const handleExportPDF = () => {
-    if (mappedOrders.length === 0) {
-      alert('No transaction records to export.');
-      return;
-    }
+  const handleExportPDF = async () => {
+    if (!activeBusiness || activeBusiness.id === '0') return;
 
-    const nonVoided = mappedOrders.filter((o) => o.status !== 'voided');
-    const totalSales = nonVoided.reduce((sum, o) => sum + o.totalAmount, 0);
-    const activeCount = nonVoided.length;
+    try {
+      const data = await fetchAllOrders(searchQuery);
+      if (data.orders.length === 0) {
+        alert('No transaction records to export.');
+        return;
+      }
 
-    const cashSales = nonVoided
-      .filter((o) => o.paymentMethod === 'cash')
-      .reduce((sum, o) => sum + o.totalAmount, 0);
-    const cardSales = nonVoided
-      .filter((o) => o.paymentMethod === 'card')
-      .reduce((sum, o) => sum + o.totalAmount, 0);
-    const bankSales = nonVoided
-      .filter((o) => o.paymentMethod === 'bank')
-      .reduce((sum, o) => sum + o.totalAmount, 0);
+      const reportData = {
+        business: {
+          name: activeBusiness.name || 'Store',
+          category: activeBusiness.category,
+          address: activeBusiness.address,
+          phone: activeBusiness.phone,
+        },
+        orders: data.orders,
+        orderItems: data.orderItems,
+        products: data.products,
+      };
 
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'absolute';
-    iframe.style.width = '0px';
-    iframe.style.height = '0px';
-    iframe.style.border = 'none';
-    document.body.appendChild(iframe);
+      const html = buildReportHtml('invoice_sales', reportData);
 
-    const doc = iframe.contentWindow?.document;
-    if (doc) {
-      doc.open();
-      doc.write(`
-        <html>
-          <head>
-            <title>Invoice Sales Report</title>
-            <style>
-              body {
-                font-family: system-ui, -apple-system, sans-serif;
-                color: #1f2937;
-                padding: 30px;
-                margin: 0;
-                line-height: 1.5;
-              }
-              .header {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                border-bottom: 2px solid #e5e7eb;
-                padding-bottom: 16px;
-                margin-bottom: 24px;
-              }
-              .store-name {
-                font-size: 20px;
-                font-weight: 700;
-                color: #111827;
-              }
-              .report-title {
-                font-size: 24px;
-                font-weight: 800;
-                color: #2563eb;
-                margin: 4px 0 0 0;
-              }
-              .meta-info {
-                font-size: 12px;
-                color: #6b7280;
-                text-align: right;
-              }
-              .summary-grid {
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 16px;
-                margin-bottom: 30px;
-              }
-              .summary-card {
-                background-color: #f9fafb;
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                padding: 16px;
-                text-align: center;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-              }
-              .summary-val {
-                font-size: 18px;
-                font-weight: 700;
-                color: #111827;
-              }
-              .summary-label {
-                font-size: 10px;
-                color: #6b7280;
-                text-transform: uppercase;
-                font-weight: 600;
-                letter-spacing: 0.5px;
-                margin-top: 4px;
-              }
-              table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 12px;
-              }
-              th {
-                background-color: #f3f4f6;
-                color: #374151;
-                font-weight: 700;
-                padding: 10px 12px;
-                text-align: left;
-                border-bottom: 2px solid #d1d5db;
-                text-transform: uppercase;
-                font-size: 10px;
-                letter-spacing: 0.5px;
-              }
-              td {
-                padding: 10px 12px;
-                border-bottom: 1px solid #e5e7eb;
-              }
-              tr.voided td {
-                color: #9ca3af;
-                text-decoration: line-through;
-              }
-              .badge {
-                font-size: 10px;
-                font-weight: 600;
-                padding: 2px 6px;
-                border-radius: 4px;
-                display: inline-block;
-              }
-              .badge-paid { background-color: #dcfce7; color: #166534; }
-              .badge-voided { background-color: #fee2e2; color: #991b1b; }
-              .badge-method { background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-              .footer {
-                text-align: center;
-                margin-top: 40px;
-                border-top: 1px dashed #d1d5db;
-                padding-top: 16px;
-                font-size: 11px;
-                color: #9ca3af;
-                font-weight: 500;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <div>
-                <div class="store-name">${activeBusiness?.name?.toUpperCase() || 'SHOPBOOK PARTNER'}</div>
-                <h1 class="report-title">Invoice Sales Report</h1>
-              </div>
-              <div class="meta-info">
-                <div>Generated: ${new Date().toLocaleString()}</div>
-                <div>Cashier: ${employeeName || 'System'}</div>
-                <div>Records: ${mappedOrders.length} Invoices</div>
-              </div>
-            </div>
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.width = '0px';
+      iframe.style.height = '0px';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
 
-            <div class="summary-grid">
-              <div class="summary-card">
-                <div class="summary-val">Rs. ${totalSales.toLocaleString()}</div>
-                <div class="summary-label">Net Sales Value</div>
-              </div>
-              <div class="summary-card">
-                <div class="summary-val">Rs. ${cashSales.toLocaleString()}</div>
-                <div class="summary-label">Cash Tendered</div>
-              </div>
-              <div class="summary-card">
-                <div class="summary-val">Rs. ${(cardSales + bankSales).toLocaleString()}</div>
-                <div class="summary-label">Card & Bank Sales</div>
-              </div>
-              <div class="summary-card">
-                <div class="summary-val">${activeCount} / ${mappedOrders.length}</div>
-                <div class="summary-label">Paid vs. Voided Invoices</div>
-              </div>
-            </div>
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
 
-            <table>
-              <thead>
-                <tr>
-                  <th>Invoice Number</th>
-                  <th>Date & Time</th>
-                  <th>Cashier</th>
-                  <th>Payment Method</th>
-                  <th>Status</th>
-                  <th style="text-align: right;">Total Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${mappedOrders
-                  .map(
-                    (o) => `
-                  <tr class="${o.status === 'voided' ? 'voided' : ''}">
-                    <td><strong>${o.invoiceNumber}</strong></td>
-                    <td>${o.dateStr}</td>
-                    <td>${o.cashierName}</td>
-                    <td>
-                      <span class="badge badge-method">${o.paymentMethod.toUpperCase()}</span>
-                      ${
-                        (o.paymentMethod === 'card' || o.paymentMethod === 'bank') && o.bankName
-                          ? `
-                        <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">
-                          ${o.bankName} ${o.cardLastFour ? `(**** ${o.cardLastFour})` : ''}
-                        </div>
-                      `
-                          : ''
-                      }
-                    </td>
-                    <td>
-                      <span class="badge ${o.status === 'voided' ? 'badge-voided' : 'badge-paid'}">
-                        ${o.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style="text-align: right; font-weight: bold;">
-                      Rs. ${o.totalAmount.toLocaleString()}
-                    </td>
-                  </tr>
-                `
-                  )
-                  .join('')}
-              </tbody>
-            </table>
-
-            <div class="footer">
-              Shopbook Mini POS &bull; Powered by Shopbook
-            </div>
-          </body>
-        </html>
-      `);
-      doc.close();
-
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        document.body.removeChild(iframe);
-      }, 150);
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          document.body.removeChild(iframe);
+        }, 150);
+      }
+    } catch (err: any) {
+      console.error('Failed to export PDF:', err);
+      alert('Failed to generate PDF report: ' + err.message);
     }
   };
 

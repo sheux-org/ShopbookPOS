@@ -202,13 +202,25 @@ export default function InsightsPage() {
     try {
       const data = await fetchReportData();
       const html = buildReportHtml(selectedReport, data);
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(html);
-        printWindow.document.close();
-        printWindow.setTimeout(() => {
-          printWindow.print();
-        }, 500);
+
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'absolute';
+      iframe.style.width = '0px';
+      iframe.style.height = '0px';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          document.body.removeChild(iframe);
+        }, 150);
       }
     } catch (err: any) {
       alert('Failed to generate PDF report: ' + err.message);
