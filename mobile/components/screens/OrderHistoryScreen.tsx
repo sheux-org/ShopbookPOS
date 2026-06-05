@@ -33,6 +33,7 @@ import { printReceipt } from '../../utils/printThermalReceipt';
 import { BottomSheet } from '../common/BottomSheet';
 import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { useSettingsStore } from '../../stores/useSettingsStore';
+import { useSyncRefreshStore } from '../../stores/useSyncRefreshStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 
 const CARD_GAP = 12;
@@ -57,6 +58,8 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const activeBiz = useActiveBusiness();
+  const syncRefreshVersion = useSyncRefreshStore((s) => s.version);
+
   const {
     data: orders = [],
     isLoading: ordersLoading,
@@ -346,6 +349,7 @@ Thank you for shopping with us!
         </View>
       ) : (
         <FlashList
+          key={`orders-${syncRefreshVersion}`}
           data={orders}
           keyExtractor={(item) => item.id}
           renderItem={renderOrderItem}

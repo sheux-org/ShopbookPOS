@@ -50,6 +50,33 @@ function tableHasChanges(slice: TableChanges | undefined): boolean {
   );
 }
 
+type PullRecord = { id: string; created_at?: number; updated_at?: number };
+
+/** Merge created+updated into `updated` for sendCreatedAsUpdated compatibility. */
+function normalizePulledChanges(changes: SyncChanges): SyncChanges {
+  const normalized: SyncChanges = { ...changes };
+
+  for (const table of PUSH_TABLE_ORDER) {
+    const slice = normalized[table];
+    if (!slice) continue;
+
+    const merged = new Map<string, PullRecord>();
+    for (const raw of [...(slice.created ?? []), ...(slice.updated ?? [])] as PullRecord[]) {
+      merged.set(raw.id, raw);
+    }
+
+    if (merged.size === 0 && !slice.deleted?.length) continue;
+
+    normalized[table] = {
+      ...slice,
+      created: [],
+      updated: Array.from(merged.values()),
+    };
+  }
+
+  return normalized;
+}
+
 async function pushChangesInOrder(changes: SyncChanges, clientBusinessId: string): Promise<void> {
   for (const table of PUSH_TABLE_ORDER) {
     const slice = changes[table];
@@ -129,7 +156,10 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
               client_business_id: activeBusinessId,
             });
             if (error) throw new Error(error.message);
-            return { changes: data.changes, timestamp: data.timestamp };
+            return {
+              changes: normalizePulledChanges(data.changes as SyncChanges),
+              timestamp: data.timestamp,
+            };
           } catch (err: any) {
             const isNetworkError =
               err?.message?.includes('fetch') ||

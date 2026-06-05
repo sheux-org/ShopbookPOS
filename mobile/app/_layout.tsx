@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PermissionProvider } from '../hooks/usePermissionHandler';
 import { useEffect, useState } from 'react';
 import { startUploadQueueMonitor, setQueryInvalidator } from '../services/uploadQueue';
+import { setOnSyncSuccess } from '../services/sync';
+import { useSyncRefreshStore } from '../stores/useSyncRefreshStore';
 import { setupNotificationListeners } from '../services/notificationService';
 import { useForceUpdate } from '../hooks/useForceUpdate';
 import { ForceUpdateScreen } from '../components/screens/ForceUpdateScreen';
@@ -27,11 +29,15 @@ const queryClient = new QueryClient({
   },
 });
 
-// Register React Query invalidator with the upload queue service
-// so it can refresh all screens after a deferred upload completes
-setQueryInvalidator(() => {
-  queryClient.invalidateQueries({ queryKey: ['products'] });
-});
+const refreshSyncedData = () => {
+  // Reset infinite-query pages so newest synced records appear from page 0
+  queryClient.resetQueries();
+  useSyncRefreshStore.getState().bump();
+};
+
+// Refresh all screens after background sync (broadcast, push, pull) or uploads
+setOnSyncSuccess(refreshSyncedData);
+setQueryInvalidator(refreshSyncedData);
 
 function MainAppContent() {
   const { isLoading, isUpdateRequired, config, currentVersion, refetch } = useForceUpdate();
