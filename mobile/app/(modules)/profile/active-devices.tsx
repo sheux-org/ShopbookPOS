@@ -15,33 +15,23 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../../constants/tokens';
-import { supabase } from '../../../services/sync';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { DEVICE_ID_KEY } from '../../../hooks/useActiveDeviceTracker';
-
-interface ActiveDevice {
-  id: string;
-  business_id: string;
-  employee_id: string | null;
-  employee_name: string;
-  role: string;
-  device_id: string;
-  device_model: string;
-  battery_level: number | null;
-  is_online: boolean;
-  latitude: number | null;
-  longitude: number | null;
-  location_name: string | null;
-  push_token: string | null;
-  last_active_at: string;
-}
+import {
+  fetchRecentlyOfflineDevices,
+  getPresenceDevices,
+  revokeDeviceSession,
+  subscribePresenceObserver,
+  type ActiveDeviceView,
+} from '../../../services/devicePresence';
 
 export default function ActiveDevicesRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const activeBusinessId = useAuthStore((state) => state.activeBusinessId);
 
-  const [devices, setDevices] = useState<ActiveDevice[]>([]);
+  const [onlineDevices, setOnlineDevices] = useState<ActiveDeviceView[]>([]);
+  const [offlineDevices, setOfflineDevices] = useState<ActiveDeviceView[]>([]);
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -51,59 +41,39 @@ export default function ActiveDevicesRoute() {
     setTimeout(() => setToastMessage(null), 2000);
   };
 
-  const fetchDevices = useCallback(async () => {
-    if (!activeBusinessId) return;
-    try {
-      const { data, error } = await supabase
-        .from('active_devices')
-        .select('*')
-        .eq('business_id', activeBusinessId)
-        .order('last_active_at', { ascending: false });
+  const refreshOnlineDevices = useCallback(() => {
+    setOnlineDevices(getPresenceDevices());
+    setLoading(false);
+  }, []);
 
-      if (error) {
-        console.error('Error fetching active devices:', error);
-      } else if (data) {
-        setDevices(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch active devices:', err);
-    } finally {
-      setLoading(false);
-    }
+  const loadOfflineDevices = useCallback(async () => {
+    if (!activeBusinessId) return;
+    const offline = await fetchRecentlyOfflineDevices(activeBusinessId);
+    const onlineIds = new Set(getPresenceDevices().map((d) => d.device_id));
+    setOfflineDevices(offline.filter((d) => !onlineIds.has(d.device_id)));
   }, [activeBusinessId]);
 
   useEffect(() => {
-    // Get current device ID from storage
+    if (!activeBusinessId) return;
+
     AsyncStorage.getItem(DEVICE_ID_KEY).then((id) => {
       setCurrentDeviceId(id);
     });
 
-    fetchDevices();
+    setLoading(true);
+    refreshOnlineDevices();
+    void loadOfflineDevices();
 
-    if (!activeBusinessId) return;
+    const unsubscribe = subscribePresenceObserver({
+      businessId: activeBusinessId,
+      onPresenceChange: () => {
+        refreshOnlineDevices();
+        void loadOfflineDevices();
+      },
+    });
 
-    // Set up Realtime listener for active devices of this business with a unique channel name
-    const channelId = `active-devices-${activeBusinessId}-${Math.random().toString(36).substring(2, 9)}`;
-    const channel = supabase
-      .channel(channelId)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'active_devices',
-          filter: `business_id=eq.${activeBusinessId}`,
-        },
-        () => {
-          fetchDevices();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [activeBusinessId, fetchDevices]);
+    return unsubscribe;
+  }, [activeBusinessId, refreshOnlineDevices, loadOfflineDevices]);
 
   const handleTerminateSession = (targetDeviceId: string, name: string) => {
     Alert.alert(
@@ -116,17 +86,19 @@ export default function ActiveDevicesRoute() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase
-                .from('active_devices')
-                .delete()
-                .eq('device_id', targetDeviceId)
-                .eq('business_id', activeBusinessId);
+              const revokedBy = currentDeviceId || 'admin';
+              const { error } = await revokeDeviceSession({
+                businessId: activeBusinessId!,
+                targetDeviceId,
+                revokedByDeviceId: revokedBy,
+              });
 
               if (error) {
                 triggerToast('Failed to terminate session.');
               } else {
                 triggerToast('Session terminated successfully! 🗑️');
-                fetchDevices();
+                refreshOnlineDevices();
+                void loadOfflineDevices();
               }
             } catch (err) {
               console.error(err);
@@ -162,9 +134,126 @@ export default function ActiveDevicesRoute() {
     return date.toLocaleDateString();
   };
 
+  const renderDeviceCard = (device: ActiveDeviceView, isOnline: boolean) => {
+    const isCurrent = device.device_id === currentDeviceId;
+    const badge = getRoleBadgeStyle(device.role);
+
+    return (
+      <View key={device.id} style={[styles.deviceCard, isCurrent && styles.deviceCardCurrent]}>
+        <View style={styles.deviceCardLeft}>
+          <View
+            style={[
+              styles.deviceIconBox,
+              isCurrent ? { backgroundColor: TOKENS.lightBlue } : { backgroundColor: '#F3F4F6' },
+            ]}
+          >
+            <Feather
+              name={
+                device.device_model.toLowerCase().includes('mac') ||
+                device.device_model.toLowerCase().includes('pc') ||
+                device.device_model.toLowerCase().includes('web')
+                  ? 'monitor'
+                  : 'smartphone'
+              }
+              size={22}
+              color={isCurrent ? TOKENS.primary : TOKENS.dark}
+            />
+          </View>
+          <View style={styles.deviceDetails}>
+            <View style={styles.deviceHeaderRow}>
+              <Text style={styles.employeeName}>{device.employee_name}</Text>
+              <View style={[styles.roleBadge, { backgroundColor: badge.backgroundColor }]}>
+                <Text style={[styles.roleBadgeText, { color: badge.color }]}>
+                  {device.role.toUpperCase()}
+                </Text>
+              </View>
+              {isCurrent && (
+                <View style={styles.currentBadge}>
+                  <Text style={styles.currentBadgeText}>This Device</Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.deviceModel}>{device.device_model}</Text>
+
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: isOnline ? TOKENS.success : TOKENS.muted },
+                  ]}
+                />
+                <Text style={styles.statText}>{isOnline ? 'Online' : 'Offline'}</Text>
+              </View>
+
+              {isOnline && device.battery_level !== null && device.battery_level >= 0 && (
+                <View style={styles.statItem}>
+                  <Feather name="battery" size={12} color={TOKENS.muted} />
+                  <Text style={styles.statText}>{device.battery_level}%</Text>
+                </View>
+              )}
+
+              <View style={styles.statItem}>
+                <Feather name="clock" size={12} color={TOKENS.muted} />
+                <Text style={styles.statText}>{formatLastActive(device.last_active_at)}</Text>
+              </View>
+            </View>
+
+            {device.location_name && (
+              <View style={styles.locationRow}>
+                <Feather name="map-pin" size={12} color={TOKENS.muted} />
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {device.location_name}
+                </Text>
+              </View>
+            )}
+
+            {device.push_token ? (
+              <View style={styles.tokenRow}>
+                <Feather name="bell" size={12} color={TOKENS.primary} />
+                <Text style={styles.tokenText} numberOfLines={1} ellipsizeMode="middle">
+                  {device.push_token}
+                </Text>
+                <TouchableOpacity
+                  style={styles.copyTokenBtn}
+                  activeOpacity={0.7}
+                  onPress={async () => {
+                    await Clipboard.setStringAsync(device.push_token || '');
+                    triggerToast('Push token copied! 📋');
+                  }}
+                >
+                  <Feather name="copy" size={11} color={TOKENS.primary} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.tokenRow}>
+                <Feather name="bell-off" size={12} color={TOKENS.muted} />
+                <Text style={[styles.tokenText, { color: TOKENS.muted }]} numberOfLines={1}>
+                  No push token registered
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {!isCurrent && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.terminateButton}
+            onPress={() => handleTerminateSession(device.device_id, device.employee_name)}
+          >
+            <Feather name="log-out" size={15} color={TOKENS.error} />
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const hasDevices = onlineDevices.length > 0 || offlineDevices.length > 0;
+
   return (
     <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top : 10 }]}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -181,14 +270,14 @@ export default function ActiveDevicesRoute() {
           activeOpacity={0.8}
           onPress={() => {
             setLoading(true);
-            fetchDevices();
+            refreshOnlineDevices();
+            void loadOfflineDevices();
           }}
         >
           <Feather name="refresh-cw" size={18} color={TOKENS.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* Toast Alert */}
       {toastMessage && (
         <View style={styles.toastContainer}>
           <Feather name="check-circle" size={15} color={TOKENS.card} />
@@ -207,9 +296,23 @@ export default function ActiveDevicesRoute() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.groupLabel}>Currently Logged In Sessions</Text>
+          <Text style={styles.groupLabel}>Online Now</Text>
+          {onlineDevices.length === 0 ? (
+            <View style={styles.emptyInline}>
+              <Text style={styles.emptyInlineText}>No devices online right now</Text>
+            </View>
+          ) : (
+            onlineDevices.map((device) => renderDeviceCard(device, true))
+          )}
 
-          {devices.length === 0 ? (
+          {offlineDevices.length > 0 && (
+            <>
+              <Text style={[styles.groupLabel, { marginTop: 16 }]}>Recently Offline (24h)</Text>
+              {offlineDevices.map((device) => renderDeviceCard(device, false))}
+            </>
+          )}
+
+          {!hasDevices && (
             <View style={styles.emptyContainer}>
               <Feather name="smartphone" size={48} color={TOKENS.muted} />
               <Text style={styles.emptyTitle}>No active sessions</Text>
@@ -217,141 +320,6 @@ export default function ActiveDevicesRoute() {
                 No device logs are currently active for this business.
               </Text>
             </View>
-          ) : (
-            devices.map((device) => {
-              const isCurrent = device.device_id === currentDeviceId;
-              const badge = getRoleBadgeStyle(device.role);
-
-              const isOnline = (() => {
-                if (!device.is_online) return false;
-                if (!device.last_active_at) return false;
-                const lastActive = new Date(device.last_active_at);
-                const diffMs = Date.now() - lastActive.getTime();
-                return diffMs < 5 * 60 * 1000; // 5 minutes threshold
-              })();
-
-              return (
-                <View
-                  key={device.id}
-                  style={[styles.deviceCard, isCurrent && styles.deviceCardCurrent]}
-                >
-                  <View style={styles.deviceCardLeft}>
-                    <View
-                      style={[
-                        styles.deviceIconBox,
-                        isCurrent
-                          ? { backgroundColor: TOKENS.lightBlue }
-                          : { backgroundColor: '#F3F4F6' },
-                      ]}
-                    >
-                      <Feather
-                        name={
-                          device.device_model.toLowerCase().includes('mac') ||
-                          device.device_model.toLowerCase().includes('pc')
-                            ? 'monitor'
-                            : 'smartphone'
-                        }
-                        size={22}
-                        color={isCurrent ? TOKENS.primary : TOKENS.dark}
-                      />
-                    </View>
-                    <View style={styles.deviceDetails}>
-                      <View style={styles.deviceHeaderRow}>
-                        <Text style={styles.employeeName}>{device.employee_name}</Text>
-                        <View
-                          style={[styles.roleBadge, { backgroundColor: badge.backgroundColor }]}
-                        >
-                          <Text style={[styles.roleBadgeText, { color: badge.color }]}>
-                            {device.role.toUpperCase()}
-                          </Text>
-                        </View>
-                        {isCurrent && (
-                          <View style={styles.currentBadge}>
-                            <Text style={styles.currentBadgeText}>This Device</Text>
-                          </View>
-                        )}
-                      </View>
-
-                      <Text style={styles.deviceModel}>{device.device_model}</Text>
-
-                      <View style={styles.statsRow}>
-                        <View style={styles.statItem}>
-                          <View
-                            style={[
-                              styles.statusDot,
-                              { backgroundColor: isOnline ? TOKENS.success : TOKENS.muted },
-                            ]}
-                          />
-                          <Text style={styles.statText}>{isOnline ? 'Online' : 'Offline'}</Text>
-                        </View>
-
-                        {isOnline && device.battery_level !== null && device.battery_level >= 0 && (
-                          <View style={styles.statItem}>
-                            <Feather name="battery" size={12} color={TOKENS.muted} />
-                            <Text style={styles.statText}>{device.battery_level}%</Text>
-                          </View>
-                        )}
-
-                        <View style={styles.statItem}>
-                          <Feather name="clock" size={12} color={TOKENS.muted} />
-                          <Text style={styles.statText}>
-                            {formatLastActive(device.last_active_at)}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {device.location_name && (
-                        <View style={styles.locationRow}>
-                          <Feather name="map-pin" size={12} color={TOKENS.muted} />
-                          <Text style={styles.locationText} numberOfLines={1}>
-                            {device.location_name}
-                          </Text>
-                        </View>
-                      )}
-
-                      {device.push_token ? (
-                        <View style={styles.tokenRow}>
-                          <Feather name="bell" size={12} color={TOKENS.primary} />
-                          <Text style={styles.tokenText} numberOfLines={1} ellipsizeMode="middle">
-                            {device.push_token}
-                          </Text>
-                          <TouchableOpacity
-                            style={styles.copyTokenBtn}
-                            activeOpacity={0.7}
-                            onPress={async () => {
-                              await Clipboard.setStringAsync(device.push_token || '');
-                              triggerToast('Push token copied! 📋');
-                            }}
-                          >
-                            <Feather name="copy" size={11} color={TOKENS.primary} />
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <View style={styles.tokenRow}>
-                          <Feather name="bell-off" size={12} color={TOKENS.muted} />
-                          <Text
-                            style={[styles.tokenText, { color: TOKENS.muted }]}
-                            numberOfLines={1}
-                          >
-                            No push token registered
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-
-                  {!isCurrent && (
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      style={styles.terminateButton}
-                      onPress={() => handleTerminateSession(device.device_id, device.employee_name)}
-                    >
-                      <Feather name="log-out" size={15} color={TOKENS.error} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })
           )}
         </ScrollView>
       )}
@@ -439,6 +407,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 8,
     marginBottom: 4,
+  },
+  emptyInline: {
+    backgroundColor: TOKENS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    padding: 16,
+    alignItems: 'center',
+  },
+  emptyInlineText: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    fontWeight: '500',
   },
   deviceCard: {
     flexDirection: 'row',

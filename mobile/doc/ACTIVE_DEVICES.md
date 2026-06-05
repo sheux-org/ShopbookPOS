@@ -1,136 +1,122 @@
 # Active Device Tracking & Session Management
 
-This document details the architecture, data collection, and synchronization mechanics for the **Active Device Tracking & Session Management** system in Shopbook Mini POS. The feature allows store owners and administrators to monitor logged-in devices in real-time, view device diagnostics (location, online status, battery, push tokens), and remotely terminate active sessions.
+This document details the architecture for **Active Device Tracking & Session Management** in Shopbook Mini POS. The system uses **Supabase Realtime Presence** for instant online device visibility, with minimal database writes only on session end or admin revocation.
 
 ---
 
-## 1. Supabase Database Schema
+## 1. Architecture Overview
 
-All active sessions are tracked in a Supabase table named `active_devices`.
+| Layer            | Mechanism                                                 | DB writes            |
+| ---------------- | --------------------------------------------------------- | -------------------- |
+| Online devices   | Supabase Presence channel `devices:{businessId}`          | None                 |
+| Offline snapshot | `active_devices` table (`is_online: false`)               | Once per session end |
+| Remote revoke    | Broadcast `session_revoke` + `device_session_revocations` | Once per revoke      |
+
+---
+
+## 2. Supabase Tables
+
+### `active_devices` (offline snapshots only)
+
+Used when a device goes offline, backgrounds, or logs out — not for periodic pings.
 
 ```sql
 create table public.active_devices (
-  id text not null primary key,           -- Format: {business_id}_{employee_id}_{device_id}
-  business_id text not null,              -- Foreign key referencing the business
-  employee_id text,                       -- Reference to employee, null if Owner / Admin
-  employee_name text not null,            -- Display name of the active employee
-  role text not null,                     -- Role string: 'admin' | 'manager' | 'cashier'
-  device_id text not null,                -- Persistent client UUID generated on install
-  device_model text not null,             -- Hardware model name (e.g. iPhone 13 / Pixel 6)
-  battery_level integer,                  -- Device battery percentage (0 - 100)
-  is_online boolean not null,             -- Current network availability state
-  latitude double precision,              -- Latitude of the device
-  longitude double precision,             -- Longitude of the device
-  location_name text,                     -- Geocoded address or coordinate string
-  push_token text,                        -- Expo push token for notifications
-  last_active_at timestamp with time zone -- Last ping timestamp
+  id text not null primary key,
+  business_id text not null,
+  employee_id text,
+  employee_name text not null,
+  role text not null,
+  device_id text not null,
+  device_model text not null,
+  battery_level integer,
+  is_online boolean not null,
+  latitude double precision,
+  longitude double precision,
+  location_name text,
+  push_token text,
+  last_active_at timestamp with time zone
+);
+```
+
+### `device_session_revocations` (persistent revoke ledger)
+
+```sql
+create table public.device_session_revocations (
+  business_id text not null,
+  device_id text not null,
+  revoked_at timestamptz not null default now(),
+  revoked_by_device_id text,
+  primary key (business_id, device_id)
 );
 ```
 
 ---
 
-## 2. Background Tracking Hook (`useActiveDeviceTracker`)
+## 3. Presence Service (`devicePresence.ts`)
 
-The custom hook [useActiveDeviceTracker.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/hooks/useActiveDeviceTracker.ts) initializes a continuous background ping cycle when a user is logged in.
+The service [devicePresence.ts](../services/devicePresence.ts) manages the Realtime channel:
 
-### A. Initialization & Cycle Frequency
+- **Channel**: `devices:{businessId}`
+- **Presence key**: persistent `device_id` from AsyncStorage (`@shopbook_pos_device_id`)
+- **Payload**: employee info, device model, battery, location, push token, platform
 
-- Runs immediately upon successful login.
-- Sets a background interval that repeats every **30 seconds** (`30000ms`).
-- Registers event listeners to trigger an **immediate ping** on local hardware changes:
-  - Battery level alterations (via `Battery.addBatteryLevelListener`).
-  - Network state changes (via `NetInfo.addEventListener`).
+Key functions:
 
-### B. Device Identity Persistence
-
-To ensure a device's identity remains stable across app restarts:
-
-- Checks local `AsyncStorage` for a persistent UUID stored under key `@shopbook_pos_device_id`.
-- If no UUID exists, it generates a new UUID v4 and saves it.
-
-### C. Diagnostics Data Collection
-
-During each ping cycle, the tracker queries native APIs to assemble the payload:
-
-1. **Network Status**: Checks connectivity using `@react-native-community/netinfo`.
-2. **Battery Level**: Fetches current capacity using `expo-battery`.
-3. **Geo-Location**:
-   - Requests location permissions from the OS.
-   - If granted, obtains latitude and longitude.
-   - Translates coordinates into a readable address (e.g. `"Colombo, Sri Lanka"`) using `expo-location`'s reverse geocoding API. If denied, sets `"Location Denied"`.
-4. **Push Token**: Fetches and caches the Expo push notification token via the device registration utility.
-
-### D. Upsert & Terminate-Check Cycle
-
-1. **Database Upsert**: Sends the payload to Supabase using a `.upsert()` call, matching the unique composite key `id`.
-2. **Remote Kill-Switch Verification**:
-   - Immediately queries the `active_devices` table for its own row matching its `device_id` and `business_id`.
-   - If the query returns **no record** (indicating an administrator deleted the session from another terminal), the device immediately triggers:
-     ```typescript
-     useAuthStore.getState().logout();
-     ```
-   - This logs the user out, clears local caches, and redirects them to the login screen.
+- `startDevicePresenceTracking()` — subscribe + track on login
+- `trackPresenceState()` — re-track on battery/network/location change (instant)
+- `teardownDevicePresence()` — untrack + optional offline snapshot write
+- `revokeDeviceSession()` — broadcast instant logout + insert revocation record
+- `subscribePresenceObserver()` — admin UI read-only presence listener
 
 ---
 
-## 3. UI & Session Termination Dashboard
+## 4. Background Tracking Hook (`useActiveDeviceTracker`)
 
-The session dashboard is rendered in the [ActiveDevicesRoute](<file:///Users/shenux/Desktop/Shopbook/shopbook-pos/app/(modules)/profile/active-devices.tsx>) screen.
+[useActiveDeviceTracker.ts](../hooks/useActiveDeviceTracker.ts) runs when a user is logged in.
 
-### A. Real-Time Data Sync
+### On login
 
-Rather than relying on manual refreshes, the screen sets up a **Supabase Realtime PostgreSQL Change Listener** filtered by the active business ID:
+1. Check `device_session_revocations` — if revoked, logout immediately
+2. Subscribe to presence channel and `track()` device state
 
-```typescript
-supabase
-  .channel(channelId)
-  .on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'active_devices',
-      filter: `business_id=eq.${activeBusinessId}`,
-    },
-    () => {
-      fetchDevices(); // Re-fetch list on any database upsert/delete
-    }
-  )
-  .subscribe();
-```
+### On change (instant, no 30s interval)
 
-### B. Session List Features
+- Battery level changes (`Battery.addBatteryLevelListener`)
+- Network state changes (`NetInfo.addEventListener`)
+- Re-tracks presence via `trackPresenceState()`
 
-- **"This Device" Identification**: Highlights the active terminal session card using a custom styling border (`deviceCardCurrent`) by checking the current device UUID.
-- **Copy Push Token**: Provides a clipboard copy button next to the Expo token for push notification debugging.
-- **Diagnostics Output**: Displays an online/offline indicator, current battery level, geolocated city/country, and last-active formatted timer.
+### On background / offline / logout
 
-### C. Remote Logout Trigger (Kill-Switch)
+- `untrack()` presence
+- Write one offline snapshot to `active_devices` (`is_online: false`)
 
-1. Administrators can press the **Log Out** (Trash/Sign Out) icon next to other active sessions.
-2. The action triggers a DELETE operation on Supabase:
-   ```typescript
-   await supabase
-     .from('active_devices')
-     .delete()
-     .eq('device_id', targetDeviceId)
-     .eq('business_id', activeBusinessId);
-   ```
-3. Within 30 seconds (or immediately on battery/network updates), the target device's tracker checks its session row, detects the deletion, and signs out.
+### Remote logout
+
+- Listens for broadcast `session_revoke` event
+- If `targetDeviceId` matches this device → instant `logout()`
 
 ---
 
-## 4. Local Sign-Out Cleanup
+## 5. Admin Dashboard (`active-devices.tsx`)
 
-To prevent stale session rows in the cloud database when users log out voluntarily:
+[active-devices.tsx](<../app/(modules)/profile/active-devices.tsx>) displays:
 
-1. When clicking **Sign Out** in [ProfileScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/ProfileScreen.tsx), the app calls `deleteCurrentDeviceSession()`.
-2. This utility function queries the device ID and business ID from stores and deletes the row from Supabase:
-   ```typescript
-   await supabase
-     .from('active_devices')
-     .delete()
-     .eq('device_id', deviceId)
-     .eq('business_id', activeBusinessId);
-   ```
-3. The local Zustand stores and database caches are then cleared.
+- **Online Now**: live list from `channel.presenceState()` via `subscribePresenceObserver()`
+- **Recently Offline (24h)**: one-time DB query for `is_online=false` rows
+
+### Remote logout
+
+1. Admin taps terminate on a device
+2. `revokeDeviceSession()` broadcasts `session_revoke` (instant if online)
+3. Inserts row into `device_session_revocations` (blocks reconnect)
+4. Deletes offline snapshot from `active_devices`
+
+---
+
+## 6. Local Sign-Out Cleanup
+
+[ProfileScreen.tsx](../components/screens/ProfileScreen.tsx) calls `deleteCurrentDeviceSession()` which:
+
+1. Untracks presence (no offline snapshot on voluntary logout)
+2. Deletes any `active_devices` row for this device

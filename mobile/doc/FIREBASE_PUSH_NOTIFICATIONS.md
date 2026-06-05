@@ -28,7 +28,7 @@ We have integrated the official **Expo SDK 54 compatible** push notification mod
 4. **Background Device Status Tracker** (`hooks/useActiveDeviceTracker.ts`):
    - Triggers the token registration on mount.
    - Caches the push token in local memory (via `useRef`) and saves it to AsyncStorage under `@shopbook_pos_push_token`.
-   - Appends the cached `push_token` to the heartbeat status payload sent to Supabase every 30 seconds.
+   - Includes the cached `push_token` in the Supabase Realtime Presence payload (instant updates, no periodic DB ping).
 
 5. **Root Mount Listeners** (`app/_layout.tsx`):
    - Sets up active notification subscription handlers when the app launches and cleans up listeners on unmount.
@@ -39,13 +39,13 @@ We have integrated the official **Expo SDK 54 compatible** push notification mod
 
 ---
 
-## 2. Why Link Push Tokens to `active_devices`?
+## 2. Why Link Push Tokens to Presence State?
 
-In multi-user POS environments, employees (cashiers, managers, owners) frequently switch devices or log in across multiple tablets and phones. Linking the push token to the `active_devices` table provides significant advantages:
+In multi-user POS environments, employees frequently switch devices or log in across multiple tablets and phones. Including the push token in the Realtime Presence payload provides:
 
-- **Targeted Delivery**: The backend always has a real-time list mapping active employees (`employee_name`, `role`) to their active devices (`device_model`) and their respective `push_token`. The backend can target specific users (e.g., sending an inventory alert to managers only, or notifying a specific cashier about a register update).
-- **Automatic Session Cleanup**: When a cashier logs out of a device, the active session is deleted from Supabase. This immediately removes their `push_token` from the active list, preventing the backend from sending notifications to offline or dead app instances.
-- **No Redundant Overhead**: Instead of maintaining a separate complex notification token registry, the POS piggybacks on the existing 30-second heartbeat check-in. If a token changes or is updated by the OS, it is automatically corrected in Supabase within 30 seconds.
+- **Targeted Delivery**: Online devices expose `employee_name`, `role`, `device_model`, and `push_token` live via presence — admins can copy tokens from the Active Devices screen.
+- **Automatic Cleanup**: When a device goes offline or logs out, presence `untrack()` removes it from the live list instantly.
+- **Low Overhead**: No separate token registry or 30-second database heartbeat — token changes are re-tracked in presence on the next battery/network update.
 
 ---
 

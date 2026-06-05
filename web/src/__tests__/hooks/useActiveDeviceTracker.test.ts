@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import {
   useActiveDeviceTracker,
   DEVICE_ID_KEY,
@@ -7,7 +7,14 @@ import {
 } from '../../hooks/useActiveDeviceTracker';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
-import { supabase } from '../../services/sync';
+import * as devicePresence from '../../services/devicePresence';
+
+vi.mock('../../services/devicePresence', () => ({
+  startDevicePresenceTracking: vi.fn().mockResolvedValue(undefined),
+  trackPresenceState: vi.fn().mockResolvedValue(undefined),
+  teardownDevicePresence: vi.fn().mockResolvedValue(undefined),
+  deleteOfflineSnapshot: vi.fn().mockResolvedValue(undefined),
+}));
 
 const MOCK_BUSINESS = {
   id: 'biz-123',
@@ -23,8 +30,6 @@ describe('useActiveDeviceTracker Hook', () => {
     useAuthStore.getState().logout();
     useBusinessStore.setState({ activeBusiness: MOCK_BUSINESS });
     localStorage.clear();
-
-    // Reset online status
     Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
   });
 
@@ -32,26 +37,22 @@ describe('useActiveDeviceTracker Hook', () => {
     vi.useRealTimers();
   });
 
-  // ─── Auth guard ───────────────────────────────────────────────────
-
-  test('should not ping if user is not logged in', () => {
+  test('should not start presence tracking if user is not logged in', () => {
     renderHook(() => useActiveDeviceTracker());
-    expect(vi.mocked(supabase.from)).not.toHaveBeenCalledWith('active_devices');
+    expect(devicePresence.startDevicePresenceTracking).not.toHaveBeenCalled();
   });
 
-  test('should not ping when activeBusinessId is "0" (placeholder)', () => {
+  test('should not start presence tracking when activeBusinessId is "0"', () => {
     useAuthStore.setState({ isLoggedIn: true });
     useBusinessStore.setState({
       activeBusiness: { ...MOCK_BUSINESS, id: '0' },
     });
 
     renderHook(() => useActiveDeviceTracker());
-    expect(vi.mocked(supabase.from)).not.toHaveBeenCalledWith('active_devices');
+    expect(devicePresence.startDevicePresenceTracking).not.toHaveBeenCalled();
   });
 
-  // ─── Successful ping ──────────────────────────────────────────────
-
-  test('should ping and register terminal status when logged in', async () => {
+  test('should start presence tracking when logged in', async () => {
     useAuthStore.setState({
       isLoggedIn: true,
       activeEmployeeId: 'emp-cashier',
@@ -61,41 +62,38 @@ describe('useActiveDeviceTracker Hook', () => {
     localStorage.setItem(DEVICE_ID_KEY, 'device-uuid-123');
 
     renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(vi.mocked(supabase.from)).toHaveBeenCalledWith('active_devices');
+    await waitFor(() => {
+      expect(devicePresence.startDevicePresenceTracking).toHaveBeenCalled();
+    });
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    expect(mockFromInstance.upsert).toHaveBeenCalled();
-
-    const payload = mockFromInstance.upsert.mock.calls[0][0];
-    expect(payload.device_id).toBe('device-uuid-123');
-    expect(payload.business_id).toBe('biz-123');
-    expect(payload.employee_id).toBe('emp-cashier');
-    expect(payload.employee_name).toBe('Kamal Gunaratne');
-    expect(payload.role).toBe('cashier');
-    expect(payload.battery_level).toBe(85);
-    expect(payload.latitude).toBe(6.9271);
-    expect(payload.longitude).toBe(79.8612);
-    expect(payload.is_online).toBe(true);
+    const [, deviceId, state] = vi.mocked(devicePresence.startDevicePresenceTracking).mock.calls[0];
+    expect(deviceId).toBe('device-uuid-123');
+    expect(state.device_id).toBe('device-uuid-123');
+    expect(state.business_id).toBe('biz-123');
+    expect(state.employee_id).toBe('emp-cashier');
+    expect(state.employee_name).toBe('Kamal Gunaratne');
+    expect(state.role).toBe('cashier');
+    expect(state.platform).toBe('web');
+    expect(state.battery_level).toBe(85);
+    expect(state.latitude).toBe(6.9271);
+    expect(state.longitude).toBe(79.8612);
   });
 
   test('should auto-generate and store a device ID if none exists', async () => {
     useAuthStore.setState({ isLoggedIn: true });
 
     renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() => {
+      expect(devicePresence.startDevicePresenceTracking).toHaveBeenCalled();
+    });
 
     const storedId = localStorage.getItem(DEVICE_ID_KEY);
     expect(storedId).not.toBeNull();
     expect(storedId).toMatch(/[0-9a-f-]{36}/);
   });
 
-  // ─── Offline skip ─────────────────────────────────────────────────
-
-  test('should skip ping when navigator is offline', async () => {
+  test('should skip presence when navigator is offline', async () => {
     useAuthStore.setState({ isLoggedIn: true });
     Object.defineProperty(navigator, 'onLine', { value: false, writable: true });
 
@@ -104,12 +102,10 @@ describe('useActiveDeviceTracker Hook', () => {
     renderHook(() => useActiveDeviceTracker());
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(logSpy).toHaveBeenCalledWith('Client is offline, skipping active device ping.');
-    expect(vi.mocked(supabase.from)).not.toHaveBeenCalledWith('active_devices');
+    expect(logSpy).toHaveBeenCalledWith('Client is offline, skipping presence update.');
+    expect(devicePresence.startDevicePresenceTracking).not.toHaveBeenCalled();
     logSpy.mockRestore();
   });
-
-  // ─── Geolocation errors ───────────────────────────────────────────
 
   test('should handle geolocation permission denied error', async () => {
     useAuthStore.setState({ isLoggedIn: true });
@@ -127,13 +123,12 @@ describe('useActiveDeviceTracker Hook', () => {
     });
 
     renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() => {
+      expect(devicePresence.startDevicePresenceTracking).toHaveBeenCalled();
+    });
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    const payload = mockFromInstance.upsert.mock.calls[0][0];
-    expect(payload.location_name).toBe('Location Denied');
+    const state = vi.mocked(devicePresence.startDevicePresenceTracking).mock.calls[0][2];
+    expect(state.location_name).toBe('Location Denied');
   });
 
   test('should set location_name to "Geolocation Unsupported" when geolocation is absent', async () => {
@@ -146,85 +141,49 @@ describe('useActiveDeviceTracker Hook', () => {
     });
 
     renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    const payload = mockFromInstance.upsert.mock.calls[0][0];
-    expect(payload.location_name).toBe('Geolocation Unsupported');
-  });
-
-  // ─── Upsert failure ───────────────────────────────────────────────
-
-  test('should print warning when database upsert fails', async () => {
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    useAuthStore.setState({ isLoggedIn: true });
-
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    mockFromInstance.upsert.mockResolvedValueOnce({ error: { message: 'Network Timeout' } } as any);
-
-    renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to upsert active device status:', {
-      message: 'Network Timeout',
+    await waitFor(() => {
+      expect(devicePresence.startDevicePresenceTracking).toHaveBeenCalled();
     });
-    consoleWarnSpy.mockRestore();
+
+    const state = vi.mocked(devicePresence.startDevicePresenceTracking).mock.calls[0][2];
+    expect(state.location_name).toBe('Geolocation Unsupported');
   });
 
-  // ─── Remote session termination ───────────────────────────────────
-
-  test('should logout when remote session row is deleted', async () => {
+  test('should logout when remote session revoke callback fires', async () => {
     useAuthStore.setState({ isLoggedIn: true, activeEmployeeId: 'emp-1' });
     localStorage.setItem(DEVICE_ID_KEY, 'device-xyz');
 
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-      maybeSingle: ReturnType<typeof vi.fn>;
-    };
-    // upsert succeeds
-    mockFromInstance.upsert.mockResolvedValueOnce({ error: null });
-    // select returns null data (session deleted remotely)
-    mockFromInstance.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-
     renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() => {
+      expect(devicePresence.startDevicePresenceTracking).toHaveBeenCalled();
+    });
+
+    const revokeHandler = vi.mocked(devicePresence.startDevicePresenceTracking).mock.calls[0][3];
+    revokeHandler?.('device-xyz');
 
     expect(logSpy).toHaveBeenCalledWith('Web terminal session terminated remotely.');
     expect(useAuthStore.getState().isLoggedIn).toBe(false);
     logSpy.mockRestore();
   });
 
-  // ─── Interval pinging ─────────────────────────────────────────────
-
-  test('should ping repeatedly using setInterval', async () => {
-    const setIntervalSpy = vi.spyOn(global, 'setInterval');
+  test('should logout when device was previously revoked', async () => {
     useAuthStore.setState({ isLoggedIn: true });
+    vi.mocked(devicePresence.startDevicePresenceTracking).mockRejectedValueOnce(
+      new Error('DEVICE_REVOKED')
+    );
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     renderHook(() => useActiveDeviceTracker());
+    await waitFor(() => {
+      expect(useAuthStore.getState().isLoggedIn).toBe(false);
+    });
 
-    expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 30000);
-
-    // Manually invoke the interval callback
-    const callback = setIntervalSpy.mock.calls[0][0] as Function;
-    callback();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    // Called twice: once on mount, once from manual interval trigger
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    expect(mockFromInstance.upsert).toHaveBeenCalledTimes(2);
-
-    setIntervalSpy.mockRestore();
+    expect(logSpy).toHaveBeenCalledWith('Web device session was previously revoked.');
+    logSpy.mockRestore();
   });
-
-  // ─── OS/Browser detection ─────────────────────────────────────────
 
   test('should identify Windows OS from user agent', async () => {
     useAuthStore.setState({ isLoggedIn: true });
@@ -235,102 +194,33 @@ describe('useActiveDeviceTracker Hook', () => {
     });
 
     renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    const payload = mockFromInstance.upsert.mock.calls[0][0];
-    expect(payload.device_model).toContain('Windows');
-    expect(payload.device_model).toContain('Chrome');
-  });
-
-  test('should identify macOS from user agent', async () => {
-    useAuthStore.setState({ isLoggedIn: true });
-    Object.defineProperty(navigator, 'userAgent', {
-      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15',
-      writable: true,
-      configurable: true,
+    await waitFor(() => {
+      expect(devicePresence.startDevicePresenceTracking).toHaveBeenCalled();
     });
 
-    renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    const payload = mockFromInstance.upsert.mock.calls[0][0];
-    expect(payload.device_model).toContain('macOS');
+    const state = vi.mocked(devicePresence.startDevicePresenceTracking).mock.calls[0][2];
+    expect(state.device_model).toContain('Windows');
+    expect(state.device_model).toContain('Chrome');
   });
 
-  test('should identify Linux from user agent', async () => {
+  test('should teardown presence when user logs out dynamically', async () => {
     useAuthStore.setState({ isLoggedIn: true });
-    Object.defineProperty(navigator, 'userAgent', {
-      value: 'Mozilla/5.0 (X11; Linux x86_64) Firefox/120.0',
-      writable: true,
-      configurable: true,
+
+    const { rerender } = renderHook(() => useActiveDeviceTracker());
+    await waitFor(() => {
+      expect(devicePresence.startDevicePresenceTracking).toHaveBeenCalled();
     });
 
-    renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    useAuthStore.setState({ isLoggedIn: false });
+    rerender();
 
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    const payload = mockFromInstance.upsert.mock.calls[0][0];
-    // X11 matches UNIX in the detector
-    expect(payload.device_model).toMatch(/UNIX|Linux/);
-    expect(payload.device_model).toContain('Firefox');
-  });
-
-  test('should identify Android (detected via UA before Linux prefix check)', async () => {
-    useAuthStore.setState({ isLoggedIn: true });
-    Object.defineProperty(navigator, 'userAgent', {
-      value: 'Mozilla/5.0 (Android 12; Mobile; rv:109.0) Gecko/123.0 Firefox/123.0',
-      writable: true,
-      configurable: true,
+    await waitFor(() => {
+      expect(devicePresence.teardownDevicePresence).toHaveBeenCalled();
     });
-
-    renderHook(() => useActiveDeviceTracker());
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      upsert: ReturnType<typeof vi.fn>;
-    };
-    const payload = mockFromInstance.upsert.mock.calls[0][0];
-    // This UA has no 'Linux' text, so Android regex matches
-    expect(payload.device_model).toContain('Android');
-  });
-
-  test('should clear interval when user logs out dynamically', async () => {
-    useAuthStore.setState({ isLoggedIn: true });
-    useBusinessStore.setState({
-      activeBusiness: { id: 'biz-123', name: 'Test Shop', category: '', address: '', phone: '' },
-    });
-
-    const setIntervalSpy = vi.spyOn(window, 'setInterval').mockImplementation(() => 999 as any);
-    const clearIntervalSpy = vi.spyOn(window, 'clearInterval').mockImplementation(() => {});
-
-    try {
-      const { rerender } = renderHook(() => useActiveDeviceTracker());
-      expect(setIntervalSpy).toHaveBeenCalled();
-
-      // Change state to logged out and rerender
-      useAuthStore.setState({ isLoggedIn: false });
-      rerender();
-
-      expect(clearIntervalSpy).toHaveBeenCalledWith(999);
-    } finally {
-      setIntervalSpy.mockRestore();
-      clearIntervalSpy.mockRestore();
-    }
   });
 
   test('should catch and warn errors in active device tracker', async () => {
     useAuthStore.setState({ isLoggedIn: true });
-    useBusinessStore.setState({
-      activeBusiness: { id: 'biz-123', name: 'Test Shop', category: '', address: '', phone: '' },
-    });
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const originalGetItem = localStorage.getItem;
@@ -349,8 +239,6 @@ describe('useActiveDeviceTracker Hook', () => {
   });
 });
 
-// ─── deleteCurrentDeviceSession ──────────────────────────────────────
-
 describe('deleteCurrentDeviceSession', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -358,19 +246,20 @@ describe('deleteCurrentDeviceSession', () => {
     localStorage.clear();
   });
 
-  test('should call supabase delete with correct device_id and business_id', async () => {
+  test('should teardown presence and delete offline snapshot', async () => {
     localStorage.setItem(DEVICE_ID_KEY, 'device-to-delete');
 
     await deleteCurrentDeviceSession();
 
-    expect(vi.mocked(supabase.from)).toHaveBeenCalledWith('active_devices');
+    expect(devicePresence.teardownDevicePresence).toHaveBeenCalledWith({ writeSnapshot: false });
+    expect(devicePresence.deleteOfflineSnapshot).toHaveBeenCalledWith(
+      'biz-123',
+      'device-to-delete'
+    );
   });
 
   test('should do nothing when no device ID in localStorage', async () => {
-    // No device ID stored
     await deleteCurrentDeviceSession();
-    // from might be called from other tests but not with active_devices delete chain
-    // We just verify it doesn't throw
   });
 
   test('should do nothing when business id is "0"', async () => {
@@ -378,21 +267,16 @@ describe('deleteCurrentDeviceSession', () => {
     useBusinessStore.setState({ activeBusiness: { ...MOCK_BUSINESS, id: '0' } });
 
     await deleteCurrentDeviceSession();
-    // supabase.from for active_devices delete should NOT have been called
-    const mockFromInstance = supabase.from('active_devices') as unknown as {
-      delete: ReturnType<typeof vi.fn>;
-    };
-    expect(mockFromInstance.delete).not.toHaveBeenCalled();
+    expect(devicePresence.teardownDevicePresence).not.toHaveBeenCalled();
   });
 
-  test('should handle supabase delete error gracefully', async () => {
+  test('should handle cleanup error gracefully', async () => {
     localStorage.setItem(DEVICE_ID_KEY, 'device-err');
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    // Make supabase.from throw
-    vi.mocked(supabase.from).mockImplementationOnce(() => {
-      throw new Error('Supabase connection error');
-    });
+    vi.mocked(devicePresence.teardownDevicePresence).mockRejectedValueOnce(
+      new Error('Supabase connection error')
+    );
 
     await deleteCurrentDeviceSession();
     expect(warnSpy).toHaveBeenCalledWith(

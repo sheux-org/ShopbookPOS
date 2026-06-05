@@ -38,23 +38,29 @@ Designed for high-speed checkout using physical keyboards and hardware barcode s
 
 ## 2. Active Devices & Remote Logout
 
-Terminals log their status and configuration metadata to allow central management:
+Terminals publish live status via **Supabase Realtime Presence** — no periodic database pings.
 
+- **Presence Service**: [devicePresence.ts](../src/services/devicePresence.ts)
 - **Hook**: [useActiveDeviceTracker.ts](../src/hooks/useActiveDeviceTracker.ts)
 - **UI Dialog**: [ActiveDevicesModal.tsx](../src/components/profile/ActiveDevicesModal.tsx)
 
-### Pinging Mechanism
+### Presence Tracking
 
-Every **30 seconds**, the tracking hook sends device telemetry back to Supabase:
+When logged in, the hook subscribes to channel `devices:{businessId}` and calls `channel.track()` with:
 
-- **Device ID**: Generated UUID stored in the browser's `localStorage` (`@shopbook_pos_web_device_id`).
-- **Device Model**: Detects browser vendor and host operating system.
-- **Battery**: Queries the Chrome Battery Status API to capture battery percentages.
-- **Location**: Fetches latitude and longitude via standard HTML Geolocation queries.
+- **Device ID**: UUID in `localStorage` (`@shopbook_pos_web_device_id`)
+- **Device Model**: Browser and OS detection from user agent
+- **Battery**: Chrome Battery Status API (when available)
+- **Location**: HTML Geolocation API
 
-### Remote Session Revocation
+Updates are pushed instantly on visibility/network changes — not on a 30-second interval.
 
-Administrators can view all active terminals in the devices modal. Removing a device from this modal deletes its row from the `active_devices` database table. On the revoked terminal's next ping, it detects that its session row is gone and automatically logs the cashier out locally.
+### Offline & Revocation (minimal DB)
+
+- **Session end**: one `active_devices` write with `is_online: false`
+- **Admin revoke**: broadcast `session_revoke` for instant logout + `device_session_revocations` insert to block reconnect
+
+The admin modal shows **Online Now** from presence state and **Recently Offline (24h)** from the snapshot table.
 
 ---
 

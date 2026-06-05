@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useBusinessStore } from '../stores/businessStore';
-import { supabase } from '../services/sync';
+import {
+  deleteOfflineSnapshot,
+  startDevicePresenceTracking,
+  teardownDevicePresence,
+  trackPresenceState,
+  type DevicePresenceState,
+} from '../services/devicePresence';
 
 export const DEVICE_ID_KEY = '@shopbook_pos_web_device_id';
 
@@ -34,7 +40,7 @@ function getBrowserAndOS() {
 }
 
 /**
- * Deletes the active device session on Supabase during manual logout.
+ * Cleans up presence tracking and offline snapshot on manual logout.
  */
 export async function deleteCurrentDeviceSession() {
   try {
@@ -42,12 +48,9 @@ export async function deleteCurrentDeviceSession() {
     const deviceId = localStorage.getItem(DEVICE_ID_KEY);
     const activeBusinessId = useBusinessStore.getState().activeBusiness?.id;
     if (deviceId && activeBusinessId && activeBusinessId !== '0') {
-      await supabase
-        .from('active_devices')
-        .delete()
-        .eq('device_id', deviceId)
-        .eq('business_id', activeBusinessId);
-      console.log('Deleted active web device session on Supabase.');
+      await teardownDevicePresence({ writeSnapshot: false });
+      await deleteOfflineSnapshot(activeBusinessId, deviceId);
+      console.log('Cleaned up web device presence session.');
     }
   } catch (e) {
     console.warn('Failed to delete active web session on logout:', e);
@@ -63,131 +66,154 @@ export function useActiveDeviceTracker() {
   const userRole = useAuthStore((s) => s.userRole);
   const logout = useAuthStore((s) => s.logout);
 
-  const trackerIntervalRef = useRef<any>(null);
+  const deviceIdRef = useRef<string | null>(null);
+  const isActiveRef = useRef(false);
 
   useEffect(() => {
     if (!isLoggedIn || !activeBusinessId || activeBusinessId === '0') {
-      if (trackerIntervalRef.current) {
-        clearInterval(trackerIntervalRef.current);
-        trackerIntervalRef.current = null;
+      if (isActiveRef.current) {
+        void teardownDevicePresence({ writeSnapshot: true });
+        isActiveRef.current = false;
       }
       return;
     }
 
-    let isSubscribed = true;
+    let cancelled = false;
+    isActiveRef.current = true;
 
-    const runTracker = async () => {
+    const handleSessionRevoke = (targetDeviceId: string) => {
+      if (targetDeviceId === deviceIdRef.current) {
+        console.log('Web terminal session terminated remotely.');
+        void teardownDevicePresence({ writeSnapshot: false });
+        logout();
+      }
+    };
+
+    const collectPresenceState = async (): Promise<DevicePresenceState | null> => {
+      if (typeof window === 'undefined') return null;
+      if (!navigator.onLine) {
+        console.log('Client is offline, skipping presence update.');
+        return null;
+      }
+
+      let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+      if (!deviceId) {
+        deviceId = generateUUID();
+        localStorage.setItem(DEVICE_ID_KEY, deviceId);
+      }
+      deviceIdRef.current = deviceId;
+
+      let batteryLevel: number | null = null;
       try {
-        if (typeof window === 'undefined') return;
-        if (!navigator.onLine) {
-          console.log('Client is offline, skipping active device ping.');
-          return;
-        }
-
-        // 1. Get or create device ID
-        let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-        if (!deviceId) {
-          deviceId = generateUUID();
-          localStorage.setItem(DEVICE_ID_KEY, deviceId);
-        }
-
-        // 2. Fetch battery info (Chrome/Edge/Opera Web API)
-        let batteryLevel: number | null = null;
-        try {
-          if ('getBattery' in navigator) {
-            const battery: any = await (navigator as any).getBattery();
-            batteryLevel = Math.round(battery.level * 100);
-          }
-        } catch (e) {
-          // battery API not supported or failed
-        }
-
-        // 3. Fetch location info
-        let latitude: number | null = null;
-        let longitude: number | null = null;
-        let locationName = 'Location Unavailable';
-
-        try {
-          if (navigator.geolocation) {
-            const position: any = await new Promise((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, {
-                timeout: 8000,
-                enableHighAccuracy: false,
-              });
-            });
-            latitude = position.coords.latitude;
-            longitude = position.coords.longitude;
-            if (typeof latitude === 'number' && typeof longitude === 'number') {
-              locationName = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        if ('getBattery' in navigator) {
+          const battery: { level: number } = await (
+            navigator as Navigator & {
+              getBattery: () => Promise<{ level: number }>;
             }
-          } else {
-            locationName = 'Geolocation Unsupported';
-          }
-        } catch (e: any) {
-          if (e && e.code === 1) {
-            // PERMISSION_DENIED
-            locationName = 'Location Denied';
-          }
+          ).getBattery();
+          batteryLevel = Math.round(battery.level * 100);
         }
+      } catch {
+        // battery API not supported
+      }
 
-        const deviceModel = getBrowserAndOS();
-        const recordId = `${activeBusinessId}_${activeEmployeeId || 'admin'}_${deviceId}`;
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      let locationName = 'Location Unavailable';
 
-        const payload = {
-          id: recordId,
-          business_id: activeBusinessId,
-          employee_id: activeEmployeeId || null,
-          employee_name: employeeName || 'Owner / Admin',
-          role: userRole,
-          device_id: deviceId,
-          device_model: deviceModel,
-          battery_level: batteryLevel,
-          is_online: true,
-          latitude: latitude,
-          longitude: longitude,
-          location_name: locationName,
-          push_token: null, // No Expo push notification token for web POS clients
-          last_active_at: new Date().toISOString(),
-        };
-
-        // 4. Upsert status to Supabase
-        const { error: upsertError } = await supabase.from('active_devices').upsert(payload);
-
-        if (upsertError) {
-          console.warn('Failed to upsert active device status:', upsertError);
+      try {
+        if (navigator.geolocation) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 8000,
+              enableHighAccuracy: false,
+            });
+          });
+          latitude = position.coords.latitude;
+          longitude = position.coords.longitude;
+          locationName = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        } else {
+          locationName = 'Geolocation Unsupported';
         }
+      } catch (e: unknown) {
+        const geoError = e as { code?: number };
+        if (geoError?.code === 1) {
+          locationName = 'Location Denied';
+        }
+      }
 
-        // 5. Remote session termination check
-        const { data: dbSession, error: selectError } = await supabase
-          .from('active_devices')
-          .select('id')
-          .eq('device_id', deviceId)
-          .eq('business_id', activeBusinessId)
-          .maybeSingle();
+      return {
+        device_id: deviceId,
+        business_id: activeBusinessId,
+        employee_id: activeEmployeeId || null,
+        employee_name: employeeName || 'Owner / Admin',
+        role: userRole,
+        device_model: getBrowserAndOS(),
+        platform: 'web',
+        battery_level: batteryLevel,
+        location_name: locationName,
+        latitude,
+        longitude,
+        push_token: null,
+        online_at: new Date().toISOString(),
+      };
+    };
 
-        if (!selectError && !dbSession) {
-          console.log('Web terminal session terminated remotely.');
-          logout();
+    const syncPresence = async (isInitial = false) => {
+      try {
+        const state = await collectPresenceState();
+        if (!state || cancelled) return;
+
+        if (isInitial) {
+          await startDevicePresenceTracking(
+            activeBusinessId,
+            state.device_id,
+            state,
+            handleSessionRevoke
+          );
+        } else {
+          await trackPresenceState(state);
         }
       } catch (err) {
+        if (err instanceof Error && err.message === 'DEVICE_REVOKED') {
+          console.log('Web device session was previously revoked.');
+          logout();
+          return;
+        }
         console.warn('Web active device tracker error:', err);
       }
     };
 
-    // Run immediately
-    runTracker();
+    void syncPresence(true);
 
-    // Set up 30s interval
-    trackerIntervalRef.current = setInterval(() => {
-      if (isSubscribed) runTracker();
-    }, 30000);
+    const handleOnline = () => {
+      if (!cancelled) void syncPresence(true);
+    };
+
+    const handleOffline = () => {
+      if (!cancelled) void teardownDevicePresence({ writeSnapshot: true });
+    };
+
+    const handleVisibilityChange = () => {
+      if (cancelled) return;
+      if (document.visibilityState === 'hidden') {
+        void teardownDevicePresence({ writeSnapshot: true });
+      } else if (document.visibilityState === 'visible') {
+        void syncPresence(true);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      isSubscribed = false;
-      if (trackerIntervalRef.current) {
-        clearInterval(trackerIntervalRef.current);
-        trackerIntervalRef.current = null;
-      }
+      cancelled = true;
+      isActiveRef.current = false;
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      void teardownDevicePresence({ writeSnapshot: true });
     };
   }, [isLoggedIn, activeBusinessId, activeEmployeeId, employeeName, userRole, logout]);
 }
