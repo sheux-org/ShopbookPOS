@@ -1,7 +1,6 @@
-import { Q } from '@nozbe/watermelondb';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import database from '../components/data/db';
+import { fetchCategoryProductCounts } from '../utils/productCounts';
 import { getBusinessTypeConfig, getCategoryLabel } from '../utils/businessTypeConfig';
 import { useActiveBusiness } from './useActiveBusiness';
 
@@ -49,22 +48,19 @@ export function useBusinessCategories(allLabel = 'All') {
   const activeBiz = useActiveBusiness();
   const config = getBusinessTypeConfig(activeBiz?.category);
 
-  const { data: allProducts = [] } = useQuery({
-    queryKey: ['all-products-for-count', activeBiz?.id],
+  const { data: counts } = useQuery({
+    queryKey: ['category-product-counts', activeBiz?.id, config.categories],
     queryFn: async () => {
-      if (!activeBiz?.id) return [];
-      return database.get('products').query(Q.where('business_id', activeBiz.id)).fetch();
+      if (!activeBiz?.id) return { total: 0, byCategory: {} as Record<string, number> };
+      return fetchCategoryProductCounts(activeBiz.id, config.categories);
     },
+    enabled: !!activeBiz?.id,
+    staleTime: 30_000,
   });
 
   return useMemo(() => {
-    const map: Record<string, number> = {};
-    let total = 0;
-    allProducts.forEach((p: any) => {
-      const cat = (p.category || '').toLowerCase().trim();
-      map[cat] = (map[cat] || 0) + 1;
-      total++;
-    });
+    const total = counts?.total ?? 0;
+    const byCategory = counts?.byCategory ?? {};
 
     const list: BusinessCategoryItem[] = [
       { id: 'all', label: allLabel, icon: 'archive-outline', count: total },
@@ -74,9 +70,9 @@ export function useBusinessCategories(allLabel = 'All') {
         id: cat,
         label: getCategoryLabel(cat, activeBiz?.category),
         icon: getCategoryIcon(cat),
-        count: map[cat.toLowerCase().trim()] || 0,
+        count: byCategory[cat.toLowerCase().trim()] || 0,
       });
     });
     return list;
-  }, [allProducts, config, activeBiz?.category, allLabel]);
+  }, [counts, config, activeBiz?.category, allLabel]);
 }

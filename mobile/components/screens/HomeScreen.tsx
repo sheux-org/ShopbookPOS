@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -15,11 +15,10 @@ import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
 import { useBusinessCategories } from '../../hooks/useBusinessCategories';
-import { useCartAdjustedProducts } from '../../hooks/useCartAdjustedProducts';
+import { HomeProductCard } from '../product/HomeProductCard';
 import { useProducts, useToggleFavoriteProduct } from '../../hooks/useProducts';
 import { useTabBarVisible } from '../../hooks/useTabBarVisible';
 import { BottomSheet } from '../common/BottomSheet';
-import { ProductImage } from '../common/ProductImage';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { SearchInput } from '../common/SearchInput';
 import { BarcodeScannerModal } from '../common/BarcodeScannerModal';
@@ -30,18 +29,6 @@ import { useBusinessStore } from '../../stores/useBusinessStore';
 import { hapticFeedback } from '../../utils/haptics';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
-
-interface HomeProduct {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  icon: string;
-  stockText: string;
-  stockType: 'normal' | 'low' | 'out';
-  stockCount?: number;
-  dbStockCount?: number;
-}
 
 export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -63,7 +50,6 @@ export const HomeScreen: React.FC = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useProducts(selectedCategory, searchQuery);
-  const filteredProducts = useCartAdjustedProducts(productsList);
   const toggleFavoriteMutation = useToggleFavoriteProduct();
 
   const activeBusiness = useActiveBusiness();
@@ -126,27 +112,18 @@ export const HomeScreen: React.FC = () => {
     lastScrollY.current = currentY;
   };
 
-  const triggerToast = (msg: string) => {
+  const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 1500);
-  };
+  }, []);
 
-  const handleAddProduct = (prod: HomeProduct) => {
-    if (prod.stockType === 'out') {
-      hapticFeedback.notificationWarning();
-      triggerToast('Product is out of stock!');
-      return;
-    }
-    hapticFeedback.impactLight();
-    cartState.addCartItem(
-      prod.name,
-      prod.price,
-      prod.icon,
-      `SKU 23400${prod.id}`,
-      prod.dbStockCount ?? prod.stockCount
-    );
-    triggerToast(`Added ${prod.name} to active invoice`);
-  };
+  const handleFavorite = useCallback(
+    (id: string) => {
+      hapticFeedback.impactLight();
+      toggleFavoriteMutation.mutate(id);
+    },
+    [toggleFavoriteMutation]
+  );
 
   return (
     <ScreenWrapper noPaddingBottom style={styles.container}>
@@ -278,7 +255,7 @@ export const HomeScreen: React.FC = () => {
       {/* Product List Grid */}
       <FlashList
         key={numColumns}
-        data={filteredProducts}
+        data={productsList}
         keyExtractor={(item) => item.id}
         numColumns={numColumns}
         showsVerticalScrollIndicator={false}
@@ -296,83 +273,9 @@ export const HomeScreen: React.FC = () => {
         contentContainerStyle={[styles.gridContainer, { paddingBottom: insets.bottom + 100 }]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        renderItem={({ item }) => {
-          return (
-            <View style={{ flex: 1, padding: 6 }}>
-              <View style={styles.productCard}>
-                {/* Image Section */}
-                <View style={styles.imageContainer}>
-                  <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={() => handleAddProduct(item)}
-                    style={{ width: '100%', height: 110 }}
-                  >
-                    <ProductImage
-                      icon={item.icon}
-                      category={item.category}
-                      style={{ width: '100%', height: 110, borderRadius: 0 }}
-                    />
-                  </TouchableOpacity>
-
-                  {/* Overlay heart button */}
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      hapticFeedback.impactLight();
-                      toggleFavoriteMutation.mutate(item.id);
-                    }}
-                    style={styles.heartBtnWrapper}
-                  >
-                    <Ionicons
-                      name={item.isFavorite ? 'heart' : 'heart-outline'}
-                      size={15}
-                      color={item.isFavorite ? TOKENS.error : TOKENS.muted}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Bottom details - touchable to add */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => handleAddProduct(item)}
-                  style={styles.productDetails}
-                >
-                  <Text style={styles.productName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-
-                  <View style={styles.priceStockRow}>
-                    <Text style={styles.productPrice}>Rs. {item.price}</Text>
-                    <View style={styles.stockPlusRow}>
-                      <Text
-                        style={[
-                          styles.stockText,
-                          item.stockType === 'low' && styles.stockTextLow,
-                          item.stockType === 'out' && styles.stockTextOut,
-                        ]}
-                      >
-                        {item.stockText}
-                      </Text>
-
-                      <View
-                        style={[
-                          styles.plusIconBadge,
-                          item.stockType === 'out' && styles.plusIconBadgeOut,
-                        ]}
-                      >
-                        <Feather
-                          name="plus"
-                          size={20}
-                          color={item.stockType === 'out' ? TOKENS.muted : TOKENS.card}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
+        renderItem={({ item }) => (
+          <HomeProductCard item={item} onAdded={triggerToast} onFavorite={handleFavorite} />
+        )}
         ListEmptyComponent={
           <View style={styles.emptyGridState}>
             <Feather name="search" size={48} color="#D1D5DB" />

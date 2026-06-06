@@ -15,23 +15,9 @@ import { ScreenWrapper } from '../common/ScreenWrapper';
 import { HeaderCartButton } from '../common/HeaderCartButton';
 import { TOKENS } from '../../constants/tokens';
 import { useBusinessCategories } from '../../hooks/useBusinessCategories';
-import { useCartAdjustedProducts } from '../../hooks/useCartAdjustedProducts';
+import { CatalogProductCard } from '../product/CatalogProductCard';
 import { useProducts } from '../../hooks/useProducts';
-import { cartState } from '../data/cartState';
-import { ProductImage } from '../common/ProductImage';
 import { hapticFeedback } from '../../utils/haptics';
-
-interface CatalogProduct {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  icon: string;
-  stockText: string;
-  stockType: 'normal' | 'low' | 'out';
-  stockCount?: number;
-  dbStockCount?: number;
-}
 
 export const CatalogScreen: React.FC = () => {
   const router = useRouter();
@@ -44,38 +30,16 @@ export const CatalogScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const {
-    data: rawProductsList = [],
+    data: productsList = [],
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useProducts(selectedCategory);
-  const productsList = useCartAdjustedProducts(rawProductsList);
 
   const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 1500);
   }, []);
-
-  const handleAddProduct = useCallback(
-    (prod: CatalogProduct) => {
-      if (prod.stockType === 'out') {
-        hapticFeedback.notificationWarning();
-        triggerToast('Product is out of stock!');
-        return;
-      }
-
-      hapticFeedback.impactLight();
-      cartState.addCartItem(
-        prod.name,
-        prod.price,
-        prod.icon,
-        `SKU 23400${prod.id}`,
-        prod.dbStockCount ?? prod.stockCount
-      );
-      triggerToast(`Added ${prod.name} to active invoice`);
-    },
-    [triggerToast]
-  );
 
   return (
     <ScreenWrapper style={styles.container}>
@@ -178,108 +142,9 @@ export const CatalogScreen: React.FC = () => {
               ) : null
             }
             contentContainerStyle={styles.gridContent}
-            renderItem={({ item }) => {
-              return (
-                <View style={{ flex: 1, padding: 6 }}>
-                  <View style={styles.productCard}>
-                    <View style={styles.imageContainer}>
-                      <TouchableOpacity
-                        activeOpacity={0.9}
-                        onPress={() => handleAddProduct(item)}
-                        style={{ width: '100%', height: 100 }}
-                      >
-                        <ProductImage
-                          icon={item.icon}
-                          category={item.category}
-                          style={{ width: '100%', height: 100, borderRadius: 0 }}
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => handleAddProduct(item)}
-                      style={styles.productDetails}
-                    >
-                      <Text style={styles.productName} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-
-                      <View style={styles.priceStockRow}>
-                        <Text style={styles.productPrice}>Rs. {item.price}</Text>
-                        {isTablet ? (
-                          <View style={styles.stockPlusRow}>
-                            <Text
-                              style={[
-                                styles.stockText,
-                                item.stockType === 'low' && styles.stockTextLow,
-                                item.stockType === 'out' && styles.stockTextOut,
-                              ]}
-                            >
-                              {item.stockText}
-                            </Text>
-
-                            <View
-                              style={[
-                                styles.plusIconBadge,
-                                item.stockType === 'out' && styles.plusIconBadgeOut,
-                              ]}
-                            >
-                              <Feather
-                                name="plus"
-                                size={16}
-                                color={item.stockType === 'out' ? TOKENS.muted : TOKENS.card}
-                              />
-                              <Text
-                                style={[
-                                  styles.plusIconBadgeText,
-                                  item.stockType === 'out' && styles.plusIconBadgeTextOut,
-                                ]}
-                              >
-                                Add
-                              </Text>
-                            </View>
-                          </View>
-                        ) : (
-                          <View style={styles.mobileStockPlusColumn}>
-                            <Text
-                              style={[
-                                styles.stockText,
-                                item.stockType === 'low' && styles.stockTextLow,
-                                item.stockType === 'out' && styles.stockTextOut,
-                              ]}
-                            >
-                              {item.stockText}
-                            </Text>
-
-                            <View
-                              style={[
-                                styles.mobilePlusIconBadge,
-                                item.stockType === 'out' && styles.mobilePlusIconBadgeOut,
-                              ]}
-                            >
-                              <Feather
-                                name="plus"
-                                size={15}
-                                color={item.stockType === 'out' ? TOKENS.muted : TOKENS.card}
-                              />
-                              <Text
-                                style={[
-                                  styles.mobilePlusIconBadgeText,
-                                  item.stockType === 'out' && styles.mobilePlusIconBadgeTextOut,
-                                ]}
-                              >
-                                Add
-                              </Text>
-                            </View>
-                          </View>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            }}
+            renderItem={({ item }) => (
+              <CatalogProductCard item={item} isTablet={isTablet} onAdded={triggerToast} />
+            )}
             ListEmptyComponent={
               <View style={styles.emptyGridState}>
                 <Feather name="search" size={48} color="#D1D5DB" />

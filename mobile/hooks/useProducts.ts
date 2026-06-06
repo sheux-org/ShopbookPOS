@@ -1,6 +1,12 @@
 import { Q } from '@nozbe/watermelondb';
 import * as NetInfo from '@react-native-community/netinfo';
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useInfiniteQuery,
+  QueryClient,
+} from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
 import { cartState } from '../components/data/cartState';
@@ -12,6 +18,11 @@ import {
   queueImageUpload,
   removeProductImage,
 } from '../services/uploadQueue';
+
+function invalidateProductQueries(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ['products'] });
+  queryClient.invalidateQueries({ queryKey: ['category-product-counts'] });
+}
 
 export interface DBProduct {
   id: string;
@@ -55,8 +66,7 @@ export function useProducts(category?: string, search?: string, activeChip?: str
         } else if (activeChip === 'Under Rs. 1000') {
           query = query.extend(Q.where('price', Q.lt(1000)));
         } else if (activeChip === 'Low Stock') {
-          // Do not apply hardcoded stock filter. We will filter in memory to support custom thresholds.
-          query = query.extend(Q.where('stock_count', Q.gt(0)));
+          query = query.extend(Q.where('stock_count', Q.gt(0)), Q.where('stock_count', Q.lte(20)));
         } else if (activeChip === 'Out of Stock') {
           query = query.extend(Q.where('stock_count', 0));
         } else if (activeChip === 'Favorites' || activeChip === 'favorites') {
@@ -78,8 +88,8 @@ export function useProducts(category?: string, search?: string, activeChip?: str
         );
       }
 
-      // If activeChip is NOT "Recents" or "Low Stock", we paginate using limit and offset
-      if (activeChip !== 'Recents' && activeChip !== 'recents' && activeChip !== 'Low Stock') {
+      // Paginate everything except Recents (Low Stock uses SQL pre-filter + page-level refine)
+      if (activeChip !== 'Recents' && activeChip !== 'recents') {
         const offset = (pageParam as number) * PAGE_SIZE;
         query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
       }
@@ -186,7 +196,7 @@ export function useAddProduct() {
     },
     onSuccess: () => {
       // Invalidate the query key so all screens automatically refetch from WatermelonDB!
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      invalidateProductQueries(queryClient);
       // Trigger background upload queue check immediately as fallback
       try {
         processUploadQueue();
@@ -211,7 +221,7 @@ export function useToggleFavoriteProduct() {
     },
     onSuccess: () => {
       // Invalidate products query cache so all components refetch instantly!
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      invalidateProductQueries(queryClient);
     },
   });
 }
@@ -249,7 +259,7 @@ export function useUpdateProductImage() {
               const state = await NetInfo.fetch();
               const isOnline = (state.isConnected ?? false) && state.isInternetReachable !== false;
               await queueImageUpload(productId, result.assets[0].uri, isOnline);
-              queryClient.invalidateQueries({ queryKey: ['products'] });
+              invalidateProductQueries(queryClient);
             }
           } catch {
             // Camera not available (e.g. simulator) — fall back to gallery
@@ -278,7 +288,7 @@ export function useUpdateProductImage() {
             const state = await NetInfo.fetch();
             const isOnline = (state.isConnected ?? false) && state.isInternetReachable !== false;
             await queueImageUpload(productId, result.assets[0].uri, isOnline);
-            queryClient.invalidateQueries({ queryKey: ['products'] });
+            invalidateProductQueries(queryClient);
           }
         },
       },
@@ -322,7 +332,7 @@ export function useRemoveProductImage() {
           style: 'destructive',
           onPress: async () => {
             await removeProductImage(productId);
-            queryClient.invalidateQueries({ queryKey: ['products'] });
+            invalidateProductQueries(queryClient);
           },
         },
         { text: 'Cancel', style: 'cancel' },
@@ -386,7 +396,7 @@ export function useUpdateProduct() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      invalidateProductQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: ['uploaded-images'] });
       // Trigger background upload queue check immediately
       try {
@@ -421,7 +431,7 @@ export function useDeleteProduct() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      invalidateProductQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: ['uploaded-images'] });
     },
   });
@@ -500,7 +510,7 @@ export function useStockInProduct() {
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['products'] });
+      invalidateProductQueries(queryClient);
       queryClient.invalidateQueries({
         queryKey: ['stock-history', variables.productId],
       });

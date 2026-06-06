@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,11 +15,9 @@ import { Feather } from '@expo/vector-icons';
 import { SearchInput } from '../common/SearchInput';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { TOKENS } from '../../constants/tokens';
-import { cartState, CatalogProduct } from '../data/cartState';
 import { HeaderCartButton } from '../common/HeaderCartButton';
 import { useProducts } from '../../hooks/useProducts';
-import { useCartAdjustedProducts } from '../../hooks/useCartAdjustedProducts';
-import { ProductImage } from '../common/ProductImage';
+import { SearchProductRow } from '../product/SearchProductRow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
@@ -38,17 +36,16 @@ export const SearchScreen: React.FC = () => {
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const {
-    data: rawProductsList = [],
+    data: productsList = [],
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useProducts(undefined, searchQuery, activeChip);
-  const filteredProducts = useCartAdjustedProducts(rawProductsList);
 
-  const triggerToast = (msg: string) => {
+  const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 1500);
-  };
+  }, []);
 
   const triggerBarcodeScanner = () => {
     if (isPremium) {
@@ -58,22 +55,6 @@ export const SearchScreen: React.FC = () => {
     } else {
       setPremiumModalVisible(true);
     }
-  };
-
-  const handleAddProduct = (prod: CatalogProduct & { dbStockCount?: number }) => {
-    if (prod.stockType === 'out') {
-      triggerToast('Product is out of stock!');
-      return;
-    }
-    const skuCode = `SKU 23400${prod.id}`;
-    cartState.addCartItem(
-      prod.name,
-      prod.price,
-      prod.icon,
-      skuCode,
-      prod.dbStockCount ?? prod.stockCount
-    );
-    triggerToast(`Added ${prod.name} to active invoice`);
   };
 
   const filterChips = ['All', 'In Stock', 'Under Rs. 1000', 'Low Stock', 'Out of Stock'];
@@ -145,13 +126,13 @@ export const SearchScreen: React.FC = () => {
       {/* Title Count Subheader */}
       <View style={styles.subheader}>
         <Text style={styles.subheaderText}>
-          {filteredProducts.length} {filteredProducts.length === 1 ? 'RESULT' : 'RESULTS'}
+          {productsList.length} {productsList.length === 1 ? 'RESULT' : 'RESULTS'}
         </Text>
       </View>
 
       {/* Results Scrollable list */}
       <FlashList
-        data={filteredProducts}
+        data={productsList}
         keyExtractor={(item) => item.id.toString()}
         style={styles.resultsList}
         showsVerticalScrollIndicator={false}
@@ -170,65 +151,7 @@ export const SearchScreen: React.FC = () => {
           paddingBottom: insets.bottom + 20,
           flexGrow: 1,
         }}
-        renderItem={({ item }) => (
-          <View style={styles.resultItemRow}>
-            {/* Left Box Icon */}
-            <ProductImage
-              icon={item.icon}
-              category={item.category}
-              size={42}
-              style={styles.iconBox}
-            />
-
-            {/* Middle Details */}
-            <View style={styles.itemDetails}>
-              <Text style={styles.itemName} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <View style={styles.skuStockRow}>
-                {item.quickCode ? (
-                  <>
-                    <Text style={styles.skuText}>QC: {item.quickCode}</Text>
-                    <Text style={styles.dividerDot}>·</Text>
-                  </>
-                ) : null}
-                {item.stockType === 'low' ? (
-                  <Text style={styles.stockLowText}>{item.stockText}</Text>
-                ) : item.stockType === 'out' ? (
-                  <Text style={styles.stockOutText}>{item.stockText}</Text>
-                ) : (
-                  <Text style={styles.stockNormalText}>{item.stockText}</Text>
-                )}
-              </View>
-            </View>
-
-            {/* Right Row Actions & Price */}
-            <View style={styles.rightActionsCol}>
-              <Text style={styles.itemPrice}>Rs. {item.price.toLocaleString()}</Text>
-
-              <TouchableOpacity
-                style={[styles.addButton, item.stockType === 'out' && styles.addButtonDisabled]}
-                activeOpacity={item.stockType === 'out' ? 1 : 0.8}
-                onPress={() => item.stockType !== 'out' && handleAddProduct(item)}
-              >
-                <Feather
-                  name={item.stockType === 'out' ? 'alert-circle' : 'plus'}
-                  size={12}
-                  color={item.stockType === 'out' ? TOKENS.muted : TOKENS.primary}
-                  style={styles.plusIcon}
-                />
-                <Text
-                  style={[
-                    styles.addButtonText,
-                    item.stockType === 'out' && styles.addButtonTextDisabled,
-                  ]}
-                >
-                  {item.stockType === 'out' ? 'Out' : 'Add'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        renderItem={({ item }) => <SearchProductRow item={item} onAdded={triggerToast} />}
         ListEmptyComponent={
           <View style={styles.emptySearchState}>
             <Feather name="search" size={48} color="#D1D5DB" />
