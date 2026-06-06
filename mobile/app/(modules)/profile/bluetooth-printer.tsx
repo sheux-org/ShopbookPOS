@@ -16,6 +16,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../../constants/tokens';
 import { useSettingsStore } from '../../../stores/useSettingsStore';
+import { getTopSafeInset } from '../../../utils/safeArea';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
 import { PermissionsAndroid } from 'react-native';
 import RNBluetoothClassic, { BluetoothDevice } from 'react-native-bluetooth-classic';
@@ -187,7 +188,7 @@ export default function BluetoothPrinterRoute() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top : 10 }]}>
+    <View style={[styles.container, { paddingTop: getTopSafeInset(insets) }]}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>

@@ -1,7 +1,8 @@
 import { Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PermissionProvider } from '../hooks/usePermissionHandler';
 import { useEffect, useState } from 'react';
@@ -114,7 +115,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
+        <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+          <StatusBar style="dark" />
           <PermissionProvider>
             <MainAppContent />
           </PermissionProvider>

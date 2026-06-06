@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
+import { getTopSafeInset } from '../../../utils/safeArea';
 import { TOKENS } from '../../../constants/tokens';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useUpdateActiveBusiness, useUploadBusinessLogo } from '../../../hooks/useBusinesses';
@@ -197,7 +197,7 @@ export default function BusinessDetailsRoute() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top : 10 }]}>
+    <View style={[styles.container, { paddingTop: getTopSafeInset(insets) }]}>
       {/* Toast Notification */}
       {toastMessage && (
         <View style={styles.toastContainer}>

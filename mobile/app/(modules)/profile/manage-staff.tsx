@@ -21,6 +21,7 @@ import {
   useStaff,
   useUpdateStaff,
 } from '../../../hooks/useStaff';
+import { getTopSafeInset } from '../../../utils/safeArea';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
 
@@ -168,7 +169,7 @@ export default function ManageStaffRoute() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top : 10 }]}>
+    <View style={[styles.container, { paddingTop: getTopSafeInset(insets) }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

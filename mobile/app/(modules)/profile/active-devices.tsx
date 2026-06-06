@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../../constants/tokens';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { getTopSafeInset } from '../../../utils/safeArea';
 import { DEVICE_ID_KEY } from '../../../hooks/useActiveDeviceTracker';
 import {
   fetchRecentlyOfflineDevices,
@@ -253,7 +254,7 @@ export default function ActiveDevicesRoute() {
   const hasDevices = onlineDevices.length > 0 || offlineDevices.length > 0;
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top : 10 }]}>
+    <View style={[styles.container, { paddingTop: getTopSafeInset(insets) }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}

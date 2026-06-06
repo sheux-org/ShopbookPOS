@@ -2,6 +2,7 @@ import React from 'react';
 import { KeyboardAvoidingView, Platform, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
+import { getTopSafeInset } from '../../utils/safeArea';
 
 interface ScreenWrapperProps {
   children: React.ReactNode;
@@ -54,8 +55,8 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
   const containerStyle: ViewStyle = {
     flex: 1,
     backgroundColor,
-    // Respect the status bar / notch at the top
-    paddingTop: insets.top,
+    // Respect the status bar / notch at the top (Android edge-to-edge included)
+    paddingTop: getTopSafeInset(insets),
     // Respect the home indicator / nav bar at the bottom
     paddingBottom: noPaddingBottom ? 0 : insets.bottom + extraBottomPad,
   };

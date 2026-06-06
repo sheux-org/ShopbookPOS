@@ -128,7 +128,7 @@ export default function PremiumPlansRoute() {
       )}
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 10 : 12 }]}>
+      <View style={[styles.header, { paddingTop: 12 }]}>
         <TouchableOpacity
           style={styles.backButton}
           activeOpacity={0.7}

@@ -21,6 +21,7 @@ import {
   useRegisterBusiness,
   useUpdateBusiness,
 } from '../../../hooks/useBusinesses';
+import { getTopSafeInset } from '../../../utils/safeArea';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
@@ -228,7 +229,7 @@ export default function ManageBusinessesRoute() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? insets.top : 10 }]}>
+    <View style={[styles.container, { paddingTop: getTopSafeInset(insets) }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
