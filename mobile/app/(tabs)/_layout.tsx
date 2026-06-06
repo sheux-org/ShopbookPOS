@@ -48,10 +48,7 @@ export default function TabLayout() {
   }, [activeBusinessId]);
 
   useEffect(() => {
-    translateY.value = withSpring(tabBarVisible ? 0 : 130, {
-      damping: 15,
-      stiffness: 120,
-    });
+    translateY.value = withSpring(tabBarVisible ? 0 : 130);
   }, [tabBarVisible, translateY]);
 
   const tabBarAnimatedStyle = useAnimatedStyle(() => ({

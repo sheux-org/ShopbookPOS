@@ -14,6 +14,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
+import { useBusinessCategories } from '../../hooks/useBusinessCategories';
 import { useProducts, useToggleFavoriteProduct } from '../../hooks/useProducts';
 import { useTabBarVisible } from '../../hooks/useTabBarVisible';
 import { BottomSheet } from '../common/BottomSheet';
@@ -40,15 +41,6 @@ interface HomeProduct {
   stockCount?: number;
 }
 
-const CATEGORIES = [
-  { id: 'all', label: 'All Items', count: 240 },
-  { id: 'grocery', label: 'Grocery', count: 84 },
-  { id: 'dairy', label: 'Dairy', count: 22 },
-  { id: 'drinks', label: 'Drinks', count: 31 },
-  { id: 'snacks', label: 'Snacks', count: 47 },
-  { id: 'household', label: 'Household', count: 38 },
-];
-
 export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -72,6 +64,7 @@ export const HomeScreen: React.FC = () => {
   const toggleFavoriteMutation = useToggleFavoriteProduct();
 
   const activeBusiness = useActiveBusiness();
+  const categories = useBusinessCategories('All Items');
   const businesses = useBusinessStore((s) => s.businesses);
   const [isBusinessSheetOpen, setIsBusinessSheetOpen] = useState(false);
 
@@ -85,6 +78,10 @@ export const HomeScreen: React.FC = () => {
       setTabBarVisible(true);
     };
   }, []);
+
+  useEffect(() => {
+    setSelectedCategory('all');
+  }, [activeBusiness.id]);
 
   const fabWidth = useSharedValue(115);
   const fabTextOpacity = useSharedValue(1);
@@ -243,7 +240,7 @@ export const HomeScreen: React.FC = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoriesScroll}
         >
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isActive = selectedCategory === cat.id;
             return (
               <TouchableOpacity
