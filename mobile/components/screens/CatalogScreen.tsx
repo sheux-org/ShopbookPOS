@@ -15,6 +15,7 @@ import { ScreenWrapper } from '../common/ScreenWrapper';
 import { HeaderCartButton } from '../common/HeaderCartButton';
 import { TOKENS } from '../../constants/tokens';
 import { useBusinessCategories } from '../../hooks/useBusinessCategories';
+import { useCartAdjustedProducts } from '../../hooks/useCartAdjustedProducts';
 import { useProducts } from '../../hooks/useProducts';
 import { cartState } from '../data/cartState';
 import { ProductImage } from '../common/ProductImage';
@@ -29,6 +30,7 @@ interface CatalogProduct {
   stockText: string;
   stockType: 'normal' | 'low' | 'out';
   stockCount?: number;
+  dbStockCount?: number;
 }
 
 export const CatalogScreen: React.FC = () => {
@@ -42,11 +44,12 @@ export const CatalogScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const {
-    data: productsList = [],
+    data: rawProductsList = [],
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useProducts(selectedCategory);
+  const productsList = useCartAdjustedProducts(rawProductsList);
 
   const triggerToast = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -67,7 +70,7 @@ export const CatalogScreen: React.FC = () => {
         prod.price,
         prod.icon,
         `SKU 23400${prod.id}`,
-        prod.stockCount
+        prod.dbStockCount ?? prod.stockCount
       );
       triggerToast(`Added ${prod.name} to active invoice`);
     },

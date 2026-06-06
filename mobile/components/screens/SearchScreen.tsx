@@ -18,6 +18,7 @@ import { TOKENS } from '../../constants/tokens';
 import { cartState, CatalogProduct } from '../data/cartState';
 import { HeaderCartButton } from '../common/HeaderCartButton';
 import { useProducts } from '../../hooks/useProducts';
+import { useCartAdjustedProducts } from '../../hooks/useCartAdjustedProducts';
 import { ProductImage } from '../common/ProductImage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettingsStore } from '../../stores/useSettingsStore';
@@ -37,11 +38,12 @@ export const SearchScreen: React.FC = () => {
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const {
-    data: productsList = [],
+    data: rawProductsList = [],
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useProducts(undefined, searchQuery, activeChip);
+  const filteredProducts = useCartAdjustedProducts(rawProductsList);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -58,16 +60,23 @@ export const SearchScreen: React.FC = () => {
     }
   };
 
-  const handleAddProduct = (prod: CatalogProduct) => {
+  const handleAddProduct = (prod: CatalogProduct & { dbStockCount?: number }) => {
+    if (prod.stockType === 'out') {
+      triggerToast('Product is out of stock!');
+      return;
+    }
     const skuCode = `SKU 23400${prod.id}`;
-    cartState.addCartItem(prod.name, prod.price, prod.icon, skuCode, prod.stockCount);
+    cartState.addCartItem(
+      prod.name,
+      prod.price,
+      prod.icon,
+      skuCode,
+      prod.dbStockCount ?? prod.stockCount
+    );
     triggerToast(`Added ${prod.name} to active invoice`);
   };
 
   const filterChips = ['All', 'In Stock', 'Under Rs. 1000', 'Low Stock', 'Out of Stock'];
-
-  // Direct queries are executed inside WatermelonDB
-  const filteredProducts = productsList;
 
   return (
     <ScreenWrapper withKeyboard noPaddingBottom style={styles.container}>

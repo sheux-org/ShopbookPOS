@@ -15,6 +15,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
 import { useBusinessCategories } from '../../hooks/useBusinessCategories';
+import { useCartAdjustedProducts } from '../../hooks/useCartAdjustedProducts';
 import { useProducts, useToggleFavoriteProduct } from '../../hooks/useProducts';
 import { useTabBarVisible } from '../../hooks/useTabBarVisible';
 import { BottomSheet } from '../common/BottomSheet';
@@ -39,6 +40,7 @@ interface HomeProduct {
   stockText: string;
   stockType: 'normal' | 'low' | 'out';
   stockCount?: number;
+  dbStockCount?: number;
 }
 
 export const HomeScreen: React.FC = () => {
@@ -61,6 +63,7 @@ export const HomeScreen: React.FC = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useProducts(selectedCategory, searchQuery);
+  const filteredProducts = useCartAdjustedProducts(productsList);
   const toggleFavoriteMutation = useToggleFavoriteProduct();
 
   const activeBusiness = useActiveBusiness();
@@ -135,12 +138,15 @@ export const HomeScreen: React.FC = () => {
       return;
     }
     hapticFeedback.impactLight();
-    cartState.addCartItem(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
+    cartState.addCartItem(
+      prod.name,
+      prod.price,
+      prod.icon,
+      `SKU 23400${prod.id}`,
+      prod.dbStockCount ?? prod.stockCount
+    );
     triggerToast(`Added ${prod.name} to active invoice`);
   };
-
-  // WatermelonDB performs search & filter queries directly
-  const filteredProducts = productsList;
 
   return (
     <ScreenWrapper noPaddingBottom style={styles.container}>
