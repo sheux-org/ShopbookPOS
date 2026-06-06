@@ -747,6 +747,7 @@ export const CartScreen: React.FC = () => {
                   data={filteredContacts}
                   keyExtractor={(item) => item.id}
                   renderItem={renderContactItem}
+                  drawDistance={300}
                   showsVerticalScrollIndicator={true}
                   contentContainerStyle={styles.listContent}
                   ListEmptyComponent={

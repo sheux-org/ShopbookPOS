@@ -54,6 +54,7 @@ export function useActiveDeviceTracker() {
   const lastCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const lastLocationNameRef = useRef<string | null>(null);
   const isActiveRef = useRef(false);
+  const isRequestingPermissionRef = useRef(false);
 
   useEffect(() => {
     if (!isLoggedIn || !activeBusinessId) {
@@ -123,7 +124,16 @@ export function useActiveDeviceTracker() {
       let locationName: string | null = null;
 
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        let { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted' && status !== 'denied') {
+          if (!isRequestingPermissionRef.current) {
+            isRequestingPermissionRef.current = true;
+            const res = await Location.requestForegroundPermissionsAsync();
+            status = res.status;
+            isRequestingPermissionRef.current = false;
+          }
+        }
+
         if (status === 'granted') {
           const loc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Balanced,

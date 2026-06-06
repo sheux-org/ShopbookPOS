@@ -110,6 +110,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
           <FlashList
             data={periodOrdersList}
             keyExtractor={(item) => item.id}
+            drawDistance={500}
             onEndReached={() => {
               if (hasNextPeriodOrders) {
                 fetchNextPeriodOrders();
@@ -178,6 +179,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
           <FlashList
             data={productsList}
             keyExtractor={(item) => item.id}
+            drawDistance={500}
             showsVerticalScrollIndicator={false}
             style={{ flex: 1, marginTop: 10 }}
             contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}

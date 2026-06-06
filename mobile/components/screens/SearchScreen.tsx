@@ -134,6 +134,7 @@ export const SearchScreen: React.FC = () => {
       <FlashList
         data={productsList}
         keyExtractor={(item) => item.id.toString()}
+        drawDistance={500}
         style={styles.resultsList}
         showsVerticalScrollIndicator={false}
         onEndReached={() => {

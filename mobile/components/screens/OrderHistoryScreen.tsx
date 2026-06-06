@@ -353,6 +353,7 @@ Thank you for shopping with us!
           data={orders}
           keyExtractor={(item) => item.id}
           renderItem={renderOrderItem}
+          drawDistance={500}
           style={styles.scrollWrapper}
           onEndReached={() => {
             if (hasNextPage) {

@@ -366,6 +366,7 @@ export const ManageItemsScreen: React.FC = () => {
         <FlashList
           data={productsList}
           keyExtractor={(item) => item.id}
+          drawDistance={500}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           onEndReached={() => {
             if (hasNextPage) {

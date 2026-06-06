@@ -125,6 +125,7 @@ export const CatalogScreen: React.FC = () => {
             data={productsList}
             keyExtractor={(item) => item.id}
             numColumns={2}
+            drawDistance={500}
             showsVerticalScrollIndicator={false}
             onEndReached={() => {
               if (hasNextPage) {

@@ -258,6 +258,7 @@ export const HomeScreen: React.FC = () => {
         data={productsList}
         keyExtractor={(item) => item.id}
         numColumns={numColumns}
+        drawDistance={500}
         showsVerticalScrollIndicator={false}
         onEndReached={() => {
           if (hasNextPage) {
