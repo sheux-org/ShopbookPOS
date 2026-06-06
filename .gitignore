@@ -63,3 +63,7 @@ coverage/
 web/coverage
 web/coverage/
 *.lcov
+
+
+# any
+/landing-page/
