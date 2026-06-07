@@ -31,7 +31,13 @@ export const SearchProductRow = React.memo(function SearchProductRow({
 
   return (
     <View style={styles.resultItemRow}>
-      <ProductImage icon={item.icon} category={item.category} size={42} style={styles.iconBox} />
+      <ProductImage
+        icon={item.icon}
+        category={item.category}
+        recyclingKey={item.id}
+        size={42}
+        style={styles.iconBox}
+      />
 
       <View style={styles.itemDetails}>
         <Text style={styles.itemName} numberOfLines={1}>

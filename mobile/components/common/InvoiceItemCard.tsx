@@ -12,7 +12,7 @@ interface InvoiceItemCardProps {
 export const InvoiceItemCard: React.FC<InvoiceItemCardProps> = ({ item }) => {
   return (
     <View style={styles.itemCard}>
-      <ProductImage icon={item.icon} size={58} style={styles.itemIconBox} />
+      <ProductImage icon={item.icon} recyclingKey={item.id} size={58} style={styles.itemIconBox} />
       <View style={styles.itemMainInfo}>
         <Text style={styles.itemName} numberOfLines={1}>
           {item.name}

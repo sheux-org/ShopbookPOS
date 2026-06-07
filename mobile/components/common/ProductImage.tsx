@@ -9,6 +9,7 @@ interface ProductImageProps {
   imageStyle?: StyleProp<ImageStyle>;
   size?: number;
   iconSize?: number;
+  recyclingKey?: string;
 }
 
 export const ProductImage: React.FC<ProductImageProps> = ({
@@ -17,6 +18,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({
   style,
   imageStyle,
   size = 48,
+  recyclingKey,
 }) => {
   const finalIcon = icon ? icon.trim() : '';
 
@@ -31,6 +33,7 @@ export const ProductImage: React.FC<ProductImageProps> = ({
       <View style={[styles.container, { width: size, height: size }, style]}>
         <Image
           source={{ uri: finalIcon }}
+          recyclingKey={recyclingKey || finalIcon}
           style={[styles.image, { width: '100%', height: '100%' }, imageStyle]}
           contentFit="cover"
           transition={250}

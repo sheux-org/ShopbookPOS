@@ -412,7 +412,12 @@ export const CartScreen: React.FC = () => {
         {invoiceItems.map((item) => (
           <View key={item.id} style={styles.itemRow}>
             {/* Left Box Icon */}
-            <ProductImage icon={item.icon || '🥛'} size={47} style={styles.iconBox} />
+            <ProductImage
+              icon={item.icon || '🥛'}
+              recyclingKey={item.id}
+              size={47}
+              style={styles.iconBox}
+            />
 
             {/* Middle Details */}
             <View style={styles.itemDetails}>

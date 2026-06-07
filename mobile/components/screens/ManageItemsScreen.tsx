@@ -398,6 +398,7 @@ export const ManageItemsScreen: React.FC = () => {
                   <ProductImage
                     icon={item.icon}
                     category={item.category}
+                    recyclingKey={item.id}
                     size={47}
                     style={styles.productImage}
                   />

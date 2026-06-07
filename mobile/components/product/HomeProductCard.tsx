@@ -46,6 +46,7 @@ export const HomeProductCard = React.memo(function HomeProductCard({
             <ProductImage
               icon={item.icon}
               category={item.category}
+              recyclingKey={item.id}
               style={{ width: '100%', height: 110, borderRadius: 0 }}
             />
           </TouchableOpacity>
