@@ -468,7 +468,12 @@ export const CartScreen: React.FC = () => {
         <View
           style={[
             styles.bottomStickyContainer,
-            { paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 12) : 16 },
+            {
+              paddingBottom:
+                Platform.OS === 'android'
+                  ? Math.max(insets.bottom + 12, 16)
+                  : Math.max(insets.bottom, 16),
+            },
           ]}
         >
           {/* Summary Box exactly matching Image 7 */}

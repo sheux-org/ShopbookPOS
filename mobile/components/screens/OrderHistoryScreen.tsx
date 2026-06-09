@@ -370,7 +370,7 @@ Thank you for shopping with us!
               />
             ) : null
           }
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={OrderCardSeparator}
         />

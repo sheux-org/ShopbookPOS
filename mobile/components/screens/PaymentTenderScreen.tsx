@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,7 @@ import {
   TextInput,
   ScrollView,
   Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -74,6 +75,22 @@ export const PaymentTenderScreen: React.FC = () => {
 
   const isPremium = useSettingsStore((s) => s.isPremium);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
+
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setIsKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   // Dynamic values
   const parsedTendered = useMemo(() => {
@@ -301,9 +318,9 @@ export const PaymentTenderScreen: React.FC = () => {
       </View>
 
       {/* Input Tender area & Change block exactly like Image 5 */}
-      <View style={styles.tenderDetailsCard}>
-        {activeMethod === 'cash' && (
-          <>
+      {activeMethod === 'cash' ? (
+        <>
+          <View style={styles.tenderDetailsCard}>
             <View style={styles.totalAmountBox}>
               <Text style={styles.totalAmountLabel}>Total Bill Amount</Text>
               <Text style={styles.totalAmountValue}>Rs. {totalAmount.toLocaleString()}.00</Text>
@@ -323,190 +340,247 @@ export const PaymentTenderScreen: React.FC = () => {
                 </Text>
               </View>
             )}
-          </>
-        )}
+          </View>
 
-        {activeMethod === 'card' && (
-          <View style={styles.cardPaymentContainer}>
-            <View style={styles.totalAmountBox}>
-              <Text style={styles.totalAmountLabel}>Total Bill Amount</Text>
-              <Text style={styles.totalAmountValue}>Rs. {totalAmount.toLocaleString()}.00</Text>
-            </View>
+          {/* Control buttons & Numpad only visible for Cash payments */}
+          <View style={styles.keyboardControlsContainer}>
+            {/* Row of quick add cash modifiers */}
+            <View style={styles.quickAddRow}>
+              <TouchableOpacity style={styles.quickCashBtn} onPress={() => handleAddQuickCash(500)}>
+                <Text style={styles.quickCashText}>+ 500</Text>
+              </TouchableOpacity>
 
-            <View style={styles.divider} />
-
-            {/* Visual Simulated Credit Card */}
-            <View style={styles.simCard}>
-              <View style={styles.simCardHeader}>
-                <Feather name="wifi" size={18} color={TOKENS.card} />
-              </View>
-
-              <Text style={styles.simCardNumber}>•••• •••• •••• {lastFourDigits || '••••'}</Text>
-
-              <View style={styles.simCardFooter}>
-                <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={styles.simCardHolderLabel}>BANK / CARDHOLDER</Text>
-                  <Text numberOfLines={1} style={styles.simCardHolderName}>
-                    {selectedBank || 'Shopbook Customer'}
-                  </Text>
-                </View>
-                <View style={styles.simCardBrandBadge}>
-                  <View
-                    style={[
-                      styles.simCardBrandCircle,
-                      { backgroundColor: TOKENS.warning, marginRight: -8 },
-                    ]}
-                  />
-                  <View style={[styles.simCardBrandCircle, { backgroundColor: TOKENS.error }]} />
-                </View>
-              </View>
-            </View>
-
-            {/* Bank Selection and Last 4 Digits input */}
-            <View style={styles.cardForm}>
-              {/* Bank Selection Dropdown */}
               <TouchableOpacity
-                style={styles.dropdownButton}
-                activeOpacity={0.7}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  setShowBankSheet(true);
-                }}
+                style={styles.quickCashBtn}
+                onPress={() => handleAddQuickCash(1000)}
               >
-                <View style={styles.dropdownContent}>
-                  <Text style={styles.inputLabel}>Bank Name</Text>
-                  <Text style={[styles.dropdownValue, !selectedBank && styles.dropdownPlaceholder]}>
-                    {selectedBank || 'Select Sri Lankan Bank'}
-                  </Text>
-                </View>
-                <Feather name="chevron-down" size={20} color={TOKENS.muted} />
+                <Text style={styles.quickCashText}>+ 1,000</Text>
               </TouchableOpacity>
 
-              {/* Card Last 4 Digits Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Last 4 Digits</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={lastFourDigits}
-                  onChangeText={(val) => {
-                    const numericVal = val.replace(/[^0-9]/g, '');
-                    setLastFourDigits(numericVal.slice(0, 4));
-                  }}
-                  placeholder="e.g. 1234"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="numeric"
-                  maxLength={4}
-                />
+              <TouchableOpacity
+                style={styles.quickCashBtn}
+                onPress={() => handleAddQuickCash(2000)}
+              >
+                <Text style={styles.quickCashText}>+ 2,000</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickCashBtn}
+                onPress={() => handleAddQuickCash(5000)}
+              >
+                <Text style={styles.quickCashText}>+ 5,000</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Exact Match button */}
+            <TouchableOpacity
+              style={styles.exactMatchContainer}
+              activeOpacity={0.8}
+              onPress={handleExactMatch}
+            >
+              <Text style={styles.exactMatchText}>Exact · Rs. {totalAmount.toLocaleString()}</Text>
+            </TouchableOpacity>
+
+            {/* Large Custom Numeric Numpad */}
+            <View style={styles.numpadGrid}>
+              <View style={styles.numpadRow}>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('1')}>
+                  <Text style={styles.numKeyText}>1</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('2')}>
+                  <Text style={styles.numKeyText}>2</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('3')}>
+                  <Text style={styles.numKeyText}>3</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.numpadRow}>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('4')}>
+                  <Text style={styles.numKeyText}>4</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('5')}>
+                  <Text style={styles.numKeyText}>5</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('6')}>
+                  <Text style={styles.numKeyText}>6</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.numpadRow}>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('7')}>
+                  <Text style={styles.numKeyText}>7</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('8')}>
+                  <Text style={styles.numKeyText}>8</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('9')}>
+                  <Text style={styles.numKeyText}>9</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.numpadRow}>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('00')}>
+                  <Text style={styles.numKeyText}>00</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('0')}>
+                  <Text style={styles.numKeyText}>0</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('backspace')}>
+                  <Ionicons name="backspace-outline" size={22} color={TOKENS.dark} />
+                </TouchableOpacity>
               </View>
             </View>
-
-            <View style={styles.cardStatusBox}>
-              <Feather name="loader" size={18} color={TOKENS.primary} />
-              <Text style={styles.cardAreaTitle}>Process on Card Terminal</Text>
-              <Text style={styles.cardAreaSubtitle}>
-                Swipe, tap, or insert the card on your physical terminal.
-              </Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Control buttons & Numpad only visible for Cash payments */}
-      {activeMethod === 'cash' && (
-        <View style={styles.keyboardControlsContainer}>
-          {/* Row of quick add cash modifiers */}
-          <View style={styles.quickAddRow}>
-            <TouchableOpacity style={styles.quickCashBtn} onPress={() => handleAddQuickCash(500)}>
-              <Text style={styles.quickCashText}>+ 500</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickCashBtn} onPress={() => handleAddQuickCash(1000)}>
-              <Text style={styles.quickCashText}>+ 1,000</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickCashBtn} onPress={() => handleAddQuickCash(2000)}>
-              <Text style={styles.quickCashText}>+ 2,000</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.quickCashBtn} onPress={() => handleAddQuickCash(5000)}>
-              <Text style={styles.quickCashText}>+ 5,000</Text>
-            </TouchableOpacity>
           </View>
 
-          {/* Exact Match button */}
+          {/* Massive checkout action complete button */}
           <TouchableOpacity
-            style={styles.exactMatchContainer}
-            activeOpacity={0.8}
-            onPress={handleExactMatch}
+            style={[
+              styles.actionCompleteBtn,
+              {
+                marginBottom:
+                  Platform.OS === 'android'
+                    ? Math.max(insets.bottom + 12, 16)
+                    : Math.max(insets.bottom, 16),
+              },
+            ]}
+            activeOpacity={0.85}
+            onPress={handleCompleteSale}
           >
-            <Text style={styles.exactMatchText}>Exact · Rs. {totalAmount.toLocaleString()}</Text>
+            <Text style={styles.completeBtnText}>Complete Sale & Print Receipt</Text>
+            <Feather name="printer" size={18} color={TOKENS.card} />
           </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ flexGrow: 1 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={[styles.tenderDetailsCard, { flex: 0, minHeight: 480 }]}>
+                <View style={styles.cardPaymentContainer}>
+                  <View style={styles.totalAmountBox}>
+                    <Text style={styles.totalAmountLabel}>Total Bill Amount</Text>
+                    <Text style={styles.totalAmountValue}>
+                      Rs. {totalAmount.toLocaleString()}.00
+                    </Text>
+                  </View>
 
-          {/* Large Custom Numeric Numpad */}
-          <View style={styles.numpadGrid}>
-            <View style={styles.numpadRow}>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('1')}>
-                <Text style={styles.numKeyText}>1</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('2')}>
-                <Text style={styles.numKeyText}>2</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('3')}>
-                <Text style={styles.numKeyText}>3</Text>
-              </TouchableOpacity>
-            </View>
+                  <View style={styles.divider} />
 
-            <View style={styles.numpadRow}>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('4')}>
-                <Text style={styles.numKeyText}>4</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('5')}>
-                <Text style={styles.numKeyText}>5</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('6')}>
-                <Text style={styles.numKeyText}>6</Text>
-              </TouchableOpacity>
-            </View>
+                  {/* Visual Simulated Credit Card */}
+                  <View style={styles.simCard}>
+                    <View style={styles.simCardHeader}>
+                      <Feather name="wifi" size={18} color={TOKENS.card} />
+                    </View>
 
-            <View style={styles.numpadRow}>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('7')}>
-                <Text style={styles.numKeyText}>7</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('8')}>
-                <Text style={styles.numKeyText}>8</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('9')}>
-                <Text style={styles.numKeyText}>9</Text>
-              </TouchableOpacity>
-            </View>
+                    <Text style={styles.simCardNumber}>
+                      •••• •••• •••• {lastFourDigits || '••••'}
+                    </Text>
 
-            <View style={styles.numpadRow}>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('00')}>
-                <Text style={styles.numKeyText}>00</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('0')}>
-                <Text style={styles.numKeyText}>0</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.numKey} onPress={() => handleNumPress('backspace')}>
-                <Ionicons name="backspace-outline" size={22} color={TOKENS.dark} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+                    <View style={styles.simCardFooter}>
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={styles.simCardHolderLabel}>BANK / CARDHOLDER</Text>
+                        <Text numberOfLines={1} style={styles.simCardHolderName}>
+                          {selectedBank || 'Shopbook Customer'}
+                        </Text>
+                      </View>
+                      <View style={styles.simCardBrandBadge}>
+                        <View
+                          style={[
+                            styles.simCardBrandCircle,
+                            { backgroundColor: TOKENS.warning, marginRight: -8 },
+                          ]}
+                        />
+                        <View
+                          style={[styles.simCardBrandCircle, { backgroundColor: TOKENS.error }]}
+                        />
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Bank Selection and Last 4 Digits input */}
+                  <View style={styles.cardForm}>
+                    {/* Bank Selection Dropdown */}
+                    <TouchableOpacity
+                      style={styles.dropdownButton}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setShowBankSheet(true);
+                      }}
+                    >
+                      <View style={styles.dropdownContent}>
+                        <Text style={styles.inputLabel}>Bank Name</Text>
+                        <Text
+                          style={[
+                            styles.dropdownValue,
+                            !selectedBank && styles.dropdownPlaceholder,
+                          ]}
+                        >
+                          {selectedBank || 'Select Sri Lankan Bank'}
+                        </Text>
+                      </View>
+                      <Feather name="chevron-down" size={20} color={TOKENS.muted} />
+                    </TouchableOpacity>
+
+                    {/* Card Last 4 Digits Input */}
+                    <View style={styles.inputContainer}>
+                      <Text style={styles.inputLabel}>Last 4 Digits</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={lastFourDigits}
+                        onChangeText={(val) => {
+                          const numericVal = val.replace(/[^0-9]/g, '');
+                          setLastFourDigits(numericVal.slice(0, 4));
+                        }}
+                        placeholder="e.g. 1234"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="numeric"
+                        maxLength={4}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.cardStatusBox}>
+                    <Feather name="loader" size={18} color={TOKENS.primary} />
+                    <Text style={styles.cardAreaTitle}>Process on Card Terminal</Text>
+                    <Text style={styles.cardAreaSubtitle}>
+                      Swipe, tap, or insert the card on your physical terminal.
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+
+          {/* Massive checkout action complete button */}
+          {!isKeyboardVisible && (
+            <TouchableOpacity
+              style={[
+                styles.actionCompleteBtn,
+                {
+                  marginBottom:
+                    Platform.OS === 'android'
+                      ? Math.max(insets.bottom + 12, 16)
+                      : Math.max(insets.bottom, 16),
+                },
+              ]}
+              activeOpacity={0.85}
+              onPress={handleCompleteSale}
+            >
+              <Text style={styles.completeBtnText}>Complete Sale & Print Receipt</Text>
+              <Feather name="printer" size={18} color={TOKENS.card} />
+            </TouchableOpacity>
+          )}
+        </>
       )}
-
-      {/* Massive checkout action complete button */}
-      <TouchableOpacity
-        style={[
-          styles.actionCompleteBtn,
-          { marginBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 12) : 16 },
-        ]}
-        activeOpacity={0.85}
-        onPress={handleCompleteSale}
-      >
-        <Text style={styles.completeBtnText}>Complete Sale & Print Receipt</Text>
-        <Feather name="printer" size={18} color={TOKENS.card} />
-      </TouchableOpacity>
 
       {/* GORGEOUS PAYMENT SUCCESS MODAL DIALOG */}
       <Modal
