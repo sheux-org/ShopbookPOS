@@ -28,6 +28,12 @@ export function useSendOtp() {
         body: JSON.stringify({ phone_number: cleanPhone }),
       });
 
+      if (response.status === 429) {
+        throw new Error(
+          'Too many requests. You have exceeded the login limit. Please try again in a little while.'
+        );
+      }
+
       if (!response.ok) {
         throw new Error('Failed to check phone number. Please try again.');
       }
@@ -67,6 +73,12 @@ export function useVerifyOtp() {
           phone_number: cleanPhone,
         }),
       });
+
+      if (response.status === 429) {
+        throw new Error(
+          'Too many requests. You have exceeded the login limit. Please try again in a little while.'
+        );
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
