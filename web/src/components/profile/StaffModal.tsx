@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, UserPlus } from 'lucide-react';
+import { X, UserPlus, Pencil, Trash2 } from 'lucide-react';
 
 interface DBEmployee {
   id: string;
@@ -22,6 +22,10 @@ interface StaffModalProps {
   newStaffRole: 'admin' | 'manager' | 'cashier';
   setNewStaffRole: (val: 'admin' | 'manager' | 'cashier') => void;
   onSubmit: (e: React.FormEvent) => void;
+  editingStaff: DBEmployee | null;
+  onEdit: (emp: DBEmployee) => void;
+  onDelete: (id: string) => void;
+  onCancelEdit: () => void;
 }
 
 export const StaffModal: React.FC<StaffModalProps> = ({
@@ -35,6 +39,10 @@ export const StaffModal: React.FC<StaffModalProps> = ({
   newStaffRole,
   setNewStaffRole,
   onSubmit,
+  editingStaff,
+  onEdit,
+  onDelete,
+  onCancelEdit,
 }) => {
   if (!isOpen) return null;
 
@@ -52,7 +60,9 @@ export const StaffModal: React.FC<StaffModalProps> = ({
             onSubmit={onSubmit}
             style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}
           >
-            <h4 className="form-title">Onboard Staff Member</h4>
+            <h4 className="form-title">
+              {editingStaff ? 'Modify Staff Details' : 'Onboard Staff Member'}
+            </h4>
 
             <div className="modal-input-group">
               <label className="modal-label">Full Name</label>
@@ -82,7 +92,17 @@ export const StaffModal: React.FC<StaffModalProps> = ({
               <label className="modal-label">Role Rank</label>
               <select
                 value={newStaffRole}
-                onChange={(e: any) => setNewStaffRole(e.target.value)}
+                onChange={(e: any) => {
+                  const val = e.target.value;
+                  const isOwner =
+                    editingStaff?.role === 'admin' ||
+                    editingStaff?.name.toLowerCase() === 'owner / admin';
+                  if (isOwner && val !== 'admin') {
+                    alert('Owner / Admin role cannot be demoted.');
+                    return;
+                  }
+                  setNewStaffRole(val);
+                }}
                 className="modal-select"
               >
                 <option value="cashier">Cashier (Billing ONLY)</option>
@@ -91,26 +111,74 @@ export const StaffModal: React.FC<StaffModalProps> = ({
               </select>
             </div>
 
-            <button type="submit" className="modal-submit-btn">
-              <UserPlus size={16} />
-              <span>Onboard member</span>
-            </button>
+            {editingStaff ? (
+              <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '10px' }}>
+                <button
+                  type="submit"
+                  className="modal-submit-btn"
+                  style={{ marginTop: 0, flex: 1 }}
+                >
+                  <Pencil size={14} />
+                  <span>Update details</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancelEdit}
+                  className="modal-cancel-btn"
+                  style={{ marginTop: 0, flex: 1 }}
+                >
+                  <span>Cancel</span>
+                </button>
+              </div>
+            ) : (
+              <button type="submit" className="modal-submit-btn">
+                <UserPlus size={16} />
+                <span>Onboard member</span>
+              </button>
+            )}
           </form>
 
           <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <h4 className="form-title">Active Store Personnel ({employees.length})</h4>
             <div className="staff-scroller">
-              {employees.map((emp) => (
-                <div key={emp.id} className="staff-card">
-                  <div>
-                    <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{emp.name}</div>
-                    <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>
-                      {emp.phone}
+              {employees.map((emp) => {
+                const isOwner = emp.role === 'admin' || emp.name.toLowerCase() === 'owner / admin';
+                return (
+                  <div key={emp.id} className="staff-card">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{emp.name}</span>
+                        <span className={`role-badge role-${emp.role}`}>
+                          {emp.role.toUpperCase()}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>
+                        📞 {emp.phone}
+                      </div>
                     </div>
+                    {!isOwner && (
+                      <div className="staff-card-actions">
+                        <button
+                          type="button"
+                          onClick={() => onEdit(emp)}
+                          className="staff-action-btn edit"
+                          title="Edit Staff Details"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(emp.id)}
+                          className="staff-action-btn delete"
+                          title="Remove Staff Member"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <span className={`role-badge role-${emp.role}`}>{emp.role.toUpperCase()}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

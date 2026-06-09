@@ -345,7 +345,7 @@ describe('businessStore', () => {
     expect(targetBiz.destroyPermanently).toHaveBeenCalled();
   });
 
-  test('should switch active business to first remaining after deleting active one', async () => {
+  test('should not delete the active business', async () => {
     const remaining = {
       id: 'biz-remaining',
       name: 'Second Shop',
@@ -374,14 +374,9 @@ describe('businessStore', () => {
     const bizCollection = databaseMock.get('businesses');
     bizCollection.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([targetBiz]) });
 
-    // After deletion, loadBusinessesFromDb reload: employees returns empty, businesses returns empty
-    const empCollection = databaseMock.get('employees');
-    empCollection.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) });
-    bizCollection.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) });
-
     await useBusinessStore.getState().deleteBusiness('biz-active-del');
 
-    expect(destroyFn).toHaveBeenCalled();
+    expect(destroyFn).not.toHaveBeenCalled();
   });
 
   test('should handle error in deleteBusiness gracefully', async () => {
@@ -396,19 +391,25 @@ describe('businessStore', () => {
     await expect(useBusinessStore.getState().deleteBusiness('biz-err')).resolves.not.toThrow();
   });
 
-  test('should set activeBusiness to remaining[0] when active biz is deleted and others remain', async () => {
-    const biz1 = { id: 'biz-deleted', name: 'Deleted', category: '', address: '', phone: '' };
-    const biz2 = {
-      id: 'biz-kept',
-      name: 'Kept Shop',
+  test('should delete inactive business and update businesses list', async () => {
+    const bizActive = {
+      id: 'biz-active',
+      name: 'Active Shop',
+      category: '',
+      address: '',
+      phone: '',
+    };
+    const bizInactive = {
+      id: 'biz-deleted',
+      name: 'Soon Deleted',
       category: 'Retail',
       address: 'Galle',
       phone: '0771',
     };
 
     useBusinessStore.setState({
-      activeBusiness: biz1,
-      businesses: [biz1, biz2],
+      activeBusiness: bizActive,
+      businesses: [bizActive, bizInactive],
     });
     useAuthStore.setState({ isLoggedIn: true, userPhone: '0771234567' });
 
@@ -418,14 +419,14 @@ describe('businessStore', () => {
     const bizCol = databaseMock.get('businesses');
     // First query: find biz to delete
     bizCol.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([targetBiz]) });
-    // After deletion: loadBusinessesFromDb reload → employees empty, businesses returns biz2
+    // After deletion: loadBusinessesFromDb reload → employees empty, businesses returns bizActive
     const empCol = databaseMock.get('employees');
     empCol.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) });
     bizCol.query.mockReturnValueOnce({
       fetch: vi.fn().mockResolvedValue([
         {
-          id: 'biz-kept',
-          name: 'Kept Shop',
+          id: 'biz-active',
+          name: 'Active Shop',
           businessType: 'Retail',
           address: 'Galle',
           phoneNumber: '0771234567',
@@ -436,8 +437,7 @@ describe('businessStore', () => {
     await useBusinessStore.getState().deleteBusiness('biz-deleted');
 
     expect(destroyFn).toHaveBeenCalled();
-    // After reload, activeBusiness should be biz2
-    expect(useBusinessStore.getState().activeBusiness.id).toBe('biz-kept');
+    expect(useBusinessStore.getState().activeBusiness.id).toBe('biz-active');
   });
 
   // ─── loadBusinessesFromDb — employee-assigned businesses path ────
@@ -607,7 +607,7 @@ describe('businessStore', () => {
     expect(updatedFields.logoUri).toBe('https://example.com/logo.png');
   });
 
-  test('deleteBusiness should switch activeBusiness to first remaining when load is skipped', async () => {
+  test('deleteBusiness should do nothing when deleting activeBusiness and load is skipped', async () => {
     const biz1 = { id: 'biz-deleted', name: 'Deleted', category: '', address: '', phone: '' };
     const biz2 = {
       id: 'biz-kept',
@@ -627,12 +627,9 @@ describe('businessStore', () => {
     const destroyFn = vi.fn().mockResolvedValue(undefined);
     const targetBiz = { id: 'biz-deleted', destroyPermanently: destroyFn };
 
-    const bizCol = databaseMock.get('businesses');
-    bizCol.query.mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([targetBiz]) });
-
     await useBusinessStore.getState().deleteBusiness('biz-deleted');
 
-    expect(destroyFn).toHaveBeenCalled();
+    expect(destroyFn).not.toHaveBeenCalled();
     expect(useBusinessStore.getState().activeBusiness.id).toBe('biz-deleted');
   });
 
@@ -664,7 +661,7 @@ describe('businessStore', () => {
 
     await useBusinessStore.getState().deleteBusiness('biz-deleted');
 
-    expect(destroyFn).toHaveBeenCalled();
+    expect(destroyFn).not.toHaveBeenCalled();
     expect(useBusinessStore.getState().activeBusiness.id).toBe('biz-deleted');
   });
 

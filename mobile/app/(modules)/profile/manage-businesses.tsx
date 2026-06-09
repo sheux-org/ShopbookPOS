@@ -57,6 +57,7 @@ export default function ManageBusinessesRoute() {
   const [newBusinessType, setNewBusinessType] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
 
   // Edit Modal states
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
@@ -65,6 +66,7 @@ export default function ManageBusinessesRoute() {
   const [editAddress, setEditAddress] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditDropdownOpen, setIsEditDropdownOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -113,6 +115,14 @@ export default function ManageBusinessesRoute() {
   };
 
   const handleConfirmDelete = (biz: Business) => {
+    if (biz.id === activeBusiness.id) {
+      Alert.alert(
+        'Action Restricted',
+        'You cannot delete your active business branch. Please switch to another business branch first before attempting to delete this one.'
+      );
+      return;
+    }
+
     if (businesses.length <= 1) {
       Alert.alert(
         'Action Restricted',
@@ -340,12 +350,12 @@ export default function ManageBusinessesRoute() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      activeOpacity={0.7}
+                      activeOpacity={isActive ? 1.0 : 0.7}
                       style={{
                         width: 32,
                         height: 32,
                         borderRadius: 16,
-                        backgroundColor: '#FCE8E6',
+                        backgroundColor: isActive ? '#F3F4F6' : '#FCE8E6',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
@@ -354,7 +364,11 @@ export default function ManageBusinessesRoute() {
                         handleConfirmDelete(biz);
                       }}
                     >
-                      <Feather name="trash-2" size={14} color={TOKENS.error} />
+                      <Feather
+                        name="trash-2"
+                        size={14}
+                        color={isActive ? '#9CA3AF' : TOKENS.error}
+                      />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -376,7 +390,7 @@ export default function ManageBusinessesRoute() {
       >
         <ScrollView
           contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 350 }}
+          style={{ maxHeight: 500 }}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.formGroup}>
@@ -390,42 +404,113 @@ export default function ManageBusinessesRoute() {
             />
           </View>
 
-          <View style={styles.formGroup}>
+          <View style={[styles.formGroup, { zIndex: 10 }]}>
             <Text style={styles.formLabel}>Business Type</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-              {BUSINESS_TYPES.map((cat) => {
-                const isSelected = newBusinessType === cat.label;
-                return (
-                  <TouchableOpacity
-                    key={cat.label}
-                    onPress={() => setNewBusinessType(cat.label)}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.formInput,
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                },
+                isCreateDropdownOpen && { borderColor: TOKENS.primary },
+              ]}
+              onPress={() => setIsCreateDropdownOpen(!isCreateDropdownOpen)}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {newBusinessType ? (
+                  <View
                     style={{
-                      flexDirection: 'row',
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
                       alignItems: 'center',
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: isSelected ? TOKENS.primary : TOKENS.border,
-                      backgroundColor: isSelected ? '#F4F7FF' : '#F9FAFB',
-                      gap: 4,
+                      justifyContent: 'center',
+                      backgroundColor: '#F3F4F6',
                     }}
-                    activeOpacity={0.7}
                   >
-                    <Text style={{ fontSize: 12 }}>{cat.icon}</Text>
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: isSelected ? '700' : '500',
-                        color: isSelected ? TOKENS.primary : TOKENS.dark,
-                      }}
-                    >
-                      {cat.label}
+                    <Text style={{ fontSize: 14 }}>
+                      {BUSINESS_TYPES.find((b) => b.label === newBusinessType)?.icon}
                     </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                  </View>
+                ) : (
+                  <Feather name="briefcase" size={16} color={TOKENS.muted} />
+                )}
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: newBusinessType ? TOKENS.dark : '#9CA3AF',
+                    fontWeight: '500',
+                  }}
+                >
+                  {newBusinessType || 'Select business type'}
+                </Text>
+              </View>
+              <Feather
+                name={isCreateDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={TOKENS.muted}
+              />
+            </TouchableOpacity>
+
+            {isCreateDropdownOpen && (
+              <View style={styles.dropdownOverlayList}>
+                <ScrollView
+                  nestedScrollEnabled
+                  style={{ maxHeight: 150 }}
+                  showsVerticalScrollIndicator
+                >
+                  {BUSINESS_TYPES.map((item) => {
+                    const isSelected = newBusinessType === item.label;
+                    return (
+                      <TouchableOpacity
+                        key={item.label}
+                        style={[
+                          styles.dropdownOverlayItem,
+                          isSelected && { backgroundColor: '#F4F7FF' },
+                        ]}
+                        onPress={() => {
+                          setNewBusinessType(item.label);
+                          setIsCreateDropdownOpen(false);
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#F3F4F6',
+                          }}
+                        >
+                          <Text style={{ fontSize: 14 }}>{item.icon}</Text>
+                        </View>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: isSelected ? '700' : '500',
+                            color: isSelected ? TOKENS.primary : TOKENS.dark,
+                          }}
+                        >
+                          {item.label}
+                        </Text>
+                        {isSelected && (
+                          <Feather
+                            name="check"
+                            size={14}
+                            color={TOKENS.primary}
+                            style={{ marginLeft: 'auto' }}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
           </View>
 
           <View style={styles.formGroup}>
@@ -483,7 +568,7 @@ export default function ManageBusinessesRoute() {
       >
         <ScrollView
           contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 350 }}
+          style={{ maxHeight: 500 }}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.formGroup}>
@@ -497,42 +582,113 @@ export default function ManageBusinessesRoute() {
             />
           </View>
 
-          <View style={styles.formGroup}>
+          <View style={[styles.formGroup, { zIndex: 10 }]}>
             <Text style={styles.formLabel}>Business Type</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-              {BUSINESS_TYPES.map((cat) => {
-                const isSelected = editBusinessType === cat.label;
-                return (
-                  <TouchableOpacity
-                    key={cat.label}
-                    onPress={() => setEditBusinessType(cat.label)}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.formInput,
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                },
+                isEditDropdownOpen && { borderColor: TOKENS.primary },
+              ]}
+              onPress={() => setIsEditDropdownOpen(!isEditDropdownOpen)}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {editBusinessType ? (
+                  <View
                     style={{
-                      flexDirection: 'row',
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
                       alignItems: 'center',
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: isSelected ? TOKENS.primary : TOKENS.border,
-                      backgroundColor: isSelected ? '#F4F7FF' : '#F9FAFB',
-                      gap: 4,
+                      justifyContent: 'center',
+                      backgroundColor: '#F3F4F6',
                     }}
-                    activeOpacity={0.7}
                   >
-                    <Text style={{ fontSize: 12 }}>{cat.icon}</Text>
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: isSelected ? '700' : '500',
-                        color: isSelected ? TOKENS.primary : TOKENS.dark,
-                      }}
-                    >
-                      {cat.label}
+                    <Text style={{ fontSize: 14 }}>
+                      {BUSINESS_TYPES.find((b) => b.label === editBusinessType)?.icon}
                     </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                  </View>
+                ) : (
+                  <Feather name="briefcase" size={16} color={TOKENS.muted} />
+                )}
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: editBusinessType ? TOKENS.dark : '#9CA3AF',
+                    fontWeight: '500',
+                  }}
+                >
+                  {editBusinessType || 'Select business type'}
+                </Text>
+              </View>
+              <Feather
+                name={isEditDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={TOKENS.muted}
+              />
+            </TouchableOpacity>
+
+            {isEditDropdownOpen && (
+              <View style={styles.dropdownOverlayList}>
+                <ScrollView
+                  nestedScrollEnabled
+                  style={{ maxHeight: 150 }}
+                  showsVerticalScrollIndicator
+                >
+                  {BUSINESS_TYPES.map((item) => {
+                    const isSelected = editBusinessType === item.label;
+                    return (
+                      <TouchableOpacity
+                        key={item.label}
+                        style={[
+                          styles.dropdownOverlayItem,
+                          isSelected && { backgroundColor: '#F4F7FF' },
+                        ]}
+                        onPress={() => {
+                          setEditBusinessType(item.label);
+                          setIsEditDropdownOpen(false);
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#F3F4F6',
+                          }}
+                        >
+                          <Text style={{ fontSize: 14 }}>{item.icon}</Text>
+                        </View>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: isSelected ? '700' : '500',
+                            color: isSelected ? TOKENS.primary : TOKENS.dark,
+                          }}
+                        >
+                          {item.label}
+                        </Text>
+                        {isSelected && (
+                          <Feather
+                            name="check"
+                            size={14}
+                            color={TOKENS.primary}
+                            style={{ marginLeft: 'auto' }}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
           </View>
 
           <View style={styles.formGroup}>
@@ -549,12 +705,15 @@ export default function ManageBusinessesRoute() {
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Phone Number</Text>
             <TextInput
-              style={styles.formInput}
+              style={[
+                styles.formInput,
+                { backgroundColor: '#F3F4F6', color: '#6B7280', borderColor: '#E5E7EB' },
+              ]}
               placeholder="e.g. +94 11 234 5678"
               placeholderTextColor="#9CA3AF"
               value={editPhone}
-              onChangeText={setEditPhone}
-              keyboardType="phone-pad"
+              editable={false}
+              selectTextOnFocus={false}
             />
           </View>
         </ScrollView>
@@ -801,5 +960,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: TOKENS.card,
+  },
+  dropdownOverlayList: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 10,
+    backgroundColor: TOKENS.card,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  dropdownOverlayItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
 });

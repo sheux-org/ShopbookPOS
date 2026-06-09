@@ -89,8 +89,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           }),
           Animated.spring(sheetTranslateY, {
             toValue: 0,
-            damping: 18,
-            stiffness: 120,
+            damping: 24,
+            stiffness: 140,
             useNativeDriver: true,
           }),
         ])
@@ -145,7 +145,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   if (!showModal) return null;
 
   const calculatedMaxHeight = maxHeight ?? SCREEN_HEIGHT - insets.top - 40;
-  const dynamicMaxHeight = Math.max(120, calculatedMaxHeight - keyboardHeight);
+  const dynamicMaxHeight = calculatedMaxHeight;
 
   return (
     <Modal visible={showModal} transparent animationType="none" onRequestClose={handleClose}>
@@ -165,10 +165,15 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
         {/* Sheet container sits on top and slides up/down */}
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.overlay}
           pointerEvents="box-none"
         >
+          {/* Top spacer to dismiss sheet and constrain height under keyboard */}
+          <TouchableWithoutFeedback onPress={handleClose}>
+            <View style={{ flex: 1 }} />
+          </TouchableWithoutFeedback>
+
           <Animated.View
             style={[
               styles.sheetContainer,
@@ -178,6 +183,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                 paddingHorizontal: contentPaddingHorizontal,
                 paddingTop: contentPaddingTop,
                 maxHeight: dynamicMaxHeight,
+                flexShrink: 1,
               },
               forceMaxHeight && { height: dynamicMaxHeight },
             ]}
@@ -210,7 +216,6 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

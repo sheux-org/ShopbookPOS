@@ -35,7 +35,7 @@ import { BranchModal } from '../../components/profile/BranchModal';
 import { FaqModal } from '../../components/profile/FaqModal';
 import { HelpSupportModal } from '../../components/profile/HelpSupportModal';
 import { ActiveDevicesModal } from '../../components/profile/ActiveDevicesModal';
-import { useStaff, useCreateStaff } from '../../hooks/useStaff';
+import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff } from '../../hooks/useStaff';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
 
@@ -88,6 +88,7 @@ export default function ProfilePage() {
   const [newStaffName, setNewStaffName] = useState('');
   const [newStaffRole, setNewStaffRole] = useState<'admin' | 'manager' | 'cashier'>('cashier');
   const [newStaffPhone, setNewStaffPhone] = useState('');
+  const [editingStaff, setEditingStaff] = useState<DBEmployee | null>(null);
 
   // Form states - Branch add
   const [newBranchName, setNewBranchName] = useState('');
@@ -97,6 +98,8 @@ export default function ProfilePage() {
   // React Query Hooks
   const { data: staffList = [] } = useStaff(activeBusiness?.id || '0');
   const createStaffMutation = useCreateStaff(activeBusiness?.id || '0');
+  const updateStaffMutation = useUpdateStaff(activeBusiness?.id || '0');
+  const deleteStaffMutation = useDeleteStaff(activeBusiness?.id || '0');
 
   const employees: DBEmployee[] = staffList.map((e) => ({
     id: e.id,
@@ -195,6 +198,40 @@ export default function ProfilePage() {
     }
   };
 
+  const handleEditStaff = (emp: DBEmployee) => {
+    setEditingStaff(emp);
+    setNewStaffName(emp.name);
+    setNewStaffPhone(emp.phone);
+    setNewStaffRole(emp.role);
+  };
+
+  const handleCancelEditStaff = () => {
+    setEditingStaff(null);
+    setNewStaffName('');
+    setNewStaffPhone('');
+    setNewStaffRole('cashier');
+  };
+
+  const handleDeleteStaff = (id: string) => {
+    const emp = employees.find((e) => e.id === id);
+    if (!emp) return;
+    if (
+      confirm(
+        `Are you sure you want to permanently remove "${emp.name}"? This action cannot be undone.`
+      )
+    ) {
+      deleteStaffMutation.mutate(id, {
+        onSuccess: () => {
+          triggerToast('Staff member removed successfully! 🗑️');
+        },
+        onError: (err: any) => {
+          console.error(err);
+          triggerToast(err.message || 'Failed to remove staff member.');
+        },
+      });
+    }
+  };
+
   const handleAddStaffSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaffName || !newStaffPhone) return;
@@ -202,24 +239,49 @@ export default function ProfilePage() {
     const displayRole =
       newStaffRole === 'admin' ? 'Admin' : newStaffRole === 'manager' ? 'Manager' : 'Cashier';
 
-    createStaffMutation.mutate(
-      {
-        name: newStaffName,
-        role: displayRole as 'Admin' | 'Manager' | 'Cashier',
-        phone: newStaffPhone,
-      },
-      {
-        onSuccess: () => {
-          triggerToast(`Staff ${newStaffName} registered successfully! 👥`);
-          setNewStaffName('');
-          setNewStaffPhone('');
-          setNewStaffRole('cashier');
+    if (editingStaff) {
+      updateStaffMutation.mutate(
+        {
+          id: editingStaff.id,
+          name: newStaffName,
+          role: displayRole as 'Admin' | 'Manager' | 'Cashier',
+          phone: newStaffPhone,
         },
-        onError: (err) => {
-          console.error('Failed to register staff:', err);
+        {
+          onSuccess: () => {
+            triggerToast(`Staff ${newStaffName} details updated! 👥`);
+            setNewStaffName('');
+            setNewStaffPhone('');
+            setNewStaffRole('cashier');
+            setEditingStaff(null);
+          },
+          onError: (err: any) => {
+            console.error('Failed to update staff:', err);
+            triggerToast(err.message || 'Failed to update staff.');
+          },
+        }
+      );
+    } else {
+      createStaffMutation.mutate(
+        {
+          name: newStaffName,
+          role: displayRole as 'Admin' | 'Manager' | 'Cashier',
+          phone: newStaffPhone,
         },
-      }
-    );
+        {
+          onSuccess: () => {
+            triggerToast(`Staff ${newStaffName} registered successfully! 👥`);
+            setNewStaffName('');
+            setNewStaffPhone('');
+            setNewStaffRole('cashier');
+          },
+          onError: (err) => {
+            console.error('Failed to register staff:', err);
+            triggerToast('Failed to onboard staff member.');
+          },
+        }
+      );
+    }
   };
 
   const handleAddBranchSubmit = async (e: React.FormEvent) => {
@@ -573,7 +635,10 @@ export default function ProfilePage() {
 
       <StaffModal
         isOpen={activeModal === 'staff'}
-        onClose={() => setActiveModal(null)}
+        onClose={() => {
+          setActiveModal(null);
+          handleCancelEditStaff();
+        }}
         employees={employees}
         newStaffName={newStaffName}
         setNewStaffName={setNewStaffName}
@@ -582,6 +647,10 @@ export default function ProfilePage() {
         newStaffRole={newStaffRole}
         setNewStaffRole={setNewStaffRole}
         onSubmit={handleAddStaffSubmit}
+        editingStaff={editingStaff}
+        onEdit={handleEditStaff}
+        onDelete={handleDeleteStaff}
+        onCancelEdit={handleCancelEditStaff}
       />
 
       <BranchModal

@@ -234,45 +234,46 @@ export default function ManageStaffRoute() {
                 </View>
               </View>
               {/* Only admins can edit/delete staff */}
-              {canPerform('create', 'staff') && (
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 10,
-                  }}
-                >
-                  <TouchableOpacity
-                    activeOpacity={0.7}
+              {canPerform('create', 'staff') &&
+                !(member.role === 'Admin' || member.name.toLowerCase() === 'owner / admin') && (
+                  <View
                     style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 16,
-                      backgroundColor: '#E8F0FE',
+                      flexDirection: 'row',
                       alignItems: 'center',
-                      justifyContent: 'center',
+                      gap: 10,
                     }}
-                    onPress={() => handleOpenEditStaffModal(member)}
                   >
-                    <Feather name="edit-2" size={14} color={TOKENS.primary} />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: '#E8F0FE',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onPress={() => handleOpenEditStaffModal(member)}
+                    >
+                      <Feather name="edit-2" size={14} color={TOKENS.primary} />
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 16,
-                      backgroundColor: '#FCE8E6',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                    onPress={() => handleConfirmDeleteStaff(member)}
-                  >
-                    <Feather name="trash-2" size={14} color={TOKENS.error} />
-                  </TouchableOpacity>
-                </View>
-              )}
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        backgroundColor: '#FCE8E6',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      onPress={() => handleConfirmDeleteStaff(member)}
+                    >
+                      <Feather name="trash-2" size={14} color={TOKENS.error} />
+                    </TouchableOpacity>
+                  </View>
+                )}
             </View>
           );
         })}
@@ -399,17 +400,32 @@ export default function ManageStaffRoute() {
             <View style={styles.rolesSelectorRow}>
               {(['Admin', 'Manager', 'Cashier'] as const).map((role) => {
                 const isSelected = editRole === role;
+                const isOwner =
+                  editingStaff?.role === 'Admin' ||
+                  editingStaff?.name.toLowerCase() === 'owner / admin';
+                const isDemoting = isOwner && role !== 'Admin';
                 return (
                   <TouchableOpacity
                     key={role}
-                    style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
-                    activeOpacity={0.8}
-                    onPress={() => setEditRole(role)}
+                    style={[
+                      styles.roleSelectTab,
+                      isSelected && styles.roleSelectTabActive,
+                      isDemoting && { opacity: 0.4 },
+                    ]}
+                    activeOpacity={isDemoting ? 1 : 0.8}
+                    onPress={() => {
+                      if (isDemoting) {
+                        triggerToast('Owner / Admin role cannot be demoted.');
+                        return;
+                      }
+                      setEditRole(role);
+                    }}
                   >
                     <Text
                       style={[
                         styles.roleSelectTabText,
                         isSelected && styles.roleSelectTabTextActive,
+                        isDemoting && { color: TOKENS.muted },
                       ]}
                     >
                       {role}

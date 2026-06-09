@@ -368,6 +368,10 @@ export const useBusinessStore = create<BusinessState>()(
         }
       },
       deleteBusiness: async (id) => {
+        if (id === get().activeBusiness.id) {
+          console.warn('Cannot delete the active business.');
+          return;
+        }
         try {
           const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
           if (businesses.length > 0) {

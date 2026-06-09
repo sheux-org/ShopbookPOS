@@ -95,7 +95,7 @@ export function useUpdateStaff(businessId: string) {
         throw new Error('Staff member not found in database!');
       }
 
-      const targetEmp = employees[0];
+      const targetEmp = employees[0] as any;
 
       const normalizePhone = (phoneStr: string): string => {
         let cleaned = phoneStr.replace(/\D/g, '');
@@ -106,6 +106,12 @@ export function useUpdateStaff(businessId: string) {
 
       const cleanPhone = normalizePhone(phone);
       const dbRole = role === 'Admin' ? 'admin' : role === 'Manager' ? 'manager' : 'cashier';
+      const isOwner =
+        targetEmp.role === 'admin' || targetEmp.name.toLowerCase() === 'owner / admin';
+
+      if (isOwner && dbRole !== 'admin') {
+        throw new Error('Owner / Admin role cannot be changed.');
+      }
 
       await database.write(async () => {
         await targetEmp.update((emp: any) => {
@@ -132,7 +138,13 @@ export function useDeleteStaff(businessId: string) {
         throw new Error('Staff member not found in database!');
       }
 
-      const targetEmp = employees[0];
+      const targetEmp = employees[0] as any;
+      const isOwner =
+        targetEmp.role === 'admin' || targetEmp.name.toLowerCase() === 'owner / admin';
+      if (isOwner) {
+        throw new Error('Owner / Admin cannot be deleted.');
+      }
+
       await database.write(async () => {
         await targetEmp.destroyPermanently();
       });
