@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import database from '../db/database';
 import { schema } from '../db/schema';
 import { useAuthStore } from '../stores/authStore';
+import { useSyncStore } from '../stores/syncStore';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
@@ -129,6 +130,8 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
 
   isSyncInProgress = true;
   hasPendingSyncRequest = false;
+  useSyncStore.getState().setSyncing(true);
+  useSyncStore.getState().setSyncSuccess(null);
 
   const runSync = async (): Promise<boolean> => {
     try {
@@ -137,6 +140,7 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
       const activeBusinessId = useAuthStore.getState().activeBusinessId;
       if (!activeBusinessId) {
         console.warn('Sync skipped: No active business ID selected.');
+        useSyncStore.getState().setSyncSuccess(false);
         return false;
       }
 
@@ -201,6 +205,8 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
         migrationsEnabledAtVersion: schema.version,
       });
       console.log('Database synced successfully');
+      useSyncStore.getState().setSyncSuccess(true);
+      useSyncStore.getState().setHasCompletedInitialSync(true);
       return true;
     } catch (error: any) {
       const isNetworkError =
@@ -214,6 +220,7 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
       } else {
         console.error('Failed to sync database:', error);
       }
+      useSyncStore.getState().setSyncSuccess(false);
       return false;
     }
   };
@@ -221,6 +228,7 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
   try {
     const success = await runSync();
     isSyncInProgress = false;
+    useSyncStore.getState().setSyncing(false);
 
     if (hasPendingSyncRequest) {
       hasPendingSyncRequest = false;
@@ -234,6 +242,8 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
   } catch (err) {
     isSyncInProgress = false;
     hasPendingSyncRequest = false;
+    useSyncStore.getState().setSyncing(false);
+    useSyncStore.getState().setSyncSuccess(false);
     return false;
   }
 }

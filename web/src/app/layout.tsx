@@ -1,21 +1,21 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '../stores/authStore';
-import { useBusinessStore } from '../stores/businessStore';
+import { usePathname } from 'next/navigation';
 import { useSettingsStore } from '../stores/settingsStore';
-import { requestFullPullForBusiness, syncDatabase, supabase, getClientId } from '../services/sync';
 import { startUploadQueueMonitor } from '@/services/uploadQueue';
+import { useSyncStore } from '../stores/syncStore';
+import { useLocalDataCheck } from '../hooks/useLocalDataCheck';
+import { useAppAuthGuard } from '../hooks/useAppAuthGuard';
+import { useAppSync } from '../hooks/useAppSync';
+import SyncBlocker from '../components/layout/SyncBlocker';
 import './globals.css';
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Sidebar } from '../components/layout/Sidebar';
 import { MobileNavbar } from '../components/layout/MobileNavbar';
 import { Header } from '../components/layout/Header';
 import { WifiOff } from 'lucide-react';
 import { MobileBlocker } from '../components/layout/MobileBlocker';
-import { useCart } from '../stores/cartStore';
-import { useCartActions } from '../hooks/useCartActions';
 import { useActiveDeviceTracker } from '../hooks/useActiveDeviceTracker';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -59,26 +59,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
-  const queryClient = useQueryClient();
   useActiveDeviceTracker();
-  const router = useRouter();
   const pathname = usePathname();
-  const { releaseReservedStocks } = useCartActions();
-
-  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
-  const activeBusinessId = useAuthStore((s) => s.activeBusinessId);
-  const loadBusinessesFromDb = useBusinessStore((s) => s.loadBusinessesFromDb);
 
   const posMode = useSettingsStore((s) => s.posMode);
   const setPosMode = useSettingsStore((s) => s.setPosMode);
   const sidebarVisible = useSettingsStore((s) => s.sidebarVisible);
   const setSidebarVisible = useSettingsStore((s) => s.setSidebarVisible);
 
-  const [syncing, setSyncing] = useState(false);
-  const [syncSuccess, setSyncSuccess] = useState<boolean | null>(null);
+  const { isSyncing: syncing, syncSuccess, hasCompletedInitialSync } = useSyncStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+
+  // Custom Hooks for State & Routing Guards
+  const { hydrated, isLoggedIn, activeBusiness } = useAppAuthGuard();
+  const { handleSync } = useAppSync(hydrated);
+  const hasLocalData = useLocalDataCheck();
 
   // Network connection status watcher
   useEffect(() => {
@@ -103,7 +99,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [hydrated, isLoggedIn]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -119,135 +115,6 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
       return next;
     });
   };
-
-  // Zustand Hydration check
-  useEffect(() => {
-    setHydrated(useAuthStore.persist.hasHydrated());
-    const unsubFinish = useAuthStore.persist.onFinishHydration(() => {
-      setHydrated(true);
-    });
-    return () => unsubFinish();
-  }, []);
-
-  // Initialize DB and load profiles on startup
-  useEffect(() => {
-    if (hydrated && isLoggedIn) {
-      loadBusinessesFromDb();
-    }
-  }, [hydrated, isLoggedIn, loadBusinessesFromDb]);
-
-  // Auth Guard
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!isLoggedIn && pathname !== '/auth') {
-      router.push('/auth');
-    } else if (isLoggedIn && pathname === '/auth') {
-      router.push('/');
-    }
-  }, [hydrated, isLoggedIn, pathname, router]);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    setSyncSuccess(null);
-    try {
-      const success = await syncDatabase();
-      setSyncSuccess(success);
-      if (success) {
-        await loadBusinessesFromDb();
-        queryClient.invalidateQueries(); // Refresh active lists and tables in the UI
-      }
-      setTimeout(() => setSyncSuccess(null), 2500);
-    } catch {
-      setSyncSuccess(false);
-      setTimeout(() => setSyncSuccess(null), 2500);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  // Trigger immediate sync when connection state is restored
-  useEffect(() => {
-    if (!hydrated || !isLoggedIn) return;
-
-    const handleOnline = () => {
-      console.log('Device is back online, triggering sync...');
-      handleSync();
-    };
-
-    window.addEventListener('online', handleOnline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-    };
-  }, [hydrated, isLoggedIn]);
-
-  // Auto trigger sync on mount, login, or when changing active business
-  const activeBusiness = useBusinessStore((s) => s.activeBusiness);
-  useEffect(() => {
-    if (hydrated && isLoggedIn) {
-      const targetBizId =
-        activeBusinessId || (activeBusiness?.id !== '0' ? activeBusiness?.id : null);
-      if (targetBizId && targetBizId !== '0') {
-        useSettingsStore.getState().setBackupEnabled(true); // Always enable sync on session load/refresh
-        handleSync();
-      }
-    }
-  }, [hydrated, isLoggedIn, activeBusiness?.id, activeBusinessId]);
-
-  // Real-time Supabase Broadcast listener for reactive sync
-  useEffect(() => {
-    if (!isLoggedIn || !activeBusinessId) return;
-
-    const clientId = getClientId();
-    const channel = supabase
-      .channel(`sync:${activeBusinessId}`)
-      .on('broadcast', { event: 'sync_trigger' }, (payload) => {
-        const data = payload.payload;
-        if (data && data.senderId !== clientId && data.businessId === activeBusinessId) {
-          console.log(
-            `[Sync Broadcast] Received mutation trigger from device: ${data.senderId}. Syncing...`
-          );
-          handleSync();
-        }
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(
-            `[Sync Broadcast] Subscribed to realtime sync channel: sync:${activeBusinessId}`
-          );
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isLoggedIn, activeBusinessId]);
-
-  const [prevBizId, setPrevBizId] = useState<string | null>(null);
-
-  // Restore stock and clear cart on logout or switching business
-  useEffect(() => {
-    if (hydrated) {
-      if (!isLoggedIn || (prevBizId && activeBusiness?.id && activeBusiness.id !== prevBizId)) {
-        const cart = useCart.getState().cart;
-        const bizIdToRestore = prevBizId || activeBusiness?.id;
-        if (cart.length > 0 && bizIdToRestore && bizIdToRestore !== '0') {
-          releaseReservedStocks(cart, bizIdToRestore);
-        } else {
-          useCart.getState().clearCart();
-        }
-        if (
-          isLoggedIn &&
-          activeBusiness?.id &&
-          activeBusiness.id !== prevBizId &&
-          activeBusiness.id !== '0'
-        ) {
-          requestFullPullForBusiness(activeBusiness.id);
-        }
-      }
-      setPrevBizId(activeBusiness?.id || null);
-    }
-  }, [hydrated, isLoggedIn, activeBusiness?.id]);
 
   const getHeaderInfo = () => {
     if (pathname.startsWith('/stocks')) {
@@ -337,49 +204,20 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     return <div style={{ backgroundColor: '#f9fafb', height: '100vh' }} />;
   }
 
-  if (isLoggedIn && pathname !== '/auth' && (!activeBusiness || activeBusiness.id === '0')) {
+  if (
+    isLoggedIn &&
+    pathname !== '/auth' &&
+    (!activeBusiness ||
+      activeBusiness.id === '0' ||
+      (!hasCompletedInitialSync && hasLocalData === false))
+  ) {
     return (
-      <div
-        style={{
-          backgroundColor: '#f9fafb',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          fontFamily: 'Inter, system-ui, sans-serif',
-        }}
-      >
-        <div
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}
-        >
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              border: '3px solid #e5e7eb',
-              borderTopColor: '#2563eb',
-              borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
-            }}
-          />
-          <div
-            style={{
-              color: '#6b7280',
-              fontSize: '13px',
-              fontWeight: '600',
-              letterSpacing: '0.5px',
-            }}
-          >
-            Loading Business Profile...
-          </div>
-        </div>
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
+      <SyncBlocker
+        activeBusiness={activeBusiness}
+        syncSuccess={syncSuccess}
+        syncing={syncing}
+        handleSync={handleSync}
+      />
     );
   }
 

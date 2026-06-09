@@ -53,7 +53,7 @@ describe('Supabase Sync Service', () => {
     mockSynchronize.mockImplementationOnce(async (config: any) => {
       const pullResult = await config.pullChanges({ lastPulledAt: 0 });
       expect(pullResult.timestamp).toBe(123456789);
-      expect(pullResult.changes.businesses.created).toHaveLength(1);
+      expect(pullResult.changes.businesses.updated).toHaveLength(1);
 
       await config.pushChanges({
         changes: {
