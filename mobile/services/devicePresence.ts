@@ -160,8 +160,14 @@ function notifyPresenceListeners(): void {
 }
 
 function ensureChannel(businessId: string, deviceId: string): RealtimeChannel {
-  if (channel && currentBusinessId === businessId && currentDeviceId === deviceId) {
-    return channel;
+  const isChannelValid =
+    channel &&
+    currentBusinessId === businessId &&
+    currentDeviceId === deviceId &&
+    (!(channel as any).joinedOnce || channel.state === 'joined' || channel.state === 'joining');
+
+  if (isChannelValid) {
+    return channel!;
   }
 
   if (channel) {
