@@ -14,10 +14,17 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { TOKENS } from '../../constants/tokens';
-import { useGetStockHistory, useStockInProduct, useProduct } from '../../hooks/useProducts';
+import {
+  useGetStockHistory,
+  useStockInProduct,
+  useProduct,
+  useFindProduct,
+  useUpdateProduct,
+} from '../../hooks/useProducts';
 import { ProductImage } from '../common/ProductImage';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { syncDatabase } from '../../services/sync';
+import { BarcodeLabelModal } from '../product/BarcodeLabelModal';
 
 export const ItemDetailsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -30,6 +37,39 @@ export const ItemDetailsScreen: React.FC = () => {
   const [activeReasonChip, setActiveReasonChip] = useState('Restock');
   const [customReasonText, setCustomReasonText] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+
+  const { generateUniqueBarcode } = useFindProduct();
+  const updateProductMutation = useUpdateProduct();
+
+  const handleGenerateBarcode = async () => {
+    if (!product) return;
+    try {
+      const newBarcode = await generateUniqueBarcode();
+      await updateProductMutation.mutateAsync({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        category: product.category,
+        icon: product.icon,
+        stockCount: product.stockCount,
+        unitType: product.unitType,
+        costPrice: product.costPrice,
+        quickCode: product.quickCode,
+        lowStockAlert: product.lowStockAlert,
+        barcode: newBarcode,
+      });
+      queryClient.invalidateQueries({ queryKey: ['product', product.id] });
+      triggerToast('EAN-13 barcode generated! 🏷️');
+      // Immediately trigger background sync
+      syncDatabase().catch((err) => console.error('Sync failed:', err));
+    } catch (err: any) {
+      Alert.alert(
+        'Barcode Generation Failed',
+        err.message || 'Could not generate a unique barcode.'
+      );
+    }
+  };
 
   const { data: product, isLoading: isProductLoading } = useProduct(id);
   const {
@@ -246,6 +286,45 @@ export const ItemDetailsScreen: React.FC = () => {
                       </Text>
                     </View>
                   ) : null}
+                </View>
+
+                {/* Barcode/Label Print Action Row */}
+                <View style={styles.barcodeActionRow}>
+                  {product.barcode ? (
+                    <TouchableOpacity
+                      style={styles.actionButtonOutline}
+                      activeOpacity={0.7}
+                      onPress={() => setIsLabelModalOpen(true)}
+                    >
+                      <Feather
+                        name="tag"
+                        size={13}
+                        color={TOKENS.primary}
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={styles.actionButtonTextOutline}>View Label</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[
+                        styles.actionButtonFilled,
+                        updateProductMutation.isPending && { opacity: 0.7 },
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={handleGenerateBarcode}
+                      disabled={updateProductMutation.isPending}
+                    >
+                      <Feather
+                        name="plus-circle"
+                        size={13}
+                        color="#FFFFFF"
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={styles.actionButtonTextFilled}>
+                        {updateProductMutation.isPending ? 'Generating...' : 'Generate Barcode'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             </View>
@@ -490,6 +569,18 @@ export const ItemDetailsScreen: React.FC = () => {
             <ActivityIndicator size="small" color={TOKENS.primary} style={{ marginVertical: 16 }} />
           ) : null
         }
+      />
+
+      <BarcodeLabelModal
+        visible={isLabelModalOpen}
+        onClose={() => setIsLabelModalOpen(false)}
+        product={{
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          barcode: product.barcode || '',
+        }}
       />
     </ScreenWrapper>
   );
@@ -953,5 +1044,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 24,
     lineHeight: 16,
+  },
+  barcodeActionRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  actionButtonOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: TOKENS.primary,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#EFF6FF',
+  },
+  actionButtonTextOutline: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: TOKENS.primary,
+  },
+  actionButtonFilled: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: TOKENS.primary,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  actionButtonTextFilled: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });

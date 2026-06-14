@@ -29,6 +29,7 @@ import {
   useProducts,
   useUpdateProduct,
   useFindProductByBarcode,
+  useFindProduct,
 } from '../../hooks/useProducts';
 import { deleteUploadThingFile, uploadToUploadThing } from '../../services/uploadQueue';
 import { ProductImage } from '../common/ProductImage';
@@ -95,6 +96,18 @@ export const ManageItemsScreen: React.FC = () => {
   const [editBarcode, setEditBarcode] = useState('');
   const [editImage, setEditImage] = useState('');
   const [editImageUploading, setEditImageUploading] = useState(false);
+
+  const { generateUniqueBarcode } = useFindProduct();
+
+  const handleAutoGenerateEditBarcode = async () => {
+    try {
+      const uniqueCode = await generateUniqueBarcode();
+      setEditBarcode(uniqueCode);
+      triggerToast('Generated unique barcode! 🏷️');
+    } catch (err: any) {
+      Alert.alert('Generation Failed', err.message || 'Failed to generate a unique barcode');
+    }
+  };
 
   const handleProductCardPress = (prod: any) => {
     router.push({
@@ -665,7 +678,20 @@ export const ManageItemsScreen: React.FC = () => {
               </View>
 
               <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Barcode</Text>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={styles.fieldLabel}>Barcode</Text>
+                  <TouchableOpacity onPress={handleAutoGenerateEditBarcode} activeOpacity={0.7}>
+                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: TOKENS.primary }}>
+                      Auto-Gen
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 <TextInput
                   style={styles.formInput}
                   placeholder="e.g. 4792002340..."

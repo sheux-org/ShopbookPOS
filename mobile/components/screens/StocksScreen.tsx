@@ -24,7 +24,12 @@ import { TOKENS } from '../../constants/tokens';
 import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { cartState } from '../data/cartState';
 import { HeaderCartButton } from '../common/HeaderCartButton';
-import { useAddProduct, useProducts, useToggleFavoriteProduct } from '../../hooks/useProducts';
+import {
+  useAddProduct,
+  useProducts,
+  useToggleFavoriteProduct,
+  useFindProduct,
+} from '../../hooks/useProducts';
 import { deleteUploadThingFile, uploadToUploadThing } from '../../services/uploadQueue';
 import { ProductImage } from '../common/ProductImage';
 import { hapticFeedback } from '../../utils/haptics';
@@ -103,6 +108,18 @@ export const StocksScreen: React.FC = () => {
   const [formBarcode, setFormBarcode] = useState('');
   const [formImage, setFormImage] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+
+  const { generateUniqueBarcode } = useFindProduct();
+
+  const handleAutoGenerateBarcode = async () => {
+    try {
+      const uniqueCode = await generateUniqueBarcode();
+      setFormBarcode(uniqueCode);
+      triggerToast('Generated unique barcode! 🏷️');
+    } catch (err: any) {
+      Alert.alert('Generation Failed', err.message || 'Failed to generate a unique barcode');
+    }
+  };
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -357,7 +374,20 @@ export const StocksScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.flexField}>
-                  <Text style={styles.fieldLabel}>Barcode</Text>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={styles.fieldLabel}>Barcode</Text>
+                    <TouchableOpacity onPress={handleAutoGenerateBarcode} activeOpacity={0.7}>
+                      <Text style={{ fontSize: 11, fontWeight: 'bold', color: TOKENS.primary }}>
+                        Auto-Gen
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   <View style={styles.barcodeInputContainer}>
                     <TextInput
                       style={styles.barcodeInput}

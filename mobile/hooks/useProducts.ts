@@ -18,6 +18,7 @@ import {
   queueImageUpload,
   removeProductImage,
 } from '../services/uploadQueue';
+import { generateEAN13 } from '../utils/barcodeGenerator';
 
 function invalidateProductQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -643,5 +644,101 @@ export function useFindProductByCode() {
       };
     }
     return null;
+  };
+}
+
+export function useFindProduct() {
+  const activeBiz = useActiveBusiness();
+
+  const findProductByCodeOrName = async (query: string): Promise<any[]> => {
+    if (!activeBiz || activeBiz.id === '0') return [];
+    return database
+      .get('products')
+      .query(
+        Q.where('business_id', activeBiz.id),
+        Q.or(Q.where('barcode', query), Q.where('quick_code', query), Q.where('name', query))
+      )
+      .fetch();
+  };
+
+  const findProductByBarcode = async (barcode: string): Promise<any[]> => {
+    if (!activeBiz || activeBiz.id === '0') return [];
+    return database
+      .get('products')
+      .query(
+        Q.where('business_id', activeBiz.id),
+        Q.or(Q.where('barcode', barcode), Q.where('quick_code', barcode))
+      )
+      .fetch();
+  };
+
+  const checkDuplicateCodes = async (params: {
+    barcode?: string;
+    quickCode?: string;
+    excludeProductId?: string;
+  }): Promise<{ barcodeDuplicate?: any; quickCodeDuplicate?: any } | null> => {
+    if (!activeBiz || activeBiz.id === '0') return null;
+    const { barcode, quickCode, excludeProductId } = params;
+    if (!barcode && !quickCode) return null;
+
+    const conditions: any[] = [];
+    if (barcode) conditions.push(Q.where('barcode', barcode));
+    if (quickCode) conditions.push(Q.where('quick_code', quickCode));
+
+    const existing = await database
+      .get('products')
+      .query(Q.where('business_id', activeBiz.id), Q.or(...conditions))
+      .fetch();
+
+    const duplicates = excludeProductId
+      ? existing.filter((p: any) => p.id !== excludeProductId)
+      : existing;
+
+    if (duplicates.length === 0) return null;
+
+    let barcodeDuplicate: any = undefined;
+    let quickCodeDuplicate: any = undefined;
+
+    for (const dup of duplicates) {
+      if (barcode && (dup as any).barcode === barcode) {
+        barcodeDuplicate = dup;
+      }
+      if (quickCode && (dup as any).quickCode === quickCode) {
+        quickCodeDuplicate = dup;
+      }
+    }
+
+    return { barcodeDuplicate, quickCodeDuplicate };
+  };
+
+  const generateUniqueBarcode = async (): Promise<string> => {
+    if (!activeBiz || activeBiz.id === '0') throw new Error('No active business');
+
+    let uniqueCode = '';
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 10) {
+      const candidate = generateEAN13();
+      const existing = await database
+        .get('products')
+        .query(Q.where('business_id', activeBiz.id), Q.where('barcode', candidate))
+        .fetch();
+      if (existing.length === 0) {
+        uniqueCode = candidate;
+        isUnique = true;
+      }
+      attempts++;
+    }
+
+    if (!uniqueCode) throw new Error('Failed to generate a unique barcode');
+    return uniqueCode;
+  };
+
+  return {
+    findProductByCodeOrName,
+    findProductByBarcode,
+    checkDuplicateCodes,
+    generateUniqueBarcode,
   };
 }

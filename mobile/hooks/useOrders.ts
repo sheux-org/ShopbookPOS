@@ -224,13 +224,14 @@ export function useCreateOrder() {
 export function useGetPeriodOrders(
   period: 'daily' | 'monthly' | 'yearly' | 'custom',
   startDate: Date | null,
-  endDate: Date | null
+  endDate: Date | null,
+  paymentMethod?: 'all' | 'cash' | 'card' | 'bank'
 ) {
   const activeBiz = useActiveBusiness();
   const PAGE_SIZE = 20;
 
   const result = useInfiniteQuery<DBOrder[]>({
-    queryKey: ['period-orders', activeBiz.id, period, startDate, endDate],
+    queryKey: ['period-orders', activeBiz.id, period, startDate, endDate, paymentMethod],
     queryFn: async ({ pageParam = 0 }) => {
       const offset = (pageParam as number) * PAGE_SIZE;
       let query = database
@@ -255,12 +256,15 @@ export function useGetPeriodOrders(
         endTs = new Date(endDate).getTime();
       }
 
-      query = query.extend(
-        Q.where('created_at', Q.between(startTs, endTs)),
-        Q.sortBy('created_at', Q.desc),
-        Q.skip(offset),
-        Q.take(PAGE_SIZE)
-      );
+      const queryConditions: any[] = [Q.where('created_at', Q.between(startTs, endTs))];
+
+      if (paymentMethod && paymentMethod !== 'all') {
+        queryConditions.push(Q.where('payment_method', paymentMethod));
+      }
+
+      queryConditions.push(Q.sortBy('created_at', Q.desc), Q.skip(offset), Q.take(PAGE_SIZE));
+
+      query = query.extend(...queryConditions);
 
       const dbOrders = await query.fetch();
       return dbOrders.map((o: any) => ({

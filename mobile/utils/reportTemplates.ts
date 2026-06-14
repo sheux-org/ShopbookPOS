@@ -12,8 +12,12 @@ export type ReportType =
   | 'best_sellers'
   | 'slow_movers'
   | 'orders_ledger'
+  | 'ledger_cash'
+  | 'ledger_card'
+  | 'ledger_bank'
   | 'item_sales'
-  | 'branch_performance';
+  | 'branch_performance'
+  | 'invoice_sales';
 
 export interface ReportData {
   business: {
@@ -216,36 +220,61 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
         </tbody>
       </table>
     `;
-  } else if (type === 'orders_ledger') {
-    reportTitle = 'Store Orders Ledger Report';
+  } else if (
+    type === 'orders_ledger' ||
+    type === 'ledger_cash' ||
+    type === 'ledger_card' ||
+    type === 'ledger_bank'
+  ) {
+    const methodFilterLabel =
+      type === 'ledger_cash'
+        ? ' (Cash Payments)'
+        : type === 'ledger_card'
+          ? ' (Card Payments)'
+          : type === 'ledger_bank'
+            ? ' (Bank Payments)'
+            : '';
+    reportTitle = `Store Orders Ledger Report${methodFilterLabel}`;
+
+    const ledgerOrders =
+      type === 'orders_ledger'
+        ? orders
+        : orders.filter(
+            (o) =>
+              (o.paymentMethod || 'cash').toLowerCase() ===
+              (type === 'ledger_cash' ? 'cash' : type === 'ledger_card' ? 'card' : 'bank')
+          );
+    const ledgerSales = ledgerOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+    const ledgerOrdersCount = ledgerOrders.length;
+    const ledgerAvgBasket = ledgerOrdersCount > 0 ? ledgerSales / ledgerOrdersCount : 0;
 
     // KPI Cards
     kpiCardsHtml = `
       <div class="kpi-card">
         <div class="kpi-label">Gross Sales Revenue</div>
-        <div class="kpi-value text-success">Rs. ${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-value text-success">Rs. ${ledgerSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Total Invoices</div>
-        <div class="kpi-value">${totalOrdersCount}</div>
+        <div class="kpi-value">${ledgerOrdersCount}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Average Order Basket</div>
-        <div class="kpi-value">Rs. ${avgBasket.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-value">Rs. ${ledgerAvgBasket.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
       </div>
     `;
 
     // Map order items to orders
     const itemsByOrder: Record<string, string[]> = {};
     for (const item of orderItems) {
-      const orderId = item._raw?.order_id || item.orderId;
+      const orderId = item.order?.id || item._raw?.order_id || item.orderId;
       if (orderId) {
         if (!itemsByOrder[orderId]) itemsByOrder[orderId] = [];
         itemsByOrder[orderId].push(`${item.quantity}x ${item.name}`);
       }
     }
 
-    const sortedOrders = [...orders].sort(
+    const sortedOrders = [...ledgerOrders].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
@@ -260,25 +289,53 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
                   ? o.invoiceNumber.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() ||
                     'Cashier'
                   : 'Cashier';
-              const paymentMethod =
-                o.invoiceNumber && o.invoiceNumber.includes('Cust:')
-                  ? 'Cash' // or parse custody
-                  : 'Cash';
-              const itemsDesc = itemsByOrder[o.id] ? itemsByOrder[o.id].join(', ') : '—';
+              const itemLines = itemsByOrder[o.id]
+                ? itemsByOrder[o.id].map((i) => `<div>${escapeHtml(i)}</div>`).join('')
+                : '<div>—</div>';
+              const tax = o.taxValue || o.tax_value || 0;
+              const discount = o.discountValue || o.discount_value || 0;
+              const total = o.totalAmount || o.total_amount || 0;
+              const subtotal = total - tax + discount;
+              const method = o.paymentMethod || o.payment_method || 'cash';
+              const bank = o.bankName || o.bank_name || '';
+              const cardLast4 = o.cardLastFour || o.card_last_four || '';
+
+              const isVoided = o.status === 'voided';
+              const rowClass = isVoided ? 'voided' : '';
+              const statusClass = isVoided ? 'status-indicator error' : 'status-indicator active';
 
               return `
-            <tr>
+            <tr class="${rowClass}">
               <td><strong>#${escapeHtml(o.invoiceNumber?.split(' ')[0] || o.id.slice(-6).toUpperCase())}</strong></td>
               <td>${date}</td>
               <td>${escapeHtml(cashierLabel)}</td>
-              <td><span class="status-indicator active">${escapeHtml(o.status || 'Paid')}</span></td>
-              <td><div class="compact-text">${escapeHtml(itemsDesc)}</div></td>
-              <td class="text-right bold">Rs. ${(o.totalAmount || 0).toFixed(2)}</td>
+              <td><div class="items-list">${itemLines}</div></td>
+              <td>
+                <span class="badge-method-text">${method.toUpperCase()}</span>
+                ${
+                  (method === 'card' || method === 'bank') && bank
+                    ? `
+                  <div style="font-size: 10px; color: #64748b; margin-top: 2px;">
+                    ${escapeHtml(bank)} ${cardLast4 ? `(**** ${cardLast4})` : ''}
+                  </div>
+                `
+                    : ''
+                }
+              </td>
+              <td>
+                <span class="${statusClass}">
+                  ${(o.status || 'Paid').toUpperCase()}
+                </span>
+              </td>
+              <td class="text-right">Rs. ${subtotal.toFixed(2)}</td>
+              <td class="text-right text-error">${discount > 0 ? `-Rs. ${discount.toFixed(2)}` : 'Rs. 0.00'}</td>
+              <td class="text-right text-success">${tax > 0 ? `+Rs. ${tax.toFixed(2)}` : 'Rs. 0.00'}</td>
+              <td class="text-right bold">Rs. ${total.toFixed(2)}</td>
             </tr>
           `;
             })
             .join('')
-        : `<tr><td colspan="6" class="text-center">No orders recorded in the database.</td></tr>`;
+        : `<tr><td colspan="10" class="text-center">No orders recorded in the database.</td></tr>`;
 
     contentHtml = `
       <h3>Invoices Registry</h3>
@@ -288,8 +345,192 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
             <th>Invoice Num</th>
             <th>Date & Time</th>
             <th>Processed By</th>
+            <th style="width: 200px;">Items Summary</th>
+            <th>Payment Details</th>
             <th>Status</th>
-            <th style="width: 300px;">Items Summary</th>
+            <th class="text-right">Subtotal</th>
+            <th class="text-right">Discount</th>
+            <th class="text-right">Tax (VAT)</th>
+            <th class="text-right">Total Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    `;
+  } else if (type === 'invoice_sales') {
+    reportTitle = 'Store Invoice Sales Report';
+
+    const nonVoided = orders.filter((o) => o.status !== 'voided');
+    const totalSales = nonVoided.reduce(
+      (sum, o) => sum + (o.totalAmount || o.total_amount || 0),
+      0
+    );
+    const activeCount = nonVoided.length;
+
+    const cashSales = nonVoided
+      .filter((o) => (o.paymentMethod || o.payment_method) === 'cash')
+      .reduce((sum, o) => sum + (o.totalAmount || o.total_amount || 0), 0);
+    const cardSales = nonVoided
+      .filter((o) => (o.paymentMethod || o.payment_method) === 'card')
+      .reduce((sum, o) => sum + (o.totalAmount || o.total_amount || 0), 0);
+    const bankSales = nonVoided
+      .filter((o) => (o.paymentMethod || o.payment_method) === 'bank')
+      .reduce((sum, o) => sum + (o.totalAmount || o.total_amount || 0), 0);
+
+    // KPI Cards
+    kpiCardsHtml = `
+      <div class="kpi-card">
+        <div class="kpi-label">Net Sales Value</div>
+        <div class="kpi-value text-success">Rs. ${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cash Tendered</div>
+        <div class="kpi-value">Rs. ${cashSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Card & Bank Sales</div>
+        <div class="kpi-value">Rs. ${(cardSales + bankSales).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Paid vs. Voided Invoices</div>
+        <div class="kpi-value">${activeCount} / ${orders.length}</div>
+      </div>
+    `;
+
+    // Map order items to orders — store full item objects to render price per line
+    const itemsByOrder: Record<string, { name: string; qty: number; price: number }[]> = {};
+    for (const item of orderItems) {
+      const orderId = item.order?.id || item._raw?.order_id || item.orderId;
+      if (orderId) {
+        if (!itemsByOrder[orderId]) itemsByOrder[orderId] = [];
+        itemsByOrder[orderId].push({
+          name: item.name || 'Unknown Item',
+          qty: item.quantity || 1,
+          price: (item.price || 0) * (item.quantity || 1),
+        });
+      }
+    }
+
+    const sortedOrders = [...orders].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    let rowsHtml =
+      sortedOrders.length > 0
+        ? sortedOrders
+            .map((o) => {
+              const date = new Date(o.createdAt).toLocaleString();
+              // Extract cashier from invoice number or default
+              const cashierLabel =
+                o.cashierName ||
+                o.cashier_name ||
+                (o.invoiceNumber && o.invoiceNumber.includes('Staff:')
+                  ? o.invoiceNumber.split('Staff:')[1]?.split('|')[0]?.replace(')', '')?.trim() ||
+                    'Cashier'
+                  : 'Cashier');
+
+              const orderItemObjs = itemsByOrder[o.id] || [];
+              const itemsGrossTotal = orderItemObjs.reduce((s, i) => s + i.price, 0);
+              const itemLines =
+                orderItemObjs.length > 0
+                  ? orderItemObjs
+                      .map(
+                        (i) =>
+                          `<div class="item-price-row">
+                        <span class="item-name">${escapeHtml(i.qty + 'x ' + i.name)}</span>
+                        <span class="item-price">Rs. ${i.price.toFixed(2)}</span>
+                      </div>`
+                      )
+                      .join('')
+                  : '<div class="item-price-row"><span class="item-name">&mdash;</span></div>';
+
+              const tax = o.taxValue || o.tax_value || 0;
+              const discount = o.discountValue || o.discount_value || 0;
+              const total = o.totalAmount || o.total_amount || 0;
+              const subtotal = total - tax + discount;
+              const method = o.paymentMethod || o.payment_method || 'cash';
+              const bank = o.bankName || o.bank_name || '';
+              const cardLast4 = o.cardLastFour || o.card_last_four || '';
+
+              const isVoided = o.status === 'voided';
+              const rowClass = isVoided ? 'voided' : '';
+              const statusClass = isVoided ? 'status-indicator error' : 'status-indicator active';
+
+              const breakdownHtml = `
+                <div class="items-breakdown">
+                  <div class="items-breakdown-row">
+                    <span>Items Total</span><span>Rs. ${itemsGrossTotal.toFixed(2)}</span>
+                  </div>
+                  ${
+                    discount > 0
+                      ? `<div class="items-breakdown-row discount-row">
+                    <span>Discount</span><span>-Rs. ${discount.toFixed(2)}</span>
+                  </div>`
+                      : ''
+                  }
+                  ${
+                    tax > 0
+                      ? `<div class="items-breakdown-row tax-row">
+                    <span>Tax (VAT)</span><span>+Rs. ${tax.toFixed(2)}</span>
+                  </div>`
+                      : ''
+                  }
+                  <div class="items-breakdown-row total-row">
+                    <span>Total</span><span>Rs. ${total.toFixed(2)}</span>
+                  </div>
+                </div>
+              `;
+              const itemsCellHtml = `<div class="items-list">${itemLines}</div>${breakdownHtml}`;
+
+              return `
+            <tr class="${rowClass}">
+              <td><strong>#${escapeHtml(o.invoiceNumber?.split(' ')[0] || o.id.slice(-6).toUpperCase())}</strong></td>
+              <td>${date}</td>
+              <td>${escapeHtml(cashierLabel)}</td>
+              <td>${itemsCellHtml}</td>
+              <td>
+                <span class="badge-method-text">${method.toUpperCase()}</span>
+                ${
+                  (method === 'card' || method === 'bank') && bank
+                    ? `
+                  <div style="font-size: 10px; color: #64748b; margin-top: 2px;">
+                    ${escapeHtml(bank)} ${cardLast4 ? `(**** ${cardLast4})` : ''}
+                  </div>
+                `
+                    : ''
+                }
+              </td>
+              <td>
+                <span class="${statusClass}">
+                  ${(o.status || 'Paid').toUpperCase()}
+                </span>
+              </td>
+              <td class="text-right">Rs. ${subtotal.toFixed(2)}</td>
+              <td class="text-right text-error">${discount > 0 ? `-Rs. ${discount.toFixed(2)}` : 'Rs. 0.00'}</td>
+              <td class="text-right text-success">${tax > 0 ? `+Rs. ${tax.toFixed(2)}` : 'Rs. 0.00'}</td>
+              <td class="text-right bold">Rs. ${total.toFixed(2)}</td>
+            </tr>
+          `;
+            })
+            .join('')
+        : `<tr><td colspan="10" class="text-center">No orders recorded in the database.</td></tr>`;
+
+    contentHtml = `
+      <h3>Invoices Registry</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Invoice Num</th>
+            <th>Date & Time</th>
+            <th>Processed By</th>
+            <th style="width: 200px;">Items Summary</th>
+            <th>Payment Details</th>
+            <th>Status</th>
+            <th class="text-right">Subtotal</th>
+            <th class="text-right">Discount</th>
+            <th class="text-right">Tax (VAT)</th>
             <th class="text-right">Total Amount</th>
           </tr>
         </thead>
@@ -551,29 +792,40 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
             padding-bottom: 20px;
             margin-bottom: 24px;
             display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+            flex-direction: column;
+            gap: 16px;
           }
 
-          .biz-info h1 {
-            font-size: 26px;
+          .header-branding {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+
+          .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .brand-logo {
+            height: 54px;
+            width: auto;
+            object-fit: contain;
+          }
+
+          .brand-title {
+            font-size: 20px;
             font-weight: 800;
             color: #0f172a;
             letter-spacing: -0.5px;
           }
 
-          .biz-info p {
-            font-size: 12px;
-            color: #64748b;
-            margin-top: 4px;
-            font-weight: 500;
-          }
-
-          .report-info {
+          .report-meta {
             text-align: right;
           }
 
-          .report-info h2 {
+          .report-meta h2 {
             font-size: 15px;
             font-weight: 700;
             color: #4f46e5;
@@ -582,10 +834,36 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
             margin-bottom: 4px;
           }
 
-          .report-info p {
+          .report-meta p {
             font-size: 11px;
             color: #64748b;
             font-weight: 500;
+          }
+
+          .header-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+
+          .biz-details h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #334155;
+            letter-spacing: -0.3px;
+          }
+
+          .biz-details p {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+          }
+
+          .report-scope {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 500;
+            text-align: right;
           }
 
           /* KPI summary cards row */
@@ -716,6 +994,18 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
           .badge.bronze { background-color: #f59e0b; }
           .badge.gray { background-color: #cbd5e1; color: #475569; }
 
+          .badge-method-text {
+            font-size: 9px;
+            font-weight: 700;
+            background-color: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            display: inline-block;
+          }
+
           /* Status Pill Indicators */
           .status-indicator {
             display: inline-block;
@@ -749,10 +1039,70 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
           .compact-text {
             font-size: 11px;
             color: #64748b;
-            max-width: 320px;
+            max-width: 200px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+          }
+
+          .items-list {
+            font-size: 11px;
+            color: #334155;
+            line-height: 1.6;
+          }
+
+          .items-list div {
+            padding: 1px 0;
+          }
+
+          .item-price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+            padding: 1px 0;
+          }
+
+          .item-name {
+            color: #334155;
+            font-size: 11px;
+          }
+
+          .item-price {
+            color: #0f172a;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+
+          .items-breakdown {
+            margin-top: 6px;
+            padding-top: 5px;
+            border-top: 1px dashed #cbd5e1;
+            font-size: 10px;
+          }
+
+          .items-breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            color: #64748b;
+            padding: 1px 0;
+          }
+
+          .items-breakdown-row.discount-row {
+            color: #dc2626;
+          }
+
+          .items-breakdown-row.tax-row {
+            color: #16a34a;
+          }
+
+          .items-breakdown-row.total-row {
+            color: #0f172a;
+            font-weight: 700;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 2px;
+            padding-top: 2px;
           }
 
           footer {
@@ -769,6 +1119,16 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
           .footer-logo {
             font-weight: 700;
             color: #4f46e5;
+          }
+
+          .footer-powered {
+            font-weight: 600;
+          }
+
+          .footer-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 700;
           }
 
           @media print {
@@ -794,23 +1154,35 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
             .badge.silver { background-color: #9ca3af !important; }
             .badge.bronze { background-color: #f59e0b !important; }
             .badge.gray { background-color: #cbd5e1 !important; }
-            .status-indicator.active { background-color: #d1fae5 !important; color: #065f46 !important; }
-            .status-indicator.warning { background-color: #fef3c7 !important; color: #92400e !important; }
-            .status-indicator.inactive { background-color: #f3f4f6 !important; color: #4b5563 !important; }
-            .status-indicator.error { background-color: #fee2e2 !important; color: #991b1b !important; }
+            .badge-method-text { background-color: #eff6ff !important; color: #1e40af !important; border-color: #bfdbfe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .status-indicator.active { background-color: #d1fae5 !important; color: #065f46 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .status-indicator.warning { background-color: #fef3c7 !important; color: #92400e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .status-indicator.inactive { background-color: #f3f4f6 !important; color: #4b5563 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .status-indicator.error { background-color: #fee2e2 !important; color: #991b1b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .footer-link { color: #2563eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
         </style>
       </head>
       <body>
         <header>
-          <div class="biz-info">
-            <h1>${businessName}</h1>
-            <p>${businessCategory} | ${businessAddress} | Tel: ${businessPhone}</p>
+          <div class="header-branding">
+            <div class="logo-area">
+              <img src="/logo.png" alt="Shopbook Logo" class="brand-logo" />
+              <span class="brand-title">Mini POS</span>
+            </div>
+            <div class="report-meta">
+              <h2>${escapeHtml(reportTitle)}</h2>
+              <p>Generated: ${escapeHtml(generatedDate)}</p>
+            </div>
           </div>
-          <div class="report-info">
-            <h2>${escapeHtml(reportTitle)}</h2>
-            <p>Database Scope: All-Time History</p>
-            <p>Generated: ${escapeHtml(generatedDate)}</p>
+          <div class="header-details">
+            <div class="biz-details">
+              <h1>${businessName}</h1>
+              <p>${businessCategory} | ${businessAddress} | Tel: ${businessPhone}</p>
+            </div>
+            <div class="report-scope">
+              <p>Database Scope: Active Database logs</p>
+            </div>
           </div>
         </header>
 
@@ -824,7 +1196,9 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
 
         <footer>
           <div>Report generated in branch system database registry.</div>
-          <div><span class="footer-logo">Shopbook POS</span> Ledger statements</div>
+          <div class="footer-powered">
+            Powered by <a href="https://shopbook.lk" target="_blank" class="footer-link">Shopbook</a>
+          </div>
         </footer>
       </body>
     </html>
@@ -931,27 +1305,52 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
     slowMovers.forEach((p, idx) => {
       csvContent += `${idx + 1},${escapeCsv(p.name)},${escapeCsv(p.sku)},${p.stockCount},${p.unitsSold},${p.price.toFixed(2)},${p.revenue.toFixed(2)},${p.unitsSold === 0 ? 'Stagnant' : 'Slow'}\n`;
     });
-  } else if (type === 'orders_ledger') {
-    csvContent += `STORE BUSINESS REPORT,Store Orders Ledger\n`;
+  } else if (
+    type === 'orders_ledger' ||
+    type === 'ledger_cash' ||
+    type === 'ledger_card' ||
+    type === 'ledger_bank'
+  ) {
+    const methodFilterLabel =
+      type === 'ledger_cash'
+        ? ' (Cash Payments)'
+        : type === 'ledger_card'
+          ? ' (Card Payments)'
+          : type === 'ledger_bank'
+            ? ' (Bank Payments)'
+            : '';
+    csvContent += `STORE BUSINESS REPORT,Store Orders Ledger${methodFilterLabel}\n`;
     csvContent += `Store Name,${escapeCsv(businessName)}\n`;
     csvContent += `Generated Date,${escapeCsv(generatedDate)}\n`;
     csvContent += `Scope,All-Time Database History\n\n`;
 
+    const ledgerOrders =
+      type === 'orders_ledger'
+        ? orders
+        : orders.filter(
+            (o) =>
+              (o.paymentMethod || 'cash').toLowerCase() ===
+              (type === 'ledger_cash' ? 'cash' : type === 'ledger_card' ? 'card' : 'bank')
+          );
+    const ledgerSales = ledgerOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+    const ledgerOrdersCount = ledgerOrders.length;
+    const ledgerAvgBasket = ledgerOrdersCount > 0 ? ledgerSales / ledgerOrdersCount : 0;
+
     // KPI row
     csvContent += `KPI,Gross Sales Revenue (Rs.),Total Invoices,Average Order Value (Rs.)\n`;
-    csvContent += `Summary,${totalSales.toFixed(2)},${totalOrdersCount},${avgBasket.toFixed(2)}\n\n`;
+    csvContent += `Summary,${ledgerSales.toFixed(2)},${ledgerOrdersCount},${ledgerAvgBasket.toFixed(2)}\n\n`;
 
     // Map order items to orders
     const itemsByOrder: Record<string, string[]> = {};
     for (const item of orderItems) {
-      const orderId = item._raw?.order_id || item.orderId;
+      const orderId = item.order?.id || item._raw?.order_id || item.orderId;
       if (orderId) {
         if (!itemsByOrder[orderId]) itemsByOrder[orderId] = [];
         itemsByOrder[orderId].push(`${item.quantity}x ${item.name}`);
       }
     }
 
-    const sortedOrders = [...orders].sort(
+    const sortedOrders = [...ledgerOrders].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 

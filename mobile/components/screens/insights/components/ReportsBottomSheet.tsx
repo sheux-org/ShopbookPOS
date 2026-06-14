@@ -31,6 +31,9 @@ interface ReportsBottomSheetProps {
   hasNextProducts: boolean;
   fetchNextProducts: () => void;
   isFetchingNextProducts: boolean;
+  paymentMethod: 'all' | 'cash' | 'card' | 'bank';
+  onPaymentMethodChange: (method: 'all' | 'cash' | 'card' | 'bank') => void;
+  resolvedOrders: any[];
 }
 
 export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
@@ -44,6 +47,9 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
   hasNextProducts,
   fetchNextProducts,
   isFetchingNextProducts,
+  paymentMethod,
+  onPaymentMethodChange,
+  resolvedOrders,
 }) => {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -107,71 +113,128 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
 
         {/* TAB CONTENT: ORDER HISTORY */}
         {reportsActiveTab === 'orders' && (
-          <FlashList
-            data={periodOrdersList}
-            keyExtractor={(item) => item.id}
-            drawDistance={500}
-            onEndReached={() => {
-              if (hasNextPeriodOrders) {
-                fetchNextPeriodOrders();
-              }
-            }}
-            onEndReachedThreshold={0.3}
-            ListFooterComponent={
-              isFetchingNextPeriodOrders ? (
-                <ActivityIndicator
-                  size="small"
-                  color={TOKENS.primary}
-                  style={{ marginVertical: 16 }}
-                />
-              ) : null
-            }
-            showsVerticalScrollIndicator={false}
-            style={{ flex: 1, marginTop: 10 }}
-            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
-            renderItem={({ item: order }) => {
-              const isExpanded = expandedOrderId === order.id;
-              const orderDate = new Date(order.createdAt);
-              return (
-                <View style={styles.historyOrderCard}>
+          <>
+            {/* Payment Method Segmented Filter Row */}
+            <View style={localStyles.filterRow}>
+              {(['all', 'cash', 'card', 'bank'] as const).map((method) => {
+                const isActive = paymentMethod === method;
+                return (
                   <TouchableOpacity
+                    key={method}
+                    style={[localStyles.filterPill, isActive && localStyles.filterPillActive]}
                     activeOpacity={0.7}
-                    style={styles.historyCardHeader}
-                    onPress={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                    onPress={() => onPaymentMethodChange(method)}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.historyInvoiceNum}>Invoice #{order.invoiceNumber}</Text>
-                      <Text style={styles.historyDateText}>
-                        {orderDate.toLocaleDateString()} at {orderDate.toLocaleTimeString()}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                      <Text style={styles.historyTotalAmount}>
-                        Rs. {order.totalAmount.toLocaleString()}
-                      </Text>
-                      <OrderCardHeaderRight orderId={order.id} isExpanded={isExpanded} />
-                    </View>
+                    <Text
+                      style={[
+                        localStyles.filterPillText,
+                        isActive && localStyles.filterPillTextActive,
+                      ]}
+                    >
+                      {method.toUpperCase()}
+                    </Text>
                   </TouchableOpacity>
+                );
+              })}
+            </View>
 
-                  {isExpanded && (
-                    <View style={styles.historyItemsExpandedPanel}>
-                      <View style={styles.expandedDivider} />
-                      <OrderItemsList orderId={order.id} />
-                    </View>
-                  )}
+            {/* Summary Bar */}
+            {(() => {
+              const filteredList = resolvedOrders.filter((o) =>
+                paymentMethod === 'all'
+                  ? true
+                  : (o.paymentMethod || 'cash').toLowerCase() === paymentMethod
+              );
+              const count = filteredList.length;
+              const totalSum = filteredList.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+
+              return (
+                <View style={localStyles.summaryBar}>
+                  <View style={localStyles.summaryCol}>
+                    <Text style={localStyles.summaryLabel}>Transactions</Text>
+                    <Text style={localStyles.summaryVal}>{count}</Text>
+                  </View>
+                  <View style={[localStyles.summaryCol, { alignItems: 'flex-end' }]}>
+                    <Text style={localStyles.summaryLabel}>Total Revenue</Text>
+                    <Text style={localStyles.summaryValSec}>
+                      Rs. {totalSum.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </Text>
+                  </View>
                 </View>
               );
-            }}
-            ListEmptyComponent={
-              <View style={localStyles.emptyStateContainer}>
-                <Feather name="file-text" size={48} color="#D1D5DB" style={{ marginBottom: 12 }} />
-                <Text style={localStyles.emptyStateTitle}>No invoices found</Text>
-                <Text style={localStyles.emptyStateSubtitle}>
-                  No sales invoices recorded for this active branch during this period.
-                </Text>
-              </View>
-            }
-          />
+            })()}
+
+            <FlashList
+              data={periodOrdersList}
+              keyExtractor={(item) => item.id}
+              drawDistance={500}
+              onEndReached={() => {
+                if (hasNextPeriodOrders) {
+                  fetchNextPeriodOrders();
+                }
+              }}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={
+                isFetchingNextPeriodOrders ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={TOKENS.primary}
+                    style={{ marginVertical: 16 }}
+                  />
+                ) : null
+              }
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1, marginTop: 10 }}
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 24 }}
+              renderItem={({ item: order }) => {
+                const isExpanded = expandedOrderId === order.id;
+                const orderDate = new Date(order.createdAt);
+                return (
+                  <View style={styles.historyOrderCard}>
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      style={styles.historyCardHeader}
+                      onPress={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.historyInvoiceNum}>Invoice #{order.invoiceNumber}</Text>
+                        <Text style={styles.historyDateText}>
+                          {orderDate.toLocaleDateString()} at {orderDate.toLocaleTimeString()}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                        <Text style={styles.historyTotalAmount}>
+                          Rs. {order.totalAmount.toLocaleString()}
+                        </Text>
+                        <OrderCardHeaderRight orderId={order.id} isExpanded={isExpanded} />
+                      </View>
+                    </TouchableOpacity>
+
+                    {isExpanded && (
+                      <View style={styles.historyItemsExpandedPanel}>
+                        <View style={styles.expandedDivider} />
+                        <OrderItemsList orderId={order.id} />
+                      </View>
+                    )}
+                  </View>
+                );
+              }}
+              ListEmptyComponent={
+                <View style={localStyles.emptyStateContainer}>
+                  <Feather
+                    name="file-text"
+                    size={48}
+                    color="#D1D5DB"
+                    style={{ marginBottom: 12 }}
+                  />
+                  <Text style={localStyles.emptyStateTitle}>No invoices found</Text>
+                  <Text style={localStyles.emptyStateSubtitle}>
+                    No sales invoices recorded for this active branch during this period.
+                  </Text>
+                </View>
+              }
+            />
+          </>
         )}
 
         {/* TAB CONTENT: STOCK-IN INVENTORY REFILL */}
@@ -346,6 +409,74 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
 };
 
 const localStyles = StyleSheet.create({
+  filterRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 4,
+  },
+  filterPill: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  filterPillActive: {
+    backgroundColor: TOKENS.primary,
+    shadowColor: TOKENS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  filterPillText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#6B7280',
+  },
+  filterPillTextActive: {
+    color: '#FFFFFF',
+  },
+  summaryBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: TOKENS.card,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  summaryCol: {
+    gap: 2,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    color: TOKENS.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  summaryVal: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: TOKENS.dark,
+  },
+  summaryValSec: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: TOKENS.success,
+  },
   emptyStateContainer: {
     alignItems: 'center',
     justifyContent: 'center',
