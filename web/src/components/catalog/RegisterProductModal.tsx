@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, UploadCloud, Trash2, Image, Loader2, Scan } from 'lucide-react';
+import { X, UploadCloud, Loader2, Scan } from 'lucide-react';
 import { deleteUploadThingFile } from '../../services/uploadQueue';
 import { useBusinessStore } from '../../stores/businessStore';
 import {
@@ -10,6 +10,7 @@ import {
   getCategoryLabel,
 } from '../../utils/businessTypeConfig';
 import { Scanner } from '../Scanner';
+import { useFindProduct } from '../../hooks/useProducts';
 
 interface DBProduct {
   id: string;
@@ -53,6 +54,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
   onSubmit,
 }) => {
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
+  const { checkDuplicateCodes, generateUniqueBarcode } = useFindProduct();
   const config = getBusinessTypeConfig(activeBusiness?.category);
   const CATEGORIES = config.categories;
   const UNIT_TYPES = config.unitTypes;
@@ -157,6 +159,35 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
       return;
     }
 
+    // Uniqueness validation for barcode and quick code using custom hook
+    if (barcode || quickCode) {
+      try {
+        const dupResult = await checkDuplicateCodes({
+          barcode,
+          quickCode,
+          excludeProductId: mode === 'edit' && product ? product.id : undefined,
+        });
+
+        if (dupResult) {
+          const { barcodeDuplicate, quickCodeDuplicate } = dupResult;
+          if (barcodeDuplicate) {
+            alert(
+              `The barcode "${barcode}" is already in use by product "${barcodeDuplicate.name}". Barcodes must be unique!`
+            );
+            return;
+          }
+          if (quickCodeDuplicate) {
+            alert(
+              `The Quick Code "${quickCode}" is already in use by product "${quickCodeDuplicate.name}". Quick Codes must be unique!`
+            );
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to validate unique barcode/quick code:', err);
+      }
+    }
+
     const priceNum = parseFloat(price);
     const costPriceNum = parseFloat(costPrice) || priceNum * 0.8;
     const stockCountNum = parseInt(stockCount) || 0;
@@ -225,7 +256,31 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                 {/* Row 2: Barcode & Quick Code */}
                 <div style={styles.topSubGrid}>
                   <div style={styles.modalInputGroup}>
-                    <label style={styles.modalLabel}>Barcode</label>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <label style={styles.modalLabel}>Barcode</label>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const uniqueCode = await generateUniqueBarcode();
+                            setBarcode(uniqueCode);
+                          } catch (err) {
+                            console.error(err);
+                            alert('Failed to generate a unique barcode. Please try again.');
+                          }
+                        }}
+                        style={styles.labelActionBtn}
+                        title="Auto-generate standard retail EAN-13 barcode"
+                      >
+                        Generate Code
+                      </button>
+                    </div>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                       <input
                         type="text"
@@ -679,5 +734,17 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     transition: 'background-color 0.2s',
+  },
+  labelActionBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--primary)',
+    fontSize: '10px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    padding: '0 4px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
+    transition: 'color 0.2s ease',
   },
 };

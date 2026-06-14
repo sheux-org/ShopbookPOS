@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuthStore } from '../../../stores/authStore';
 import { useBusinessStore } from '../../../stores/businessStore';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import {
@@ -17,8 +16,6 @@ import {
   TrendingUp,
   Package,
   History,
-  Tag,
-  Barcode,
   Calendar,
   Lock,
   ArrowUpRight,
@@ -33,7 +30,9 @@ import {
   useAdjustStock,
   useUpdateProduct,
   useDeleteProduct,
+  useFindProduct,
 } from '../../../hooks/useProducts';
+import { BarcodeLabelModal } from '../../../components/stocks/BarcodeLabelModal';
 
 export default function StockDetailPage() {
   const params = useParams();
@@ -49,6 +48,7 @@ export default function StockDetailPage() {
   // Modal states
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showLabelModal, setShowLabelModal] = useState(false);
 
   // Copy indicator states
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -61,6 +61,7 @@ export default function StockDetailPage() {
   const adjustStockMutation = useAdjustStock();
   const updateProductMutation = useUpdateProduct();
   const deleteProductMutation = useDeleteProduct();
+  const { generateUniqueBarcode } = useFindProduct();
 
   // Permission guard
   if (!canPerform('update', 'products')) {
@@ -184,6 +185,31 @@ export default function StockDetailPage() {
     } catch (err) {
       console.error('Failed to update product details:', err);
       throw err;
+    }
+  };
+
+  const handleGenerateBarcode = async () => {
+    if (!product) return;
+    try {
+      const uniqueCode = await generateUniqueBarcode();
+
+      await updateProductMutation.mutateAsync({
+        id,
+        name: product.name,
+        price: product.price,
+        costPrice: product.costPrice || 0,
+        stockCount: product.stockCount,
+        lowStockAlert: product.lowStockAlert || 5,
+        unitType: product.unitType || 'Pieces',
+        category: product.category,
+        quickCode: product.quickCode || '',
+        barcode: uniqueCode,
+        icon: product.icon,
+      });
+      triggerToast('New barcode generated successfully! 🏷️');
+    } catch (err) {
+      console.error('Failed to generate barcode on-the-fly:', err);
+      alert('Failed to generate a unique barcode. Please try again.');
     }
   };
 
@@ -337,16 +363,56 @@ export default function StockDetailPage() {
                   <span style={styles.metaLabelCompact}>Barcode:</span>
                   <div style={styles.codeWrapper}>
                     <span style={styles.codeTextCompact}>{product.barcode || 'None'}</span>
-                    {product.barcode && (
+                    {product.barcode ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button
+                          onClick={() => handleCopy(product.barcode || '', 'barcode')}
+                          style={styles.copyBtnCompact}
+                          title="Copy barcode to clipboard"
+                        >
+                          {copiedCode === 'barcode' ? (
+                            <Check size={10} color="var(--success)" />
+                          ) : (
+                            <Copy size={10} />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setShowLabelModal(true)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--primary)',
+                            fontSize: '9px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            padding: '1px 4px',
+                            textTransform: 'uppercase',
+                            borderRadius: '3px',
+                            backgroundColor: '#eff6ff',
+                          }}
+                          title="View Barcode & QR Code Label"
+                        >
+                          View Label
+                        </button>
+                      </div>
+                    ) : (
                       <button
-                        onClick={() => handleCopy(product.barcode || '', 'barcode')}
-                        style={styles.copyBtnCompact}
+                        onClick={handleGenerateBarcode}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--primary)',
+                          fontSize: '9px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          padding: '2px 6px',
+                          textTransform: 'uppercase',
+                          borderRadius: '4px',
+                          backgroundColor: '#eff6ff',
+                        }}
+                        title="Auto-generate standard retail barcode"
                       >
-                        {copiedCode === 'barcode' ? (
-                          <Check size={10} color="var(--success)" />
-                        ) : (
-                          <Copy size={10} />
-                        )}
+                        Generate
                       </button>
                     )}
                   </div>
@@ -536,6 +602,19 @@ export default function StockDetailPage() {
         }}
         onClose={() => setShowEditModal(false)}
         onSubmit={handleEditSubmit}
+      />
+
+      {/* Barcode/QR Code Label Modal */}
+      <BarcodeLabelModal
+        isOpen={showLabelModal}
+        onClose={() => setShowLabelModal(false)}
+        product={{
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          barcode: product.barcode || '',
+        }}
       />
     </div>
   );
