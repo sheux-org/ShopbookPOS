@@ -12,6 +12,9 @@ export type ReportType =
   | 'best_sellers'
   | 'slow_movers'
   | 'orders_ledger'
+  | 'ledger_cash'
+  | 'ledger_card'
+  | 'ledger_bank'
   | 'item_sales'
   | 'branch_performance'
   | 'invoice_sales';
@@ -217,22 +220,47 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
         </tbody>
       </table>
     `;
-  } else if (type === 'orders_ledger') {
-    reportTitle = 'Store Orders Ledger Report';
+  } else if (
+    type === 'orders_ledger' ||
+    type === 'ledger_cash' ||
+    type === 'ledger_card' ||
+    type === 'ledger_bank'
+  ) {
+    const methodFilterLabel =
+      type === 'ledger_cash'
+        ? ' (Cash Payments)'
+        : type === 'ledger_card'
+          ? ' (Card Payments)'
+          : type === 'ledger_bank'
+            ? ' (Bank Payments)'
+            : '';
+    reportTitle = `Store Orders Ledger Report${methodFilterLabel}`;
+
+    const ledgerOrders =
+      type === 'orders_ledger'
+        ? orders
+        : orders.filter(
+            (o) =>
+              (o.paymentMethod || 'cash').toLowerCase() ===
+              (type === 'ledger_cash' ? 'cash' : type === 'ledger_card' ? 'card' : 'bank')
+          );
+    const ledgerSales = ledgerOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+    const ledgerOrdersCount = ledgerOrders.length;
+    const ledgerAvgBasket = ledgerOrdersCount > 0 ? ledgerSales / ledgerOrdersCount : 0;
 
     // KPI Cards
     kpiCardsHtml = `
       <div class="kpi-card">
         <div class="kpi-label">Gross Sales Revenue</div>
-        <div class="kpi-value text-success">Rs. ${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-value text-success">Rs. ${ledgerSales.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Total Invoices</div>
-        <div class="kpi-value">${totalOrdersCount}</div>
+        <div class="kpi-value">${ledgerOrdersCount}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Average Order Basket</div>
-        <div class="kpi-value">Rs. ${avgBasket.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-value">Rs. ${ledgerAvgBasket.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
       </div>
     `;
 
@@ -246,7 +274,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
       }
     }
 
-    const sortedOrders = [...orders].sort(
+    const sortedOrders = [...ledgerOrders].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
@@ -1277,15 +1305,40 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
     slowMovers.forEach((p, idx) => {
       csvContent += `${idx + 1},${escapeCsv(p.name)},${escapeCsv(p.sku)},${p.stockCount},${p.unitsSold},${p.price.toFixed(2)},${p.revenue.toFixed(2)},${p.unitsSold === 0 ? 'Stagnant' : 'Slow'}\n`;
     });
-  } else if (type === 'orders_ledger') {
-    csvContent += `STORE BUSINESS REPORT,Store Orders Ledger\n`;
+  } else if (
+    type === 'orders_ledger' ||
+    type === 'ledger_cash' ||
+    type === 'ledger_card' ||
+    type === 'ledger_bank'
+  ) {
+    const methodFilterLabel =
+      type === 'ledger_cash'
+        ? ' (Cash Payments)'
+        : type === 'ledger_card'
+          ? ' (Card Payments)'
+          : type === 'ledger_bank'
+            ? ' (Bank Payments)'
+            : '';
+    csvContent += `STORE BUSINESS REPORT,Store Orders Ledger${methodFilterLabel}\n`;
     csvContent += `Store Name,${escapeCsv(businessName)}\n`;
     csvContent += `Generated Date,${escapeCsv(generatedDate)}\n`;
     csvContent += `Scope,All-Time Database History\n\n`;
 
+    const ledgerOrders =
+      type === 'orders_ledger'
+        ? orders
+        : orders.filter(
+            (o) =>
+              (o.paymentMethod || 'cash').toLowerCase() ===
+              (type === 'ledger_cash' ? 'cash' : type === 'ledger_card' ? 'card' : 'bank')
+          );
+    const ledgerSales = ledgerOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+    const ledgerOrdersCount = ledgerOrders.length;
+    const ledgerAvgBasket = ledgerOrdersCount > 0 ? ledgerSales / ledgerOrdersCount : 0;
+
     // KPI row
     csvContent += `KPI,Gross Sales Revenue (Rs.),Total Invoices,Average Order Value (Rs.)\n`;
-    csvContent += `Summary,${totalSales.toFixed(2)},${totalOrdersCount},${avgBasket.toFixed(2)}\n\n`;
+    csvContent += `Summary,${ledgerSales.toFixed(2)},${ledgerOrdersCount},${ledgerAvgBasket.toFixed(2)}\n\n`;
 
     // Map order items to orders
     const itemsByOrder: Record<string, string[]> = {};
@@ -1297,7 +1350,7 @@ export function buildReportCsv(type: ReportType, data: ReportData): string {
       }
     }
 
-    const sortedOrders = [...orders].sort(
+    const sortedOrders = [...ledgerOrders].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 

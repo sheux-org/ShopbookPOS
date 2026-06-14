@@ -33,7 +33,10 @@ export default function ReportExporter({
           >
             <option value="best_sellers">Best Selling Products</option>
             <option value="slow_movers">Slow Moving Inventory</option>
-            <option value="orders_ledger">Store Orders Ledger</option>
+            <option value="orders_ledger">Store Orders Ledger (All Payments)</option>
+            <option value="ledger_cash">Store Orders Ledger (Cash Payments)</option>
+            <option value="ledger_card">Store Orders Ledger (Card Payments)</option>
+            <option value="ledger_bank">Store Orders Ledger (Bank Payments)</option>
             <option value="item_sales">Item-Wise Sales Summary</option>
             <option value="branch_performance">Branch Performance & Low Stock</option>
           </select>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { ShoppingCart, Eye, Loader2, Receipt } from 'lucide-react';
 
 interface TransactionLedgerProps {
@@ -12,6 +12,19 @@ export default function TransactionLedger({
   onViewReceipt,
   isLoading,
 }: TransactionLedgerProps) {
+  const [methodFilter, setMethodFilter] = useState<'all' | 'cash' | 'card' | 'bank'>('all');
+
+  // Filter orders based on the selected method
+  const filteredOrders = useMemo(() => {
+    if (methodFilter === 'all') return orders;
+    return orders.filter((o) => (o.paymentMethod || 'cash').toLowerCase() === methodFilter);
+  }, [orders, methodFilter]);
+
+  // Compute the total of the currently filtered/active orders
+  const activeTotal = useMemo(() => {
+    return filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }, [filteredOrders]);
+
   return (
     <div className="ledger-list-card">
       {isLoading && (
@@ -20,11 +33,80 @@ export default function TransactionLedger({
         </div>
       )}
 
-      <div className="ledger-header">
-        <div className="ledger-header-icon-wrapper">
-          <ShoppingCart size={16} />
+      <div
+        className="ledger-header"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '14px',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="ledger-header-icon-wrapper">
+            <ShoppingCart size={16} />
+          </div>
+          <h3 className="ledger-title">Transaction Ledger</h3>
         </div>
-        <h3 className="ledger-title">Transaction Ledger</h3>
+
+        {/* Optimized Segmented Payment Method Filters */}
+        <div className="ledger-payment-filter-bar">
+          <button
+            className={`ledger-payment-filter-btn ${methodFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setMethodFilter('all')}
+          >
+            All
+          </button>
+          <button
+            className={`ledger-payment-filter-btn ${methodFilter === 'cash' ? 'active' : ''}`}
+            onClick={() => setMethodFilter('cash')}
+          >
+            Cash
+          </button>
+          <button
+            className={`ledger-payment-filter-btn ${methodFilter === 'card' ? 'active' : ''}`}
+            onClick={() => setMethodFilter('card')}
+          >
+            Card
+          </button>
+          <button
+            className={`ledger-payment-filter-btn ${methodFilter === 'bank' ? 'active' : ''}`}
+            onClick={() => setMethodFilter('bank')}
+          >
+            Bank
+          </button>
+        </div>
+      </div>
+
+      {/* Dynamic Summary Bar with active totals */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '10px 14px',
+          backgroundColor: '#f8fafc',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0',
+          marginBottom: '14px',
+          fontSize: '12.5px',
+          color: '#64748b',
+          fontWeight: 600,
+        }}
+      >
+        <span>
+          Showing {filteredOrders.length}{' '}
+          {filteredOrders.length === 1 ? 'transaction' : 'transactions'}
+        </span>
+        <span style={{ color: 'var(--primary)', fontWeight: 700 }}>
+          Total: Rs.{' '}
+          {activeTotal.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </span>
       </div>
 
       <div className="ledger-table-wrapper">
@@ -39,7 +121,7 @@ export default function TransactionLedger({
             </tr>
           </thead>
           <tbody>
-            {orders.map((o: any) => (
+            {filteredOrders.map((o: any) => (
               <tr key={o.id}>
                 <td>
                   <span className="ledger-invoice-num">{o.invoiceNumber.split(' ')[0]}</span>
@@ -65,9 +147,9 @@ export default function TransactionLedger({
                 </td>
               </tr>
             ))}
-            {orders.length === 0 && (
+            {filteredOrders.length === 0 && (
               <tr>
-                <td colSpan={5}>
+                <td colSpan={5} style={{ textAlign: 'center' }}>
                   <div
                     style={{
                       display: 'flex',
@@ -77,6 +159,7 @@ export default function TransactionLedger({
                       padding: '64px 24px',
                       textAlign: 'center',
                       gap: '8px',
+                      width: '100%',
                     }}
                   >
                     <div
@@ -91,23 +174,27 @@ export default function TransactionLedger({
                         justifyContent: 'center',
                         color: '#94a3b8',
                         marginBottom: '4px',
+                        marginLeft: 'auto',
+                        marginRight: 'auto',
                       }}
                     >
                       <Receipt size={24} />
                     </div>
                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#475569' }}>
-                      No Invoiced Orders
+                      {orders.length === 0 ? 'No Invoiced Orders' : 'No Matching Invoices'}
                     </h4>
                     <p
                       style={{
-                        margin: 0,
+                        margin: '0 auto',
                         fontSize: '12px',
                         color: '#94a3b8',
                         maxWidth: '260px',
                         lineHeight: '1.5',
                       }}
                     >
-                      There are no completed or paid invoices logged within this time boundary.
+                      {orders.length === 0
+                        ? 'There are no completed or paid invoices logged within this time boundary.'
+                        : 'There are no paid invoices matching the selected payment method filter.'}
                     </p>
                   </div>
                 </td>
