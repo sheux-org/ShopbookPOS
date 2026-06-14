@@ -148,6 +148,8 @@ export default function InsightsPage() {
   // Modal receipt states
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingCsv, setIsGeneratingCsv] = useState(false);
 
   // Convert custom date strings to Date objects
   const startDateObj = useMemo(() => {
@@ -199,8 +201,9 @@ export default function InsightsPage() {
 
   // Handlers for exporting reports
   const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
     try {
-      const data = await fetchReportData();
+      const data = await fetchReportData(period, startDateObj, endDateObj);
       const html = buildReportHtml(selectedReport, data);
 
       const iframe = document.createElement('iframe');
@@ -219,17 +222,22 @@ export default function InsightsPage() {
         setTimeout(() => {
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
-          document.body.removeChild(iframe);
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 5000);
         }, 150);
       }
     } catch (err: any) {
       alert('Failed to generate PDF report: ' + err.message);
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
   const handleDownloadCsv = async () => {
+    setIsGeneratingCsv(true);
     try {
-      const data = await fetchReportData();
+      const data = await fetchReportData(period, startDateObj, endDateObj);
       const csv = buildReportCsv(selectedReport, data);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -244,6 +252,8 @@ export default function InsightsPage() {
       document.body.removeChild(link);
     } catch (err: any) {
       alert('Failed to generate CSV report: ' + err.message);
+    } finally {
+      setIsGeneratingCsv(false);
     }
   };
 
@@ -383,6 +393,8 @@ export default function InsightsPage() {
             setSelectedReport={setSelectedReport}
             handleDownloadPdf={handleDownloadPdf}
             handleDownloadCsv={handleDownloadCsv}
+            isGeneratingPdf={isGeneratingPdf}
+            isGeneratingCsv={isGeneratingCsv}
           />
 
           <TransactionLedger

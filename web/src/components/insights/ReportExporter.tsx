@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, Download, FileDown } from 'lucide-react';
+import { Printer, Download, FileDown, Loader2 } from 'lucide-react';
 import { ReportType } from '../../utils/reportTemplates';
 
 interface ReportExporterProps {
@@ -7,6 +7,8 @@ interface ReportExporterProps {
   setSelectedReport: (report: ReportType) => void;
   handleDownloadPdf: () => void;
   handleDownloadCsv: () => void;
+  isGeneratingPdf?: boolean;
+  isGeneratingCsv?: boolean;
 }
 
 export default function ReportExporter({
@@ -14,6 +16,8 @@ export default function ReportExporter({
   setSelectedReport,
   handleDownloadPdf,
   handleDownloadCsv,
+  isGeneratingPdf = false,
+  isGeneratingCsv = false,
 }: ReportExporterProps) {
   return (
     <div className="export-card">
@@ -30,6 +34,7 @@ export default function ReportExporter({
             value={selectedReport}
             onChange={(e) => setSelectedReport(e.target.value as ReportType)}
             className="export-select"
+            disabled={isGeneratingPdf || isGeneratingCsv}
           >
             <option value="best_sellers">Best Selling Products</option>
             <option value="slow_movers">Slow Moving Inventory</option>
@@ -47,17 +52,19 @@ export default function ReportExporter({
             onClick={handleDownloadPdf}
             className="export-btn pdf"
             title="Export Statement Report as PDF"
+            disabled={isGeneratingPdf || isGeneratingCsv}
           >
-            <Printer size={15} />
-            <span>PDF</span>
+            {isGeneratingPdf ? <Loader2 size={15} className="spin-anim" /> : <Printer size={15} />}
+            <span>{isGeneratingPdf ? 'Loading...' : 'PDF'}</span>
           </button>
           <button
             onClick={handleDownloadCsv}
             className="export-btn excel"
             title="Export Ledger Statement as CSV/Excel"
+            disabled={isGeneratingPdf || isGeneratingCsv}
           >
-            <Download size={15} />
-            <span>Excel</span>
+            {isGeneratingCsv ? <Loader2 size={15} className="spin-anim" /> : <Download size={15} />}
+            <span>{isGeneratingCsv ? 'Loading...' : 'Excel'}</span>
           </button>
         </div>
       </div>
