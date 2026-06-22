@@ -10,6 +10,7 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [detectorUnsupported, setDetectorUnsupported] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
   const scanIntervalRef = useRef<any>(null);
 
@@ -83,12 +84,9 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
         }
       }, 500);
     } else {
-      // Fallback: draw video frame to temporary canvas and parse barcode
-      // Since canvas scanning requires a full JS engine, we simulate with a friendly alert
-      // or guide to use hardware keyboard scanners which are standard.
-      console.warn(
-        'Native BarcodeDetector API is not supported in this browser. Running mockup scanning feed.'
-      );
+      // No in-browser barcode decoder (Safari/Firefox). Tell the user instead of
+      // showing a viewfinder that silently never scans.
+      setDetectorUnsupported(true);
     }
   };
 
@@ -131,7 +129,14 @@ export const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
         </div>
 
         <div style={styles.footer}>
-          <p style={styles.footerText}>Align a product barcode or QR code inside the viewport.</p>
+          {detectorUnsupported ? (
+            <p style={{ ...styles.footerText, color: 'var(--warning)' }}>
+              Camera scanning isn’t supported in this browser. Use Chrome or Edge, a USB scanner, or
+              type the code manually.
+            </p>
+          ) : (
+            <p style={styles.footerText}>Align a product barcode or QR code inside the viewport.</p>
+          )}
           <span style={styles.hardwareTip}>
             Tip: Physical USB scanners are supported directly on the invoice screen without opening
             the camera.

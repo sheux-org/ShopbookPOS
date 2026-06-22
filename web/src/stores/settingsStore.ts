@@ -6,6 +6,9 @@ interface PrinterDevice {
   address: string;
 }
 
+type ThermalPaperWidth = 58 | 80;
+type CashDrawerPin = '2pin' | '5pin';
+
 interface SettingsState {
   isBackupEnabled: boolean;
   pairedPrinter: PrinterDevice | null;
@@ -13,6 +16,12 @@ interface SettingsState {
   isPremium: boolean;
   posMode: 'tablet' | 'normal';
   sidebarVisible: boolean;
+  // Web Serial thermal printer preferences
+  thermalPaperWidth: ThermalPaperWidth;
+  thermalBaudRate: number;
+  // Cash drawer (kicked via the printer's drawer port over ESC/POS)
+  cashDrawerPin: CashDrawerPin;
+  openDrawerOnCashSale: boolean;
   toggleBackup: () => void;
   setBackupEnabled: (enabled: boolean) => void;
   setPairedPrinter: (printer: PrinterDevice | null) => void;
@@ -20,6 +29,10 @@ interface SettingsState {
   setPremium: (premium: boolean) => void;
   setPosMode: (mode: 'tablet' | 'normal') => void;
   setSidebarVisible: (visible: boolean) => void;
+  setThermalPaperWidth: (width: ThermalPaperWidth) => void;
+  setThermalBaudRate: (baudRate: number) => void;
+  setCashDrawerPin: (pin: CashDrawerPin) => void;
+  setOpenDrawerOnCashSale: (enabled: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -31,6 +44,10 @@ export const useSettingsStore = create<SettingsState>()(
       isPremium: true, // Exclusively premium web client!
       posMode: 'tablet', // Default to Tablet POS Mode
       sidebarVisible: true, // Default to true (sidebar ON)
+      thermalPaperWidth: 80, // 80mm rolls are the common desktop POS size
+      thermalBaudRate: 9600,
+      cashDrawerPin: '2pin', // most drawers use the 2-pin kick
+      openDrawerOnCashSale: true,
       toggleBackup: () => set((state) => ({ isBackupEnabled: !state.isBackupEnabled })),
       setBackupEnabled: (enabled) => set({ isBackupEnabled: enabled }),
       setPairedPrinter: (printer) => set({ pairedPrinter: printer }),
@@ -38,6 +55,10 @@ export const useSettingsStore = create<SettingsState>()(
       setPremium: (premium) => set({ isPremium: premium }),
       setPosMode: (mode) => set({ posMode: mode }),
       setSidebarVisible: (visible) => set({ sidebarVisible: visible }),
+      setThermalPaperWidth: (width) => set({ thermalPaperWidth: width }),
+      setThermalBaudRate: (baudRate) => set({ thermalBaudRate: baudRate }),
+      setCashDrawerPin: (pin) => set({ cashDrawerPin: pin }),
+      setOpenDrawerOnCashSale: (enabled) => set({ openDrawerOnCashSale: enabled }),
     }),
     {
       name: 'settings-storage',

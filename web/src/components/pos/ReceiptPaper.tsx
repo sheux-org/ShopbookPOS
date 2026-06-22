@@ -1,6 +1,11 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
+import { buildReceiptModel, cleanInvoiceNumber, formatMoney } from '../../utils/receiptModel';
+import { buildReceiptPrintHtml } from '../../utils/receiptHtml';
+
+// Re-exported for existing consumers (InvoiceDetailModal, etc.).
+export { cleanInvoiceNumber };
 
 interface CartItem {
   id?: string;
@@ -31,11 +36,6 @@ interface ReceiptPaperProps {
   changeDue: number;
 }
 
-export const cleanInvoiceNumber = (invoiceNumber: string) => {
-  if (!invoiceNumber) return '';
-  return invoiceNumber.split(' (Staff:')[0].trim();
-};
-
 export const printThermalReceipt = (
   order: any,
   items: any[],
@@ -44,19 +44,7 @@ export const printThermalReceipt = (
 ) => {
   if (!order) return;
 
-  const invoiceNum = cleanInvoiceNumber(order.invoiceNumber);
-  const parts = order.dateStr ? order.dateStr.split(' ') : [];
-  const datePart = parts[0] || '';
-  const timePart = parts[1] || '';
-
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const statusStr = order.status ? order.status.toUpperCase() : 'PAID';
-
-  // Parse fields as numbers to ensure safety
-  const discountVal = parseFloat(order.discountValue as any) || 0;
-  const taxVal = parseFloat(order.taxValue as any) || 0;
-  const taxRateVal = parseFloat(order.taxRate as any) || 0;
-  const totalAmountVal = parseFloat(order.totalAmount as any) || 0;
+  const m = buildReceiptModel({ order, items, activeBusiness, changeDue });
 
   const iframe = document.createElement('iframe');
   iframe.style.position = 'absolute';
@@ -68,210 +56,7 @@ export const printThermalReceipt = (
   const doc = iframe.contentWindow?.document;
   if (doc) {
     doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <title>Invoice Receipt ${invoiceNum}</title>
-          <style>
-            @page {
-              size: 80mm auto;
-              margin: 0mm;
-            }
-            body {
-              margin: 0;
-              padding: 10px;
-              font-family: 'Courier New', Courier, monospace;
-              font-size: 12px;
-              color: #000000;
-              width: 76mm; /* typical thermal size */
-            }
-            .receipt-header {
-              text-align: center;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              gap: 4px;
-            }
-            .receipt-store-name {
-              font-size: 16px;
-              font-weight: bold;
-              margin: 0;
-              text-transform: uppercase;
-            }
-            .receipt-store-address, .receipt-store-phone {
-              margin: 2px 0;
-              font-size: 11px;
-            }
-            .receipt-divider {
-              border-top: 1px dashed #000000;
-              margin: 8px 0;
-            }
-            .receipt-meta {
-              display: flex;
-              flex-direction: column;
-              gap: 3px;
-              font-size: 11px;
-            }
-            .receipt-meta-row {
-              display: flex;
-              justify-content: space-between;
-            }
-            .receipt-items-list {
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
-            }
-            .receipt-item-row {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-            }
-            .receipt-totals {
-              display: flex;
-              flex-direction: column;
-              gap: 4px;
-            }
-            .receipt-totals-row {
-              display: flex;
-              justify-content: space-between;
-            }
-            .receipt-footer {
-              text-align: center;
-              margin-top: 15px;
-              font-size: 11px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="receipt-header">
-            <h3 class="receipt-store-name">${activeBusiness?.name?.trim() || 'SHOPBOOK POS PARTNER'}</h3>
-            <p class="receipt-store-address">${activeBusiness?.address?.trim() || 'Sri Lanka'}</p>
-            <p class="receipt-store-phone">${activeBusiness?.phone?.trim() || '+94 ** *** ****'}</p>
-          </div>
-
-          <div class="receipt-divider"></div>
-
-          <div class="receipt-meta">
-            <div class="receipt-meta-row">
-              <span><strong>Invoice:</strong> ${invoiceNum}</span>
-              <span><strong>Date:</strong> ${datePart}</span>
-            </div>
-            <div class="receipt-meta-row">
-              <span><strong>Cashier:</strong> ${order.cashierName}</span>
-              <span><strong>Time:</strong> ${timePart}</span>
-            </div>
-            <div class="receipt-meta-row">
-              <span><strong>Status:</strong> ${statusStr}</span>
-            </div>
-          </div>
-
-          <div class="receipt-divider"></div>
-
-          <div class="receipt-items-list">
-            <div class="receipt-item-row" style="font-weight: bold; border-bottom: 1px dashed #000000; padding-bottom: 3px; margin-bottom: 3px;">
-              <span style="flex: 2.5;">Item Description</span>
-              <span style="flex: 0.8; text-align: center;">Qty</span>
-              <span style="flex: 1.2; text-align: right;">Amount</span>
-            </div>
-            ${items
-              .map(
-                (item) => `
-              <div class="receipt-item-row">
-                <span style="flex: 2.5; word-wrap: break-word;">${item.name}</span>
-                <span style="flex: 0.8; text-align: center;">${item.quantity}</span>
-                <span style="flex: 1.2; text-align: right;">Rs. ${(item.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-            `
-              )
-              .join('')}
-          </div>
-
-          <div class="receipt-divider"></div>
-
-          <div class="receipt-totals">
-            <div class="receipt-totals-row">
-              <span>Sub Total</span>
-              <span>Rs. ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-            ${
-              discountVal > 0
-                ? `
-              <div class="receipt-totals-row">
-                <span>${order.discountType === 'percent' ? `Discount (${Math.round((discountVal / subtotal) * 100)}%)` : 'Discount'}</span>
-                <span>- Rs. ${discountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <div class="receipt-totals-row">
-                <span>Net Subtotal</span>
-                <span>Rs. ${(subtotal - discountVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-            `
-                : ''
-            }
-            ${
-              taxRateVal > 0 || taxVal > 0
-                ? `
-              <div class="receipt-totals-row">
-                <span>VAT (${taxRateVal}%)</span>
-                <span>Rs. ${taxVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-            `
-                : ''
-            }
-            <div class="receipt-divider" style="margin: 4px 0;"></div>
-            <div class="receipt-totals-row" style="font-weight: bold; font-size: 13px;">
-              <span>NET TOTAL</span>
-              <span>Rs. ${totalAmountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-            <div class="receipt-divider" style="margin: 4px 0;"></div>
-            <div class="receipt-totals-row">
-              <span>Payment Mode</span>
-              <span style="text-transform: uppercase;">${order.paymentMethod}</span>
-            </div>
-            ${
-              order.paymentMethod === 'cash'
-                ? `
-              <div class="receipt-totals-row">
-                <span>Cash Tendered</span>
-                <span>Rs. ${(order.cashReceived ?? order.totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <div class="receipt-totals-row" style="font-weight: bold;">
-                <span>Change Due</span>
-                <span>Rs. ${changeDue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-            `
-                : ''
-            }
-            ${
-              order.paymentMethod === 'card'
-                ? `
-              <div class="receipt-totals-row">
-                <span>Card / Bank</span>
-                <span>${order.bankName || ''} ${order.cardLastFour ? `(**** ${order.cardLastFour})` : ''}</span>
-              </div>
-            `
-                : ''
-            }
-            ${
-              order.paymentMethod === 'bank'
-                ? `
-              <div class="receipt-totals-row">
-                <span>Bank Name</span>
-                <span>${order.bankName || ''}</span>
-              </div>
-            `
-                : ''
-            }
-          </div>
-
-          <div class="receipt-divider"></div>
-
-          <div class="receipt-footer">
-            <p style="font-weight: bold; margin: 4px 0; font-size: 12px; letter-spacing: 0.5px;">THANK YOU, COME AGAIN!</p>
-            <p style="margin: 4px 0; font-size: 10px; color: #555555;">Powered by Shopbook</p>
-          </div>
-        </body>
-      </html>
-    `);
+    doc.write(buildReceiptPrintHtml(m));
     doc.close();
 
     setTimeout(() => {
@@ -288,81 +73,44 @@ export const ReceiptPaper: React.FC<ReceiptPaperProps> = ({
   activeBusiness,
   changeDue,
 }) => {
-  const subtotal = useMemo(() => {
-    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  }, [items]);
-
-  const [datePart, timePart] = useMemo(() => {
-    if (!order?.dateStr) return ['', ''];
-    const parts = order.dateStr.split(' ');
-    return [parts[0] || '', parts[1] || ''];
-  }, [order?.dateStr]);
-
-  const discountVal = useMemo(() => {
-    if (!order) return 0;
-    const val = parseFloat(order.discountValue as any);
-    return isNaN(val) ? 0 : val;
-  }, [order?.discountValue]);
-
-  const taxVal = useMemo(() => {
-    if (!order) return 0;
-    const val = parseFloat(order.taxValue as any);
-    return isNaN(val) ? 0 : val;
-  }, [order?.taxValue]);
-
-  const taxRateVal = useMemo(() => {
-    if (!order) return 0;
-    const val = parseFloat(order.taxRate as any);
-    return isNaN(val) ? 0 : val;
-  }, [order?.taxRate]);
-
-  const totalAmountVal = useMemo(() => {
-    if (!order) return 0;
-    const val = parseFloat(order.totalAmount as any);
-    return isNaN(val) ? 0 : val;
-  }, [order?.totalAmount]);
-
   if (!order) return null;
-  const statusStr = order.status ? order.status.toUpperCase() : 'PAID';
+
+  const m = buildReceiptModel({ order, items, activeBusiness, changeDue });
 
   return (
     <div style={styles.receiptPaperContainer}>
       {/* Sticky Header Section */}
       <div style={styles.receiptFixedHeader}>
         <div style={styles.receiptHeader}>
-          <h3 style={styles.receiptStoreName}>
-            {activeBusiness?.name?.trim() || 'Shopbook POS Partner'}
-          </h3>
-          <p style={styles.receiptStoreAddress}>{activeBusiness?.address?.trim() || 'Sri Lanka'}</p>
-          <p style={styles.receiptStorePhone}>
-            {activeBusiness?.phone?.trim() || '+94 ** *** ****'}
-          </p>
+          <h3 style={styles.receiptStoreName}>{m.businessName}</h3>
+          <p style={styles.receiptStoreAddress}>{m.businessAddress}</p>
+          <p style={styles.receiptStorePhone}>{m.businessPhone || '+94 ** *** ****'}</p>
         </div>
 
         <div style={styles.receiptDivider} />
 
         <div style={styles.receiptMeta}>
           <div>
-            <strong>Invoice:</strong> {cleanInvoiceNumber(order.invoiceNumber)}
+            <strong>Invoice:</strong> {m.invoiceNumber}
           </div>
           <div>
-            <strong>Cashier:</strong> {order.cashierName}
+            <strong>Cashier:</strong> {m.cashierName}
           </div>
           <div>
-            <strong>Date:</strong> {datePart}
+            <strong>Date:</strong> {m.date}
           </div>
           <div>
-            <strong>Time:</strong> {timePart}
+            <strong>Time:</strong> {m.time}
           </div>
           <div>
             <strong>Status: </strong>
             <span
               style={{
-                color: order.status === 'voided' ? 'var(--error)' : 'var(--success)',
+                color: m.isVoided ? 'var(--error)' : 'var(--success)',
                 fontWeight: 'bold',
               }}
             >
-              {statusStr}
+              {m.status}
             </span>
           </div>
         </div>
@@ -381,7 +129,7 @@ export const ReceiptPaper: React.FC<ReceiptPaperProps> = ({
       {/* Scrollable items and summary section */}
       <div style={styles.receiptScrollArea}>
         <div style={styles.receiptItemsList}>
-          {items.map((item, idx) => (
+          {m.items.map((item, idx) => (
             <div key={idx} style={styles.receiptItemRow}>
               <span
                 style={{
@@ -394,13 +142,7 @@ export const ReceiptPaper: React.FC<ReceiptPaperProps> = ({
                 {item.name}
               </span>
               <span style={{ flex: 1, textAlign: 'center' }}>{item.quantity}</span>
-              <span style={{ flex: 1, textAlign: 'right' }}>
-                Rs.{' '}
-                {(item.price * item.quantity).toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
+              <span style={{ flex: 1, textAlign: 'right' }}>{formatMoney(item.lineTotal)}</span>
             </div>
           ))}
         </div>
@@ -411,52 +153,24 @@ export const ReceiptPaper: React.FC<ReceiptPaperProps> = ({
         <div style={styles.receiptTotals}>
           <div style={styles.receiptTotalsRow}>
             <span>Subtotal</span>
-            <span>
-              Rs.{' '}
-              {subtotal.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
+            <span>{formatMoney(m.subtotal)}</span>
           </div>
-          {discountVal > 0 && (
+          {m.discount && (
             <>
               <div style={styles.receiptTotalsRow}>
-                <span>
-                  {order.discountType === 'percent'
-                    ? `Discount (${Math.round((discountVal / subtotal) * 100)}%)`
-                    : 'Discount'}
-                </span>
-                <span>
-                  - Rs.{' '}
-                  {discountVal.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
+                <span>{m.discount.label}</span>
+                <span>- {formatMoney(m.discount.amount)}</span>
               </div>
               <div style={styles.receiptTotalsRow}>
                 <span>Net Subtotal</span>
-                <span>
-                  Rs.{' '}
-                  {(subtotal - discountVal).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
+                <span>{formatMoney(m.discount.netSubtotal)}</span>
               </div>
             </>
           )}
-          {(taxRateVal > 0 || taxVal > 0) && (
+          {m.tax && (
             <div style={styles.receiptTotalsRow}>
-              <span>VAT Tax ({taxRateVal}%)</span>
-              <span>
-                Rs.{' '}
-                {taxVal.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
+              <span>{m.tax.label}</span>
+              <span>{formatMoney(m.tax.amount)}</span>
             </div>
           )}
           <div
@@ -468,13 +182,7 @@ export const ReceiptPaper: React.FC<ReceiptPaperProps> = ({
             }}
           >
             <span>Total Paid</span>
-            <span>
-              Rs.{' '}
-              {totalAmountVal.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
+            <span>{formatMoney(m.total)}</span>
           </div>
         </div>
 
@@ -482,35 +190,18 @@ export const ReceiptPaper: React.FC<ReceiptPaperProps> = ({
 
         <div style={styles.receiptFooter}>
           <p style={{ margin: '4px 0', textTransform: 'uppercase' }}>
-            Payment Mode: {order.paymentMethod}
+            Payment Mode: {m.paymentMethod}
           </p>
-          {order.paymentMethod === 'cash' && (
+          {m.cashTendered !== null && (
             <>
-              <p style={{ margin: '4px 0' }}>
-                Cash Tendered: Rs.{' '}
-                {(order.cashReceived ?? order.totalAmount).toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </p>
+              <p style={{ margin: '4px 0' }}>Cash Tendered: {formatMoney(m.cashTendered)}</p>
               <p style={{ margin: '4px 0', fontWeight: 'bold' }}>
-                Change Due: Rs.{' '}
-                {changeDue.toLocaleString('en-US', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                Change Due: {formatMoney(m.changeDue ?? 0)}
               </p>
             </>
           )}
-          {order.paymentMethod === 'card' && (
-            <p style={{ margin: '4px 0' }}>
-              Card / Bank: {order.bankName || ''}{' '}
-              {order.cardLastFour ? `(**** ${order.cardLastFour})` : ''}
-            </p>
-          )}
-          {order.paymentMethod === 'bank' && (
-            <p style={{ margin: '4px 0' }}>Bank Name: {order.bankName || ''}</p>
-          )}
+          {m.cardLabel && <p style={{ margin: '4px 0' }}>Card / Bank: {m.cardLabel}</p>}
+          {m.bankName && <p style={{ margin: '4px 0' }}>Bank Name: {m.bankName}</p>}
           <div style={styles.receiptDivider} />
           <p
             style={{
@@ -520,11 +211,9 @@ export const ReceiptPaper: React.FC<ReceiptPaperProps> = ({
               fontSize: '13px',
             }}
           >
-            THANK YOU, COME AGAIN!
+            {m.footer[0]}
           </p>
-          <p style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>
-            Powered by Shopbook
-          </p>
+          <p style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '4px' }}>{m.footer[1]}</p>
         </div>
       </div>
     </div>

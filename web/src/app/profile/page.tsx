@@ -25,6 +25,7 @@ import {
   Building,
   Camera,
   Smartphone,
+  Printer,
 } from 'lucide-react';
 import './profile.css';
 import { TerminalDiagnostics } from '../../components/TerminalDiagnostics';
@@ -35,6 +36,7 @@ import { BranchModal } from '../../components/profile/BranchModal';
 import { FaqModal } from '../../components/profile/FaqModal';
 import { HelpSupportModal } from '../../components/profile/HelpSupportModal';
 import { ActiveDevicesModal } from '../../components/profile/ActiveDevicesModal';
+import { ThermalPrinterModal } from '../../components/profile/ThermalPrinterModal';
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff } from '../../hooks/useStaff';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
@@ -70,7 +72,7 @@ export default function ProfilePage() {
 
   // Modals state
   const [activeModal, setActiveModal] = useState<
-    'details' | 'staff' | 'branches' | 'faq' | 'devices' | null
+    'details' | 'staff' | 'branches' | 'faq' | 'devices' | 'printer' | null
   >(null);
 
   // Form states - Store details
@@ -558,6 +560,21 @@ export default function ProfilePage() {
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
 
+              {/* Option: Thermal Printer */}
+              <div className="profile-option-card" onClick={() => setActiveModal('printer')}>
+                <div className="profile-icon-box card-store-info">
+                  <Printer size={20} />
+                </div>
+                <div className="profile-option-details">
+                  <h4 className="profile-option-title">Thermal Printer Setup</h4>
+                  <p className="profile-option-sub">
+                    Connect a USB/serial ESC/POS thermal printer for direct one-tap receipt printing
+                    without the system dialog.
+                  </p>
+                </div>
+                <ChevronRight size={18} className="profile-chevron-arrow" />
+              </div>
+
               {/* Option: Support FAQs */}
               <div className="profile-option-card" onClick={() => setActiveModal('faq')}>
                 <div className="profile-icon-box card-faq">
@@ -675,6 +692,12 @@ export default function ProfilePage() {
         isOpen={activeModal === 'devices'}
         onClose={() => setActiveModal(null)}
         activeBusinessId={activeBusiness?.id || '0'}
+      />
+
+      <ThermalPrinterModal
+        isOpen={activeModal === 'printer'}
+        onClose={() => setActiveModal(null)}
+        activeBusiness={activeBusiness}
       />
 
       <HelpSupportModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />

@@ -147,7 +147,7 @@ describe('Scanner & useHardwareScanner Component', () => {
     }
   });
 
-  test('should log warning when BarcodeDetector is unavailable (fallback mode)', async () => {
+  test('shows an unsupported notice when BarcodeDetector is unavailable', async () => {
     const onScan = vi.fn();
     const mockStream = { getTracks: () => [{ stop: vi.fn() }] };
     (navigator.mediaDevices.getUserMedia as any).mockResolvedValue(mockStream);
@@ -155,18 +155,10 @@ describe('Scanner & useHardwareScanner Component', () => {
     // Ensure BarcodeDetector is NOT on window
     delete (window as any).BarcodeDetector;
 
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { findByText } = render(<Scanner onScan={onScan} onClose={vi.fn()} />);
 
-    render(<Scanner onScan={onScan} onClose={vi.fn()} />);
-
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-
-    expect(warnSpy).toHaveBeenCalledWith(
-      'Native BarcodeDetector API is not supported in this browser. Running mockup scanning feed.'
-    );
-    warnSpy.mockRestore();
+    // Instead of silently doing nothing, the user is told and pointed elsewhere.
+    expect(await findByText(/Use Chrome or Edge/i)).toBeInTheDocument();
   });
 
   // ─── useHardwareScanner ──────────────────────────────────────────

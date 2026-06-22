@@ -3,6 +3,8 @@
 import React from 'react';
 import { Printer } from 'lucide-react';
 import { ReceiptPaper, printThermalReceipt } from './ReceiptPaper';
+import { useThermalPrinter } from '../../hooks/useThermalPrinter';
+import { isUserCancellation } from '../../services/webSerialPrinter';
 
 interface CartItem {
   id: string;
@@ -47,14 +49,39 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onClose,
   posMode,
 }) => {
-  const handlePrint = () => {
+  const thermal = useThermalPrinter();
+
+  // Fallback: render the receipt through the OS print dialog (works everywhere).
+  const systemPrint = () => {
     if (!order) return;
     printThermalReceipt(order, items, activeBusiness, changeDue);
   };
 
+  // Smart print (explicit button press = has a user gesture, so we may prompt
+  // the one-time device picker). Prefer a direct thermal printer; on cancel do
+  // nothing; on any real failure fall back to the system print dialog.
+  const handleSmartPrint = async () => {
+    if (!order) return;
+    if (thermal.supported) {
+      try {
+        await thermal.printReceipt({ order, items, activeBusiness, changeDue });
+        return;
+      } catch (err) {
+        if (isUserCancellation(err)) return;
+        console.warn('Thermal printer unavailable, using system print:', err);
+      }
+    }
+    systemPrint();
+  };
+
+  // Auto-print on keyboard-optimized checkout. No user gesture here, so never
+  // prompt: print directly only if a printer is already connected, else system.
   React.useEffect(() => {
-    if (isOpen && order && posMode === 'normal') {
-      handlePrint();
+    if (!isOpen || !order || posMode !== 'normal') return;
+    if (thermal.supported && thermal.canPrint) {
+      thermal.printReceipt({ order, items, activeBusiness, changeDue }).catch(() => systemPrint());
+    } else {
+      systemPrint();
     }
   }, [isOpen, order, posMode]);
 
@@ -74,10 +101,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
         {/* Receipt actions footer */}
         <div style={styles.receiptActions}>
-          <button onClick={handlePrint} style={styles.printBtn}>
+          <button onClick={handleSmartPrint} style={styles.printBtn}>
             <Printer size={15} />
             <span>Print Receipt</span>
           </button>
+
+          {thermal.supported && (
+            <span style={styles.printerHint}>
+              {thermal.canPrint
+                ? thermal.activeTransport === 'bridge'
+                  ? '🖨 Print agent ready'
+                  : '🖨 Thermal printer ready'
+                : 'Tap to pick your printer (once), or prints via your system printer'}
+            </span>
+          )}
 
           <button onClick={onClose} style={styles.receiptDoneBtn}>
             Done & Clear Screen
@@ -148,6 +185,11 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
+  },
+  printerHint: {
+    fontSize: '11px',
+    color: 'var(--muted)',
+    textAlign: 'center',
   },
   receiptDoneBtn: {
     width: '100%',
