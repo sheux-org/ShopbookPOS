@@ -38,6 +38,8 @@ interface ReceiptModalProps {
   changeDue: number;
   onClose: () => void;
   posMode?: 'normal' | 'tablet';
+  // Lifted from the page so printer status is shared (one probe loop, not two).
+  thermal: ReturnType<typeof useThermalPrinter>;
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
@@ -48,38 +50,47 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   changeDue,
   onClose,
   posMode,
+  thermal,
 }) => {
-  const thermal = useThermalPrinter();
-
   // Fallback: render the receipt through the OS print dialog (works everywhere).
+  const [printNote, setPrintNote] = React.useState<string | null>(null);
+
   const systemPrint = () => {
     if (!order) return;
     printThermalReceipt(order, items, activeBusiness, changeDue);
   };
 
+  // Spoken in the cashier's terms, not ours: what happened + the one thing to check.
+  const FELL_BACK =
+    'Couldn’t reach the printer — opened the system print dialog instead. Check the printer/cable or the print agent, then re-check via the status above.';
+
   // Smart print (explicit button press = has a user gesture, so we may prompt
-  // the one-time device picker). Prefer a direct thermal printer; on cancel do
-  // nothing; on any real failure fall back to the system print dialog.
+  // the one-time device picker). printReceipt routes serial → agent → picker
+  // internally and throws only when none is reachable; on cancel do nothing; on
+  // real failure surface a note and fall back to the system print dialog.
   const handleSmartPrint = async () => {
     if (!order) return;
-    if (thermal.supported) {
-      try {
-        await thermal.printReceipt({ order, items, activeBusiness, changeDue });
-        return;
-      } catch (err) {
-        if (isUserCancellation(err)) return;
-        console.warn('Thermal printer unavailable, using system print:', err);
-      }
+    setPrintNote(null);
+    try {
+      await thermal.printReceipt({ order, items, activeBusiness, changeDue });
+      return;
+    } catch (err) {
+      if (isUserCancellation(err)) return;
+      setPrintNote(FELL_BACK);
+      systemPrint();
     }
-    systemPrint();
   };
 
   // Auto-print on keyboard-optimized checkout. No user gesture here, so never
-  // prompt: print directly only if a printer is already connected, else system.
+  // prompt: print directly only if a transport is ready, else system print.
   React.useEffect(() => {
     if (!isOpen || !order || posMode !== 'normal') return;
-    if (thermal.supported && thermal.canPrint) {
-      thermal.printReceipt({ order, items, activeBusiness, changeDue }).catch(() => systemPrint());
+    setPrintNote(null);
+    if (thermal.canPrint) {
+      thermal.printReceipt({ order, items, activeBusiness, changeDue }).catch(() => {
+        setPrintNote(FELL_BACK);
+        systemPrint();
+      });
     } else {
       systemPrint();
     }
@@ -106,7 +117,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <span>Print Receipt</span>
           </button>
 
-          {thermal.supported && (
+          {printNote ? (
+            <span
+              style={{ ...styles.printerHint, color: 'var(--warning, #b45309)', fontWeight: 600 }}
+            >
+              ⚠ {printNote}
+            </span>
+          ) : (
             <span style={styles.printerHint}>
               {thermal.canPrint
                 ? thermal.activeTransport === 'bridge'

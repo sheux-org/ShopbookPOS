@@ -73,6 +73,35 @@ no-hardware dev tool: `PRINT_AGENT_VIRTUAL=1` renders each `/print` to a PNG in
 `shopbook-receipts/`. The app's bridge tier auto-detects it via `/health` — so a dev with
 no printer runs the agent in virtual mode and gets PNG receipts from real checkouts.
 
+### Live printer status + self-heal (what the cashier sees)
+
+The Checkout Summary header shows a **printer-status pill**, driven by a live probe in
+`useThermalPrinter` (polls `/health` + reacts to USB connect/disconnect + tab refocus —
+not a one-shot check):
+
+| Pill                  | Meaning                                                                  |
+| --------------------- | ------------------------------------------------------------------------ |
+| 🟢 `🖨 Printer ready` | a serial/COM printer is connected (Web Serial)                           |
+| 🟢 `🖨 Agent ready`   | the print-agent is reachable (USB / queue printing)                      |
+| 🟡 `🖨 System print`  | no direct printer — receipts use the OS print dialog. Click to re-check. |
+
+**Test self-heal:** open the POS with the agent off → pill is amber `System print`. Start
+the agent (`./print-agent/target/release/shopbook-print-agent`) → within ~6 s the pill
+flips to green **without a reload** (covers the reboot race where the agent starts after
+the POS). Unplug a serial printer → pill drops to amber on the disconnect event.
+
+**Diagnostic on failure:** if a direct print fails, the receipt modal shows a plain note
+("Couldn't reach the printer — opened the system print dialog instead. Check the
+printer/cable or the print agent…") instead of silently switching — so the cashier knows
+what happened and the one thing to check.
+
+### USB auto-fallback (no app config)
+
+The app posts only `{bytes}` to the agent. When the agent finds **no OS print queue**
+(macOS/Linux with a USB printer-class device like the MJ5818), it **auto-routes to direct
+USB** — so the same checkout prints on macOS with no app change. On Windows the installed
+print queue stays primary. (To force USB explicitly, send `printer:"usb"`.)
+
 The **serial-mock** tool is what reproduces our end-to-end automation: it mocks
 `navigator.serial`, captures the ESC/POS bytes the app sends (test receipt, real sale,
 drawer kick), and renders each as a receipt image at `http://localhost:8930`.

@@ -12,10 +12,14 @@ import { SettlementCard } from '../components/pos/SettlementCard';
 import { CustomerModal } from '../components/pos/CustomerModal';
 import { CatalogView } from '../components/pos/CatalogView';
 import { ReceiptModal } from '../components/pos/ReceiptModal';
+import { useThermalPrinter } from '../hooks/useThermalPrinter';
 import { SettlementModal } from '../components/pos/SettlementModal';
 
 export default function PosBillingPage() {
   const [showPaymentModal, setShowPaymentModal] = React.useState(false);
+  // Single shared printer-status source (self-healing live probe) for the
+  // always-on status pill and the receipt modal.
+  const thermal = useThermalPrinter();
   const {
     cart,
     customer,
@@ -139,7 +143,35 @@ export default function PosBillingPage() {
                 alignItems: 'center',
               }}
             >
-              <h3 className="pane-title">Checkout Summary</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h3 className="pane-title">Checkout Summary</h3>
+                <span
+                  onClick={() => thermal.refresh()}
+                  title={
+                    thermal.canPrint
+                      ? thermal.activeTransport === 'bridge'
+                        ? 'Printing via the local print agent. Click to re-check.'
+                        : 'Direct thermal printer connected. Click to re-check.'
+                      : 'No direct printer detected — receipts use the system print dialog. Click to re-check (e.g. after plugging in the printer or starting the agent).'
+                  }
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '3px 8px',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    backgroundColor: thermal.canPrint ? '#dcfce7' : '#fef3c7',
+                    color: thermal.canPrint ? '#15803d' : '#b45309',
+                  }}
+                >
+                  {thermal.canPrint
+                    ? thermal.activeTransport === 'bridge'
+                      ? '🖨 Agent ready'
+                      : '🖨 Printer ready'
+                    : '🖨 System print'}
+                </span>
+              </div>
               {cart.length > 0 && (
                 <button
                   onClick={() => {
@@ -315,6 +347,7 @@ export default function PosBillingPage() {
         activeBusiness={activeBusiness}
         changeDue={latestOrder?.changeDue || 0}
         posMode={posMode}
+        thermal={thermal}
         onClose={() => {
           setShowReceipt(false);
           resetAllState();

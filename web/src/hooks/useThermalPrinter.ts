@@ -37,29 +37,54 @@ export function useThermalPrinter() {
   const [bridgeReady, setBridgeReady] = useState(false); // a local print-bridge agent is reachable
   const [activeTransport, setActiveTransport] = useState<PrinterTransportId | null>(null);
 
-  // On mount: silently reopen a granted serial printer (no prompt) AND probe for
-  // a local print-bridge agent, so we know which tiers are available.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      let serialOk = false;
-      if (supported) {
-        try {
-          serialOk = await restorePrinter(baudRate);
-        } catch {
-          serialOk = false;
-        }
+  // Re-evaluate which transports are reachable: silently reopen a granted serial
+  // printer (no prompt) and probe the local print-bridge agent. Cheap; safe to
+  // call repeatedly (skips serial restore when already open).
+  const refresh = useCallback(async () => {
+    let serialOk = isPrinterConnected();
+    if (supported && !serialOk) {
+      try {
+        serialOk = await restorePrinter(baudRate);
+      } catch {
+        serialOk = false;
       }
-      const bridgeOk = await isBridgeAvailable();
-      if (cancelled) return;
-      setConnected(serialOk);
-      setBridgeReady(bridgeOk);
-      setActiveTransport(serialOk ? 'web-serial' : bridgeOk ? 'bridge' : null);
-    })();
-    return () => {
-      cancelled = true;
-    };
+    }
+    const bridgeOk = await isBridgeAvailable();
+    setConnected(serialOk);
+    setBridgeReady(bridgeOk);
+    setActiveTransport(serialOk ? 'web-serial' : bridgeOk ? 'bridge' : null);
   }, [supported, baudRate]);
+
+  // Keep status LIVE so it self-heals across the real shop day: the agent
+  // starting after a reboot, a USB printer unplugged/replugged mid-shift, the
+  // tab being refocused. Polling beats a one-shot mount probe that goes stale.
+  useEffect(() => {
+    let alive = true;
+    const tick = () => {
+      if (alive) void refresh();
+    };
+    tick();
+    const interval = setInterval(tick, 6000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    const serial = (navigator as unknown as { serial?: EventTarget }).serial;
+    const onConnect = () => tick();
+    const onDisconnect = () => {
+      // A granted serial printer was physically removed — drop it, then re-probe.
+      void disconnectPrinter().finally(tick);
+    };
+    serial?.addEventListener?.('connect', onConnect);
+    serial?.addEventListener?.('disconnect', onDisconnect);
+    return () => {
+      alive = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      serial?.removeEventListener?.('connect', onConnect);
+      serial?.removeEventListener?.('disconnect', onDisconnect);
+    };
+  }, [refresh]);
 
   const connect = useCallback(async () => {
     await connectPrinter(baudRate);
@@ -148,6 +173,7 @@ export function useThermalPrinter() {
     bridgeReady,
     canPrint,
     activeTransport,
+    refresh,
     connect,
     disconnect,
     printReceipt,
