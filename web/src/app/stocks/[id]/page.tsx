@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useReducer } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useBusinessStore } from '../../../stores/businessStore';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
@@ -34,6 +34,49 @@ import {
 } from '../../../hooks/useProducts';
 import { BarcodeLabelModal } from '../../../components/stocks/BarcodeLabelModal';
 
+interface StockDetailState {
+  toastMsg: string | null;
+  showAdjustModal: boolean;
+  showEditModal: boolean;
+  showLabelModal: boolean;
+  copiedCode: string | null;
+}
+
+type StockDetailAction =
+  | { type: 'showToast'; message: string }
+  | { type: 'clearToast' }
+  | { type: 'setShowAdjustModal'; show: boolean }
+  | { type: 'setShowEditModal'; show: boolean }
+  | { type: 'setShowLabelModal'; show: boolean }
+  | { type: 'setCopiedCode'; code: string | null };
+
+const initialStockDetailState: StockDetailState = {
+  toastMsg: null,
+  showAdjustModal: false,
+  showEditModal: false,
+  showLabelModal: false,
+  copiedCode: null,
+};
+
+function stockDetailReducer(state: StockDetailState, action: StockDetailAction): StockDetailState {
+  switch (action.type) {
+    case 'showToast':
+      return { ...state, toastMsg: action.message };
+    case 'clearToast':
+      return { ...state, toastMsg: null };
+    case 'setShowAdjustModal':
+      return { ...state, showAdjustModal: action.show };
+    case 'setShowEditModal':
+      return { ...state, showEditModal: action.show };
+    case 'setShowLabelModal':
+      return { ...state, showLabelModal: action.show };
+    case 'setCopiedCode':
+      return { ...state, copiedCode: action.code };
+    default:
+      return state;
+  }
+}
+
 export default function StockDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -42,16 +85,8 @@ export default function StockDetailPage() {
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const { canPerform } = useUserPermissions();
 
-  // Toast state
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-
-  // Modal states
-  const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showLabelModal, setShowLabelModal] = useState(false);
-
-  // Copy indicator states
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(stockDetailReducer, initialStockDetailState);
+  const { toastMsg, showAdjustModal, showEditModal, showLabelModal, copiedCode } = state;
 
   // Query Hooks
   const { data: product, isLoading: loadingProduct, error: productError } = useProduct(id);
@@ -116,8 +151,8 @@ export default function StockDetailPage() {
   }
 
   const triggerToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 1500);
+    dispatch({ type: 'showToast', message: msg });
+    setTimeout(() => dispatch({ type: 'clearToast' }), 1500);
   };
 
   const handleCopy = (text: string, type: 'barcode' | 'quickcode') => {
@@ -141,9 +176,9 @@ export default function StockDetailPage() {
       }
       document.body.removeChild(textArea);
     }
-    setCopiedCode(type);
+    dispatch({ type: 'setCopiedCode', code: type });
     triggerToast(`${type === 'barcode' ? 'Barcode' : 'Quick Code'} copied to clipboard! 📋`);
-    setTimeout(() => setCopiedCode(null), 1500);
+    setTimeout(() => dispatch({ type: 'setCopiedCode', code: null }), 1500);
   };
 
   const handleAdjustSubmit = async (
@@ -159,7 +194,7 @@ export default function StockDetailPage() {
         reason: adjustReason,
       });
       triggerToast(`Logged ${adjustType.toUpperCase()} adjustment successfully! 📈`);
-      setShowAdjustModal(false);
+      dispatch({ type: 'setShowAdjustModal', show: false });
     } catch (err) {
       console.error('Failed to adjust stock:', err);
     }
@@ -181,7 +216,7 @@ export default function StockDetailPage() {
         icon: formData.icon,
       });
       triggerToast('Product details updated successfully! 📦');
-      setShowEditModal(false);
+      dispatch({ type: 'setShowEditModal', show: false });
     } catch (err) {
       console.error('Failed to update product details:', err);
       throw err;
@@ -270,7 +305,7 @@ export default function StockDetailPage() {
             {/* Card Top Right Edit/Delete buttons (parallel to the product name) */}
             <div style={styles.topCardActions}>
               <button
-                onClick={() => setShowEditModal(true)}
+                onClick={() => dispatch({ type: 'setShowEditModal', show: true })}
                 className="action-btn-secondary"
                 style={{
                   padding: '4px 8px',
@@ -377,7 +412,7 @@ export default function StockDetailPage() {
                           )}
                         </button>
                         <button
-                          onClick={() => setShowLabelModal(true)}
+                          onClick={() => dispatch({ type: 'setShowLabelModal', show: true })}
                           style={{
                             background: 'none',
                             border: 'none',
@@ -499,7 +534,10 @@ export default function StockDetailPage() {
 
             {/* Action Row */}
             <div style={styles.actionsRow}>
-              <button onClick={() => setShowAdjustModal(true)} style={styles.actionBtnPrimary}>
+              <button
+                onClick={() => dispatch({ type: 'setShowAdjustModal', show: true })}
+                style={styles.actionBtnPrimary}
+              >
                 <Plus size={16} />
                 <span>Adjust Stock</span>
               </button>
@@ -578,7 +616,7 @@ export default function StockDetailPage() {
           quickCode: product.quickCode,
           barcode: product.barcode,
         }}
-        onClose={() => setShowAdjustModal(false)}
+        onClose={() => dispatch({ type: 'setShowAdjustModal', show: false })}
         onSubmit={handleAdjustSubmit}
       />
 
@@ -600,14 +638,14 @@ export default function StockDetailPage() {
           barcode: product.barcode,
           isFavorite: product.isFavorite,
         }}
-        onClose={() => setShowEditModal(false)}
+        onClose={() => dispatch({ type: 'setShowEditModal', show: false })}
         onSubmit={handleEditSubmit}
       />
 
       {/* Barcode/QR Code Label Modal */}
       <BarcodeLabelModal
         isOpen={showLabelModal}
-        onClose={() => setShowLabelModal(false)}
+        onClose={() => dispatch({ type: 'setShowLabelModal', show: false })}
         product={{
           id: product.id,
           name: product.name,

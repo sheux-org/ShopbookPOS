@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useReducer, useCallback } from 'react';
 import {
   X,
   Smartphone,
@@ -30,42 +30,88 @@ interface ActiveDevicesModalProps {
   activeBusinessId: string;
 }
 
+interface ActiveDevicesState {
+  onlineDevices: ActiveDeviceView[];
+  offlineDevices: ActiveDeviceView[];
+  currentDeviceId: string | null;
+  loading: boolean;
+  toastMsg: string | null;
+}
+
+type ActiveDevicesAction =
+  | { type: 'setOnlineDevices'; devices: ActiveDeviceView[] }
+  | { type: 'setOfflineDevices'; devices: ActiveDeviceView[] }
+  | { type: 'setCurrentDeviceId'; deviceId: string | null }
+  | { type: 'setLoading'; loading: boolean }
+  | { type: 'showToast'; message: string }
+  | { type: 'clearToast' };
+
+const initialActiveDevicesState: ActiveDevicesState = {
+  onlineDevices: [],
+  offlineDevices: [],
+  currentDeviceId: null,
+  loading: true,
+  toastMsg: null,
+};
+
+function activeDevicesReducer(
+  state: ActiveDevicesState,
+  action: ActiveDevicesAction
+): ActiveDevicesState {
+  switch (action.type) {
+    case 'setOnlineDevices':
+      return { ...state, onlineDevices: action.devices };
+    case 'setOfflineDevices':
+      return { ...state, offlineDevices: action.devices };
+    case 'setCurrentDeviceId':
+      return { ...state, currentDeviceId: action.deviceId };
+    case 'setLoading':
+      return { ...state, loading: action.loading };
+    case 'showToast':
+      return { ...state, toastMsg: action.message };
+    case 'clearToast':
+      return { ...state, toastMsg: null };
+    default:
+      return state;
+  }
+}
+
 export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
   isOpen,
   onClose,
   activeBusinessId,
 }) => {
-  const [onlineDevices, setOnlineDevices] = useState<ActiveDeviceView[]>([]);
-  const [offlineDevices, setOfflineDevices] = useState<ActiveDeviceView[]>([]);
-  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(activeDevicesReducer, initialActiveDevicesState);
+  const { onlineDevices, offlineDevices, currentDeviceId, loading, toastMsg } = state;
 
   const triggerToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 2000);
+    dispatch({ type: 'showToast', message: msg });
+    setTimeout(() => dispatch({ type: 'clearToast' }), 2000);
   };
 
   const refreshOnlineDevices = useCallback(() => {
-    setOnlineDevices(getPresenceDevices());
-    setLoading(false);
+    dispatch({ type: 'setOnlineDevices', devices: getPresenceDevices() });
+    dispatch({ type: 'setLoading', loading: false });
   }, []);
 
   const loadOfflineDevices = useCallback(async () => {
     if (!activeBusinessId || activeBusinessId === '0') return;
     const offline = await fetchRecentlyOfflineDevices(activeBusinessId);
     const onlineIds = new Set(getPresenceDevices().map((d) => d.device_id));
-    setOfflineDevices(offline.filter((d) => !onlineIds.has(d.device_id)));
+    dispatch({
+      type: 'setOfflineDevices',
+      devices: offline.filter((d) => !onlineIds.has(d.device_id)),
+    });
   }, [activeBusinessId]);
 
   useEffect(() => {
     if (!isOpen || !activeBusinessId || activeBusinessId === '0') return;
 
     if (typeof window !== 'undefined') {
-      setCurrentDeviceId(localStorage.getItem(DEVICE_ID_KEY));
+      dispatch({ type: 'setCurrentDeviceId', deviceId: localStorage.getItem(DEVICE_ID_KEY) });
     }
 
-    setLoading(true);
+    dispatch({ type: 'setLoading', loading: true });
     refreshOnlineDevices();
     void loadOfflineDevices();
 
@@ -247,7 +293,7 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
             <h3>Active Devices & Sessions</h3>
             <button
               onClick={() => {
-                setLoading(true);
+                dispatch({ type: 'setLoading', loading: true });
                 refreshOnlineDevices();
                 void loadOfflineDevices();
               }}

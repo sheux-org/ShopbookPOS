@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useReducer, useMemo } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import { Lock } from 'lucide-react';
@@ -21,24 +21,111 @@ import ReceiptModal from '../../components/insights/ReceiptModal';
 import PeriodSelector from '../../components/insights/PeriodSelector';
 import CustomDatePicker from '../../components/insights/CustomDatePicker';
 
+type InsightsPeriod = 'daily' | 'yesterday' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+
+interface InsightsState {
+  period: InsightsPeriod;
+  customStart: string;
+  customEnd: string;
+  selectedReport: ReportType;
+  showCalendar: boolean;
+  viewMonth: number;
+  viewYear: number;
+  showReceipt: boolean;
+  selectedReceipt: any;
+  isGeneratingPdf: boolean;
+  isGeneratingCsv: boolean;
+}
+
+type InsightsAction =
+  | { type: 'setPeriod'; period: InsightsPeriod }
+  | { type: 'setShowCalendar'; show: boolean }
+  | { type: 'setSelectedReport'; report: ReportType }
+  | { type: 'prevMonth' }
+  | { type: 'nextMonth' }
+  | { type: 'selectDate'; dateStr: string }
+  | { type: 'clearCustomDates' }
+  | { type: 'openReceipt'; receipt: any }
+  | { type: 'closeReceipt' }
+  | { type: 'setIsGeneratingPdf'; value: boolean }
+  | { type: 'setIsGeneratingCsv'; value: boolean };
+
+const initialInsightsState: InsightsState = {
+  period: 'monthly',
+  customStart: '',
+  customEnd: '',
+  selectedReport: 'best_sellers',
+  showCalendar: false,
+  viewMonth: new Date().getMonth(),
+  viewYear: new Date().getFullYear(),
+  showReceipt: false,
+  selectedReceipt: null,
+  isGeneratingPdf: false,
+  isGeneratingCsv: false,
+};
+
+function insightsReducer(state: InsightsState, action: InsightsAction): InsightsState {
+  switch (action.type) {
+    case 'setPeriod':
+      return { ...state, period: action.period };
+    case 'setShowCalendar':
+      return { ...state, showCalendar: action.show };
+    case 'setSelectedReport':
+      return { ...state, selectedReport: action.report };
+    case 'prevMonth':
+      if (state.viewMonth === 0) {
+        return { ...state, viewMonth: 11, viewYear: state.viewYear - 1 };
+      }
+      return { ...state, viewMonth: state.viewMonth - 1 };
+    case 'nextMonth':
+      if (state.viewMonth === 11) {
+        return { ...state, viewMonth: 0, viewYear: state.viewYear + 1 };
+      }
+      return { ...state, viewMonth: state.viewMonth + 1 };
+    case 'selectDate': {
+      if (!state.customStart || (state.customStart && state.customEnd)) {
+        return { ...state, customStart: action.dateStr, customEnd: '' };
+      }
+      if (action.dateStr < state.customStart) {
+        return { ...state, customStart: action.dateStr };
+      }
+      return { ...state, customEnd: action.dateStr };
+    }
+    case 'clearCustomDates':
+      return { ...state, customStart: '', customEnd: '' };
+    case 'openReceipt':
+      return { ...state, selectedReceipt: action.receipt, showReceipt: true };
+    case 'closeReceipt':
+      return { ...state, showReceipt: false, selectedReceipt: null };
+    case 'setIsGeneratingPdf':
+      return { ...state, isGeneratingPdf: action.value };
+    case 'setIsGeneratingCsv':
+      return { ...state, isGeneratingCsv: action.value };
+    default:
+      return state;
+  }
+}
+
 export default function InsightsPage() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const employeeName = useAuthStore((s) => s.employeeName);
   const { role } = useUserPermissions();
 
-  // Filter & period state
-  const [period, setPeriod] = useState<
-    'daily' | 'yesterday' | 'weekly' | 'monthly' | 'yearly' | 'custom'
-  >('monthly');
-  const [customStart, setCustomStart] = useState<string>('');
-  const [customEnd, setCustomEnd] = useState<string>('');
-  const [selectedReport, setSelectedReport] = useState<ReportType>('best_sellers');
-
-  // Calendar popover state
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [viewMonth, setViewMonth] = useState(new Date().getMonth());
-  const [viewYear, setViewYear] = useState(new Date().getFullYear());
+  const [state, dispatch] = useReducer(insightsReducer, initialInsightsState);
+  const {
+    period,
+    customStart,
+    customEnd,
+    selectedReport,
+    showCalendar,
+    viewMonth,
+    viewYear,
+    showReceipt,
+    selectedReceipt,
+    isGeneratingPdf,
+    isGeneratingCsv,
+  } = state;
 
   const monthsNames = [
     'January',
@@ -55,41 +142,13 @@ export default function InsightsPage() {
     'December',
   ];
 
-  const handlePrevMonth = () => {
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear((prev) => prev - 1);
-    } else {
-      setViewMonth((prev) => prev - 1);
-    }
-  };
+  const handlePrevMonth = () => dispatch({ type: 'prevMonth' });
 
-  const handleNextMonth = () => {
-    if (viewMonth === 11) {
-      setViewMonth(0);
-      setViewYear((prev) => prev + 1);
-    } else {
-      setViewMonth((prev) => prev + 1);
-    }
-  };
+  const handleNextMonth = () => dispatch({ type: 'nextMonth' });
 
-  const handleDateClick = (dateStr: string) => {
-    if (!customStart || (customStart && customEnd)) {
-      setCustomStart(dateStr);
-      setCustomEnd('');
-    } else {
-      if (dateStr < customStart) {
-        setCustomStart(dateStr);
-      } else {
-        setCustomEnd(dateStr);
-      }
-    }
-  };
+  const handleDateClick = (dateStr: string) => dispatch({ type: 'selectDate', dateStr });
 
-  const handleClearDates = () => {
-    setCustomStart('');
-    setCustomEnd('');
-  };
+  const handleClearDates = () => dispatch({ type: 'clearCustomDates' });
 
   // Compute days in current month grid (42 days)
   const calendarDays = useMemo(() => {
@@ -145,12 +204,6 @@ export default function InsightsPage() {
     }
   }, [period]);
 
-  // Modal receipt states
-  const [showReceipt, setShowReceipt] = useState(false);
-  const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [isGeneratingCsv, setIsGeneratingCsv] = useState(false);
-
   // Convert custom date strings to Date objects
   const startDateObj = useMemo(() => {
     return customStart ? new Date(customStart) : null;
@@ -201,7 +254,7 @@ export default function InsightsPage() {
 
   // Handlers for exporting reports
   const handleDownloadPdf = async () => {
-    setIsGeneratingPdf(true);
+    dispatch({ type: 'setIsGeneratingPdf', value: true });
     try {
       const data = await fetchReportData(period, startDateObj, endDateObj);
       const html = buildReportHtml(selectedReport, data);
@@ -230,12 +283,12 @@ export default function InsightsPage() {
     } catch (err: any) {
       alert('Failed to generate PDF report: ' + err.message);
     } finally {
-      setIsGeneratingPdf(false);
+      dispatch({ type: 'setIsGeneratingPdf', value: false });
     }
   };
 
   const handleDownloadCsv = async () => {
-    setIsGeneratingCsv(true);
+    dispatch({ type: 'setIsGeneratingCsv', value: true });
     try {
       const data = await fetchReportData(period, startDateObj, endDateObj);
       const csv = buildReportCsv(selectedReport, data);
@@ -253,7 +306,7 @@ export default function InsightsPage() {
     } catch (err: any) {
       alert('Failed to generate CSV report: ' + err.message);
     } finally {
-      setIsGeneratingCsv(false);
+      dispatch({ type: 'setIsGeneratingCsv', value: false });
     }
   };
 
@@ -333,7 +386,10 @@ export default function InsightsPage() {
             </div>
           )}
           {/* Period selector tabs */}
-          <PeriodSelector period={period} setPeriod={setPeriod} />
+          <PeriodSelector
+            period={period}
+            setPeriod={(p) => dispatch({ type: 'setPeriod', period: p })}
+          />
 
           {/* Custom Date Picker popover wrapper */}
           {period === 'custom' && (
@@ -341,7 +397,7 @@ export default function InsightsPage() {
               customStart={customStart}
               customEnd={customEnd}
               showCalendar={showCalendar}
-              setShowCalendar={setShowCalendar}
+              setShowCalendar={(show) => dispatch({ type: 'setShowCalendar', show })}
               viewMonth={viewMonth}
               viewYear={viewYear}
               calendarDays={calendarDays}
@@ -390,7 +446,7 @@ export default function InsightsPage() {
         <div className="ledger-pane">
           <ReportExporter
             selectedReport={selectedReport}
-            setSelectedReport={setSelectedReport}
+            setSelectedReport={(report) => dispatch({ type: 'setSelectedReport', report })}
             handleDownloadPdf={handleDownloadPdf}
             handleDownloadCsv={handleDownloadCsv}
             isGeneratingPdf={isGeneratingPdf}
@@ -400,8 +456,7 @@ export default function InsightsPage() {
           <TransactionLedger
             orders={orders}
             onViewReceipt={(o: any) => {
-              setSelectedReceipt(o);
-              setShowReceipt(true);
+              dispatch({ type: 'openReceipt', receipt: o });
             }}
             isLoading={isLoading}
           />
@@ -411,7 +466,7 @@ export default function InsightsPage() {
       {/* Printable Receipt Modal */}
       <ReceiptModal
         isOpen={showReceipt}
-        onClose={() => setShowReceipt(false)}
+        onClose={() => dispatch({ type: 'closeReceipt' })}
         selectedReceipt={selectedReceipt}
         receiptSubtotal={receiptSubtotal}
         activeBusiness={activeBusiness}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useReducer, useMemo } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import { Search, CheckCircle, FileSpreadsheet, FileText } from 'lucide-react';
@@ -41,20 +41,57 @@ interface OrderItemRecord {
   price: number;
 }
 
+interface HistoryState {
+  searchQuery: string;
+  toastMsg: string | null;
+  isExporting: boolean;
+  showReceipt: boolean;
+  selectedOrder: OrderRecord | null;
+}
+
+type HistoryAction =
+  | { type: 'setSearchQuery'; searchQuery: string }
+  | { type: 'showToast'; message: string }
+  | { type: 'clearToast' }
+  | { type: 'setIsExporting'; isExporting: boolean }
+  | { type: 'openReceipt'; order: OrderRecord }
+  | { type: 'closeReceipt' };
+
+const initialHistoryState: HistoryState = {
+  searchQuery: '',
+  toastMsg: null,
+  isExporting: false,
+  showReceipt: false,
+  selectedOrder: null,
+};
+
+function historyReducer(state: HistoryState, action: HistoryAction): HistoryState {
+  switch (action.type) {
+    case 'setSearchQuery':
+      return { ...state, searchQuery: action.searchQuery };
+    case 'showToast':
+      return { ...state, toastMsg: action.message };
+    case 'clearToast':
+      return { ...state, toastMsg: null };
+    case 'setIsExporting':
+      return { ...state, isExporting: action.isExporting };
+    case 'openReceipt':
+      return { ...state, selectedOrder: action.order, showReceipt: true };
+    case 'closeReceipt':
+      return { ...state, showReceipt: false, selectedOrder: null };
+    default:
+      return state;
+  }
+}
+
 export default function OrderHistoryPage() {
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const employeeName = useAuthStore((s) => s.employeeName);
   const { isRoleAtLeast } = useUserPermissions();
   const canExport = isRoleAtLeast('manager'); // Only manager & admin can export reports
 
-  // States
-  const [searchQuery, setSearchQuery] = useState('');
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
-
-  // Detail Modal States
-  const [showReceipt, setShowReceipt] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<OrderRecord | null>(null);
+  const [state, dispatch] = useReducer(historyReducer, initialHistoryState);
+  const { searchQuery, toastMsg, isExporting, showReceipt, selectedOrder } = state;
 
   // React Query Hooks
   const {
@@ -91,14 +128,13 @@ export default function OrderHistoryPage() {
 
   // Trigger Toast notification
   const triggerToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 1500);
+    dispatch({ type: 'showToast', message: msg });
+    setTimeout(() => dispatch({ type: 'clearToast' }), 1500);
   };
 
   // View Receipt detail click
   const handleViewReceipt = (order: OrderRecord) => {
-    setSelectedOrder(order);
-    setShowReceipt(true);
+    dispatch({ type: 'openReceipt', order });
   };
 
   // Void Invoice
@@ -123,8 +159,7 @@ export default function OrderHistoryPage() {
       {
         onSuccess: () => {
           triggerToast(`Invoice ${selectedOrder.invoiceNumber} voided! 🚫`);
-          setShowReceipt(false);
-          setSelectedOrder(null);
+          dispatch({ type: 'closeReceipt' });
         },
         onError: (err) => {
           console.error('Failed to void invoice:', err);
@@ -177,7 +212,7 @@ Thank you for shopping with us!
   const handleExportExcel = async () => {
     if (isExporting) return;
     try {
-      setIsExporting(true);
+      dispatch({ type: 'setIsExporting', isExporting: true });
       const data = await fetchAllOrders(searchQuery);
       if (data.orders.length === 0) {
         alert('No transaction records to export.');
@@ -233,7 +268,7 @@ Thank you for shopping with us!
       console.error('Failed to export Excel:', err);
       alert('Failed to generate Excel export: ' + err.message);
     } finally {
-      setIsExporting(false);
+      dispatch({ type: 'setIsExporting', isExporting: false });
     }
   };
 
@@ -245,7 +280,7 @@ Thank you for shopping with us!
     }
 
     try {
-      setIsExporting(true);
+      dispatch({ type: 'setIsExporting', isExporting: true });
       const data = await fetchAllOrders(searchQuery);
       if (data.orders.length === 0) {
         alert('No transaction records to export.');
@@ -282,7 +317,7 @@ Thank you for shopping with us!
         setTimeout(() => {
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
-          setIsExporting(false);
+          dispatch({ type: 'setIsExporting', isExporting: false });
           setTimeout(() => {
             if (document.body.contains(iframe)) {
               document.body.removeChild(iframe);
@@ -293,7 +328,7 @@ Thank you for shopping with us!
     } catch (err: any) {
       console.error('Failed to export PDF:', err);
       alert('Failed to generate PDF report: ' + err.message);
-      setIsExporting(false);
+      dispatch({ type: 'setIsExporting', isExporting: false });
     }
   };
 
@@ -314,7 +349,7 @@ Thank you for shopping with us!
             type="text"
             placeholder="Search by invoice number, payment method, or status..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => dispatch({ type: 'setSearchQuery', searchQuery: e.target.value })}
             style={styles.searchInput}
           />
         </div>
@@ -387,8 +422,7 @@ Thank you for shopping with us!
         items={orderItems}
         activeBusiness={activeBusiness}
         onClose={() => {
-          setShowReceipt(false);
-          setSelectedOrder(null);
+          dispatch({ type: 'closeReceipt' });
         }}
         onVoid={handleVoidInvoice}
         onCopyText={handleCopyReceiptText}

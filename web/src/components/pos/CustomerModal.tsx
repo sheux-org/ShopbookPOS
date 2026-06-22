@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useReducer, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 interface CustomerRecord {
@@ -19,6 +19,52 @@ interface CustomerModalProps {
   scanInputRef: React.RefObject<HTMLInputElement | null>;
 }
 
+interface CustomerModalState {
+  tab: 'search' | 'create';
+  searchQuery: string;
+  newName: string;
+  newPhone: string;
+  newEmail: string;
+}
+
+type CustomerModalAction =
+  | { type: 'reset' }
+  | { type: 'setTab'; tab: 'search' | 'create' }
+  | { type: 'setSearchQuery'; searchQuery: string }
+  | { type: 'setNewName'; newName: string }
+  | { type: 'setNewPhone'; newPhone: string }
+  | { type: 'setNewEmail'; newEmail: string };
+
+const initialCustomerModalState: CustomerModalState = {
+  tab: 'search',
+  searchQuery: '',
+  newName: '',
+  newPhone: '',
+  newEmail: '',
+};
+
+function customerModalReducer(
+  state: CustomerModalState,
+  action: CustomerModalAction
+): CustomerModalState {
+  switch (action.type) {
+    case 'reset':
+      return initialCustomerModalState;
+    case 'setTab':
+      return { ...state, tab: action.tab };
+    case 'setSearchQuery':
+      return { ...state, searchQuery: action.searchQuery };
+    case 'setNewName':
+      return { ...state, newName: action.newName };
+    case 'setNewPhone':
+      return { ...state, newPhone: action.newPhone };
+    case 'setNewEmail':
+      return { ...state, newEmail: action.newEmail };
+    default:
+      return state;
+  }
+}
+
 export const CustomerModal: React.FC<CustomerModalProps> = ({
   isOpen,
   onClose,
@@ -28,13 +74,8 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   posMode,
   scanInputRef,
 }) => {
-  const [tab, setTab] = useState<'search' | 'create'>('search');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Create Customer Form States
-  const [newName, setNewName] = useState('');
-  const [newPhone, setNewPhone] = useState('');
-  const [newEmail, setNewEmail] = useState('');
+  const [state, dispatch] = useReducer(customerModalReducer, initialCustomerModalState);
+  const { tab, searchQuery, newName, newPhone, newEmail } = state;
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -42,11 +83,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   // Focus appropriate input on open
   useEffect(() => {
     if (isOpen) {
-      setTab('search');
-      setSearchQuery('');
-      setNewName('');
-      setNewPhone('');
-      setNewEmail('');
+      dispatch({ type: 'reset' });
       setTimeout(() => searchInputRef.current?.focus(), 50);
     }
   }, [isOpen]);
@@ -96,7 +133,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
         <div style={styles.tabContainer}>
           <button
             onClick={() => {
-              setTab('search');
+              dispatch({ type: 'setTab', tab: 'search' });
               setTimeout(() => searchInputRef.current?.focus(), 50);
             }}
             style={{
@@ -109,7 +146,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
           </button>
           <button
             onClick={() => {
-              setTab('create');
+              dispatch({ type: 'setTab', tab: 'create' });
               setTimeout(() => nameInputRef.current?.focus(), 50);
             }}
             style={{
@@ -129,7 +166,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               type="text"
               placeholder="Type name or phone number to filter..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => dispatch({ type: 'setSearchQuery', searchQuery: e.target.value })}
               style={styles.modalInput}
             />
 
@@ -176,7 +213,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 type="text"
                 placeholder="e.g. Ruwan Silva"
                 value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                onChange={(e) => dispatch({ type: 'setNewName', newName: e.target.value })}
                 required
                 style={styles.modalInput}
               />
@@ -188,7 +225,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 type="text"
                 placeholder="e.g. 0771234567"
                 value={newPhone}
-                onChange={(e) => setNewPhone(e.target.value)}
+                onChange={(e) => dispatch({ type: 'setNewPhone', newPhone: e.target.value })}
                 required
                 style={styles.modalInput}
               />
@@ -200,7 +237,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 type="email"
                 placeholder="e.g. ruwan@gmail.com"
                 value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
+                onChange={(e) => dispatch({ type: 'setNewEmail', newEmail: e.target.value })}
                 style={styles.modalInput}
               />
             </div>

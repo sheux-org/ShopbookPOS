@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useReducer, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
@@ -11,17 +11,74 @@ import './auth.css';
 import { PhoneStep } from '../../components/auth/PhoneStep';
 import { OtpStep } from '../../components/auth/OtpStep';
 
+type AuthStep = 'phone' | 'otp';
+
+interface AuthState {
+  step: AuthStep;
+  phone: string;
+  otpError: string;
+  verificationToken: string;
+  toastMessage: string | null;
+  resendCooldown: number;
+}
+
+type AuthAction =
+  | { type: 'setStep'; step: AuthStep }
+  | { type: 'setPhone'; phone: string }
+  | { type: 'setOtpError'; otpError: string }
+  | { type: 'setVerificationToken'; token: string }
+  | { type: 'showToast'; message: string }
+  | { type: 'clearToast' }
+  | { type: 'setResendCooldown'; cooldown: number }
+  | { type: 'decrementResendCooldown' }
+  | { type: 'enterOtpStep'; token: string };
+
+const initialAuthState: AuthState = {
+  step: 'phone',
+  phone: '',
+  otpError: '',
+  verificationToken: '',
+  toastMessage: null,
+  resendCooldown: 30,
+};
+
+function authReducer(state: AuthState, action: AuthAction): AuthState {
+  switch (action.type) {
+    case 'setStep':
+      return { ...state, step: action.step };
+    case 'setPhone':
+      return { ...state, phone: action.phone };
+    case 'setOtpError':
+      return { ...state, otpError: action.otpError };
+    case 'setVerificationToken':
+      return { ...state, verificationToken: action.token };
+    case 'showToast':
+      return { ...state, toastMessage: action.message };
+    case 'clearToast':
+      return { ...state, toastMessage: null };
+    case 'setResendCooldown':
+      return { ...state, resendCooldown: action.cooldown };
+    case 'decrementResendCooldown':
+      return { ...state, resendCooldown: state.resendCooldown - 1 };
+    case 'enterOtpStep':
+      return {
+        ...state,
+        verificationToken: action.token,
+        step: 'otp',
+        resendCooldown: 30,
+      };
+    default:
+      return state;
+  }
+}
+
 export default function AuthPage() {
   const router = useRouter();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const loadBusinesses = useBusinessStore((s) => s.loadBusinessesFromDb);
 
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState<string>('');
-  const [otpError, setOtpError] = useState<string>('');
-  const [verificationToken, setVerificationToken] = useState<string>('');
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [resendCooldown, setResendCooldown] = useState(30);
+  const [state, dispatch] = useReducer(authReducer, initialAuthState);
+  const { step, phone, otpError, verificationToken, toastMessage, resendCooldown } = state;
 
   // Mutations
   const sendOtpMutation = useSendOtp();
@@ -46,14 +103,14 @@ export default function AuthPage() {
   }, [isLoggedIn, loadBusinesses, router]);
 
   const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
+    dispatch({ type: 'showToast', message: msg });
+    setTimeout(() => dispatch({ type: 'clearToast' }), 2500);
   };
 
   // Countdown timer for Resend OTP
   useEffect(() => {
     if (step === 'otp' && resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      const timer = setTimeout(() => dispatch({ type: 'decrementResendCooldown' }), 1000);
       return () => clearTimeout(timer);
     }
   }, [step, resendCooldown]);
@@ -63,9 +120,9 @@ export default function AuthPage() {
     const cleanPhone = normalizePhone(phone);
     try {
       const token = await sendOtpMutation.mutateAsync(cleanPhone);
-      setVerificationToken(token || '');
-      setOtpError('');
-      setResendCooldown(30);
+      dispatch({ type: 'setVerificationToken', token: token || '' });
+      dispatch({ type: 'setOtpError', otpError: '' });
+      dispatch({ type: 'setResendCooldown', cooldown: 30 });
       triggerToast('Verification code resent to +94 ' + phone);
     } catch (err: any) {
       triggerToast(err.message || 'Network error. Please try again.');
@@ -88,9 +145,7 @@ export default function AuthPage() {
     }
     try {
       const token = await sendOtpMutation.mutateAsync(cleanPhone);
-      setVerificationToken(token || '');
-      setStep('otp');
-      setResendCooldown(30);
+      dispatch({ type: 'enterOtpStep', token: token || '' });
       triggerToast('Verification code sent to +94 ' + phone);
     } catch (err: any) {
       triggerToast(err.message || 'Network error. Please try again.');
@@ -99,7 +154,7 @@ export default function AuthPage() {
 
   const handleOtpVerify = async (code: string) => {
     if (loading) return;
-    setOtpError('');
+    dispatch({ type: 'setOtpError', otpError: '' });
     if (code.length < 5) {
       triggerToast('Please enter a 5-digit code!');
       return;
@@ -121,7 +176,7 @@ export default function AuthPage() {
         );
       }
     } catch (err: any) {
-      setOtpError(err.message || 'Invalid OTP. Hint: Use 11111');
+      dispatch({ type: 'setOtpError', otpError: err.message || 'Invalid OTP. Hint: Use 11111' });
     }
   };
 
@@ -153,7 +208,7 @@ export default function AuthPage() {
         {step === 'phone' ? (
           <PhoneStep
             phone={phone}
-            setPhone={setPhone}
+            setPhone={(value) => dispatch({ type: 'setPhone', phone: value })}
             loading={loading}
             normalizePhone={normalizePhone}
             onSubmit={handlePhoneSubmit}
@@ -166,7 +221,7 @@ export default function AuthPage() {
             onVerify={handleOtpVerify}
             onResend={handleResendOtp}
             resendCooldown={resendCooldown}
-            onBack={() => setStep('phone')}
+            onBack={() => dispatch({ type: 'setStep', step: 'phone' })}
           />
         )}
 

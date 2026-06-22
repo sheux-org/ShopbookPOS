@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useReducer, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
@@ -47,6 +47,122 @@ interface DBEmployee {
   email?: string;
 }
 
+type ProfileModal = 'details' | 'staff' | 'branches' | 'faq' | 'devices' | null;
+
+interface ProfileState {
+  toastMsg: string | null;
+  syncing: boolean;
+  activeModal: ProfileModal;
+  isHelpModalOpen: boolean;
+  editName: string;
+  editCategory: string;
+  editAddress: string;
+  editPhone: string;
+  editLogoUri: string;
+  newBranchLogo: File | null;
+  newStaffName: string;
+  newStaffRole: 'admin' | 'manager' | 'cashier';
+  newStaffPhone: string;
+  editingStaff: DBEmployee | null;
+  newBranchName: string;
+  newBranchCategory: string;
+  newBranchAddress: string;
+}
+
+type ProfileAction =
+  | { type: 'showToast'; message: string }
+  | { type: 'clearToast' }
+  | { type: 'setSyncing'; syncing: boolean }
+  | { type: 'setActiveModal'; modal: ProfileModal }
+  | { type: 'setHelpModalOpen'; open: boolean }
+  | {
+      type: 'loadStoreDetails';
+      details: {
+        name: string;
+        category: string;
+        address: string;
+        phone: string;
+        logoUri: string;
+      };
+    }
+  | { type: 'setField'; field: keyof ProfileState; value: ProfileState[keyof ProfileState] }
+  | { type: 'startEditStaff'; employee: DBEmployee }
+  | { type: 'resetStaffForm' }
+  | { type: 'resetBranchForm' };
+
+const initialProfileState: ProfileState = {
+  toastMsg: null,
+  syncing: false,
+  activeModal: null,
+  isHelpModalOpen: false,
+  editName: '',
+  editCategory: '',
+  editAddress: '',
+  editPhone: '',
+  editLogoUri: '',
+  newBranchLogo: null,
+  newStaffName: '',
+  newStaffRole: 'cashier',
+  newStaffPhone: '',
+  editingStaff: null,
+  newBranchName: '',
+  newBranchCategory: 'Cafe',
+  newBranchAddress: '',
+};
+
+function profileReducer(state: ProfileState, action: ProfileAction): ProfileState {
+  switch (action.type) {
+    case 'showToast':
+      return { ...state, toastMsg: action.message };
+    case 'clearToast':
+      return { ...state, toastMsg: null };
+    case 'setSyncing':
+      return { ...state, syncing: action.syncing };
+    case 'setActiveModal':
+      return { ...state, activeModal: action.modal };
+    case 'setHelpModalOpen':
+      return { ...state, isHelpModalOpen: action.open };
+    case 'loadStoreDetails':
+      return {
+        ...state,
+        editName: action.details.name,
+        editCategory: action.details.category,
+        editAddress: action.details.address,
+        editPhone: action.details.phone,
+        editLogoUri: action.details.logoUri,
+      };
+    case 'setField':
+      return { ...state, [action.field]: action.value };
+    case 'startEditStaff':
+      return {
+        ...state,
+        editingStaff: action.employee,
+        newStaffName: action.employee.name,
+        newStaffPhone: action.employee.phone,
+        newStaffRole: action.employee.role,
+      };
+    case 'resetStaffForm':
+      return {
+        ...state,
+        editingStaff: null,
+        newStaffName: '',
+        newStaffPhone: '',
+        newStaffRole: 'cashier',
+      };
+    case 'resetBranchForm':
+      return {
+        ...state,
+        newBranchName: '',
+        newBranchAddress: '',
+        newBranchCategory: 'Cafe',
+        newBranchLogo: null,
+        activeModal: null,
+      };
+    default:
+      return state;
+  }
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
@@ -64,36 +180,31 @@ export default function ProfilePage() {
   const updateActiveBusinessDetails = useBusinessStore((s) => s.updateActiveBusinessDetails);
   const updateBusinessDetails = useBusinessStore((s) => s.updateBusinessDetails);
 
-  // States
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
+  const [state, dispatch] = useReducer(profileReducer, initialProfileState);
+  const {
+    toastMsg,
+    syncing,
+    activeModal,
+    isHelpModalOpen,
+    editName,
+    editCategory,
+    editAddress,
+    editPhone,
+    editLogoUri,
+    newBranchLogo,
+    newStaffName,
+    newStaffRole,
+    newStaffPhone,
+    editingStaff,
+    newBranchName,
+    newBranchCategory,
+    newBranchAddress,
+  } = state;
 
-  // Modals state
-  const [activeModal, setActiveModal] = useState<
-    'details' | 'staff' | 'branches' | 'faq' | 'devices' | null
-  >(null);
-
-  // Form states - Store details
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editCategory, setEditCategory] = useState('');
-  const [editAddress, setEditAddress] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [editLogoUri, setEditLogoUri] = useState('');
-  const [newBranchLogo, setNewBranchLogo] = useState<File | null>(null);
+  const setProfileField = <K extends keyof ProfileState>(field: K, value: ProfileState[K]) =>
+    dispatch({ type: 'setField', field, value });
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  // Form states - Staff add
-  const [newStaffName, setNewStaffName] = useState('');
-  const [newStaffRole, setNewStaffRole] = useState<'admin' | 'manager' | 'cashier'>('cashier');
-  const [newStaffPhone, setNewStaffPhone] = useState('');
-  const [editingStaff, setEditingStaff] = useState<DBEmployee | null>(null);
-
-  // Form states - Branch add
-  const [newBranchName, setNewBranchName] = useState('');
-  const [newBranchCategory, setNewBranchCategory] = useState('Cafe');
-  const [newBranchAddress, setNewBranchAddress] = useState('');
 
   // React Query Hooks
   const { data: staffList = [] } = useStaff(activeBusiness?.id || '0');
@@ -117,17 +228,22 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (isLoggedIn && activeBusiness) {
-      setEditName(activeBusiness.name || '');
-      setEditCategory(activeBusiness.category || '');
-      setEditAddress(activeBusiness.address || '');
-      setEditPhone(activeBusiness.phone || '');
-      setEditLogoUri(activeBusiness.logoUri || '');
+      dispatch({
+        type: 'loadStoreDetails',
+        details: {
+          name: activeBusiness.name || '',
+          category: activeBusiness.category || '',
+          address: activeBusiness.address || '',
+          phone: activeBusiness.phone || '',
+          logoUri: activeBusiness.logoUri || '',
+        },
+      });
     }
   }, [isLoggedIn, activeBusiness]);
 
   useEffect(() => {
     const handleOpenHelp = () => {
-      setIsHelpModalOpen(true);
+      dispatch({ type: 'setHelpModalOpen', open: true });
     };
     window.addEventListener('open-help-modal', handleOpenHelp);
     return () => {
@@ -136,15 +252,15 @@ export default function ProfilePage() {
   }, []);
 
   const triggerToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 1500);
+    dispatch({ type: 'showToast', message: msg });
+    setTimeout(() => dispatch({ type: 'clearToast' }), 1500);
   };
 
   const handleMainAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeBusiness) return;
     try {
-      setSyncing(true);
+      dispatch({ type: 'setSyncing', syncing: true });
       triggerToast('Uploading logo... ⏳');
       const publicUrl = await uploadBusinessLogo(file, activeBusiness.id);
       await updateActiveBusinessDetails({
@@ -160,23 +276,23 @@ export default function ProfilePage() {
       console.error(err);
       alert('Upload failed: ' + err.message);
     } finally {
-      setSyncing(false);
+      dispatch({ type: 'setSyncing', syncing: false });
     }
   };
 
   const handleDetailsLogoUpload = async (file: File) => {
     if (!activeBusiness) return;
     try {
-      setSyncing(true);
+      dispatch({ type: 'setSyncing', syncing: true });
       triggerToast('Uploading logo... ⏳');
       const publicUrl = await uploadBusinessLogo(file, activeBusiness.id);
-      setEditLogoUri(publicUrl);
+      setProfileField('editLogoUri', publicUrl);
       triggerToast('Logo uploaded! Click save to update details.');
     } catch (err: any) {
       console.error(err);
       alert('Upload failed: ' + err.message);
     } finally {
-      setSyncing(false);
+      dispatch({ type: 'setSyncing', syncing: false });
     }
   };
 
@@ -192,24 +308,18 @@ export default function ProfilePage() {
       });
       await loadBusinesses();
       triggerToast('Store details updated! 🏬');
-      setActiveModal(null);
+      dispatch({ type: 'setActiveModal', modal: null });
     } catch (err) {
       console.error(err);
     }
   };
 
   const handleEditStaff = (emp: DBEmployee) => {
-    setEditingStaff(emp);
-    setNewStaffName(emp.name);
-    setNewStaffPhone(emp.phone);
-    setNewStaffRole(emp.role);
+    dispatch({ type: 'startEditStaff', employee: emp });
   };
 
   const handleCancelEditStaff = () => {
-    setEditingStaff(null);
-    setNewStaffName('');
-    setNewStaffPhone('');
-    setNewStaffRole('cashier');
+    dispatch({ type: 'resetStaffForm' });
   };
 
   const handleDeleteStaff = (id: string) => {
@@ -250,10 +360,7 @@ export default function ProfilePage() {
         {
           onSuccess: () => {
             triggerToast(`Staff ${newStaffName} details updated! 👥`);
-            setNewStaffName('');
-            setNewStaffPhone('');
-            setNewStaffRole('cashier');
-            setEditingStaff(null);
+            dispatch({ type: 'resetStaffForm' });
           },
           onError: (err: any) => {
             console.error('Failed to update staff:', err);
@@ -271,9 +378,7 @@ export default function ProfilePage() {
         {
           onSuccess: () => {
             triggerToast(`Staff ${newStaffName} registered successfully! 👥`);
-            setNewStaffName('');
-            setNewStaffPhone('');
-            setNewStaffRole('cashier');
+            dispatch({ type: 'resetStaffForm' });
           },
           onError: (err) => {
             console.error('Failed to register staff:', err);
@@ -289,7 +394,7 @@ export default function ProfilePage() {
     if (!newBranchName || !newBranchAddress) return;
 
     try {
-      setSyncing(true);
+      dispatch({ type: 'setSyncing', syncing: true });
       triggerToast('Initializing branch... 🏢');
       const businessId = await registerBusiness(
         newBranchName,
@@ -312,21 +417,17 @@ export default function ProfilePage() {
 
       await loadBusinesses();
       triggerToast(`Branch ${newBranchName} initialized! 🏢`);
-      setNewBranchName('');
-      setNewBranchAddress('');
-      setNewBranchCategory('Cafe');
-      setNewBranchLogo(null);
-      setActiveModal(null);
+      dispatch({ type: 'resetBranchForm' });
     } catch (err) {
       console.error(err);
       alert('Failed to register branch: ' + err);
     } finally {
-      setSyncing(false);
+      dispatch({ type: 'setSyncing', syncing: false });
     }
   };
 
   const handleManualSync = async () => {
-    setSyncing(true);
+    dispatch({ type: 'setSyncing', syncing: true });
     try {
       triggerToast('Syncing database... 🔄');
       const success = await syncDatabase();
@@ -338,7 +439,7 @@ export default function ProfilePage() {
         );
       }
     } finally {
-      setSyncing(false);
+      dispatch({ type: 'setSyncing', syncing: false });
     }
   };
 
@@ -476,7 +577,10 @@ export default function ProfilePage() {
             <div className="profile-options-grid">
               {/* Option: Store details */}
               {canPerform('read', 'settings') && (
-                <div className="profile-option-card" onClick={() => setActiveModal('details')}>
+                <div
+                  className="profile-option-card"
+                  onClick={() => dispatch({ type: 'setActiveModal', modal: 'details' })}
+                >
                   <div className="profile-icon-box card-store-info">
                     <Store size={20} />
                   </div>
@@ -492,7 +596,10 @@ export default function ProfilePage() {
               )}
 
               {/* Option: Switch branches */}
-              <div className="profile-option-card" onClick={() => setActiveModal('branches')}>
+              <div
+                className="profile-option-card"
+                onClick={() => dispatch({ type: 'setActiveModal', modal: 'branches' })}
+              >
                 <div className="profile-icon-box card-locations">
                   <MapPin size={20} />
                 </div>
@@ -508,7 +615,10 @@ export default function ProfilePage() {
 
               {/* Option: Staff Management */}
               {canPerform('create', 'staff') && (
-                <div className="profile-option-card" onClick={() => setActiveModal('staff')}>
+                <div
+                  className="profile-option-card"
+                  onClick={() => dispatch({ type: 'setActiveModal', modal: 'staff' })}
+                >
                   <div className="profile-icon-box card-staff">
                     <Users size={20} />
                   </div>
@@ -543,7 +653,7 @@ export default function ProfilePage() {
               {/* Option: Active Devices & Sessions */}
               <div
                 className="profile-option-card devices-card"
-                onClick={() => setActiveModal('devices')}
+                onClick={() => dispatch({ type: 'setActiveModal', modal: 'devices' })}
               >
                 <div className="profile-icon-box card-devices">
                   <Smartphone size={20} />
@@ -559,7 +669,10 @@ export default function ProfilePage() {
               </div>
 
               {/* Option: Support FAQs */}
-              <div className="profile-option-card" onClick={() => setActiveModal('faq')}>
+              <div
+                className="profile-option-card"
+                onClick={() => dispatch({ type: 'setActiveModal', modal: 'faq' })}
+              >
                 <div className="profile-icon-box card-faq">
                   <HelpCircle size={20} />
                 </div>
@@ -618,17 +731,17 @@ export default function ProfilePage() {
       {/* Modal overlays */}
       <StoreDetailsModal
         isOpen={activeModal === 'details'}
-        onClose={() => setActiveModal(null)}
+        onClose={() => dispatch({ type: 'setActiveModal', modal: null })}
         editName={editName}
-        setEditName={setEditName}
+        setEditName={(value) => setProfileField('editName', value)}
         editCategory={editCategory}
-        setEditCategory={setEditCategory}
+        setEditCategory={(value) => setProfileField('editCategory', value)}
         editAddress={editAddress}
-        setEditAddress={setEditAddress}
+        setEditAddress={(value) => setProfileField('editAddress', value)}
         editPhone={editPhone}
-        setEditPhone={setEditPhone}
+        setEditPhone={(value) => setProfileField('editPhone', value)}
         editLogoUri={editLogoUri}
-        setEditLogoUri={setEditLogoUri}
+        setEditLogoUri={(value) => setProfileField('editLogoUri', value)}
         onLogoUpload={handleDetailsLogoUpload}
         onSubmit={handleStoreDetailsSubmit}
       />
@@ -636,16 +749,16 @@ export default function ProfilePage() {
       <StaffModal
         isOpen={activeModal === 'staff'}
         onClose={() => {
-          setActiveModal(null);
+          dispatch({ type: 'setActiveModal', modal: null });
           handleCancelEditStaff();
         }}
         employees={employees}
         newStaffName={newStaffName}
-        setNewStaffName={setNewStaffName}
+        setNewStaffName={(value) => setProfileField('newStaffName', value)}
         newStaffPhone={newStaffPhone}
-        setNewStaffPhone={setNewStaffPhone}
+        setNewStaffPhone={(value) => setProfileField('newStaffPhone', value)}
         newStaffRole={newStaffRole}
-        setNewStaffRole={setNewStaffRole}
+        setNewStaffRole={(value) => setProfileField('newStaffRole', value)}
         onSubmit={handleAddStaffSubmit}
         editingStaff={editingStaff}
         onEdit={handleEditStaff}
@@ -655,29 +768,35 @@ export default function ProfilePage() {
 
       <BranchModal
         isOpen={activeModal === 'branches'}
-        onClose={() => setActiveModal(null)}
+        onClose={() => dispatch({ type: 'setActiveModal', modal: null })}
         businesses={businesses}
         activeBusiness={activeBusiness}
         setActiveBusiness={setActiveBusiness}
         newBranchName={newBranchName}
-        setNewBranchName={setNewBranchName}
+        setNewBranchName={(value) => setProfileField('newBranchName', value)}
         newBranchCategory={newBranchCategory}
-        setNewBranchCategory={setNewBranchCategory}
+        setNewBranchCategory={(value) => setProfileField('newBranchCategory', value)}
         newBranchAddress={newBranchAddress}
-        setNewBranchAddress={setNewBranchAddress}
+        setNewBranchAddress={(value) => setProfileField('newBranchAddress', value)}
         onSubmit={handleAddBranchSubmit}
         triggerToast={triggerToast}
       />
 
-      <FaqModal isOpen={activeModal === 'faq'} onClose={() => setActiveModal(null)} />
+      <FaqModal
+        isOpen={activeModal === 'faq'}
+        onClose={() => dispatch({ type: 'setActiveModal', modal: null })}
+      />
 
       <ActiveDevicesModal
         isOpen={activeModal === 'devices'}
-        onClose={() => setActiveModal(null)}
+        onClose={() => dispatch({ type: 'setActiveModal', modal: null })}
         activeBusinessId={activeBusiness?.id || '0'}
       />
 
-      <HelpSupportModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
+      <HelpSupportModal
+        isOpen={isHelpModalOpen}
+        onClose={() => dispatch({ type: 'setHelpModalOpen', open: false })}
+      />
     </div>
   );
 }

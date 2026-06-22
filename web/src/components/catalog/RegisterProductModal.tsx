@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useReducer, useEffect, useRef } from 'react';
 import { X, UploadCloud, Loader2, Scan } from 'lucide-react';
 import { deleteUploadThingFile } from '../../services/uploadQueue';
 import { useBusinessStore } from '../../stores/businessStore';
@@ -46,6 +46,72 @@ interface RegisterProductModalProps {
   }) => Promise<void>;
 }
 
+interface ProductFormState {
+  name: string;
+  price: string;
+  costPrice: string;
+  stockCount: string;
+  lowStockAlert: string;
+  unitType: string;
+  category: string;
+  quickCode: string;
+  barcode: string;
+  icon: string;
+  uploadingImage: boolean;
+  submitting: boolean;
+  showScanner: boolean;
+}
+
+type ProductFormAction =
+  | { type: 'loadEdit'; product: DBProduct; defaultUnitType: string; defaultCategory: string }
+  | { type: 'reset'; defaultUnitType: string; defaultCategory: string }
+  | { type: 'setField'; field: keyof ProductFormState; value: string | boolean };
+
+function createEmptyForm(defaultUnitType: string, defaultCategory: string): ProductFormState {
+  return {
+    name: '',
+    price: '',
+    costPrice: '',
+    stockCount: '',
+    lowStockAlert: '5',
+    unitType: defaultUnitType,
+    category: defaultCategory,
+    quickCode: '',
+    barcode: '',
+    icon: '',
+    uploadingImage: false,
+    submitting: false,
+    showScanner: false,
+  };
+}
+
+function productFormReducer(state: ProductFormState, action: ProductFormAction): ProductFormState {
+  switch (action.type) {
+    case 'loadEdit':
+      return {
+        ...state,
+        name: action.product.name,
+        price: action.product.price.toString(),
+        costPrice: action.product.costPrice ? action.product.costPrice.toString() : '',
+        stockCount: action.product.stockCount.toString(),
+        lowStockAlert: action.product.lowStockAlert ? action.product.lowStockAlert.toString() : '5',
+        unitType: action.product.unitType || action.defaultUnitType,
+        category: action.product.category || action.defaultCategory,
+        quickCode: action.product.quickCode || '',
+        barcode: action.product.barcode || '',
+        icon: action.product.icon || '',
+        submitting: false,
+        uploadingImage: false,
+      };
+    case 'reset':
+      return createEmptyForm(action.defaultUnitType, action.defaultCategory);
+    case 'setField':
+      return { ...state, [action.field]: action.value };
+    default:
+      return state;
+  }
+}
+
 export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
   isOpen,
   mode,
@@ -59,19 +125,26 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
   const CATEGORIES = config.categories;
   const UNIT_TYPES = config.unitTypes;
 
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  const [costPrice, setCostPrice] = useState('');
-  const [stockCount, setStockCount] = useState('');
-  const [lowStockAlert, setLowStockAlert] = useState('5');
-  const [unitType, setUnitType] = useState(config.defaultUnitType);
-  const [category, setCategory] = useState(config.defaultCategory);
-  const [quickCode, setQuickCode] = useState('');
-  const [barcode, setBarcode] = useState('');
-  const [icon, setIcon] = useState('');
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
+  const [form, dispatch] = useReducer(
+    productFormReducer,
+    { defaultUnitType: config.defaultUnitType, defaultCategory: config.defaultCategory },
+    ({ defaultUnitType, defaultCategory }) => createEmptyForm(defaultUnitType, defaultCategory)
+  );
+  const {
+    name,
+    price,
+    costPrice,
+    stockCount,
+    lowStockAlert,
+    unitType,
+    category,
+    quickCode,
+    barcode,
+    icon,
+    uploadingImage,
+    submitting,
+    showScanner,
+  } = form;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,30 +152,19 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (mode === 'edit' && product) {
-        setName(product.name);
-        setPrice(product.price.toString());
-        setCostPrice(product.costPrice ? product.costPrice.toString() : '');
-        setStockCount(product.stockCount.toString());
-        setLowStockAlert(product.lowStockAlert ? product.lowStockAlert.toString() : '5');
-        setUnitType(product.unitType || config.defaultUnitType);
-        setCategory(product.category || config.defaultCategory);
-        setQuickCode(product.quickCode || '');
-        setBarcode(product.barcode || '');
-        setIcon(product.icon || '');
+        dispatch({
+          type: 'loadEdit',
+          product,
+          defaultUnitType: config.defaultUnitType,
+          defaultCategory: config.defaultCategory,
+        });
       } else {
-        setName('');
-        setPrice('');
-        setCostPrice('');
-        setStockCount('');
-        setLowStockAlert('5');
-        setUnitType(config.defaultUnitType);
-        setCategory(config.defaultCategory);
-        setQuickCode('');
-        setBarcode('');
-        setIcon('');
+        dispatch({
+          type: 'reset',
+          defaultUnitType: config.defaultUnitType,
+          defaultCategory: config.defaultCategory,
+        });
       }
-      setSubmitting(false);
-      setUploadingImage(false);
     }
   }, [isOpen, mode, product, config.defaultCategory, config.defaultUnitType]);
 
@@ -130,7 +192,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
     // Convert to Base64 data URL for instant offline preview & local DB saving
     try {
       const base64 = await readAsBase64(file);
-      setIcon(base64);
+      dispatch({ type: 'setField', field: 'icon', value: base64 });
     } catch (err) {
       console.error('Failed to convert image to base64:', err);
       alert('Failed to process image file.');
@@ -141,7 +203,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
     if (icon.startsWith('http')) {
       await deleteUploadThingFile(icon);
     }
-    setIcon('');
+    dispatch({ type: 'setField', field: 'icon', value: '' });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -193,7 +255,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
     const stockCountNum = parseInt(stockCount) || 0;
     const lowStockAlertNum = parseInt(lowStockAlert) || 5;
 
-    setSubmitting(true);
+    dispatch({ type: 'setField', field: 'submitting', value: true });
     try {
       // Use icon url/base64 if available, otherwise get category default emoji
       const finalIcon = icon || getCategoryEmoji(category, activeBusiness?.category);
@@ -214,7 +276,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
     } catch (err) {
       console.error('Failed to submit product:', err);
     } finally {
-      setSubmitting(false);
+      dispatch({ type: 'setField', field: 'submitting', value: false });
     }
   };
 
@@ -247,7 +309,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                     type="text"
                     placeholder="e.g. Anchor Milk Powder 400g"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) =>
+                      dispatch({ type: 'setField', field: 'name', value: e.target.value })
+                    }
                     style={styles.modalInput}
                     required
                   />
@@ -269,7 +333,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                         onClick={async () => {
                           try {
                             const uniqueCode = await generateUniqueBarcode();
-                            setBarcode(uniqueCode);
+                            dispatch({ type: 'setField', field: 'barcode', value: uniqueCode });
                           } catch (err) {
                             console.error(err);
                             alert('Failed to generate a unique barcode. Please try again.');
@@ -286,12 +350,16 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                         type="text"
                         placeholder="e.g. 47900101"
                         value={barcode}
-                        onChange={(e) => setBarcode(e.target.value)}
+                        onChange={(e) =>
+                          dispatch({ type: 'setField', field: 'barcode', value: e.target.value })
+                        }
                         style={{ ...styles.modalInput, paddingRight: '40px' }}
                       />
                       <button
                         type="button"
-                        onClick={() => setShowScanner(true)}
+                        onClick={() =>
+                          dispatch({ type: 'setField', field: 'showScanner', value: true })
+                        }
                         style={styles.barcodeScanBtn}
                         title="Scan Barcode using camera"
                       >
@@ -306,7 +374,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                       type="text"
                       placeholder="e.g. 2016"
                       value={quickCode}
-                      onChange={(e) => setQuickCode(e.target.value)}
+                      onChange={(e) =>
+                        dispatch({ type: 'setField', field: 'quickCode', value: e.target.value })
+                      }
                       style={styles.modalInput}
                     />
                   </div>
@@ -388,7 +458,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                 <label style={styles.modalLabel}>Category</label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) =>
+                    dispatch({ type: 'setField', field: 'category', value: e.target.value })
+                  }
                   style={styles.select}
                 >
                   {CATEGORIES.map((cat) => (
@@ -403,7 +475,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                 <label style={styles.modalLabel}>Unit Type</label>
                 <select
                   value={unitType}
-                  onChange={(e) => setUnitType(e.target.value)}
+                  onChange={(e) =>
+                    dispatch({ type: 'setField', field: 'unitType', value: e.target.value })
+                  }
                   style={styles.select}
                 >
                   {UNIT_TYPES.map((unit) => (
@@ -424,7 +498,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                   step="0.01"
                   placeholder="0.00"
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) =>
+                    dispatch({ type: 'setField', field: 'price', value: e.target.value })
+                  }
                   style={styles.modalInput}
                   required
                 />
@@ -437,7 +513,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                   step="0.01"
                   placeholder="0.00"
                   value={costPrice}
-                  onChange={(e) => setCostPrice(e.target.value)}
+                  onChange={(e) =>
+                    dispatch({ type: 'setField', field: 'costPrice', value: e.target.value })
+                  }
                   style={styles.modalInput}
                 />
               </div>
@@ -451,7 +529,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                   type="number"
                   placeholder="e.g. 50"
                   value={stockCount}
-                  onChange={(e) => setStockCount(e.target.value)}
+                  onChange={(e) =>
+                    dispatch({ type: 'setField', field: 'stockCount', value: e.target.value })
+                  }
                   style={styles.modalInput}
                   required
                 />
@@ -463,7 +543,9 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                   type="number"
                   placeholder="e.g. 5"
                   value={lowStockAlert}
-                  onChange={(e) => setLowStockAlert(e.target.value)}
+                  onChange={(e) =>
+                    dispatch({ type: 'setField', field: 'lowStockAlert', value: e.target.value })
+                  }
                   style={styles.modalInput}
                 />
               </div>
@@ -488,10 +570,10 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
       {showScanner && (
         <Scanner
           onScan={(code) => {
-            setBarcode(code);
-            setShowScanner(false);
+            dispatch({ type: 'setField', field: 'barcode', value: code });
+            dispatch({ type: 'setField', field: 'showScanner', value: false });
           }}
-          onClose={() => setShowScanner(false)}
+          onClose={() => dispatch({ type: 'setField', field: 'showScanner', value: false })}
         />
       )}
     </div>

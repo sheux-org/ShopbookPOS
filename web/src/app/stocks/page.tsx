@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useReducer } from 'react';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
 import { Package, History, CheckCircle, Lock } from 'lucide-react';
@@ -32,13 +32,77 @@ interface DBProduct {
   barcode?: string;
 }
 
+interface StocksState {
+  searchQuery: string;
+  toastMsg: string | null;
+  activeTab: 'inventory' | 'audit';
+  showAdjustModal: boolean;
+  selectedProduct: DBProduct | null;
+  showAddModal: boolean;
+}
+
+type StocksAction =
+  | { type: 'setSearchQuery'; searchQuery: string }
+  | { type: 'showToast'; message: string }
+  | { type: 'clearToast' }
+  | { type: 'setActiveTab'; activeTab: 'inventory' | 'audit' }
+  | { type: 'openAdjustModal'; product: DBProduct }
+  | { type: 'closeAdjustModal' }
+  | { type: 'openAddModal' }
+  | { type: 'closeAddModal' };
+
+const initialStocksState: StocksState = {
+  searchQuery: '',
+  toastMsg: null,
+  activeTab: 'inventory',
+  showAdjustModal: false,
+  selectedProduct: null,
+  showAddModal: false,
+};
+
+function stocksReducer(state: StocksState, action: StocksAction): StocksState {
+  switch (action.type) {
+    case 'setSearchQuery':
+      return { ...state, searchQuery: action.searchQuery };
+    case 'showToast':
+      return { ...state, toastMsg: action.message };
+    case 'clearToast':
+      return { ...state, toastMsg: null };
+    case 'setActiveTab':
+      return { ...state, activeTab: action.activeTab };
+    case 'openAdjustModal':
+      return { ...state, selectedProduct: action.product, showAdjustModal: true };
+    case 'closeAdjustModal':
+      return { ...state, showAdjustModal: false, selectedProduct: null };
+    case 'openAddModal':
+      return { ...state, showAddModal: true };
+    case 'closeAddModal':
+      return { ...state, showAddModal: false };
+    default:
+      return state;
+  }
+}
+
 export default function StocksPage() {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const { canPerform } = useUserPermissions();
 
-  // States
-  const [searchQuery, setSearchQuery] = useState('');
+  const [state, dispatch] = useReducer(stocksReducer, initialStocksState);
+  const { searchQuery, toastMsg, activeTab, showAdjustModal, selectedProduct, showAddModal } =
+    state;
+
+  const {
+    data: products = [],
+    isLoading: loadingProducts,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useProducts(undefined, searchQuery);
+
+  const { data: logs = [] } = useGetGlobalStockHistory(activeBusiness?.id || '0');
+  const adjustStockMutation = useAdjustStock();
+  const addProductMutation = useAddProduct();
 
   if (!canPerform('update', 'products')) {
     return (
@@ -93,39 +157,17 @@ export default function StocksPage() {
       </div>
     );
   }
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'inventory' | 'audit'>('inventory');
-
-  // Stock Adjustment Modal
-  const [showAdjustModal, setShowAdjustModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<DBProduct | null>(null);
-
-  // Add New Item Modal
-  const [showAddModal, setShowAddModal] = useState(false);
-
-  // React Query Hooks
-  const {
-    data: products = [],
-    isLoading: loadingProducts,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useProducts(undefined, searchQuery);
-
-  const { data: logs = [] } = useGetGlobalStockHistory(activeBusiness?.id || '0');
-  const adjustStockMutation = useAdjustStock();
-  const addProductMutation = useAddProduct();
 
   const triggerToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 1500);
+    dispatch({ type: 'showToast', message: msg });
+    setTimeout(() => dispatch({ type: 'clearToast' }), 1500);
   };
 
   const handleAddProductSubmit = async (formData: any) => {
     try {
       await addProductMutation.mutateAsync(formData);
       triggerToast('New item added to catalog! 📦');
-      setShowAddModal(false);
+      dispatch({ type: 'closeAddModal' });
     } catch (err) {
       console.error('Failed to add product:', err);
       throw err;
@@ -149,8 +191,7 @@ export default function StocksPage() {
       {
         onSuccess: () => {
           triggerToast(`Successfully logged ${adjustType.toUpperCase()} adjustment! 📈`);
-          setShowAdjustModal(false);
-          setSelectedProduct(null);
+          dispatch({ type: 'closeAdjustModal' });
         },
         onError: (err) => {
           console.error('Failed to adjust inventory:', err);
@@ -172,14 +213,14 @@ export default function StocksPage() {
       {/* Segmented tab navigation shown only on mobile/tablet viewports (< 1024px) */}
       <div className="stocks-tab-bar">
         <button
-          onClick={() => setActiveTab('inventory')}
+          onClick={() => dispatch({ type: 'setActiveTab', activeTab: 'inventory' })}
           className={`stocks-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
         >
           <Package size={16} />
           <span>Product Inventory</span>
         </button>
         <button
-          onClick={() => setActiveTab('audit')}
+          onClick={() => dispatch({ type: 'setActiveTab', activeTab: 'audit' })}
           className={`stocks-tab-btn ${activeTab === 'audit' ? 'active' : ''}`}
         >
           <History size={16} />
@@ -192,12 +233,9 @@ export default function StocksPage() {
           <StocksTable
             filteredProducts={products}
             searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onAdjustStock={(p) => {
-              setSelectedProduct(p);
-              setShowAdjustModal(true);
-            }}
-            onAddItem={() => setShowAddModal(true)}
+            setSearchQuery={(query) => dispatch({ type: 'setSearchQuery', searchQuery: query })}
+            onAdjustStock={(p) => dispatch({ type: 'openAdjustModal', product: p })}
+            onAddItem={() => dispatch({ type: 'openAddModal' })}
             activeTab={activeTab}
           />
           {activeTab === 'inventory' && hasNextPage && (
@@ -220,8 +258,7 @@ export default function StocksPage() {
         isOpen={showAdjustModal}
         product={selectedProduct}
         onClose={() => {
-          setShowAdjustModal(false);
-          setSelectedProduct(null);
+          dispatch({ type: 'closeAdjustModal' });
         }}
         onSubmit={handleAdjustSubmit}
       />
@@ -230,7 +267,7 @@ export default function StocksPage() {
         isOpen={showAddModal}
         mode="create"
         product={null}
-        onClose={() => setShowAddModal(false)}
+        onClose={() => dispatch({ type: 'closeAddModal' })}
         onSubmit={handleAddProductSubmit}
       />
     </div>
