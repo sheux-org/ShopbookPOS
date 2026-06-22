@@ -90,6 +90,12 @@ const server = http.createServer((req, res) => {
     return res.writeHead(200, { 'content-type': 'text/html' }).end(r.html);
   }
 
+  if (req.method === 'GET' && req.url === '/health') {
+    return res
+      .writeHead(200, { 'content-type': 'application/json' })
+      .end(JSON.stringify({ ok: true, service: 'serial-mock', receipts: receipts.length }));
+  }
+
   if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
     return res.writeHead(200, { 'content-type': 'text/html' }).end(indexPage());
   }
