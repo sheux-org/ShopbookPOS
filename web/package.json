@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "print:preview": "tsx scripts/print-preview.mts",
+    "gen:barcodes": "node scripts/gen-barcode.mjs",
     "serial-mock": "node tools/serial-mock/server.mjs",
     "doctor": "react-doctor"
   },

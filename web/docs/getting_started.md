@@ -96,3 +96,11 @@ Before submitting pull requests, ensure your code adheres to codebase standards.
 3. **Next.js Production Build Validation** (`pnpm build:web`)
 
 For more details, see the [Testing Guide](testing.md#7-git-pre-commit-quality-guard-husky).
+
+---
+
+## 7. Manual Device Testing (login, scanner, printer)
+
+For testing the POS device features — logging in, the barcode scanner, and the thermal
+printer / cash drawer **without physical hardware** — follow the
+[Device & Hardware Testing Guide](device-testing.md).
