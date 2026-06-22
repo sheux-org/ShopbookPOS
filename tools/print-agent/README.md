@@ -6,10 +6,10 @@ e.g. a USB printer-class device like the MINJCODE **MJ5818**. The browser can't 
 those directly; this agent receives the bytes over `localhost` and writes them to the
 printer's OS queue (**Windows winspool RAW** / **CUPS** on macOS/Linux).
 
-It lives at the **repo root** (not under `web/`) on purpose — it's a native binary, not
-part of the Vercel-deployed Next.js app. It is the production sibling of the dev
-`web/tools/serial-mock` and speaks the **same `/health` + `/print` contract**, so the POS
-app code is identical whichever is running.
+It lives under **`tools/`** (not under `web/`) on purpose — it's a native binary, not part
+of the Vercel-deployed Next.js app. It speaks a simple `/health` + `/print` contract; the
+`tools/serial-mock` browser extension targets the **same contract** to exercise the Web
+Serial path without hardware (run this agent in virtual mode to render those bytes).
 
 ```
 POS web app ──fetch http://localhost:8930/print {bytes}──► print-agent ──RAW──► printer queue
@@ -56,11 +56,27 @@ the `serial-mock` HTML gallery.
 Security posture: binds **127.0.0.1 only** (never the network), 4 MiB body cap, optional
 token, configurable CORS origin.
 
+## Quick start (no Rust toolchain)
+
+A prebuilt **macOS Apple-Silicon** binary is committed for instant use — no `cargo`:
+
+```bash
+# virtual mode (renders PNGs; great for dev with no printer)
+PRINT_AGENT_VIRTUAL=1 ./prebuilt/shopbook-print-agent-macos-arm64
+# or print mode (drives a real/USB printer)
+./prebuilt/shopbook-print-agent-macos-arm64
+```
+
+> Only **macOS arm64** is committed (it's the dev machine; ~560 KB). For Windows/Linux/Intel,
+> build below or grab a signed binary from the GitHub Release (canonical distribution).
+> The prebuilt is a convenience and can lag `src/` — rebuild + recommit it when the agent
+> changes, or just use a Release.
+
 ## Build
 
 ```bash
-cd print-agent
-cargo build --release          # -> target/release/shopbook-print-agent (~540 KB)
+cd tools/print-agent
+cargo build --release          # -> target/release/shopbook-print-agent (~560 KB)
 cargo clippy --release          # lint (clean)
 ```
 
@@ -153,6 +169,6 @@ installed queue (verified target: Windows + MJ5818).
 ## Relationship to the rest of the system
 
 - App transport + smart routing: `web/src/services/printerTransport.ts`, `web/src/hooks/useThermalPrinter.ts`
-- Dev stand-in that renders HTML in a browser gallery: `web/tools/serial-mock/`
+- Web Serial mock (browser extension that captures `navigator.serial` bytes and feeds this agent in virtual mode): `tools/serial-mock/`
 - ESC/POS bytes come from `web/src/utils/thermalReceipt.tsx` — unchanged; this agent only transports (or renders) them.
 - Future: this Rust core moves into the Tauri desktop app's native print command verbatim.
