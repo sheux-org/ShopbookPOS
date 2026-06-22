@@ -18,11 +18,11 @@ POS web app ──fetch http://localhost:8930/print {bytes}──► print-agent
 
 ## HTTP contract
 
-| Method | Path        | Body / Result                                                                       |
-| ------ | ----------- | ----------------------------------------------------------------------------------- |
-| `GET`  | `/health`   | `{ ok, service, version, platform, mode, defaultPrinter, printers[] }`              |
-| `GET`  | `/printers` | `{ printers: [{ name, systemName, isDefault }] }`                                   |
-| `POST` | `/print`    | body `{ bytes: number[], printer?: string }` → raw-prints to `printer` (or default) |
+| Method | Path        | Body / Result                                                                                                                   |
+| ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/health`   | `{ ok, service, version, platform, mode }` (liveness — fast, no device enumeration)                                             |
+| `GET`  | `/printers` | `{ printers: [...] }` — OS print queues **and** USB printer-class devices (`systemName:"usb"`, addressable via `printer:"usb"`) |
+| `POST` | `/print`    | body `{ bytes: number[], printer?: string }` → raw-prints to `printer` (or default)                                             |
 
 The app's `web/src/services/printerTransport.ts` points at `NEXT_PUBLIC_PRINT_BRIDGE_URL`
 (default `http://localhost:8930`) and, if set, sends `NEXT_PUBLIC_PRINT_BRIDGE_TOKEN` as
@@ -84,7 +84,24 @@ cargo build --release --target x86_64-pc-windows-msvc   # -> shopbook-print-agen
 
 ## Distribution to clients / merchants
 
-The merchant installs **one binary** (no Node/JVM/runtime). Per platform:
+The merchant installs **one binary** (no Node/JVM/runtime). The `install/` scripts
+do the auto-start setup for you — download the binary for the OS, then run the
+matching script once:
+
+```bash
+# macOS / Linux
+PRINT_AGENT_TOKEN=secret ./install/install-macos.sh ./shopbook-print-agent
+PRINT_AGENT_TOKEN=secret ./install/install-linux.sh ./shopbook-print-agent
+# Windows (PowerShell)
+./install/install-windows.ps1 -BinPath .\shopbook-print-agent.exe -Token secret
+```
+
+> The end goal is a **signed** installer (`.msi`/`.pkg`) that wraps these steps — without
+> signing, Windows SmartScreen / macOS Gatekeeper warn the merchant. See "Releases" above;
+> code-signing certs are the one paid prerequisite (Windows ~$120/yr via Azure Trusted
+> Signing, macOS $99/yr Apple Developer; Linux needs none).
+
+The manual equivalents (what the scripts do under the hood), per platform:
 
 ### Windows (the POSMAX target) — auto-start service
 

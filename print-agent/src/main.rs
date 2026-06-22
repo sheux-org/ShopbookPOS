@@ -9,6 +9,7 @@
 //!   POST /print    -> { bytes: number[], printer?: string }  (raw ESC/POS)
 
 mod render;
+mod usb;
 
 use std::io::{Cursor, Read};
 use std::net::Ipv4Addr;
@@ -117,8 +118,6 @@ fn route(request: &mut Request, cfg: &Config) -> Resp {
                 "version": VERSION,
                 "platform": std::env::consts::OS,
                 "mode": if cfg.virtual_mode { "virtual" } else { "print" },
-                "defaultPrinter": printers::get_default_printer().map(|p| p.name),
-                "printers": list_printers(),
             }),
             cfg,
         ),
@@ -152,6 +151,18 @@ fn handle_print(request: &mut Request, cfg: &Config) -> Resp {
         return render_virtual(&req.bytes, cfg);
     }
 
+    // Direct USB (printer-class device with no OS queue, e.g. MJ5818 on macOS/Linux).
+    if req.printer.as_deref() == Some("usb") {
+        return match usb::print(&req.bytes) {
+            Ok(name) => json_response(
+                200,
+                json!({ "ok": true, "transport": "usb", "printer": name, "bytes": req.bytes.len() }),
+                cfg,
+            ),
+            Err(e) => json_response(500, json!({ "ok": false, "error": e }), cfg),
+        };
+    }
+
     let target = match &req.printer {
         Some(name) => printers::get_printers()
             .into_iter()
@@ -159,7 +170,21 @@ fn handle_print(request: &mut Request, cfg: &Config) -> Resp {
         None => printers::get_default_printer(),
     };
     let Some(printer) = target else {
-        return json_response(404, json!({ "ok": false, "error": "no matching printer" }), cfg);
+        // No OS print queue matched. On macOS/Linux a USB printer-class device
+        // (e.g. MJ5818) exposes no queue, so fall back to direct USB — this lets
+        // the web app print with just {bytes} and no platform-specific routing.
+        return match usb::print(&req.bytes) {
+            Ok(name) => json_response(
+                200,
+                json!({ "ok": true, "transport": "usb", "printer": name, "bytes": req.bytes.len() }),
+                cfg,
+            ),
+            Err(usb_err) => json_response(
+                404,
+                json!({ "ok": false, "error": format!("no OS print queue and no USB printer ({usb_err})") }),
+                cfg,
+            ),
+        };
     };
 
     let mut opts = PrinterJobOptions::none(); // Converter::None => raw ESC/POS passthrough
@@ -198,10 +223,22 @@ fn render_virtual(bytes: &[u8], cfg: &Config) -> Resp {
 }
 
 fn list_printers() -> Vec<serde_json::Value> {
-    printers::get_printers()
+    let mut out: Vec<serde_json::Value> = printers::get_printers()
         .into_iter()
         .map(|p| json!({ "name": p.name, "systemName": p.system_name, "isDefault": p.is_default }))
-        .collect()
+        .collect();
+    // USB printer-class devices addressable via the direct-USB transport (printer:"usb").
+    for u in usb::discover() {
+        out.push(json!({
+            "name": format!("{} (USB)", u.name),
+            "systemName": "usb",
+            "isDefault": false,
+            "transport": "usb",
+            "vendorId": u.vendor_id,
+            "productId": u.product_id,
+        }));
+    }
+    out
 }
 
 fn header(request: &Request, name: &str) -> Option<String> {
