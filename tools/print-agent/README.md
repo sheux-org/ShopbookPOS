@@ -40,8 +40,8 @@ PRINT_AGENT_VIRTUAL=1 PRINT_AGENT_OUTPUT_DIR=./shopbook-receipts ./shopbook-prin
 ```
 
 The PNG uses a public-domain 8x8 bitmap font (no font asset) and renders alignment, bold,
-the cut marker, and the cash-drawer-kick badge. This is the agent's built-in equivalent of
-the `serial-mock` HTML gallery.
+the cut marker, and the cash-drawer-kick badge — the single renderer for both the bridge
+path and the Web Serial path (the `serial-mock` extension forwards its bytes here).
 
 ## Configuration (environment variables)
 

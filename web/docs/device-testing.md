@@ -123,8 +123,9 @@ always uses the real `navigator.serial`; only the dev extension overrides it.
 
 Wired into the printer's RJ11/RJ12 port; opens via an `ESC p` kick. It **auto-fires on cash
 sales** when printing over Web Serial (`openDrawerOnCashSale`), and there's an on-demand
-**Open Cash Drawer** button in Thermal Printer Setup. Verify the bytes with the serial-mock
-tool (gallery flags `💵 drawer`) or `print:preview` (`xxd .preview/cash.bin | grep 1b70`).
+**Open Cash Drawer** button in Thermal Printer Setup. Verify the bytes via `print:preview`
+(`xxd .preview/cash.bin | grep 1b70`) or the agent's virtual-mode PNG (it renders a
+`[cash drawer kick]` badge).
 
 ---
 
