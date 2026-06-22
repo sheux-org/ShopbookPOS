@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { ShoppingCart, Eye, Loader2, Receipt } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface TransactionLedgerProps {
   orders: any[];
@@ -24,6 +25,25 @@ export default function TransactionLedger({
   const activeTotal = useMemo(() => {
     return filteredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   }, [filteredOrders]);
+
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredOrders.length,
+    getScrollElement: () => tableWrapperRef.current,
+    estimateSize: () => 42,
+    overscan: 12,
+  });
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? totalSize -
+        (virtualItems[virtualItems.length - 1].start + virtualItems[virtualItems.length - 1].size)
+      : 0;
 
   return (
     <div className="ledger-list-card">
@@ -109,7 +129,7 @@ export default function TransactionLedger({
         </span>
       </div>
 
-      <div className="ledger-table-wrapper">
+      <div ref={tableWrapperRef} className="ledger-table-wrapper">
         <table className="ledger-table">
           <thead>
             <tr>
@@ -122,32 +142,56 @@ export default function TransactionLedger({
           </thead>
           {filteredOrders.length > 0 && (
             <tbody>
-              {filteredOrders.map((o: any) => (
-                <tr key={o.id}>
-                  <td>
-                    <span className="ledger-invoice-num">{o.invoiceNumber.split(' ')[0]}</span>
-                  </td>
-                  <td>
-                    <span className="ledger-date">{o.date}</span>
-                  </td>
-                  <td>
-                    <span className={`ledger-method-badge method-${o.paymentMethod.toLowerCase()}`}>
-                      {o.paymentMethod.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="ledger-amount-cell">Rs. {o.totalAmount.toLocaleString()}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button
-                      onClick={() => onViewReceipt(o)}
-                      className="ledger-view-btn"
-                      title="View Printable Invoice Receipt"
-                    >
-                      <Eye size={12} />
-                      <span>View</span>
-                    </button>
-                  </td>
+              {paddingTop > 0 && (
+                <tr style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}>
+                  <td
+                    colSpan={5}
+                    style={{ padding: 0, border: 'none', background: 'transparent' }}
+                  />
                 </tr>
-              ))}
+              )}
+
+              {virtualItems.map((virtualRow) => {
+                const o = filteredOrders[virtualRow.index];
+                if (!o) return null;
+                return (
+                  <tr key={o.id}>
+                    <td>
+                      <span className="ledger-invoice-num">{o.invoiceNumber.split(' ')[0]}</span>
+                    </td>
+                    <td>
+                      <span className="ledger-date">{o.date}</span>
+                    </td>
+                    <td>
+                      <span
+                        className={`ledger-method-badge method-${o.paymentMethod.toLowerCase()}`}
+                      >
+                        {o.paymentMethod.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="ledger-amount-cell">Rs. {o.totalAmount.toLocaleString()}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        onClick={() => onViewReceipt(o)}
+                        className="ledger-view-btn"
+                        title="View Printable Invoice Receipt"
+                      >
+                        <Eye size={12} />
+                        <span>View</span>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {paddingBottom > 0 && (
+                <tr style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}>
+                  <td
+                    colSpan={5}
+                    style={{ padding: 0, border: 'none', background: 'transparent' }}
+                  />
+                </tr>
+              )}
             </tbody>
           )}
         </table>

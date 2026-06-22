@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { Eye, FileText } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface OrderRecord {
   id: string;
@@ -30,6 +31,24 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
   filteredOrders,
   onViewReceipt,
 }) => {
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredOrders.length,
+    getScrollElement: () => tableWrapperRef.current,
+    estimateSize: () => 58,
+    overscan: 10,
+  });
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? totalSize -
+        (virtualItems[virtualItems.length - 1].start + virtualItems[virtualItems.length - 1].size)
+      : 0;
   return (
     <div style={styles.tableCard}>
       {loading ? (
@@ -38,7 +57,7 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
           <p style={{ marginTop: '12px' }}>Loading historical sales logs...</p>
         </div>
       ) : (
-        <div style={styles.tableWrapper}>
+        <div ref={tableWrapperRef} style={styles.tableWrapper}>
           <table style={styles.table}>
             <thead>
               <tr style={styles.trHead}>
@@ -52,59 +71,82 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((o) => (
-                <tr key={o.id} style={styles.trRow} className="history-table-row">
-                  <td style={styles.td}>
-                    <strong>{o.invoiceNumber}</strong>
-                  </td>
-                  <td style={styles.td}>{o.dateStr}</td>
-                  <td style={styles.td}>{o.cashierName}</td>
-                  <td style={styles.td}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '2px',
-                        alignItems: 'flex-start',
-                      }}
-                    >
-                      <span style={styles.methodBadge}>{o.paymentMethod.toUpperCase()}</span>
-                      {(o.paymentMethod === 'card' || o.paymentMethod === 'bank') && o.bankName && (
-                        <span
-                          style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '500' }}
-                        >
-                          {o.bankName} {o.cardLastFour ? `(**** ${o.cardLastFour})` : ''}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td style={styles.td}>
-                    <span
-                      style={{
-                        ...styles.statusBadge,
-                        backgroundColor: o.status === 'voided' ? '#fff1f2' : '#f0fdf4',
-                        color: o.status === 'voided' ? 'var(--error)' : 'var(--success)',
-                        border: o.status === 'voided' ? '1px solid #fecaca' : '1px solid #bbf7d0',
-                      }}
-                    >
-                      {o.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <strong
-                      style={{ color: o.status === 'voided' ? 'var(--muted)' : 'var(--primary)' }}
-                    >
-                      Rs. {o.totalAmount.toLocaleString()}
-                    </strong>
-                  </td>
-                  <td style={{ ...styles.td, textAlign: 'right' }}>
-                    <button onClick={() => onViewReceipt(o)} style={styles.viewReceiptBtn}>
-                      <Eye size={14} />
-                      <span>Inspect</span>
-                    </button>
-                  </td>
+              {paddingTop > 0 && (
+                <tr style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}>
+                  <td
+                    colSpan={7}
+                    style={{ padding: 0, border: 'none', background: 'transparent' }}
+                  />
                 </tr>
-              ))}
+              )}
+
+              {virtualItems.map((virtualRow) => {
+                const o = filteredOrders[virtualRow.index];
+                if (!o) return null;
+                return (
+                  <tr key={o.id} style={styles.trRow} className="history-table-row">
+                    <td style={styles.td}>
+                      <strong>{o.invoiceNumber}</strong>
+                    </td>
+                    <td style={styles.td}>{o.dateStr}</td>
+                    <td style={styles.td}>{o.cashierName}</td>
+                    <td style={styles.td}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px',
+                          alignItems: 'flex-start',
+                        }}
+                      >
+                        <span style={styles.methodBadge}>{o.paymentMethod.toUpperCase()}</span>
+                        {(o.paymentMethod === 'card' || o.paymentMethod === 'bank') &&
+                          o.bankName && (
+                            <span
+                              style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '500' }}
+                            >
+                              {o.bankName} {o.cardLastFour ? `(**** ${o.cardLastFour})` : ''}
+                            </span>
+                          )}
+                      </div>
+                    </td>
+                    <td style={styles.td}>
+                      <span
+                        style={{
+                          ...styles.statusBadge,
+                          backgroundColor: o.status === 'voided' ? '#fff1f2' : '#f0fdf4',
+                          color: o.status === 'voided' ? 'var(--error)' : 'var(--success)',
+                          border: o.status === 'voided' ? '1px solid #fecaca' : '1px solid #bbf7d0',
+                        }}
+                      >
+                        {o.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <strong
+                        style={{ color: o.status === 'voided' ? 'var(--muted)' : 'var(--primary)' }}
+                      >
+                        Rs. {o.totalAmount.toLocaleString()}
+                      </strong>
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'right' }}>
+                      <button onClick={() => onViewReceipt(o)} style={styles.viewReceiptBtn}>
+                        <Eye size={14} />
+                        <span>Inspect</span>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {paddingBottom > 0 && (
+                <tr style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}>
+                  <td
+                    colSpan={7}
+                    style={{ padding: 0, border: 'none', background: 'transparent' }}
+                  />
+                </tr>
+              )}
 
               {filteredOrders.length === 0 && (
                 <tr>

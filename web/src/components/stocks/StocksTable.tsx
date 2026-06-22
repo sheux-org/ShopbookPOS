@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Package, Search, Plus } from 'lucide-react';
 import { ProductImage } from '../ProductImage';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface DBProduct {
   id: string;
@@ -37,6 +38,24 @@ export const StocksTable: React.FC<StocksTableProps> = ({
   activeTab,
 }) => {
   const router = useRouter();
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredProducts.length,
+    getScrollElement: () => tableWrapperRef.current,
+    estimateSize: () => 52,
+    overscan: 12,
+  });
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
+
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? totalSize -
+        (virtualItems[virtualItems.length - 1].start + virtualItems[virtualItems.length - 1].size)
+      : 0;
 
   return (
     <div
@@ -62,7 +81,7 @@ export const StocksTable: React.FC<StocksTableProps> = ({
       </div>
 
       {/* Table Container */}
-      <div style={styles.tableWrapper} className="stocks-table-wrapper">
+      <div ref={tableWrapperRef} style={styles.tableWrapper} className="stocks-table-wrapper">
         <table style={styles.table}>
           <thead>
             <tr style={styles.thRow}>
@@ -79,7 +98,15 @@ export const StocksTable: React.FC<StocksTableProps> = ({
             </tr>
           </thead>
           <tbody>
-            {filteredProducts.map((p) => {
+            {paddingTop > 0 && (
+              <tr style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}>
+                <td colSpan={9} style={{ padding: 0, border: 'none', background: 'transparent' }} />
+              </tr>
+            )}
+
+            {virtualItems.map((virtualRow) => {
+              const p = filteredProducts[virtualRow.index];
+              if (!p) return null;
               const isOut = p.stockCount <= 0;
               const isLow = p.lowStockAlert && p.stockCount <= p.lowStockAlert;
               return (
@@ -135,6 +162,12 @@ export const StocksTable: React.FC<StocksTableProps> = ({
                 </tr>
               );
             })}
+
+            {paddingBottom > 0 && (
+              <tr style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}>
+                <td colSpan={9} style={{ padding: 0, border: 'none', background: 'transparent' }} />
+              </tr>
+            )}
 
             {filteredProducts.length === 0 && (
               <tr>
