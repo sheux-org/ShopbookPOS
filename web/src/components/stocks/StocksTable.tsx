@@ -99,8 +99,17 @@ export const StocksTable: React.FC<StocksTableProps> = ({
           </thead>
           <tbody>
             {paddingTop > 0 && (
-              <tr style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}>
-                <td colSpan={9} style={{ padding: 0, border: 'none', background: 'transparent' }} />
+              <tr
+                style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}
+                aria-hidden="true"
+                tabIndex={-1}
+              >
+                <td
+                  colSpan={9}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  style={{ padding: 0, border: 'none', background: 'transparent' }}
+                />
               </tr>
             )}
 
@@ -164,8 +173,17 @@ export const StocksTable: React.FC<StocksTableProps> = ({
             })}
 
             {paddingBottom > 0 && (
-              <tr style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}>
-                <td colSpan={9} style={{ padding: 0, border: 'none', background: 'transparent' }} />
+              <tr
+                style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}
+                aria-hidden="true"
+                tabIndex={-1}
+              >
+                <td
+                  colSpan={9}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  style={{ padding: 0, border: 'none', background: 'transparent' }}
+                />
               </tr>
             )}
 

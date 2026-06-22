@@ -143,9 +143,15 @@ export default function TransactionLedger({
           {filteredOrders.length > 0 && (
             <tbody>
               {paddingTop > 0 && (
-                <tr style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}>
+                <tr
+                  style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
                   <td
                     colSpan={5}
+                    aria-hidden="true"
+                    tabIndex={-1}
                     style={{ padding: 0, border: 'none', background: 'transparent' }}
                   />
                 </tr>
@@ -185,9 +191,15 @@ export default function TransactionLedger({
               })}
 
               {paddingBottom > 0 && (
-                <tr style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}>
+                <tr
+                  style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
                   <td
                     colSpan={5}
+                    aria-hidden="true"
+                    tabIndex={-1}
                     style={{ padding: 0, border: 'none', background: 'transparent' }}
                   />
                 </tr>

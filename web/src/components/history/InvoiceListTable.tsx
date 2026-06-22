@@ -72,9 +72,15 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
             </thead>
             <tbody>
               {paddingTop > 0 && (
-                <tr style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}>
+                <tr
+                  style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
                   <td
                     colSpan={7}
+                    aria-hidden="true"
+                    tabIndex={-1}
                     style={{ padding: 0, border: 'none', background: 'transparent' }}
                   />
                 </tr>
@@ -140,9 +146,15 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
               })}
 
               {paddingBottom > 0 && (
-                <tr style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}>
+                <tr
+                  style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
                   <td
                     colSpan={7}
+                    aria-hidden="true"
+                    tabIndex={-1}
                     style={{ padding: 0, border: 'none', background: 'transparent' }}
                   />
                 </tr>

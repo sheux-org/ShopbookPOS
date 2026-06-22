@@ -11,6 +11,46 @@ interface ReportExporterProps {
   isGeneratingCsv?: boolean;
 }
 
+interface PdfButtonProps {
+  onClick: () => void;
+  isGenerating: boolean;
+  disabled: boolean;
+}
+
+function PdfButton({ onClick, isGenerating, disabled }: PdfButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="export-btn pdf"
+      title="Export Statement Report as PDF"
+      disabled={disabled}
+    >
+      {isGenerating ? <Loader2 size={15} className="spin-anim" /> : <Printer size={15} />}
+      <span>{isGenerating ? 'Loading...' : 'PDF'}</span>
+    </button>
+  );
+}
+
+interface ExcelButtonProps {
+  onClick: () => void;
+  isGenerating: boolean;
+  disabled: boolean;
+}
+
+function ExcelButton({ onClick, isGenerating, disabled }: ExcelButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="export-btn excel"
+      title="Export Ledger Statement as CSV/Excel"
+      disabled={disabled}
+    >
+      {isGenerating ? <Loader2 size={15} className="spin-anim" /> : <Download size={15} />}
+      <span>{isGenerating ? 'Loading...' : 'Excel'}</span>
+    </button>
+  );
+}
+
 export default function ReportExporter({
   selectedReport,
   setSelectedReport,
@@ -19,10 +59,15 @@ export default function ReportExporter({
   isGeneratingPdf = false,
   isGeneratingCsv = false,
 }: ReportExporterProps) {
+  const isDisabled = isGeneratingPdf || isGeneratingCsv;
+
   return (
     <div className="export-card">
       <div className="export-header">
-        <div className="export-header-icon-wrapper">
+        <div
+          className="export-header-icon-wrapper"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
           <FileDown size={16} />
         </div>
         <h3 className="export-title">Export Business Reports</h3>
@@ -34,7 +79,7 @@ export default function ReportExporter({
             value={selectedReport}
             onChange={(e) => setSelectedReport(e.target.value as ReportType)}
             className="export-select"
-            disabled={isGeneratingPdf || isGeneratingCsv}
+            disabled={isDisabled}
           >
             <option value="best_sellers">Best Selling Products</option>
             <option value="slow_movers">Slow Moving Inventory</option>
@@ -48,24 +93,16 @@ export default function ReportExporter({
         </div>
 
         <div className="export-buttons-group">
-          <button
+          <PdfButton
             onClick={handleDownloadPdf}
-            className="export-btn pdf"
-            title="Export Statement Report as PDF"
-            disabled={isGeneratingPdf || isGeneratingCsv}
-          >
-            {isGeneratingPdf ? <Loader2 size={15} className="spin-anim" /> : <Printer size={15} />}
-            <span>{isGeneratingPdf ? 'Loading...' : 'PDF'}</span>
-          </button>
-          <button
+            isGenerating={isGeneratingPdf}
+            disabled={isDisabled}
+          />
+          <ExcelButton
             onClick={handleDownloadCsv}
-            className="export-btn excel"
-            title="Export Ledger Statement as CSV/Excel"
-            disabled={isGeneratingPdf || isGeneratingCsv}
-          >
-            {isGeneratingCsv ? <Loader2 size={15} className="spin-anim" /> : <Download size={15} />}
-            <span>{isGeneratingCsv ? 'Loading...' : 'Excel'}</span>
-          </button>
+            isGenerating={isGeneratingCsv}
+            disabled={isDisabled}
+          />
         </div>
       </div>
     </div>
