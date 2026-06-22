@@ -66,76 +66,67 @@ export function useBusinessInsights(
         };
       }
 
-      // 2. Fetch completed orders
-      const orders = await database
+      // 2. Determine time range and fetch completed orders at database level
+      const today = new Date();
+      let startTs = 0;
+      let endTs = Date.now();
+
+      if (period === 'daily') {
+        startTs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+        endTs = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          23,
+          59,
+          59,
+          999
+        ).getTime();
+      } else if (period === 'yesterday') {
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        startTs = new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate()
+        ).getTime();
+        endTs = new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate(),
+          23,
+          59,
+          59,
+          999
+        ).getTime();
+      } else if (period === 'weekly') {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+        startTs = sevenDaysAgo.getTime();
+        endTs = today.getTime();
+      } else if (period === 'monthly') {
+        startTs = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+        endTs = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      } else if (period === 'yearly') {
+        startTs = new Date(today.getFullYear(), 0, 1).getTime();
+        endTs = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
+      } else if (period === 'custom' && startDate && endDate) {
+        startTs = new Date(startDate).getTime();
+        const adjustedEnd = new Date(endDate);
+        adjustedEnd.setHours(23, 59, 59, 999);
+        endTs = adjustedEnd.getTime();
+      }
+
+      let ordersQuery = database
         .get('orders')
-        .query(Q.where('business_id', dbBiz.id), Q.where('status', 'paid'))
-        .fetch();
+        .query(Q.where('business_id', dbBiz.id), Q.where('status', 'paid'));
 
-      // 3. Filter orders based on active period using robust range comparisons
-      const filteredOrders = orders.filter((order: any) => {
-        if (!order.createdAt) return false;
-        const orderDate = new Date(order.createdAt);
-        const today = new Date();
+      if (period) {
+        ordersQuery = ordersQuery.extend(Q.where('created_at', Q.between(startTs, endTs)));
+      }
 
-        if (period === 'daily') {
-          const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          const end = new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-            23,
-            59,
-            59,
-            999
-          );
-          return orderDate >= start && orderDate <= end;
-        } else if (period === 'yesterday') {
-          const yesterday = new Date();
-          yesterday.setDate(today.getDate() - 1);
-          const start = new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate()
-          );
-          const end = new Date(
-            yesterday.getFullYear(),
-            yesterday.getMonth(),
-            yesterday.getDate(),
-            23,
-            59,
-            59,
-            999
-          );
-          return orderDate >= start && orderDate <= end;
-        } else if (period === 'weekly') {
-          const sevenDaysAgo = new Date();
-          sevenDaysAgo.setDate(today.getDate() - 7);
-          sevenDaysAgo.setHours(0, 0, 0, 0);
-          return orderDate >= sevenDaysAgo && orderDate <= today;
-        } else if (period === 'monthly') {
-          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-          const endOfMonth = new Date(
-            today.getFullYear(),
-            today.getMonth() + 1,
-            0,
-            23,
-            59,
-            59,
-            999
-          );
-          return orderDate >= startOfMonth && orderDate <= endOfMonth;
-        } else if (period === 'yearly') {
-          const startOfYear = new Date(today.getFullYear(), 0, 1);
-          const endOfYear = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
-          return orderDate >= startOfYear && orderDate <= endOfYear;
-        } else if (period === 'custom' && startDate && endDate) {
-          const adjustedEnd = new Date(endDate);
-          adjustedEnd.setHours(23, 59, 59, 999);
-          return orderDate >= startDate && orderDate <= adjustedEnd;
-        }
-        return true;
-      });
+      const filteredOrders = await ordersQuery.fetch();
 
       // 4. Fetch low stock items
       const allProducts = await database
@@ -400,7 +391,7 @@ export function useBusinessInsights(
 
 export function useInsightsExport(businessId: string) {
   return {
-    fetchReportData: async () => {
+    fetchReportData: async (period?: string, startDate?: Date | null, endDate?: Date | null) => {
       // 1. Fetch active business SQLite record
       const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
       const dbBiz = businesses[0];
@@ -408,16 +399,72 @@ export function useInsightsExport(businessId: string) {
         throw new Error('Active business not found in local database!');
       }
 
-      // 2. Fetch completed orders for active business (Paid status, all-time)
-      const orders = await database
-        .get('orders')
-        .query(Q.where('business_id', dbBiz.id), Q.where('status', 'paid'))
-        .fetch();
+      // 2. Determine time range and fetch completed orders at database level
+      const today = new Date();
+      let startTs = 0;
+      let endTs = Date.now();
 
-      // 3. Gather all order items for these orders
+      if (period === 'daily') {
+        startTs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+        endTs = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          23,
+          59,
+          59,
+          999
+        ).getTime();
+      } else if (period === 'yesterday') {
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        startTs = new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate()
+        ).getTime();
+        endTs = new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate(),
+          23,
+          59,
+          59,
+          999
+        ).getTime();
+      } else if (period === 'weekly') {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+        startTs = sevenDaysAgo.getTime();
+        endTs = today.getTime();
+      } else if (period === 'monthly') {
+        startTs = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
+        endTs = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      } else if (period === 'yearly') {
+        startTs = new Date(today.getFullYear(), 0, 1).getTime();
+        endTs = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
+      } else if (period === 'custom' && startDate && endDate) {
+        startTs = new Date(startDate).getTime();
+        const adjustedEnd = new Date(endDate);
+        adjustedEnd.setHours(23, 59, 59, 999);
+        endTs = adjustedEnd.getTime();
+      }
+
+      let ordersQuery = database
+        .get('orders')
+        .query(Q.where('business_id', dbBiz.id), Q.where('status', 'paid'));
+
+      if (period) {
+        ordersQuery = ordersQuery.extend(Q.where('created_at', Q.between(startTs, endTs)));
+      }
+
+      const filteredOrders = await ordersQuery.fetch();
+
+      // 4. Gather all order items for these filtered orders
       let orderItems: any[] = [];
-      if (orders.length > 0) {
-        const orderIds = orders.map((o: any) => o.id);
+      if (filteredOrders.length > 0) {
+        const orderIds = filteredOrders.map((o: any) => o.id);
         const chunkSize = 100;
         for (let i = 0; i < orderIds.length; i += chunkSize) {
           const chunk = orderIds.slice(i, i + chunkSize);
@@ -429,7 +476,7 @@ export function useInsightsExport(businessId: string) {
         }
       }
 
-      // 4. Fetch all active business products
+      // 5. Fetch all active business products
       const products = await database
         .get('products')
         .query(Q.where('business_id', dbBiz.id))
@@ -442,7 +489,7 @@ export function useInsightsExport(businessId: string) {
           address: (dbBiz as any).address,
           phone: (dbBiz as any).phone,
         },
-        orders,
+        orders: filteredOrders,
         orderItems,
         products,
       };

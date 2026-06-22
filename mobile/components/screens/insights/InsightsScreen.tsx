@@ -45,6 +45,7 @@ export const InsightsScreen: React.FC = () => {
   // Period filters
   const [period, setPeriod] = useState<'daily' | 'monthly' | 'yearly' | 'custom'>('monthly');
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'all' | 'cash' | 'card' | 'bank'>('all');
 
   // Custom resolved dates
   const [resolvedStartDate, setResolvedStartDate] = useState<Date | null>(null);
@@ -90,7 +91,7 @@ export const InsightsScreen: React.FC = () => {
     fetchNextPage: fetchNextPeriodOrders,
     hasNextPage: hasNextPeriodOrders,
     isFetchingNextPage: isFetchingNextPeriodOrders,
-  } = useGetPeriodOrders(period, resolvedStartDate, resolvedEndDate);
+  } = useGetPeriodOrders(period, resolvedStartDate, resolvedEndDate, paymentMethod);
 
   // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
@@ -145,7 +146,11 @@ export const InsightsScreen: React.FC = () => {
     setExportType('CSV');
     try {
       // 1. Fetch reporting dataset via custom hook
-      const { business, orders, orderItems, products } = await fetchReportData();
+      const { business, orders, orderItems, products } = await fetchReportData(
+        period,
+        resolvedStartDate,
+        resolvedEndDate
+      );
 
       // 2. Generate Report CSV
       const csvText = buildReportCsv(reportType, {
@@ -184,7 +189,11 @@ export const InsightsScreen: React.FC = () => {
     setExportType('PDF');
     try {
       // 1. Fetch reporting dataset via custom hook
-      const { business, orders, orderItems, products } = await fetchReportData();
+      const { business, orders, orderItems, products } = await fetchReportData(
+        period,
+        resolvedStartDate,
+        resolvedEndDate
+      );
 
       // 2. Generate Report HTML
       const html = buildReportHtml(reportType, {
@@ -574,6 +583,9 @@ export const InsightsScreen: React.FC = () => {
         hasNextProducts={hasNextProducts}
         fetchNextProducts={fetchNextProducts}
         isFetchingNextProducts={isFetchingNextProducts}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={setPaymentMethod}
+        resolvedOrders={stats?.resolvedOrders || []}
       />
 
       {/* Export Progress Modal */}
