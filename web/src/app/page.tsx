@@ -163,7 +163,7 @@ export default function PosBillingPage() {
               )}
 
               {/* Customer Lookup Profile */}
-              <div style={{ marginBottom: '12px', marginTop: posMode === 'tablet' ? '12px' : 0 }}>
+              <div style={{ marginBottom: '12px', marginTop: posMode === 'tablet' ? 'auto' : 0 }}>
                 {customer ? (
                   <div className="customer-status-card">
                     <div>

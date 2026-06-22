@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MinusCircle, PlusCircle, Trash2, ShoppingBag } from 'lucide-react';
 import { ProductImage } from '../ProductImage';
 
@@ -20,8 +20,19 @@ interface TabletCartScrollerProps {
 }
 
 export const TabletCartScroller: React.FC<TabletCartScrollerProps> = ({ cart, updateQuantity }) => {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(cart.length);
+
+  // Reveal the newest line whenever an item is added to the cart.
+  useEffect(() => {
+    if (cart.length > prevCountRef.current && scrollerRef.current) {
+      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+    }
+    prevCountRef.current = cart.length;
+  }, [cart.length]);
+
   return (
-    <div style={styles.tabletCartScroller}>
+    <div ref={scrollerRef} style={styles.tabletCartScroller}>
       {cart.map((item) => (
         <div key={item.id} style={styles.cartItemRow}>
           <ProductImage
@@ -96,7 +107,6 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto',
     flex: 1,
     minHeight: '150px',
-    maxHeight: '260px',
     borderBottom: '1px solid var(--border)',
     paddingBottom: '12px',
     marginBottom: '12px',
