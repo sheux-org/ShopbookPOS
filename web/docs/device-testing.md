@@ -59,13 +59,19 @@ Point the webcam at a barcode/QR; the field fills. On Safari/Firefox it shows th
 
 ---
 
-## 3. Thermal printer (ESC/POS) — three tiers, no printer needed
+## 3. Thermal printer (ESC/POS) — four tiers, no printer needed for the first three
 
-| Tier                            | What it tests                                                | How                                                                                                 |
-| ------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| **Byte/visual preview**         | Receipt content + drawer kick bytes                          | `pnpm run print:preview` → see [receipt-preview.md](receipt-preview.md)                             |
-| **Live app path (recommended)** | The real browser Web Serial path rendered as a receipt image | the **serial-mock** dev tool → see [../tools/serial-mock/README.md](../tools/serial-mock/README.md) |
-| **Real hardware**               | Physical print + paper output                                | Profile → Thermal Printer Setup → Connect → Print Test Receipt (XP-365B over a COM port)            |
+| Tier                            | What it tests                                                | How                                                                                                         |
+| ------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| **Byte/visual preview**         | Receipt content + drawer kick bytes                          | `pnpm run print:preview` → see [receipt-preview.md](receipt-preview.md)                                     |
+| **Live app path (recommended)** | The real browser Web Serial path rendered as a receipt image | the **serial-mock** dev tool → see [../tools/serial-mock/README.md](../tools/serial-mock/README.md)         |
+| **Print agent — virtual mode**  | The bridge transport + a PNG render of the receipt           | run the agent with `PRINT_AGENT_VIRTUAL=1` → see [../../print-agent/README.md](../../print-agent/README.md) |
+| **Real hardware**               | Physical print + paper output                                | Profile → Thermal Printer Setup → Connect → Print Test Receipt (XP-365B over a COM port)                    |
+
+The **print-agent** (repo root `print-agent/`) is the production raw-print service AND a
+no-hardware dev tool: `PRINT_AGENT_VIRTUAL=1` renders each `/print` to a PNG in
+`shopbook-receipts/`. The app's bridge tier auto-detects it via `/health` — so a dev with
+no printer runs the agent in virtual mode and gets PNG receipts from real checkouts.
 
 The **serial-mock** tool is what reproduces our end-to-end automation: it mocks
 `navigator.serial`, captures the ESC/POS bytes the app sends (test receipt, real sale,
