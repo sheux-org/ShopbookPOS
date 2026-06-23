@@ -207,3 +207,4 @@ ALTER TABLE public.active_devices ENABLE ROW LEVEL SECURITY;
 - **Low-Stock Alerts**: Red (`#EF4444`) warnings reflect critical items needing replenishment.
 - **Glassmorphism Backdrop**: UI layouts on both platforms overlay transclucent containers (`rgba(15, 23, 42, 0.6)`) to preserve modern design aesthetics.
 - **Fonts**: Plotted with modern high-legibility sans-serif typefaces (like _Plus Jakarta Sans_ on mobile and _Inter_ on desktop layouts) for rapid visual lookup.
+
