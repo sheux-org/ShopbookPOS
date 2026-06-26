@@ -4,7 +4,6 @@ import React from 'react';
 import { Printer } from 'lucide-react';
 import { ReceiptPaper, printThermalReceipt } from './ReceiptPaper';
 import { useThermalPrinter } from '../../hooks/useThermalPrinter';
-import { isUserCancellation } from '../../services/webSerialPrinter';
 
 interface CartItem {
   id: string;
@@ -64,18 +63,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const FELL_BACK =
     'Couldn’t reach the printer — opened the system print dialog instead. Check the printer/cable or the print agent, then re-check via the status above.';
 
-  // Smart print (explicit button press = has a user gesture, so we may prompt
-  // the one-time device picker). printReceipt routes serial → agent → picker
-  // internally and throws only when none is reachable; on cancel do nothing; on
-  // real failure surface a note and fall back to the system print dialog.
+  // Print via the Chittie Companion; on any failure surface a note and fall back
+  // to the system print dialog.
   const handleSmartPrint = async () => {
     if (!order) return;
     setPrintNote(null);
     try {
       await thermal.printReceipt({ order, items, activeBusiness, changeDue });
       return;
-    } catch (err) {
-      if (isUserCancellation(err)) return;
+    } catch {
       setPrintNote(FELL_BACK);
       systemPrint();
     }
@@ -126,10 +122,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           ) : (
             <span style={styles.printerHint}>
               {thermal.canPrint
-                ? thermal.activeTransport === 'bridge'
-                  ? '🖨 Print agent ready'
-                  : '🖨 Thermal printer ready'
-                : 'Tap to pick your printer (once), or prints via your system printer'}
+                ? '🖨 Chittie Companion ready'
+                : 'Companion not running — prints via your system printer'}
             </span>
           )}
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Usb, Printer, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { X, Printer, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useThermalPrinter } from '../../hooks/useThermalPrinter';
 import { useSettingsStore } from '../../stores/settingsStore';
 
@@ -11,19 +11,17 @@ interface ThermalPrinterModalProps {
   activeBusiness: { name?: string; address?: string; phone?: string } | null;
 }
 
-const BAUD_RATES = [9600, 19200, 38400, 115200];
+const COMPANION_INSTALL_URL =
+  'https://pub-4b53b304bc45450dbe0155abfe55778b.r2.dev/chittie-companion-latest-windows-x64-setup.exe';
 
 export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
   isOpen,
   onClose,
   activeBusiness,
 }) => {
-  const { supported, connected, connect, disconnect, printTestReceipt, openCashDrawer } =
-    useThermalPrinter();
+  const { ready, refresh, printTestReceipt, openCashDrawer } = useThermalPrinter();
   const paperWidth = useSettingsStore((s) => s.thermalPaperWidth);
   const setPaperWidth = useSettingsStore((s) => s.setThermalPaperWidth);
-  const baudRate = useSettingsStore((s) => s.thermalBaudRate);
-  const setBaudRate = useSettingsStore((s) => s.setThermalBaudRate);
   const cashDrawerPin = useSettingsStore((s) => s.cashDrawerPin);
   const setCashDrawerPin = useSettingsStore((s) => s.setCashDrawerPin);
 
@@ -37,29 +35,6 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
     setTimeout(() => setMessage(null), 2500);
   };
 
-  const handleConnect = async () => {
-    setBusy(true);
-    try {
-      await connect();
-      notify('Printer connected.');
-    } catch (err) {
-      console.error('Printer connect failed:', err);
-      notify('Connection cancelled or failed.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    setBusy(true);
-    try {
-      await disconnect();
-      notify('Printer disconnected.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const handleTestPrint = async () => {
     setBusy(true);
     try {
@@ -67,7 +42,7 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
       notify('Test receipt sent.');
     } catch (err) {
       console.error('Test print failed:', err);
-      notify('Could not print. Check the printer and try again.');
+      notify('Could not print. Is the Chittie Companion running?');
     } finally {
       setBusy(false);
     }
@@ -91,8 +66,8 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
       <div style={styles.content}>
         <div style={styles.header}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Usb size={18} color="var(--primary)" />
-            <h3 style={styles.title}>Thermal Printer (Web Serial)</h3>
+            <Printer size={18} color="var(--primary)" />
+            <h3 style={styles.title}>Thermal Printer (Chittie Companion)</h3>
           </div>
           <button onClick={onClose} style={styles.closeBtn}>
             <X size={18} />
@@ -100,90 +75,80 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
         </div>
 
         <div style={styles.body}>
-          {!supported ? (
+          <div style={ready ? styles.statusConnected : styles.statusIdle}>
+            {ready ? <CheckCircle2 size={18} /> : <Printer size={18} />}
+            <span>{ready ? 'Chittie Companion connected & ready' : 'Companion not running'}</span>
+          </div>
+
+          {!ready && (
             <div style={styles.warningBox}>
               <AlertTriangle size={20} color="var(--warning)" />
               <div>
-                <p style={styles.warningTitle}>Not supported in this browser</p>
+                <p style={styles.warningTitle}>Install the Chittie Companion</p>
                 <p style={styles.warningSub}>
-                  Direct thermal printing uses the Web Serial API, available on desktop Chrome or
-                  Edge over HTTPS. Use those, or fall back to the system print dialog.
+                  The print bridge runs in the tray and drives your USB/network thermal printer.{' '}
+                  <a
+                    href={COMPANION_INSTALL_URL}
+                    style={{ color: 'var(--primary)', fontWeight: 700 }}
+                  >
+                    Download for Windows
+                  </a>
+                  , install it, then re-check. (No companion? Printing falls back to the system
+                  dialog.)
                 </p>
               </div>
             </div>
-          ) : (
-            <>
-              <div style={connected ? styles.statusConnected : styles.statusIdle}>
-                {connected ? <CheckCircle2 size={18} /> : <Printer size={18} />}
-                <span>{connected ? 'Printer connected & ready' : 'No printer connected'}</span>
-              </div>
-
-              <div style={styles.fieldRow}>
-                <label style={styles.fieldLabel}>Paper width</label>
-                <div style={styles.segment}>
-                  {([58, 80] as const).map((w) => (
-                    <button
-                      key={w}
-                      onClick={() => setPaperWidth(w)}
-                      style={paperWidth === w ? styles.segmentActive : styles.segmentBtn}
-                    >
-                      {w}mm
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={styles.fieldRow}>
-                <label style={styles.fieldLabel}>Baud rate</label>
-                <select
-                  value={baudRate}
-                  onChange={(e) => setBaudRate(Number(e.target.value))}
-                  style={styles.select}
-                >
-                  {BAUD_RATES.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={styles.fieldRow}>
-                <label style={styles.fieldLabel}>Cash drawer pin</label>
-                <div style={styles.segment}>
-                  {(['2pin', '5pin'] as const).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setCashDrawerPin(p)}
-                      style={cashDrawerPin === p ? styles.segmentActive : styles.segmentBtn}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={styles.buttonCol}>
-                {!connected ? (
-                  <button onClick={handleConnect} disabled={busy} style={styles.primaryBtn}>
-                    <Usb size={15} />
-                    <span>Connect Printer</span>
-                  </button>
-                ) : (
-                  <button onClick={handleDisconnect} disabled={busy} style={styles.secondaryBtn}>
-                    Disconnect
-                  </button>
-                )}
-                <button onClick={handleTestPrint} disabled={busy} style={styles.secondaryBtn}>
-                  <Printer size={15} />
-                  <span>Print Test Receipt</span>
-                </button>
-                <button onClick={handleOpenDrawer} disabled={busy} style={styles.secondaryBtn}>
-                  <span>Open Cash Drawer</span>
-                </button>
-              </div>
-            </>
           )}
+
+          <div style={styles.fieldRow}>
+            <label style={styles.fieldLabel}>Paper width</label>
+            <div style={styles.segment}>
+              {([58, 80] as const).map((w) => (
+                <button
+                  key={w}
+                  onClick={() => setPaperWidth(w)}
+                  style={paperWidth === w ? styles.segmentActive : styles.segmentBtn}
+                >
+                  {w}mm
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.fieldRow}>
+            <label style={styles.fieldLabel}>Cash drawer pin</label>
+            <div style={styles.segment}>
+              {(['2pin', '5pin'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setCashDrawerPin(p)}
+                  style={cashDrawerPin === p ? styles.segmentActive : styles.segmentBtn}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.buttonCol}>
+            <button
+              onClick={() => {
+                void refresh();
+                notify('Re-checking…');
+              }}
+              disabled={busy}
+              style={styles.secondaryBtn}
+            >
+              Re-check connection
+            </button>
+            <button onClick={handleTestPrint} disabled={busy} style={styles.secondaryBtn}>
+              <Printer size={15} />
+              <span>Print Test Receipt</span>
+            </button>
+            <button onClick={handleOpenDrawer} disabled={busy} style={styles.secondaryBtn}>
+              <span>Open Cash Drawer</span>
+            </button>
+          </div>
 
           {message && <div style={styles.toast}>{message}</div>}
         </div>

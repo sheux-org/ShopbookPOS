@@ -1,7 +1,19 @@
 import React from 'react';
-import { Printer, Text, Row, Line, Br, Cut, Cashdraw, render } from 'react-thermal-printer';
-import type { CashDrawerPin } from 'react-thermal-printer';
+import {
+  Printer,
+  Text,
+  Row,
+  Line,
+  Br,
+  Cut,
+  Cashdraw,
+  render,
+  PRINTER_PROFILES,
+  type TextRasterizer,
+} from '@angadie/chittie';
 import { buildReceiptModel, formatMoney, type ReceiptModelInput } from './receiptModel';
+
+export type CashDrawerPin = '2pin' | '5pin';
 
 export type RenderReceiptParams = ReceiptModelInput & {
   /** Characters per line — 32 for 58mm rolls, 48 for 80mm rolls. */
@@ -11,17 +23,54 @@ export type RenderReceiptParams = ReceiptModelInput & {
   cashDrawerPin?: CashDrawerPin;
 };
 
-// UTF-8 encoder bypasses iconv-lite's codepage path; our receipts are Latin/English.
-const utf8Encoder = (text: string) => new TextEncoder().encode(text);
+// react-thermal-printer's '2pin'/'5pin' → chittie's pulse device (0 = connector pin 2, 1 = pin 5).
+const drawerDevice = (pin: CashDrawerPin = '2pin') => (pin === '5pin' ? 1 : 0);
+
+// 32 cols → 58mm (384 dots), else 80mm (576 dots).
+const profileFor = (widthChars: number) =>
+  widthChars <= 32 ? PRINTER_PROFILES['58mm'] : PRINTER_PROFILES['80mm'];
+
+/**
+ * Browser rasterizer — shapes Sinhala/Tamil/etc. via the OS fonts so non-Latin
+ * receipts print correctly (the old UTF-8 path printed garbage on ESC/POS). Only
+ * invoked for text a code page can't represent; Latin/English never touches it
+ * (so Node tests / Latin previews need no canvas). Tight crop = clean line spacing.
+ */
+export const browserRasterizer: TextRasterizer = {
+  rasterize(text, { fontSize = 24, maxWidth = 576, bold = false } = {}) {
+    if (typeof document === 'undefined') {
+      throw new Error('thermalReceipt: non-Latin text needs a browser canvas (no document here)');
+    }
+    const font = `${bold ? 'bold ' : ''}${fontSize}px "Noto Sans Sinhala","Noto Sans Tamil",sans-serif`;
+    const probe = document.createElement('canvas').getContext('2d')!;
+    probe.font = font;
+    const m = probe.measureText(text);
+    const ascent = Math.ceil(m.actualBoundingBoxAscent || fontSize * 0.8);
+    const descent = Math.ceil(m.actualBoundingBoxDescent || fontSize * 0.22);
+    const w = Math.min(Math.ceil(m.width) + 4, maxWidth);
+    const h = ascent + descent + 2;
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#000';
+    ctx.font = font;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(text, 2, ascent + 1);
+    return ctx.getImageData(0, 0, w, h) as unknown as ImageData;
+  },
+};
 
 export function buildReceiptElement(params: RenderReceiptParams) {
-  const widthChars = params.widthChars ?? 48;
+  const { columns } = profileFor(params.widthChars ?? 48);
   const m = buildReceiptModel(params);
 
   return (
-    <Printer type="epson" width={widthChars} encoder={utf8Encoder}>
-      {params.openCashDrawer ? <Cashdraw pin={params.cashDrawerPin ?? '2pin'} /> : null}
-      <Text align="center" bold={true}>
+    <Printer width={columns}>
+      {params.openCashDrawer ? <Cashdraw device={drawerDevice(params.cashDrawerPin)} /> : null}
+      <Text align="center" bold>
         {m.businessName}
       </Text>
       <Text align="center">{m.businessAddress}</Text>
@@ -54,10 +103,7 @@ export function buildReceiptElement(params: RenderReceiptParams) {
 
       <Line />
 
-      <Row
-        left={<Text bold={true}>TOTAL</Text>}
-        right={<Text bold={true}>{formatMoney(m.total)}</Text>}
-      />
+      <Row left="TOTAL" right={formatMoney(m.total)} />
 
       <Line />
 
@@ -74,7 +120,7 @@ export function buildReceiptElement(params: RenderReceiptParams) {
       <Br />
 
       {m.footer.map((line, i) => (
-        <Text key={i} align="center">
+        <Text key={i} align="center" small>
           {line}
         </Text>
       ))}
@@ -84,16 +130,23 @@ export function buildReceiptElement(params: RenderReceiptParams) {
   );
 }
 
-export function renderReceiptBytes(params: RenderReceiptParams): Promise<Uint8Array> {
-  return render(buildReceiptElement(params));
+const renderOpts = (widthChars: number) => ({
+  dotWidth: profileFor(widthChars).dotWidth,
+  rasterizer: browserRasterizer,
+  codepage: 'cp437' as const,
+});
+
+export async function renderReceiptBytes(params: RenderReceiptParams): Promise<Uint8Array> {
+  return render(buildReceiptElement(params), renderOpts(params.widthChars ?? 48));
 }
 
 /** ESC/POS bytes that just kick the cash drawer (no print), for an on-demand open. */
-export function renderCashDrawerBytes(pin: CashDrawerPin = '2pin'): Promise<Uint8Array> {
+export async function renderCashDrawerBytes(pin: CashDrawerPin = '2pin'): Promise<Uint8Array> {
   return render(
-    <Printer type="epson" encoder={utf8Encoder}>
-      <Cashdraw pin={pin} />
-    </Printer>
+    <Printer width={48}>
+      <Cashdraw device={drawerDevice(pin)} />
+    </Printer>,
+    renderOpts(48)
   );
 }
 

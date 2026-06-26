@@ -1,42 +1,42 @@
-// Print-bridge transport: when no serial/COM port is available (e.g. a USB
-// printer-class device like the MINJCODE MJ5818), the app sends the same raw
-// ESC/POS bytes to a local print-bridge agent over localhost. In dev the
-// serial-mock server fills this role; in production a native agent does.
+// Print transport — the single path. Sends chittie ESC/POS bytes to the Chittie
+// Companion (a battle-tested localhost print bridge) via its published SDK, which
+// drives USB printer-class / OS-queue / TCP printers. If the companion isn't
+// running, callers fall back to the system print dialog (see useThermalPrinter.ts).
+import { createCompanionClient, type CompanionClient } from '@angadie/chittie-companion';
 
 const BRIDGE_URL = (process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL || 'http://localhost:8930').replace(
   /\/$/,
   ''
 );
-// Optional shared secret — must match the agent's PRINT_AGENT_TOKEN in production.
+// Optional shared secret — must match the companion's CHITTIE_TOKEN / PRINT_AGENT_TOKEN.
 const BRIDGE_TOKEN = process.env.NEXT_PUBLIC_PRINT_BRIDGE_TOKEN || '';
+// Optional explicit target ("usb", a queue name, or "host:port"); default = companion's chosen printer.
+const BRIDGE_TARGET = process.env.NEXT_PUBLIC_PRINT_TARGET || '';
 
-export type PrinterTransportId = 'web-serial' | 'bridge';
+export type PrinterTransportId = 'bridge';
 
-/** Cheap, short-timeout probe for a reachable local print-bridge agent. */
+let client: CompanionClient | null = null;
+function companion(): CompanionClient {
+  if (!client) {
+    client = createCompanionClient({ url: BRIDGE_URL, token: BRIDGE_TOKEN || undefined });
+  }
+  return client;
+}
+
+/** Cheap, short-timeout probe for a reachable Chittie Companion. */
 export async function isBridgeAvailable(timeoutMs = 700): Promise<boolean> {
-  if (typeof fetch === 'undefined') return false;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), timeoutMs));
   try {
-    const res = await fetch(`${BRIDGE_URL}/health`, { signal: controller.signal });
-    return res.ok;
+    return await Promise.race([companion().available(), timeout]);
   } catch {
     return false;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
-/** Send raw ESC/POS bytes to the print-bridge agent. */
+/** Send raw ESC/POS bytes to the companion. Throws if it didn't print. */
 export async function printViaBridge(data: Uint8Array): Promise<void> {
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (BRIDGE_TOKEN) headers['x-agent-token'] = BRIDGE_TOKEN;
-  const res = await fetch(`${BRIDGE_URL}/print`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ bytes: Array.from(data) }),
-  });
-  if (!res.ok) throw new Error(`Print bridge responded ${res.status}`);
+  const res = await companion().print(data, BRIDGE_TARGET ? { target: BRIDGE_TARGET } : {});
+  if (!res.printed) throw new Error(res.reason || 'Print bridge failed');
 }
 
 export { BRIDGE_URL };
