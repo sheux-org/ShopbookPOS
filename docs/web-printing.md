@@ -5,6 +5,9 @@ The web POS prints thermal receipts with **[chittie](https://github.com/octalpix
 `react-thermal-printer` path and the in-repo `tools/print-agent` (deleted) — we promoted chittie's
 battle-tested agent (proven on real 58mm hardware, incl. Sinhala).
 
+> Setting up a till or testing locally? See **[`printing-setup-and-test.md`](./printing-setup-and-test.md)**
+> (store-owner + developer runbook). This page is the architecture.
+
 ## Architecture
 
 ```

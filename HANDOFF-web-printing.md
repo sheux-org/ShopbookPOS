@@ -1,5 +1,15 @@
 # Handoff — Shopbook POS Web: printing, scanning, cash drawer, device audit
 
+> ⚠️ **PRINTING IS SUPERSEDED.** The printing described below (`react-thermal-printer` + Web Serial +
+> the in-repo `tools/print-agent`) was **replaced by chittie + the Chittie Companion** (PR #9).
+> For printing, read instead:
+>
+> - **[`docs/printing-setup-and-test.md`](docs/printing-setup-and-test.md)** — store-owner + developer runbook.
+> - **[`docs/web-printing.md`](docs/web-printing.md)** — architecture.
+>
+> The **scanning, cash-drawer, and device-audit** sections below are still accurate; only the
+> _printing_ details are historical.
+
 **Scope of this handoff:** the WEB app (`web/`) device work done this session. The
 `react-thermal-printer` fork effort (octalpixel/react-thermal-printer) is a **separate
 track — not part of this handoff.**
