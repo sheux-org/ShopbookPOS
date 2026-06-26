@@ -32,11 +32,16 @@ ReceiptModal / hook ──▶ thermalReceipt.tsx (chittie JSX → ESC/POS bytes)
 1. **Install the Chittie Companion** on the till (Windows): the prebuilt installer —
    `https://pub-4b53b304bc45450dbe0155abfe55778b.r2.dev/chittie-companion-latest-windows-x64-setup.exe`
    It runs in the tray, auto-starts (silent), auto-detects the printer, and exposes `localhost:8930`.
+   A **vendored copy** also ships in this repo at `web/public/companion/` (served at
+   `/companion/chittie-companion-latest-windows-x64-setup.exe`) so you can self-host — see
+   `web/public/companion/README.md`.
 2. The web POS finds it automatically. Overrides (optional env):
    - `NEXT_PUBLIC_PRINT_BRIDGE_URL` (default `http://localhost:8930`)
    - `NEXT_PUBLIC_PRINT_BRIDGE_TOKEN` (must match the companion's `CHITTIE_TOKEN`)
    - `NEXT_PUBLIC_PRINT_TARGET` (optional explicit printer; default = the companion's chosen one)
-3. No companion? The POS falls back to **Web Serial** (Chrome/Edge desktop), then the system print dialog.
+   - `NEXT_PUBLIC_COMPANION_INSTALL_URL` (the in-app "Download" link; default = R2; set to
+     `/companion/chittie-companion-latest-windows-x64-setup.exe` to serve your own copy)
+3. No companion? The POS falls back to the **system print dialog**.
 
 ## Dev
 

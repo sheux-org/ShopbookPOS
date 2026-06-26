@@ -85,6 +85,10 @@ Open `web/.preview/index.html` to eyeball each scenario (cash / card / discount-
 - `NEXT_PUBLIC_PRINT_BRIDGE_TOKEN` — must match the Companion's `CHITTIE_TOKEN`
 - `NEXT_PUBLIC_PRINT_TARGET` — explicit printer (queue name / `usb` / `host:port`); default = the
   Companion's chosen printer
+- `NEXT_PUBLIC_COMPANION_INSTALL_URL` — the in-app "Download for Windows" link; default = the R2
+  installer. A vendored copy also ships at `web/public/companion/` (served at
+  `/companion/chittie-companion-latest-windows-x64-setup.exe`) — set this to that path to self-host.
+  See `web/public/companion/README.md`.
 
 ### Before shipping
 

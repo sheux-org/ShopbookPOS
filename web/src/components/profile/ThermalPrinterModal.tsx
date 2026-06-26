@@ -11,7 +11,10 @@ interface ThermalPrinterModalProps {
   activeBusiness: { name?: string; address?: string; phone?: string } | null;
 }
 
+// Defaults to the R2-hosted installer (always latest). Override with
+// NEXT_PUBLIC_COMPANION_INSTALL_URL to self-host (a copy ships at web/public/companion/).
 const COMPANION_INSTALL_URL =
+  process.env.NEXT_PUBLIC_COMPANION_INSTALL_URL ||
   'https://pub-4b53b304bc45450dbe0155abfe55778b.r2.dev/chittie-companion-latest-windows-x64-setup.exe';
 
 export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
