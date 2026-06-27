@@ -3,6 +3,8 @@
 `chittie-companion-latest-windows-x64-setup.exe` is a **copy** of the published Chittie Companion
 Windows installer (NSIS, x64), so this repo carries its own copy and you can **self-host** it.
 
+**Currently vendored: v0.1.4** (adds the "A tool by Asyncdot Engineering · asyncdot.com" footer).
+
 - **Source of truth (always latest):**
   `https://pub-4b53b304bc45450dbe0155abfe55778b.r2.dev/chittie-companion-latest-windows-x64-setup.exe`
 - **This file is a snapshot** — it does **not** auto-update. Re-pull on each Companion release:
