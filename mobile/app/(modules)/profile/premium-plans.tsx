@@ -101,7 +101,7 @@ export default function PremiumPlansRoute() {
     hapticFeedback.impactMedium();
     Alert.alert(
       'Downgrade to Free',
-      'Are you sure you want to cancel your Mini POS Pro license? This will restrict access to premium features.',
+      'Are you sure you want to cancel your Shopbook POS Pro license? This will restrict access to premium features.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -143,7 +143,7 @@ export default function PremiumPlansRoute() {
           <Feather name="chevron-left" size={22} color={TOKENS.dark} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Mini POS Pro</Text>
+        <Text style={styles.headerTitle}>Shopbook POS Pro</Text>
         <View style={styles.placeholderWidth} />
       </View>
 
@@ -161,7 +161,7 @@ export default function PremiumPlansRoute() {
               <View style={styles.vipBadge}>
                 <Text style={styles.vipBadgeText}>ACTIVE MEMBER</Text>
               </View>
-              <Text style={styles.proPassTitle}>MINI POS PRO LICENSE</Text>
+              <Text style={styles.proPassTitle}>SHOPBOOK POS PRO LICENSE</Text>
               <Text style={styles.proPassSubtitle}>
                 Active Cloud Sync • Multi-Branch Outlets • Printer Support
               </Text>
@@ -180,7 +180,7 @@ export default function PremiumPlansRoute() {
               <Ionicons name="diamond" size={18} color="#D97706" />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.warningCardTitle}>Upgrade to Mini POS Pro</Text>
+              <Text style={styles.warningCardTitle}>Upgrade to Shopbook POS Pro</Text>
               <Text style={styles.alertDesc}>
                 Unlock auto cloud sync backups, printing, staff accounts, web terminal, and camera
                 barcode scanning.

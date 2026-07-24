@@ -115,8 +115,8 @@ export function ForceUpdateScreen({ onRetry, config, currentVersion }: ForceUpda
         <Text style={styles.titleText}>Update Required</Text>
 
         <Text style={styles.messageText}>
-          A newer, more secure version of Shopbook Mini POS is available. Please update to continue
-          using the app.
+          A newer, more secure version of Shopbook POS is available. Please update to continue using
+          the app.
         </Text>
 
         {/* Version specifications */}

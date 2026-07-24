@@ -107,7 +107,7 @@ export function buildThermalReceiptText(opts: BuildThermalReceiptOptions, width 
   // Footer separator & note
   text += '-'.repeat(width) + '\n';
   text += 'Thank you for visiting!\n';
-  text += 'Powered by Mini POS\n';
+  text += 'Powered by Shopbook POS\n';
 
   if (opts.barcodeLine) {
     text += `\n${opts.barcodeLine}\n`;

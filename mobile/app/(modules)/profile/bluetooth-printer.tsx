@@ -174,7 +174,7 @@ export default function BluetoothPrinterRoute() {
       receiptText += '--------------------------------\n';
 
       receiptText += '\nThank you for visiting!\n';
-      receiptText += 'Powered by Mini POS\n\n\n\n';
+      receiptText += 'Powered by Shopbook POS\n\n\n\n';
 
       // Write data to printer
       await device.write(receiptText, 'utf-8');
@@ -348,7 +348,7 @@ export default function BluetoothPrinterRoute() {
                   )}
                 </View>
               ) : (
-                <Text style={styles.receiptLogoText}>★ MINI POS ★</Text>
+                <Text style={styles.receiptLogoText}>★ SHOPBOOK POS ★</Text>
               )}
 
               <Text style={styles.receiptStoreName}>{activeBusiness.name}</Text>
@@ -401,7 +401,7 @@ export default function BluetoothPrinterRoute() {
                 Thank you for visiting!
               </Text>
               <Text style={[styles.receiptStoreSub, { textAlign: 'center' }]}>
-                Powered by Mini POS
+                Powered by Shopbook POS
               </Text>
 
               <View style={styles.barcodeBox}>

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Mini POS",
+    "name": "Shopbook POS",
     "slug": "shopbook-pos",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,13 +9,13 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pasanpahasara.shopbookpos",
+      "bundleIdentifier": "lk.shopbook.pos",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.pasanpahasara.shopbookpos",
+      "package": "lk.shopbook.pos",
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
@@ -43,9 +43,9 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Mini POS shares approximate device location with your store admin on the Active Devices panel.",
-          "locationAlwaysAndWhenInUsePermission": "Mini POS shares approximate device location with your store admin on the Active Devices panel.",
-          "locationAlwaysPermission": "Mini POS shares approximate device location with your store admin on the Active Devices panel."
+          "locationWhenInUsePermission": "Shopbook POS shares approximate device location with your store admin on the Active Devices panel.",
+          "locationAlwaysAndWhenInUsePermission": "Shopbook POS shares approximate device location with your store admin on the Active Devices panel.",
+          "locationAlwaysPermission": "Shopbook POS shares approximate device location with your store admin on the Active Devices panel."
         }
       ],
       [
@@ -63,8 +63,8 @@
       [
         "with-rn-bluetooth-classic",
         {
-          "peripheralUsageDescription": "Mini POS uses Bluetooth to connect with your thermal printer.",
-          "alwaysUsageDescription": "Mini POS requires Bluetooth to print invoices in the background.",
+          "peripheralUsageDescription": "Shopbook POS uses Bluetooth to connect with your thermal printer.",
+          "alwaysUsageDescription": "Shopbook POS requires Bluetooth to print invoices in the background.",
           "protocols": ["com.shopbook.pos"]
         }
       ]

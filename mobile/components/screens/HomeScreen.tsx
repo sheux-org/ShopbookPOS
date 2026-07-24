@@ -138,7 +138,7 @@ export const HomeScreen: React.FC = () => {
       {/* Header section with Search bar built-in */}
       <View style={styles.header}>
         <View style={styles.headerTextWrapper}>
-          <Text style={styles.headerTitle}>Mini POS</Text>
+          <Text style={styles.headerTitle}>Shopbook POS</Text>
           <TouchableOpacity
             style={styles.businessSwitcherBtn}
             activeOpacity={0.7}

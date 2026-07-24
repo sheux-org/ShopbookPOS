@@ -221,8 +221,8 @@ export const InsightsScreen: React.FC = () => {
     try {
       const content =
         exportType === 'CSV'
-          ? `Mini POS - Tabular CSV Statement for ${activeBiz.name}\nGross Revenue: Rs. ${stats?.grossRevenue.toLocaleString()}\nTotal Orders: ${stats?.ordersCount}`
-          : `Mini POS - Premium PDF Invoice statement for ${activeBiz.name}\nGenerated on Sri Lanka Helplines.`;
+          ? `Shopbook POS - Tabular CSV Statement for ${activeBiz.name}\nGross Revenue: Rs. ${stats?.grossRevenue.toLocaleString()}\nTotal Orders: ${stats?.ordersCount}`
+          : `Shopbook POS - Premium PDF Invoice statement for ${activeBiz.name}\nGenerated on Sri Lanka Helplines.`;
       await Share.share({
         message: content,
       });

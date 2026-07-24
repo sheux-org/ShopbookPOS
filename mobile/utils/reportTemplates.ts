@@ -1168,7 +1168,7 @@ export function buildReportHtml(type: ReportType, data: ReportData): string {
           <div class="header-branding">
             <div class="logo-area">
               <img src="/logo.png" alt="Shopbook Logo" class="brand-logo" />
-              <span class="brand-title">Mini POS</span>
+              <span class="brand-title">Shopbook POS</span>
             </div>
             <div class="report-meta">
               <h2>${escapeHtml(reportTitle)}</h2>

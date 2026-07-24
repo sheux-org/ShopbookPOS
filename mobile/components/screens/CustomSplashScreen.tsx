@@ -97,7 +97,7 @@ export function CustomSplashScreen({ isReady, onAnimationComplete }: CustomSplas
 
           {/* Title Text */}
           <Animated.View style={[styles.textContainer, animatedTextStyle]}>
-            <Text style={styles.title}>Mini POS</Text>
+            <Text style={styles.title}>Shopbook POS</Text>
           </Animated.View>
         </View>
 
