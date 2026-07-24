@@ -80,8 +80,6 @@
       }
     },
     "runtimeVersion": "1.0.0",
-    "updates": {
-      "url": "https://u.expo.dev/c3dfd340-0c26-4a74-9dd9-062842904f76"
-    }
+    "owner": "shopbook_fayaz"
   }
 }
