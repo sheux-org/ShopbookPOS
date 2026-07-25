@@ -2,7 +2,7 @@
   "expo": {
     "name": "Shopbook POS",
     "slug": "shopbook-pos",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "shopbookpos",
@@ -10,13 +10,22 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "lk.shopbook.pos",
+      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "lk.shopbook.pos",
+      "versionCode": 2,
       "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.BLUETOOTH_ADVERTISE",
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT",
@@ -80,6 +89,9 @@
       }
     },
     "runtimeVersion": "1.0.0",
-    "owner": "shopbook_fayaz"
+    "owner": "shopbook_fayaz",
+    "updates": {
+      "url": "https://u.expo.dev/c3dfd340-0c26-4a74-9dd9-062842904f76"
+    }
   }
 }

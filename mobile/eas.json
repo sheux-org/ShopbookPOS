@@ -27,7 +27,15 @@
         "buildType": "apk"
       }
     },
-    "production": {}
+    "production": {},
+    "shopbook-pos-ios-dev": {
+      "channel": "shopbook-pos-ios-dev",
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {}
+    }
   },
   "submit": {
     "production": {}
