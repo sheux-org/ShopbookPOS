@@ -81,22 +81,22 @@ export const ProductImage: React.FC<ProductImageProps> = ({ icon, size = 48, sty
   }
 
   // Dynamic font sizing based on container size
-  const miniFontSize = size === 48 ? 10 : Math.max(6, Math.round(size * 0.17));
+  const shopbookFontSize = size === 48 ? 8 : Math.max(6, Math.round(size * 0.13));
   const posFontSize = size === 48 ? 18 : Math.max(10, Math.round(size * 0.31));
 
   return (
     <div style={containerStyle}>
       <span
         style={{
-          fontSize: `${miniFontSize}px`,
+          fontSize: `${shopbookFontSize}px`,
           fontWeight: '700',
           color: '#C8C8C8',
-          letterSpacing: '1.2px',
+          letterSpacing: '1px',
           textTransform: 'uppercase',
           lineHeight: 1,
         }}
       >
-        Mini
+        SHOPBOOK
       </span>
       <span
         style={{

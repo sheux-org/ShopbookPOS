@@ -44,13 +44,12 @@ export const ProductImage: React.FC<ProductImageProps> = ({
   }
 
   // Dynamic scaling of placeholder text sizes based on container size
-  // Keep the home screen (where size defaults to 48) at its original font sizes: 10 and 18.
-  const miniFontSize = size === 48 ? 10 : Math.max(6, Math.round(size * 0.17));
+  const shopbookFontSize = size === 48 ? 8 : Math.max(6, Math.round(size * 0.13));
   const posFontSize = size === 48 ? 18 : Math.max(10, Math.round(size * 0.31));
 
   return (
     <View style={[styles.container, styles.placeholder, { width: size, height: size }, style]}>
-      <Text style={[styles.brandMini, { fontSize: miniFontSize }]}>Mini</Text>
+      <Text style={[styles.brandShopbook, { fontSize: shopbookFontSize }]}>SHOPBOOK</Text>
       <Text style={[styles.brandPos, { fontSize: posFontSize }]}>POS</Text>
     </View>
   );
@@ -72,11 +71,11 @@ const styles = StyleSheet.create({
     borderColor: '#EBEBEB',
     gap: -1,
   },
-  brandMini: {
-    fontSize: 10,
+  brandShopbook: {
+    fontSize: 8,
     fontWeight: '700',
     color: '#C8C8C8',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   brandPos: {
