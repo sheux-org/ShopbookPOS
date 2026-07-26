@@ -79,16 +79,20 @@ export const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
+  periodPillsScroll: {
+    flexGrow: 0,
+  },
   periodPillsRow: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9', // modern light slate background
+    backgroundColor: '#F1F5F9',
     borderRadius: 14,
     padding: 4,
-    gap: 2,
+    gap: 4,
+    alignItems: 'center',
   },
   periodPill: {
-    flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -98,8 +102,8 @@ export const styles = StyleSheet.create({
     boxShadow: '0px 2px 3px 0px rgba(0, 0, 0, 0.08)',
   },
   periodPillText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#64748B',
   },
   periodPillTextActive: {

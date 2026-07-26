@@ -47,6 +47,30 @@ const REPORT_OPTIONS = [
     bgColor: '#EFF6FF',
   },
   {
+    id: 'ledger_cash',
+    title: 'Cash Payment Settlement Ledger',
+    desc: 'Audit cash payments and register cash settlements.',
+    icon: 'dollar-sign',
+    color: '#059669',
+    bgColor: '#D1FAE5',
+  },
+  {
+    id: 'ledger_card',
+    title: 'Credit / Debit Card Settlements',
+    desc: 'Card transactions and card terminal settlement audit.',
+    icon: 'credit-card',
+    color: '#6366F1',
+    bgColor: '#EEF2FF',
+  },
+  {
+    id: 'ledger_bank',
+    title: 'Bank Transfer & QR Audit',
+    desc: 'Direct bank transfers, online payments, and QR settlements.',
+    icon: 'briefcase',
+    color: '#0284C7',
+    bgColor: '#E0F2FE',
+  },
+  {
     id: 'item_sales',
     title: 'Item-Wise Sales Summary',
     desc: 'Total quantities and revenues per catalog product.',
@@ -61,6 +85,14 @@ const REPORT_OPTIONS = [
     icon: 'activity',
     color: '#EF4444',
     bgColor: '#FCE8E6',
+  },
+  {
+    id: 'invoice_sales',
+    title: 'Invoice-by-Invoice Audit',
+    desc: 'Detailed line item breakdown for every issued invoice.',
+    icon: 'file-text',
+    color: '#D97706',
+    bgColor: '#FEF3C7',
   },
 ];
 
