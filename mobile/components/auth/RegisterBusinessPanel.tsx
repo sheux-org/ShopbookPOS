@@ -369,20 +369,12 @@ const panelStyles = StyleSheet.create({
   inputWrapperFocused: {
     borderColor: TOKENS.primary,
     backgroundColor: TOKENS.card,
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
+    boxShadow: '0px 0px 6px 0px rgba(37, 99, 235, 0.18)',
   },
   inputWrapperSelected: {
     borderColor: TOKENS.primary,
     backgroundColor: '#EFF6FF',
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 1,
+    boxShadow: '0px 0px 4px 0px rgba(37, 99, 235, 0.1)',
   },
   inputIcon: {
     marginRight: 8,
@@ -426,8 +418,7 @@ const panelStyles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: TOKENS.card,
     zIndex: 1000,
-    elevation: 5,
-    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
+    boxShadow: '0px 4px 12px 0px rgba(0, 0, 0, 0.08)',
   },
   dropdownItem: {
     flexDirection: 'row',

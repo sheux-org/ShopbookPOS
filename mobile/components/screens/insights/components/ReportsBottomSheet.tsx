@@ -427,11 +427,7 @@ const localStyles = StyleSheet.create({
   },
   filterPillActive: {
     backgroundColor: TOKENS.primary,
-    shadowColor: TOKENS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    boxShadow: '0px 2px 4px 0px rgba(37, 99, 235, 0.15)',
   },
   filterPillText: {
     fontSize: 11,
@@ -452,11 +448,7 @@ const localStyles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    boxShadow: '0px 2px 4px 0px rgba(0, 0, 0, 0.03)',
   },
   summaryCol: {
     gap: 2,

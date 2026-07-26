@@ -714,8 +714,7 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: {
     backgroundColor: '#E5E7EB',
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: 'none',
   },
   submitButtonText: {
     fontSize: 14,

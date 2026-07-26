@@ -140,7 +140,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
     zIndex: 99999,
-    elevation: 99999,
   },
   scannerCard: {
     backgroundColor: TOKENS.card,

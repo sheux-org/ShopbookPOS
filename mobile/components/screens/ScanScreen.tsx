@@ -430,8 +430,7 @@ const styles = StyleSheet.create({
   },
   summaryBarButtonDisabled: {
     backgroundColor: '#F3F4F6',
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: 'none',
   },
   summaryBarLeft: {
     flexDirection: 'row',

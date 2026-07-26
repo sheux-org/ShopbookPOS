@@ -11,7 +11,7 @@ export const PoweredBy: React.FC<PoweredByProps> = ({ style, showPro = true }) =
   return (
     <View style={[styles.container, style]}>
       <Text style={styles.text}>powered by</Text>
-      <Text style={styles.brand}>Shopbook{showPro ? ' Pro' : ''}</Text>
+      <Text style={styles.brand}>Shopbook</Text>
     </View>
   );
 };
