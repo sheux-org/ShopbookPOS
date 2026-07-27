@@ -13,4 +13,8 @@ pnpm --filter web exec tsc --noEmit || { echo "❌ TypeScript typecheck failed! 
 echo "📦 Running Next.js build verification..."
 pnpm build:web || { echo "❌ Next.js build failed! Please fix build errors before committing."; exit 1; }
 
+# 4. Run Expo Mobile Dependency & Health Verification
+echo "📱 Checking Expo mobile dependencies with expo-doctor..."
+(cd mobile && npx expo-doctor) || { echo "❌ Expo dependency check failed! Run 'npx expo install --fix' in mobile/ to align versions."; exit 1; }
+
 echo "✅ All health checks passed! Creating git commit..."
