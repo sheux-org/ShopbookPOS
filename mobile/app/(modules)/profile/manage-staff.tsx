@@ -1,18 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheet } from '../../../components/common/BottomSheet';
+import { BottomSheet, BottomSheetTextInput } from '../../../components/common/BottomSheet';
 import { TOKENS } from '../../../constants/tokens';
 import {
   StaffMember,
@@ -24,6 +15,7 @@ import {
 import { getTopSafeInset } from '../../../utils/safeArea';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
+import { hapticFeedback } from '@/utils/haptics';
 
 export default function ManageStaffRoute() {
   const insets = useSafeAreaInsets();
@@ -63,6 +55,7 @@ export default function ManageStaffRoute() {
     setEditPhone(member.phone);
     setIsEditModalOpen(true);
   };
+  hapticFeedback.impactLight();
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -72,6 +65,7 @@ export default function ManageStaffRoute() {
   const handleSaveEditStaff = () => {
     if (!editingStaff) return;
     if (!editName.trim() || !editPhone.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Name and phone number are required!');
       return;
     }
@@ -89,15 +83,18 @@ export default function ManageStaffRoute() {
           triggerToast('Staff details updated successfully! 🚀');
           setIsEditModalOpen(false);
           setEditingStaff(null);
+          hapticFeedback.notificationSuccess();
         },
         onError: () => {
           triggerToast('Failed to update staff details.');
+          hapticFeedback.notificationError();
         },
       }
     );
   };
 
   const handleConfirmDeleteStaff = (staff: StaffMember) => {
+    hapticFeedback.notificationWarning();
     Alert.alert(
       'Remove Staff Member',
       `Are you sure you want to permanently remove "${staff.name}"? This action cannot be undone.`,
@@ -107,12 +104,15 @@ export default function ManageStaffRoute() {
           text: 'Remove Staff',
           style: 'destructive',
           onPress: () => {
+            hapticFeedback.impactMedium();
             deleteMutation.mutate(staff.id, {
               onSuccess: () => {
                 triggerToast('Staff member removed successfully! 🗑️');
+                hapticFeedback.notificationSuccess();
               },
               onError: () => {
                 triggerToast('Failed to delete staff member.');
+                hapticFeedback.notificationError();
               },
             });
           },
@@ -123,11 +123,13 @@ export default function ManageStaffRoute() {
 
   const handleAddStaff = () => {
     if (!newName.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter staff name!');
       return;
     }
     // Email is optional
     if (!newPhone.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter phone number!');
       return;
     }
@@ -149,9 +151,11 @@ export default function ManageStaffRoute() {
           setNewRole('Cashier');
           setNewEmail('');
           setNewPhone('');
+          hapticFeedback.notificationSuccess();
         },
         onError: () => {
           triggerToast('Failed to add staff member.');
+          hapticFeedback.notificationError();
         },
       }
     );
@@ -284,15 +288,25 @@ export default function ManageStaffRoute() {
         visible={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Add Staff Member"
+        footerComponent={
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (!newName.trim() || !newPhone.trim()) && styles.submitButtonDisabled,
+            ]}
+            activeOpacity={0.8}
+            onPress={handleAddStaff}
+            disabled={!newName.trim() || !newPhone.trim()}
+          >
+            <Text style={styles.submitButtonText}>Authorize Staff Member</Text>
+            <Feather name="user-plus" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        }
       >
-        <ScrollView
-          contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 280 }}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Staff Full Name</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Pahasara"
               placeholderTextColor="#9CA3AF"
@@ -311,7 +325,10 @@ export default function ManageStaffRoute() {
                     key={role}
                     style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
                     activeOpacity={0.8}
-                    onPress={() => setNewRole(role)}
+                    onPress={() => {
+                      hapticFeedback.selection();
+                      setNewRole(role);
+                    }}
                   >
                     <Text
                       style={[
@@ -329,7 +346,7 @@ export default function ManageStaffRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Mobile Number</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. +94 77 987 6543"
               placeholderTextColor="#9CA3AF"
@@ -344,7 +361,7 @@ export default function ManageStaffRoute() {
               Email Address{' '}
               <Text style={{ fontWeight: 'normal', color: TOKENS.muted }}>(Optional)</Text>
             </Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. pahasara@shopbook.lk"
               placeholderTextColor="#9CA3AF"
@@ -354,20 +371,7 @@ export default function ManageStaffRoute() {
               autoCapitalize="none"
             />
           </View>
-        </ScrollView>
-
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!newName.trim() || !newPhone.trim()) && styles.submitButtonDisabled,
-          ]}
-          activeOpacity={0.8}
-          onPress={handleAddStaff}
-          disabled={!newName.trim() || !newPhone.trim()}
-        >
-          <Text style={styles.submitButtonText}>Authorize Staff Member</Text>
-          <Feather name="user-plus" size={16} color={TOKENS.card} />
-        </TouchableOpacity>
+        </View>
       </BottomSheet>
 
       {/* Modal for editing a staff member */}
@@ -378,15 +382,25 @@ export default function ManageStaffRoute() {
           setEditingStaff(null);
         }}
         title="Edit Staff Details"
+        footerComponent={
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (!editName.trim() || !editPhone.trim()) && styles.submitButtonDisabled,
+            ]}
+            activeOpacity={0.8}
+            onPress={handleSaveEditStaff}
+            disabled={!editName.trim() || !editPhone.trim()}
+          >
+            <Text style={styles.submitButtonText}>Update Staff Details</Text>
+            <Feather name="check" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        }
       >
-        <ScrollView
-          contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 280 }}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Staff Full Name</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Aruni Silva"
               placeholderTextColor="#9CA3AF"
@@ -441,7 +455,7 @@ export default function ManageStaffRoute() {
               Email Address{' '}
               <Text style={{ fontWeight: 'normal', color: TOKENS.muted }}>(Optional)</Text>
             </Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. aruni@shopbook.lk"
               placeholderTextColor="#9CA3AF"
@@ -454,7 +468,7 @@ export default function ManageStaffRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Mobile Number</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. +94 77 987 6543"
               placeholderTextColor="#9CA3AF"
@@ -463,20 +477,7 @@ export default function ManageStaffRoute() {
               keyboardType="phone-pad"
             />
           </View>
-        </ScrollView>
-
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!editName.trim() || !editPhone.trim()) && styles.submitButtonDisabled,
-          ]}
-          activeOpacity={0.8}
-          onPress={handleSaveEditStaff}
-          disabled={!editName.trim() || !editPhone.trim()}
-        >
-          <Text style={styles.submitButtonText}>Update Staff Details</Text>
-          <Feather name="check" size={16} color={TOKENS.card} />
-        </TouchableOpacity>
+        </View>
       </BottomSheet>
     </View>
   );
@@ -650,10 +651,10 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalScroll: {
-    paddingTop: 4,
-    paddingBottom: 8,
+    paddingTop: 6,
+    paddingBottom: 24,
     paddingHorizontal: 0,
-    gap: 16,
+    gap: 18,
   },
   formGroup: {
     gap: 6,
@@ -664,7 +665,7 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   formInput: {
-    height: 44,
+    height: 46,
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 10,
@@ -681,8 +682,8 @@ const styles = StyleSheet.create({
   },
   roleSelectTab: {
     flex: 1,
-    height: 38,
-    borderRadius: 8,
+    height: 42,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: TOKENS.border,
     backgroundColor: TOKENS.card,
@@ -703,19 +704,18 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flexDirection: 'row',
-    height: 48,
+    height: 50,
     backgroundColor: TOKENS.primary,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 8,
+    marginTop: 18,
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
   },
   submitButtonDisabled: {
     backgroundColor: '#E5E7EB',
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: 'none',
   },
   submitButtonText: {
     fontSize: 14,

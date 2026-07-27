@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { TOKENS } from '../../../../constants/tokens';
 import { ReportType } from '../../../../utils/reportTemplates';
 import { styles } from '../styles';
+import { hapticFeedback } from '@/utils/haptics';
 
 interface CsvLedgerModalProps {
   visible: boolean;
@@ -47,6 +48,30 @@ const REPORT_OPTIONS = [
     bgColor: '#EFF6FF',
   },
   {
+    id: 'ledger_cash',
+    title: 'Cash Payment Settlement Ledger',
+    desc: 'Audit cash payments and register cash settlements.',
+    icon: 'dollar-sign',
+    color: '#059669',
+    bgColor: '#D1FAE5',
+  },
+  {
+    id: 'ledger_card',
+    title: 'Credit / Debit Card Settlements',
+    desc: 'Card transactions and card terminal settlement audit.',
+    icon: 'credit-card',
+    color: '#6366F1',
+    bgColor: '#EEF2FF',
+  },
+  {
+    id: 'ledger_bank',
+    title: 'Bank Transfer & QR Audit',
+    desc: 'Direct bank transfers, online payments, and QR settlements.',
+    icon: 'briefcase',
+    color: '#0284C7',
+    bgColor: '#E0F2FE',
+  },
+  {
     id: 'item_sales',
     title: 'Item-Wise Sales Summary',
     desc: 'Total quantities and revenues per catalog product.',
@@ -61,6 +86,14 @@ const REPORT_OPTIONS = [
     icon: 'activity',
     color: '#EF4444',
     bgColor: '#FCE8E6',
+  },
+  {
+    id: 'invoice_sales',
+    title: 'Invoice-by-Invoice Audit',
+    desc: 'Detailed line item breakdown for every issued invoice.',
+    icon: 'file-text',
+    color: '#D97706',
+    bgColor: '#FEF3C7',
   },
 ];
 
@@ -93,11 +126,11 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
 
           <View style={styles.premiumModalHeader}>
             <View style={styles.pdfModalTitleRow}>
-              <Feather name="grid" size={20} color={TOKENS.success} />
-              <Text style={styles.pdfModalTitle}>CSV Ledger Report</Text>
+              <Feather name="download" size={20} color={TOKENS.primary} />
+              <Text style={styles.pdfModalTitle}>Export CSV Spreadsheet</Text>
             </View>
             <Text style={styles.pdfModalDescription}>
-              Compile tabular CSV spreadsheet ledger reports from your store database history.
+              Export raw dataset logs in CSV table format to analyze in Microsoft Excel.
             </Text>
           </View>
 
@@ -113,7 +146,10 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
                   key={opt.id}
                   activeOpacity={0.8}
                   style={[styles.pdfOptionCard, isSelected && styles.pdfOptionCardSelected]}
-                  onPress={() => onSelectReportType(opt.id as ReportType)}
+                  onPress={() => {
+                    hapticFeedback.selection();
+                    onSelectReportType(opt.id as ReportType);
+                  }}
                 >
                   <View style={[styles.pdfOptionIconBox, { backgroundColor: opt.bgColor }]}>
                     <Feather name={opt.icon as any} size={15} color={opt.color} />
@@ -134,9 +170,12 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
 
           <View style={styles.premiumModalFooter}>
             <TouchableOpacity
-              style={[styles.pdfGenerateBtn, { backgroundColor: TOKENS.success }]}
+              style={styles.pdfGenerateBtn}
               activeOpacity={0.85}
-              onPress={() => onGenerateReport(selectedReportType)}
+              onPress={() => {
+                hapticFeedback.notificationSuccess();
+                onGenerateReport(selectedReportType);
+              }}
             >
               <Feather name="grid" size={16} color="#FFFFFF" />
               <Text style={styles.pdfGenerateBtnText}>Generate CSV Report</Text>

@@ -1,245 +1,245 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, memo } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  Modal,
-  Animated,
-  Dimensions,
-  TouchableWithoutFeedback,
-  KeyboardAvoidingView,
-  Platform,
+  useWindowDimensions,
   Keyboard,
+  Platform,
 } from 'react-native';
+import {
+  BottomSheetModal,
+  BottomSheetView,
+  BottomSheetScrollView,
+  BottomSheetBackdrop,
+  BottomSheetBackdropProps,
+  BottomSheetFooter,
+  BottomSheetFooterProps,
+} from '@gorhom/bottom-sheet';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-interface BottomSheetProps {
+export interface BottomSheetProps {
   visible: boolean;
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  /** Inner horizontal padding for the rounded sheet (default 20). Use 0 for edge-to-edge body content. */
+  footerComponent?: React.ReactNode;
   contentPaddingHorizontal?: number;
-  /** Inner top padding below the sheet top radius (default 12). */
   contentPaddingTop?: number;
-  /** Cap total sheet height (e.g. fraction of screen). Scroll should live inside children when used. */
   maxHeight?: number;
-  /** Force the sheet to take the full calculated height instead of wrapping content */
   forceMaxHeight?: boolean;
+  snapPoints?: (string | number)[];
+  enableDynamicSizing?: boolean;
+  useScrollView?: boolean;
 }
+
+// Memory leakage / Re-render පාලනය සඳහා Custom Backdrop Memoization
+const CustomBackdrop = memo((props: BottomSheetBackdropProps) => (
+  <BottomSheetBackdrop
+    {...props}
+    disappearsOnIndex={-1}
+    appearsOnIndex={0}
+    opacity={0.5}
+    pressBehavior="close"
+  />
+));
 
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   visible,
   onClose,
   title,
   children,
-  contentPaddingHorizontal = 20,
+  footerComponent,
+  contentPaddingHorizontal = 16,
   contentPaddingTop = 12,
   maxHeight,
   forceMaxHeight = false,
+  snapPoints,
+  enableDynamicSizing = true,
+  useScrollView = true,
 }) => {
   const insets = useSafeAreaInsets();
-  const [showModal, setShowModal] = useState(visible);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const { height: screenHeight } = useWindowDimensions();
 
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const sheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-  const activeAnimation = useRef<Animated.CompositeAnimation | null>(null);
+  const bottomSheetModalRef = useRef<BottomSheetModal | null>(null);
+  const isPresentedRef = useRef<boolean>(false);
 
-  const runAnimation = (animation: Animated.CompositeAnimation, onEnd?: () => void) => {
-    activeAnimation.current?.stop();
-    activeAnimation.current = animation;
-    animation.start(onEnd);
-  };
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
-    const showSubscription = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      }
-    );
-    const hideSubscription = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-      }
-    );
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
 
     return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
+      showSub.remove();
+      hideSub.remove();
     };
+  }, []);
+
+  const topInset = Math.max(insets.top, 24);
+  const maxAvailableHeight = maxHeight ?? screenHeight - topInset - 24;
+
+  const usingDynamicSizing =
+    !snapPoints && !forceMaxHeight && enableDynamicSizing && !useScrollView;
+
+  const computedSnapPoints =
+    snapPoints ??
+    (forceMaxHeight ? [maxAvailableHeight] : usingDynamicSizing ? undefined : ['75%', '92%']);
+
+  const presentModal = useCallback(() => {
+    if (bottomSheetModalRef.current && !isPresentedRef.current) {
+      isPresentedRef.current = true;
+      bottomSheetModalRef.current.present();
+    }
+  }, []);
+
+  const dismissModal = useCallback(() => {
+    if (bottomSheetModalRef.current && isPresentedRef.current) {
+      isPresentedRef.current = false;
+      bottomSheetModalRef.current.dismiss();
+    }
   }, []);
 
   useEffect(() => {
     if (visible) {
-      setShowModal(true);
-      runAnimation(
-        Animated.parallel([
-          Animated.timing(backdropOpacity, {
-            toValue: 0.5,
-            duration: 250,
-            useNativeDriver: true,
-          }),
-          Animated.spring(sheetTranslateY, {
-            toValue: 0,
-            damping: 24,
-            stiffness: 140,
-            useNativeDriver: true,
-          }),
-        ])
-      );
+      presentModal();
     } else {
-      runAnimation(
-        Animated.parallel([
-          Animated.timing(backdropOpacity, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(sheetTranslateY, {
-            toValue: SCREEN_HEIGHT,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
-        () => {
-          setShowModal(false);
-        }
-      );
+      dismissModal();
     }
+  }, [visible, presentModal, dismissModal]);
 
-    return () => {
-      activeAnimation.current?.stop();
-      activeAnimation.current = null;
-    };
-  }, [visible]);
+  const handleDismiss = useCallback(() => {
+    isPresentedRef.current = false;
+    onClose();
+  }, [onClose]);
 
-  const handleClose = () => {
-    runAnimation(
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sheetTranslateY, {
-          toValue: SCREEN_HEIGHT,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]),
-      () => {
-        setShowModal(false);
-        onClose();
-      }
-    );
-  };
+  const handleAnimate = useCallback((fromIndex: number, toIndex: number) => {
+    if (toIndex === -1) {
+      Keyboard.dismiss();
+    }
+  }, []);
 
-  if (!showModal) return null;
-
-  const calculatedMaxHeight = maxHeight ?? SCREEN_HEIGHT - insets.top - 40;
-  const dynamicMaxHeight = calculatedMaxHeight;
-
-  return (
-    <Modal visible={showModal} transparent animationType="none" onRequestClose={handleClose}>
-      <View style={StyleSheet.absoluteFill}>
-        {/* Backdrop fades in/out independently and stays 100% static */}
-        <TouchableWithoutFeedback onPress={handleClose}>
-          <Animated.View
+  // Memoized Footer Component
+  const renderFooter = useCallback(
+    (props: BottomSheetFooterProps) => {
+      if (!footerComponent) return null;
+      return (
+        <BottomSheetFooter {...props} bottomInset={0}>
+          <View
             style={[
-              StyleSheet.absoluteFillObject,
+              styles.footerWrapper,
               {
-                backgroundColor: '#000',
-                opacity: backdropOpacity,
-              },
-            ]}
-          />
-        </TouchableWithoutFeedback>
-
-        {/* Sheet container sits on top and slides up/down */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.overlay}
-          pointerEvents="box-none"
-        >
-          {/* Top spacer to dismiss sheet and constrain height under keyboard */}
-          <TouchableWithoutFeedback onPress={handleClose}>
-            <View style={{ flex: 1 }} />
-          </TouchableWithoutFeedback>
-
-          <Animated.View
-            style={[
-              styles.sheetContainer,
-              {
-                transform: [{ translateY: sheetTranslateY }],
-                paddingBottom: Math.max(insets.bottom, 16),
                 paddingHorizontal: contentPaddingHorizontal,
-                paddingTop: contentPaddingTop,
-                maxHeight: dynamicMaxHeight,
-                flexShrink: 1,
+                paddingBottom: isKeyboardVisible ? 12 : Math.max(insets.bottom + 12, 24),
               },
-              forceMaxHeight && { height: dynamicMaxHeight },
             ]}
           >
-            {/* Visual drag handle indictator */}
-            <View style={styles.dragHandle} />
+            {footerComponent}
+          </View>
+        </BottomSheetFooter>
+      );
+    },
+    [footerComponent, contentPaddingHorizontal, insets.bottom, isKeyboardVisible]
+  );
 
-            {title ? (
-              <View
-                style={[
-                  styles.sheetHeader,
-                  contentPaddingHorizontal === 0 ? { paddingHorizontal: 16 } : null,
-                ]}
-              >
-                <Text style={styles.sheetTitle}>{title}</Text>
-                <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-                  <Feather name="x" size={20} color={TOKENS.dark} />
-                </TouchableOpacity>
-              </View>
-            ) : null}
+  return (
+    <BottomSheetModal
+      ref={bottomSheetModalRef}
+      onDismiss={handleDismiss}
+      snapPoints={computedSnapPoints}
+      enableDynamicSizing={usingDynamicSizing}
+      maxDynamicContentSize={maxAvailableHeight}
+      backdropComponent={CustomBackdrop}
+      footerComponent={footerComponent ? renderFooter : undefined}
+      enablePanDownToClose={true}
+      keyboardBehavior="extend"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+      handleIndicatorStyle={styles.dragHandle}
+      backgroundStyle={styles.backgroundStyle}
+      enableOverDrag={false}
+      animateOnMount
+      onAnimate={handleAnimate}
+    >
+      <BottomSheetView
+        style={[
+          styles.sheetView,
+          {
+            paddingHorizontal: contentPaddingHorizontal,
+            paddingTop: contentPaddingTop,
+            paddingBottom: footerComponent ? 0 : Math.max(insets.bottom + 12, 28),
+          },
+        ]}
+      >
+        {title ? (
+          <View
+            style={[
+              styles.sheetHeader,
+              contentPaddingHorizontal === 0 && styles.headerPaddingFallback,
+            ]}
+          >
+            <Text style={styles.sheetTitle}>{title}</Text>
+            <TouchableOpacity onPress={dismissModal} style={styles.closeBtn} activeOpacity={0.7}>
+              <Feather name="x" size={20} color={TOKENS.dark} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
-            <View style={[styles.sheetBody, forceMaxHeight && { flex: 1 }]}>{children}</View>
-          </Animated.View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+        {useScrollView ? (
+          <BottomSheetScrollView
+            style={styles.scrollViewFlex}
+            automaticallyAdjustKeyboardInsets
+            keyboardDismissMode="interactive"
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {children}
+          </BottomSheetScrollView>
+        ) : (
+          <View style={styles.sheetBody}>{children}</View>
+        )}
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 };
 
+export { BottomSheetView, BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-  },
-  sheetContainer: {
+  backgroundStyle: {
     backgroundColor: TOKENS.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    boxShadow: '0px -4px 10px 0px rgba(0, 0, 0, 0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   dragHandle: {
     width: 40,
     height: 5,
     backgroundColor: '#E2E8F0',
     borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: 14,
+  },
+  sheetView: {
+    width: '100%',
+    flex: 1,
   },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 14,
+  },
+  headerPaddingFallback: {
+    paddingHorizontal: 16,
   },
   sheetTitle: {
     fontSize: 16,
@@ -255,6 +255,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sheetBody: {
-    // Allows inner components to render freely
+    width: '100%',
+  },
+  scrollViewFlex: {
+    width: '100%',
+  },
+  footerWrapper: {
+    width: '100%',
+    backgroundColor: TOKENS.card,
+    paddingTop: 10,
   },
 });

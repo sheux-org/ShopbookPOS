@@ -225,7 +225,7 @@ export const PosScreen: React.FC = () => {
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrapper}>
-          <Text style={styles.headerTitle}>Mini POS</Text>
+          <Text style={styles.headerTitle}>Shopbook POS</Text>
           <Text style={styles.headerSubtitle}>Invoice {invoiceNumber}</Text>
         </View>
 

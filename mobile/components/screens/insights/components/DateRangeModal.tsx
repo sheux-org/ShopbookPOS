@@ -4,6 +4,7 @@ import { Calendar } from 'react-native-calendars';
 import { Feather } from '@expo/vector-icons';
 import { TOKENS } from '../../../../constants/tokens';
 import { styles } from '../styles';
+import { hapticFeedback } from '@/utils/haptics';
 
 interface DateRangeModalProps {
   visible: boolean;
@@ -101,6 +102,7 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
   };
 
   const handleCalendarDayPress = (day: any) => {
+    hapticFeedback.selection();
     const clickedDate = new Date(day.year, day.month - 1, day.day);
     if (!tempStartDate || (tempStartDate && tempEndDate)) {
       setTempStartDate(clickedDate);
@@ -154,6 +156,7 @@ export const DateRangeModal: React.FC<DateRangeModalProps> = ({
   };
 
   const handlePresetPress = (presetValue: string) => {
+    hapticFeedback.selection();
     const today = new Date();
     let start = new Date();
     let end = new Date();

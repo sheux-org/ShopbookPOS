@@ -36,7 +36,7 @@ function escapeHtml(s: string): string {
 
 function buildLogoHtml(logoUri?: string | null): string {
   if (!logoUri) {
-    return `<div style="text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 8px; font-family: monospace; color: #000; letter-spacing: 2px;">★ MINI POS ★</div>`;
+    return `<div style="text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 8px; font-family: monospace; color: #000; letter-spacing: 2px;">★ SHOPBOOK POS ★</div>`;
   }
   if (logoUri.length <= 2) {
     return `<div style="font-size: 38px; text-align: center; margin-bottom: 5px;">${escapeHtml(logoUri)}</div>`;
@@ -166,7 +166,7 @@ export function buildThermalReceiptHtml(opts: BuildThermalReceiptOptions): strin
 
           <div class="separator"></div>
           <div class="center">Thank you for visiting!</div>
-          <div class="center">Powered by Mini POS</div>
+          <div class="center">Powered by Shopbook POS</div>
           <div class="barcode">${escapeHtml(barcode)}</div>
         </body>
       </html>

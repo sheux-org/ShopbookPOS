@@ -113,7 +113,7 @@ export default function AuthPage() {
       });
 
       if (result.status === 'success') {
-        triggerToast('Welcome back to Mini POS!');
+        triggerToast('Welcome back to Shopbook POS!');
         router.push('/');
       } else {
         triggerToast(
@@ -146,7 +146,7 @@ export default function AuthPage() {
               fetchPriority="high"
             />
           </div>
-          <h2 className="auth-title">Shopbook Mini POS</h2>
+          <h2 className="auth-title">Shopbook POS</h2>
           <p className="auth-subtitle">Premium Web Billing Terminal</p>
         </div>
 

@@ -222,7 +222,7 @@ export function useCreateOrder() {
 }
 
 export function useGetPeriodOrders(
-  period: 'daily' | 'monthly' | 'yearly' | 'custom',
+  period: 'daily' | 'yesterday' | 'weekly' | 'monthly' | 'yearly' | 'custom',
   startDate: Date | null,
   endDate: Date | null,
   paymentMethod?: 'all' | 'cash' | 'card' | 'bank'
@@ -245,6 +245,29 @@ export function useGetPeriodOrders(
       if (period === 'daily') {
         startTs = new Date().setHours(0, 0, 0, 0);
         endTs = new Date().setHours(23, 59, 59, 999);
+      } else if (period === 'yesterday') {
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        startTs = new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate()
+        ).getTime();
+        endTs = new Date(
+          yesterday.getFullYear(),
+          yesterday.getMonth(),
+          yesterday.getDate(),
+          23,
+          59,
+          59,
+          999
+        ).getTime();
+      } else if (period === 'weekly') {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+        startTs = sevenDaysAgo.getTime();
+        endTs = today.getTime();
       } else if (period === 'monthly') {
         startTs = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
         endTs = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();

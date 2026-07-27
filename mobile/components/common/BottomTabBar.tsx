@@ -4,6 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { hapticFeedback } from '@/utils/haptics';
 
 interface BottomTabBarProps {
   activeTab?: 'home' | 'pos' | 'stocks' | 'insights' | 'orders' | 'profile';
@@ -46,7 +47,10 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab = 'home', 
             key={tab.id}
             style={styles.tab}
             activeOpacity={0.7}
-            onPress={() => onTabPress?.(tab.id)}
+            onPress={() => {
+              hapticFeedback.selection();
+              onTabPress?.(tab.id);
+            }}
           >
             {/* Sleek active indicator bar */}
             <View style={[styles.indicator, isActive && styles.indicatorActive]} />

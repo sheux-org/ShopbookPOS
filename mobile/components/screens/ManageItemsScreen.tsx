@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { hapticFeedback } from '../../utils/haptics';
 import { TOKENS } from '../../constants/tokens';
 import { usePermission } from '../../hooks/usePermissionHandler';
 import { useSettingsStore } from '../../stores/useSettingsStore';
@@ -36,6 +35,7 @@ import { ProductImage } from '../common/ProductImage';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { getBusinessTypeConfig, getCategoryLabel } from '../../utils/businessTypeConfig';
+import { hapticFeedback } from '@/utils/haptics';
 
 export const ManageItemsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -175,6 +175,7 @@ export const ManageItemsScreen: React.FC = () => {
   };
 
   const handleDeletePress = (prod: any) => {
+    hapticFeedback.notificationWarning();
     Alert.alert(
       'Delete Product',
       `Are you sure you want to permanently delete "${prod.name}" from your stocks? This action cannot be undone.`,
@@ -184,11 +185,14 @@ export const ManageItemsScreen: React.FC = () => {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
+            hapticFeedback.impactMedium();
             deleteProductMutation.mutate(prod.id, {
               onSuccess: () => {
+                hapticFeedback.notificationSuccess();
                 triggerToast('Product deleted successfully! 🗑️');
               },
               onError: (err) => {
+                hapticFeedback.notificationError();
                 Alert.alert('Error', 'Failed to delete product.');
               },
             });
@@ -316,6 +320,7 @@ export const ManageItemsScreen: React.FC = () => {
       },
       {
         onSuccess: () => {
+          hapticFeedback.notificationSuccess();
           triggerToast('Product updated! ✅');
           setEditModalVisible(false);
           setEditingProduct(null);

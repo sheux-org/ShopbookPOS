@@ -38,7 +38,7 @@ export const MobileNavbar: React.FC<MobileNavbarProps> = ({
         {/* Text block */}
         <div className="mobile-brand-text-block">
           <span className="mobile-brand-shopbook">Shopbook</span>
-          <span className="mobile-brand-minpos">Mini POS</span>
+          <span className="mobile-brand-minpos">POS</span>
         </div>
       </div>
 

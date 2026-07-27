@@ -70,7 +70,13 @@ The native mobile application is optimized for tablet layouts and hand-held term
 - **Mandatory Force Updates**: Synchronizes client versions with remote `app_config` variables and blocks outmoded clients.
 - **Licensing & Payments**: Pro features license checks connected to subscription plan modals (RevenueCat checkout or bank slip WhatsApp submission).
 
-For detailed app routes and files, see the [mobile subdirectory](shopbook-pos/mobile).
+### 📦 Mobile Package Management Rules
+
+- **Installing Packages**: **ALWAYS** use `npx expo install <package-name>` inside `mobile/` to automatically install Expo SDK 54 compatible versions. Never use direct `npm install` or `pnpm add` for Expo modules.
+- **Auto-Fixing Dependencies**: Run `cd mobile && npx expo install --fix` to automatically align package versions with Expo SDK 54 standards.
+- **Health Checks**: Run `cd mobile && npx -y expo-doctor` to run all 17 environment and dependency health checks.
+
+For detailed app routes and files, see the [mobile README](mobile/README.md).
 
 ---
 
@@ -84,7 +90,7 @@ The desktop web application provides a responsive console tailored for desktop m
 - **Invoices Sales Ledger**: A dedicated database auditing list (`/history`) to inspect past receipts, view total revenue aggregates, and void transactions.
 - **IndexedDB Local Engine**: Uses LokiJS and WatermelonDB web adapters to guarantee complete responsiveness even with temporary internet dropouts.
 
-For detailed routes and CSS tokens, see the [web subdirectory](shopbook-pos/web).
+For detailed routes and CSS tokens, see the [web subdirectory](web).
 
 ---
 
@@ -141,6 +147,7 @@ To maintain formatting standards and prevent broken code from being committed, t
 1. **Prettier**: Enforces consistent code styling project-wide. Staged files are formatted automatically before commit completion.
 2. **Husky**: Hooks into git actions to run checks during `git commit` automatically, keeping the repository green and buildable.
 3. **lint-staged**: Runs Prettier formatters exclusively on modified/staged files, ensuring fast commit operations.
+4. **Expo Doctor**: Enforces Expo SDK 54 package version compatibility before any mobile code is committed.
 
 ### Automated Pre-commit Hook Pipeline
 
@@ -149,6 +156,7 @@ When you run `git commit`, the hook automatically executes the following checks:
 1. 🔍 **Stage Formatting**: Uses `Prettier` (via `lint-staged`) to format modified code, stylesheets, and configs.
 2. 🚀 **TypeScript Verification**: Runs a web compilation check (`tsc --noEmit`) to catch any static compiler errors before committing.
 3. 📦 **Next.js Production Build Validation**: Verifies the web bundle compile (`pnpm build:web`) to ensure no compile-time regressions are committed.
+4. 📱 **Expo Mobile Dependency Verification**: Runs `cd mobile && npx expo-doctor` to ensure Expo SDK 54 package compatibility before allowing a commit.
 
 If any of these verification stages fail, the commit process is aborted, allowing you to fix compilation or styling issues locally before pushing to GitHub.
 
@@ -207,6 +215,3 @@ ALTER TABLE public.active_devices ENABLE ROW LEVEL SECURITY;
 - **Low-Stock Alerts**: Red (`#EF4444`) warnings reflect critical items needing replenishment.
 - **Glassmorphism Backdrop**: UI layouts on both platforms overlay transclucent containers (`rgba(15, 23, 42, 0.6)`) to preserve modern design aesthetics.
 - **Fonts**: Plotted with modern high-legibility sans-serif typefaces (like _Plus Jakarta Sans_ on mobile and _Inter_ on desktop layouts) for rapid visual lookup.
-
-  
-

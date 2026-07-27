@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import {
+  Keyboard,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -25,6 +27,18 @@ import { hapticFeedback } from '../../../utils/haptics';
 
 const PRESET_EMOJIS = ['🛒', '🛍️', '🥛', '👕', '💊', '☕', '🍔', '📦', '🌾', '🏢', '🛠️', '📚'];
 
+const BUSINESS_TYPES = [
+  { label: 'Cafe', icon: '☕' },
+  { label: 'Restaurant', icon: '🍽️' },
+  { label: 'Boutique', icon: '👗' },
+  { label: 'Salon', icon: '✂️' },
+  { label: 'Supermarket', icon: '🛒' },
+  { label: 'Grocery Shop', icon: '🏪' },
+  { label: 'Pharmacy', icon: '💊' },
+  { label: 'Hardware', icon: '🔧' },
+  { label: 'Other', icon: '✨' },
+];
+
 export default function BusinessDetailsRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -33,6 +47,25 @@ export default function BusinessDetailsRoute() {
   const activeBusiness = useBusinessStore((state) => state.activeBusiness);
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const toggleHaptics = useSettingsStore((state) => state.toggleHaptics);
+
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleToggleHaptics = () => {
     toggleHaptics();
@@ -198,278 +231,403 @@ export default function BusinessDetailsRoute() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: getTopSafeInset(insets) }]}>
-      {/* Toast Notification */}
-      {toastMessage && (
-        <View style={styles.toastContainer}>
-          <Feather name="check-circle" size={16} color={TOKENS.card} />
-          <Text style={styles.toastText}>{toastMessage}</Text>
-        </View>
-      )}
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: TOKENS.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
+    >
+      <View style={[styles.container, { paddingTop: getTopSafeInset(insets) }]}>
+        {/* Toast Notification */}
+        {toastMessage && (
+          <View style={styles.toastContainer}>
+            <Feather name="check-circle" size={16} color={TOKENS.card} />
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </View>
+        )}
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.7}
-          onPress={() => router.push('/profile')}
-        >
-          <Feather name="chevron-left" size={22} color={TOKENS.dark} />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Store Details</Text>
-
-        {(() => {
-          if (!canPerform('update', 'settings')) return null;
-
-          return (
-            <TouchableOpacity
-              style={styles.editToggleBtn}
-              activeOpacity={0.7}
-              onPress={() => {
-                if (isEditing) {
-                  // Cancel edit
-                  setName(activeBusiness.name);
-                  setCategory(activeBusiness.category);
-                  setAddress(activeBusiness.address);
-                  setPhone(activeBusiness.phone);
-                  setLogoUri(activeBusiness.logoUri || '');
-                }
-                setIsEditing(!isEditing);
-              }}
-            >
-              <Text style={styles.editToggleText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
-            </TouchableOpacity>
-          );
-        })()}
-      </View>
-
-      <ScrollView
-        style={styles.scrollWrapper}
-        contentContainerStyle={[styles.scrollContent, isEditing && { paddingBottom: 100 }]}
-      >
-        {/* Business Main Card */}
-        <View style={styles.detailCard}>
+        {/* Header */}
+        <View style={styles.header}>
           <TouchableOpacity
-            style={[styles.storeIconBox, isEditing && styles.storeIconBoxEditing]}
-            disabled={!isEditing || isUploading}
-            onPress={() => setShowLogoSelector(true)}
-            activeOpacity={0.75}
+            style={styles.backButton}
+            activeOpacity={0.7}
+            onPress={() => router.push('/profile')}
           >
-            <BusinessAvatar
-              logoUri={logoUri}
-              name={name || activeBusiness.name}
-              size={72}
-              isUploading={isUploading}
-            />
-
-            {isEditing && !isUploading && (
-              <View style={styles.cameraOverlay}>
-                <Feather name="camera" size={16} color={TOKENS.card} />
-              </View>
-            )}
+            <Feather name="chevron-left" size={22} color={TOKENS.dark} />
           </TouchableOpacity>
-          <Text style={styles.storeName}>{isEditing ? name : activeBusiness.name}</Text>
-          <Text style={styles.storeStatus}>
-            {isEditing ? 'Tap icon to change profile image 📸' : '🛡️ Admin Control Terminal'}
-          </Text>
+
+          <Text style={styles.headerTitle}>Store Details</Text>
+
+          {(() => {
+            if (!canPerform('update', 'settings')) return null;
+
+            return (
+              <TouchableOpacity
+                style={styles.editToggleBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (isEditing) {
+                    // Cancel edit
+                    setName(activeBusiness.name);
+                    setCategory(activeBusiness.category);
+                    setAddress(activeBusiness.address);
+                    setPhone(activeBusiness.phone);
+                    setLogoUri(activeBusiness.logoUri || '');
+                  }
+                  setIsEditing(!isEditing);
+                }}
+              >
+                <Text style={styles.editToggleText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
+              </TouchableOpacity>
+            );
+          })()}
         </View>
 
-        {/* Haptics Switch Toggle */}
-        <View style={styles.infoGroup}>
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: TOKENS.dark }}>
-                Haptic Feedback
-              </Text>
-              <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 4 }}>
-                {hapticsEnabled
-                  ? 'Vibration feedback is active across the app'
-                  : 'Enable tactile vibration feedback for interactions'}
-              </Text>
-            </View>
+        <ScrollView
+          style={styles.scrollWrapper}
+          contentContainerStyle={[styles.scrollContent, isEditing && { paddingBottom: 140 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Business Main Card */}
+          <View style={styles.detailCard}>
             <TouchableOpacity
-              onPress={handleToggleHaptics}
-              style={[
-                styles.switchButton,
-                hapticsEnabled ? styles.switchButtonActive : styles.switchButtonInactive,
-              ]}
-              activeOpacity={0.8}
+              style={[styles.storeIconBox, isEditing && styles.storeIconBoxEditing]}
+              disabled={!isEditing || isUploading}
+              onPress={() => setShowLogoSelector(true)}
+              activeOpacity={0.75}
             >
-              <View
-                style={[
-                  styles.switchThumb,
-                  hapticsEnabled ? styles.switchThumbActive : styles.switchThumbInactive,
-                ]}
+              <BusinessAvatar
+                logoUri={logoUri}
+                name={name || activeBusiness.name}
+                size={72}
+                isUploading={isUploading}
               />
+
+              {isEditing && !isUploading && (
+                <View style={styles.cameraOverlay}>
+                  <Feather name="camera" size={16} color={TOKENS.card} />
+                </View>
+              )}
             </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Info Group */}
-        <View style={styles.infoGroup}>
-          <Text style={styles.groupLabel}>Administrative Profile</Text>
-
-          {/* Business Name Field */}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Business Name</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.inputField}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter Business Name"
-                placeholderTextColor={TOKENS.muted}
-              />
-            ) : (
-              <Text style={styles.infoVal}>{activeBusiness.name}</Text>
-            )}
-          </View>
-
-          {/* Business Type Field */}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Business Type / Category</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.inputField}
-                value={category}
-                onChangeText={setCategory}
-                placeholder="Enter Category (e.g. Supermarket & Groceries)"
-                placeholderTextColor={TOKENS.muted}
-              />
-            ) : (
-              <Text style={styles.infoVal}>{activeBusiness.category}</Text>
-            )}
-          </View>
-
-          {/* Address Field */}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Address</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.inputField}
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Enter Address"
-                placeholderTextColor={TOKENS.muted}
-              />
-            ) : (
-              <Text style={styles.infoVal}>{activeBusiness.address}</Text>
-            )}
-          </View>
-
-          {/* Phone Field */}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Phone Number</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.inputField}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                placeholder="Enter Phone Number"
-                placeholderTextColor={TOKENS.muted}
-              />
-            ) : (
-              <Text style={styles.infoVal}>{activeBusiness.phone}</Text>
-            )}
-          </View>
-
-          {/* Static details showing admin privileges */}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Admin Privilege Status</Text>
-            <Text style={[styles.infoVal, { color: TOKENS.success }]}>
-              FULL READ-WRITE PRIVILEGES
+            <Text style={styles.storeName}>{isEditing ? name : activeBusiness.name}</Text>
+            <Text style={styles.storeStatus}>
+              {isEditing ? 'Tap icon to change profile image 📸' : '🛡️ Admin Control Terminal'}
             </Text>
           </View>
-        </View>
-      </ScrollView>
 
-      {isEditing && (
-        <View style={[styles.fixedBottomContainer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <TouchableOpacity
-            style={styles.saveButton}
-            activeOpacity={0.8}
-            onPress={handleSaveChanges}
-          >
-            <Feather name="check" size={16} color={TOKENS.card} />
-            <Text style={styles.saveButtonText}>Update Details</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* LOGO SELECTOR BOTTOM SHEET */}
-      <BottomSheet
-        visible={showLogoSelector}
-        onClose={() => setShowLogoSelector(false)}
-        title="Choose Profile Image"
-      >
-        <View style={styles.sheetBody}>
-          {/* Option 1: Gallery Picker */}
-          <TouchableOpacity style={styles.pickerOptionBtn} onPress={handlePickImage}>
-            <View style={styles.pickerOptionIcon}>
-              <Feather name="image" size={20} color={TOKENS.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pickerOptionTitle}>Select from Gallery</Text>
-              <Text style={styles.pickerOptionSub}>Choose a custom photo or logo</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          {/* Option 2: Live Camera Capture */}
-          <TouchableOpacity style={styles.pickerOptionBtn} onPress={handleTakePhoto}>
-            <View style={styles.pickerOptionIcon}>
-              <Feather name="camera" size={20} color={TOKENS.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pickerOptionTitle}>Take Photo</Text>
-              <Text style={styles.pickerOptionSub}>Capture a live image via camera</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          {/* Option 2: Presets */}
-          <Text style={styles.sectionLabel}>Quick Emoji Presets</Text>
-          <View style={styles.presetsGrid}>
-            {PRESET_EMOJIS.map((emoji) => (
+          {/* Haptics Switch Toggle */}
+          <View style={styles.infoGroup}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: TOKENS.dark }}>
+                  Haptic Feedback
+                </Text>
+                <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 4 }}>
+                  {hapticsEnabled
+                    ? 'Vibration feedback is active across the app'
+                    : 'Enable tactile vibration feedback for interactions'}
+                </Text>
+              </View>
               <TouchableOpacity
-                key={emoji}
-                style={[styles.presetCell, logoUri === emoji && styles.presetCellSelected]}
-                onPress={() => {
-                  setLogoUri(emoji);
-                  setShowLogoSelector(false);
-                }}
+                onPress={handleToggleHaptics}
+                style={[
+                  styles.switchButton,
+                  hapticsEnabled ? styles.switchButtonActive : styles.switchButtonInactive,
+                ]}
+                activeOpacity={0.8}
               >
-                <Text style={styles.presetEmojiText}>{emoji}</Text>
+                <View
+                  style={[
+                    styles.switchThumb,
+                    hapticsEnabled ? styles.switchThumbActive : styles.switchThumbInactive,
+                  ]}
+                />
               </TouchableOpacity>
-            ))}
+            </View>
           </View>
 
-          {logoUri ? (
-            <>
-              <View style={styles.divider} />
-              <TouchableOpacity
-                style={styles.removeLogoBtn}
-                onPress={() => {
-                  setLogoUri('');
-                  setShowLogoSelector(false);
-                }}
-              >
-                <Feather name="trash-2" size={16} color={TOKENS.error} />
-                <Text style={styles.removeLogoText}>Remove Custom Logo</Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
-        </View>
-      </BottomSheet>
-    </View>
+          {/* Info Group */}
+          <View style={styles.infoGroup}>
+            <Text style={styles.groupLabel}>Administrative Profile</Text>
+
+            {/* Business Name Field */}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Business Name</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.inputField}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Enter Business Name"
+                  placeholderTextColor={TOKENS.muted}
+                />
+              ) : (
+                <Text style={styles.infoVal}>{activeBusiness.name}</Text>
+              )}
+            </View>
+
+            {/* Business Type Field */}
+            <View
+              style={[
+                styles.infoRow,
+                { zIndex: isCategoryDropdownOpen ? 1000 : 1, position: 'relative' },
+              ]}
+            >
+              <Text style={styles.infoLabel}>Business Type / Category</Text>
+              {isEditing ? (
+                <View style={{ width: '100%', position: 'relative' }}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    style={[
+                      styles.inputField,
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingHorizontal: 12,
+                      },
+                      isCategoryDropdownOpen && { borderColor: TOKENS.primary },
+                    ]}
+                    onPress={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      {category ? (
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#F3F4F6',
+                          }}
+                        >
+                          <Text style={{ fontSize: 14 }}>
+                            {BUSINESS_TYPES.find(
+                              (b) => b.label.toLowerCase() === category.toLowerCase()
+                            )?.icon || '🏪'}
+                          </Text>
+                        </View>
+                      ) : (
+                        <Feather name="briefcase" size={16} color={TOKENS.muted} />
+                      )}
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: category ? TOKENS.dark : TOKENS.muted,
+                          fontWeight: '500',
+                        }}
+                      >
+                        {category || 'Select business type'}
+                      </Text>
+                    </View>
+                    <Feather
+                      name={isCategoryDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                      size={18}
+                      color={TOKENS.muted}
+                    />
+                  </TouchableOpacity>
+
+                  {isCategoryDropdownOpen && (
+                    <View style={styles.categoryDropdownOverlayList}>
+                      <ScrollView
+                        nestedScrollEnabled
+                        style={{ maxHeight: 180 }}
+                        showsVerticalScrollIndicator
+                      >
+                        {BUSINESS_TYPES.map((item) => {
+                          const isSelected = category.toLowerCase() === item.label.toLowerCase();
+                          return (
+                            <TouchableOpacity
+                              key={item.label}
+                              style={[
+                                styles.categoryDropdownItem,
+                                isSelected && { backgroundColor: '#F4F7FF' },
+                              ]}
+                              onPress={() => {
+                                setCategory(item.label);
+                                setIsCategoryDropdownOpen(false);
+                              }}
+                            >
+                              <View
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: 12,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: '#F3F4F6',
+                                }}
+                              >
+                                <Text style={{ fontSize: 14 }}>{item.icon}</Text>
+                              </View>
+                              <Text
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? '700' : '500',
+                                  color: isSelected ? TOKENS.primary : TOKENS.dark,
+                                }}
+                              >
+                                {item.label}
+                              </Text>
+                              {isSelected && (
+                                <Feather
+                                  name="check"
+                                  size={14}
+                                  color={TOKENS.primary}
+                                  style={{ marginLeft: 'auto' }}
+                                />
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <Text style={styles.infoVal}>{activeBusiness.category}</Text>
+              )}
+            </View>
+
+            {/* Address Field */}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Address</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.inputField}
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="Enter Address"
+                  placeholderTextColor={TOKENS.muted}
+                />
+              ) : (
+                <Text style={styles.infoVal}>{activeBusiness.address}</Text>
+              )}
+            </View>
+
+            {/* Phone Field */}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Phone Number</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.inputField}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  placeholder="Enter Phone Number"
+                  placeholderTextColor={TOKENS.muted}
+                />
+              ) : (
+                <Text style={styles.infoVal}>{activeBusiness.phone}</Text>
+              )}
+            </View>
+
+            {/* Static details showing admin privileges */}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Admin Privilege Status</Text>
+              <Text style={[styles.infoVal, { color: TOKENS.success }]}>
+                FULL READ-WRITE PRIVILEGES
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        {isEditing && (
+          <View
+            style={[
+              styles.fixedBottomContainer,
+              { paddingBottom: isKeyboardVisible ? 12 : Math.max(insets.bottom, 12) },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.saveButton}
+              activeOpacity={0.8}
+              onPress={handleSaveChanges}
+            >
+              <Feather name="check" size={16} color={TOKENS.card} />
+              <Text style={styles.saveButtonText}>Update Details</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* LOGO SELECTOR BOTTOM SHEET */}
+        <BottomSheet
+          visible={showLogoSelector}
+          onClose={() => setShowLogoSelector(false)}
+          title="Choose Profile Image"
+        >
+          <View style={styles.sheetBody}>
+            {/* Option 1: Gallery Picker */}
+            <TouchableOpacity style={styles.pickerOptionBtn} onPress={handlePickImage}>
+              <View style={styles.pickerOptionIcon}>
+                <Feather name="image" size={20} color={TOKENS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pickerOptionTitle}>Select from Gallery</Text>
+                <Text style={styles.pickerOptionSub}>Choose a custom photo or logo</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            {/* Option 2: Live Camera Capture */}
+            <TouchableOpacity style={styles.pickerOptionBtn} onPress={handleTakePhoto}>
+              <View style={styles.pickerOptionIcon}>
+                <Feather name="camera" size={20} color={TOKENS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pickerOptionTitle}>Take Photo</Text>
+                <Text style={styles.pickerOptionSub}>Capture a live image via camera</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            {/* Option 2: Presets */}
+            <Text style={styles.sectionLabel}>Quick Emoji Presets</Text>
+            <View style={styles.presetsGrid}>
+              {PRESET_EMOJIS.map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={[styles.presetCell, logoUri === emoji && styles.presetCellSelected]}
+                  onPress={() => {
+                    setLogoUri(emoji);
+                    setShowLogoSelector(false);
+                  }}
+                >
+                  <Text style={styles.presetEmojiText}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {logoUri ? (
+              <>
+                <View style={styles.divider} />
+                <TouchableOpacity
+                  style={styles.removeLogoBtn}
+                  onPress={() => {
+                    setLogoUri('');
+                    setShowLogoSelector(false);
+                  }}
+                >
+                  <Feather name="trash-2" size={16} color={TOKENS.error} />
+                  <Text style={styles.removeLogoText}>Remove Custom Logo</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        </BottomSheet>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -794,5 +952,26 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: TOKENS.primary,
+  },
+  categoryDropdownOverlayList: {
+    position: 'absolute',
+    top: 48,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    borderRadius: 10,
+    backgroundColor: TOKENS.card,
+    boxShadow: '0px 6px 16px 0px rgba(0, 0, 0, 0.12)',
+  },
+  categoryDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
 });

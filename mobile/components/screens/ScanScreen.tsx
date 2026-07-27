@@ -20,6 +20,7 @@ import { cartState, CartItem } from '../data/cartState';
 import { useProducts } from '../../hooks/useProducts';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { InvoiceItemCard } from '../common/InvoiceItemCard';
+import { hapticFeedback } from '@/utils/haptics';
 
 export const ScanScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -89,10 +90,12 @@ export const ScanScreen: React.FC = () => {
 
     const matched = catalogProducts.find((p) => p.barcode === data);
     if (matched) {
+      hapticFeedback.notificationSuccess();
       const skuCode = matched.barcode || `SKU 23400${matched.id}`;
       cartState.addCartItem(matched.name, matched.price, matched.icon, skuCode, matched.stockCount);
       triggerToast(`Added ${matched.name} 🛒`);
     } else {
+      hapticFeedback.notificationWarning();
       triggerToast(`Barcode ${data} not in catalog ⚠️`);
     }
   };
@@ -430,8 +433,7 @@ const styles = StyleSheet.create({
   },
   summaryBarButtonDisabled: {
     backgroundColor: '#F3F4F6',
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: 'none',
   },
   summaryBarLeft: {
     flexDirection: 'row',

@@ -64,7 +64,7 @@ export const MobileBlocker: React.FC = () => {
           <span
             style={{ fontWeight: 600, fontSize: '20px', color: '#0f172a', letterSpacing: '-0.3px' }}
           >
-            Mini POS
+            POS
           </span>
         </div>
 

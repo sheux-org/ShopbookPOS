@@ -109,7 +109,7 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
           <View style={styles.headerSection}>
             <View style={styles.headerTitleRow}>
               <Ionicons name="diamond" size={24} color="#D97706" />
-              <Text style={styles.alertTitle}>Mini POS Pro</Text>
+              <Text style={styles.alertTitle}>Shopbook POS Pro</Text>
               <View style={styles.vipBadge}>
                 <Text style={styles.vipBadgeText}>PRO</Text>
               </View>

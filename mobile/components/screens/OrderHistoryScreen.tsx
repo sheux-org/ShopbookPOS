@@ -403,7 +403,7 @@ Thank you for shopping with us!
                     <Image source={{ uri: activeBiz.logoUri }} style={styles.thermalLogoImg} />
                   )
                 ) : (
-                  <Text style={styles.thermalMiniPos}>★ MINI POS ★</Text>
+                  <Text style={styles.thermalMiniPos}>★ SHOPBOOK POS ★</Text>
                 )}
 
                 <Text style={styles.thermalHeaderTitle}>{activeBiz.name}</Text>
@@ -488,7 +488,7 @@ Thank you for shopping with us!
                 <View style={styles.thermalRule} />
 
                 <Text style={styles.thermalFooterCenter}>Thank you for visiting!</Text>
-                <Text style={styles.thermalFooterCenter}>Powered by Shopbook Mini POS</Text>
+                <Text style={styles.thermalFooterCenter}>Powered by Shopbook POS</Text>
                 <View style={styles.thermalBarcodeBox}>
                   <Barcode
                     value={invoiceBarcodeValue}

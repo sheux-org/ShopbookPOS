@@ -177,7 +177,6 @@ const styles = StyleSheet.create({
   },
   plusIconBadgeOut: {
     backgroundColor: '#E5E7EB',
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: 'none',
   },
 });

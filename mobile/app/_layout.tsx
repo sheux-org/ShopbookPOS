@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -118,7 +119,9 @@ export default function RootLayout() {
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
           <StatusBar style="dark" />
           <PermissionProvider>
-            <MainAppContent />
+            <BottomSheetModalProvider>
+              <MainAppContent />
+            </BottomSheetModalProvider>
           </PermissionProvider>
         </SafeAreaProvider>
       </QueryClientProvider>

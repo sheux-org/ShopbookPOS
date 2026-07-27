@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  PermissionsAndroid,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -18,9 +19,9 @@ import { TOKENS } from '../../../constants/tokens';
 import { useSettingsStore } from '../../../stores/useSettingsStore';
 import { getTopSafeInset } from '../../../utils/safeArea';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
-import { PermissionsAndroid } from 'react-native';
 import RNBluetoothClassic, { BluetoothDevice } from 'react-native-bluetooth-classic';
 import Barcode from 'react-native-barcode-svg';
+import { hapticFeedback } from '@/utils/haptics';
 
 export default function BluetoothPrinterRoute() {
   const insets = useSafeAreaInsets();
@@ -28,12 +29,14 @@ export default function BluetoothPrinterRoute() {
 
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
   const setPairedPrinter = useSettingsStore((s) => s.setPairedPrinter);
+  const isPremium = useSettingsStore((s) => s.isPremium);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
 
   const [isScanning, setIsScanning] = useState(false);
   const [devices, setDevices] = useState<BluetoothDevice[]>([]);
   const [connectingDevice, setConnectingDevice] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   // Virtual test print preview sheet
   const [showReceiptPreview, setShowReceiptPreview] = useState(false);
@@ -44,8 +47,14 @@ export default function BluetoothPrinterRoute() {
   };
 
   const handleStartScan = async () => {
+    if (!isPremium) {
+      hapticFeedback.notificationWarning();
+      setPremiumModalVisible(true);
+      return;
+    }
     setIsScanning(true);
     setDevices([]);
+    hapticFeedback.impactLight();
 
     try {
       if (Platform.OS === 'android') {
@@ -60,29 +69,37 @@ export default function BluetoothPrinterRoute() {
             PermissionsAndroid.RESULTS.DENIED ||
           granted['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.DENIED
         ) {
+          hapticFeedback.notificationWarning();
           triggerToast('Bluetooth permissions are required to scan.');
           setIsScanning(false);
           return;
         }
       }
 
-      // First try to get bonded (paired) devices, which are usually what printers are
-      const bonded = await RNBluetoothClassic.getBondedDevices();
-
-      // Also start discovery for new devices
-      const discovered = await RNBluetoothClassic.startDiscovery();
-
-      const allDevices = [...bonded];
-      for (const d of discovered) {
-        if (!allDevices.find((x) => x.address === d.address)) {
-          allDevices.push(d);
-        }
+      const isEnabled = await RNBluetoothClassic.isBluetoothEnabled();
+      if (!isEnabled) {
+        hapticFeedback.notificationWarning();
+        Alert.alert(
+          'Bluetooth Disabled',
+          'Please enable Bluetooth in your device settings to scan for thermal printers.'
+        );
+        setIsScanning(false);
+        return;
       }
 
-      setDevices(allDevices);
-      triggerToast('Scan completed! Nearby devices found.');
+      const bonded = await RNBluetoothClassic.getBondedDevices();
+      setDevices(bonded);
+
+      if (bonded.length === 0) {
+        hapticFeedback.notificationWarning();
+        triggerToast('No paired Bluetooth devices found.');
+      } else {
+        hapticFeedback.notificationSuccess();
+        triggerToast(`Found ${bonded.length} paired Bluetooth device(s)`);
+      }
     } catch (err) {
       console.warn(err);
+      hapticFeedback.notificationError();
       triggerToast('Failed to scan for Bluetooth devices.');
     } finally {
       setIsScanning(false);
@@ -91,21 +108,22 @@ export default function BluetoothPrinterRoute() {
 
   const handleConnectDevice = async (device: BluetoothDevice) => {
     setConnectingDevice(device.address);
+    hapticFeedback.impactMedium();
+
     try {
-      let isConnected = await device.isConnected();
-      if (!isConnected) {
-        const connectedDevice = await RNBluetoothClassic.connectToDevice(device.address);
-        isConnected = connectedDevice ? true : false;
-      }
+      const isConnected = await RNBluetoothClassic.connectToDevice(device.address);
 
       if (isConnected) {
+        hapticFeedback.notificationSuccess();
         setPairedPrinter({ name: device.name || 'Unknown Printer', address: device.address });
         triggerToast(`Connected to ${device.name}`);
       } else {
+        hapticFeedback.notificationError();
         triggerToast(`Failed to connect to ${device.name}`);
       }
     } catch (err) {
       console.warn(err);
+      hapticFeedback.notificationError();
       triggerToast('Connection error occurred.');
     } finally {
       setConnectingDevice(null);
@@ -113,12 +131,14 @@ export default function BluetoothPrinterRoute() {
   };
 
   const handleDisconnect = () => {
+    hapticFeedback.notificationWarning();
     Alert.alert('Disconnect Printer', 'Are you sure you want to disconnect this thermal printer?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Disconnect',
         style: 'destructive',
         onPress: () => {
+          hapticFeedback.impactMedium();
           setPairedPrinter(null);
           setDevices([]);
           triggerToast('Printer disconnected');
@@ -129,14 +149,17 @@ export default function BluetoothPrinterRoute() {
 
   const handlePrintTestPage = async () => {
     if (!pairedPrinter) {
+      hapticFeedback.notificationWarning();
       Alert.alert('No Printer', 'Please pair a thermal printer first.');
       return;
     }
+    hapticFeedback.impactLight();
     setShowReceiptPreview(true);
   };
 
   const executePhysicalPrint = async () => {
     if (!pairedPrinter) {
+      hapticFeedback.notificationWarning();
       Alert.alert('No Printer', 'No printer connected.');
       return;
     }
@@ -174,15 +197,17 @@ export default function BluetoothPrinterRoute() {
       receiptText += '--------------------------------\n';
 
       receiptText += '\nThank you for visiting!\n';
-      receiptText += 'Powered by Mini POS\n\n\n\n';
+      receiptText += 'Powered by Shopbook POS\n\n\n\n';
 
       // Write data to printer
       await device.write(receiptText, 'utf-8');
 
+      hapticFeedback.notificationSuccess();
       setShowReceiptPreview(false);
       triggerToast('Receipt sent to physical printer! 🖨️');
     } catch (error) {
       console.warn('Print error', error);
+      hapticFeedback.notificationError();
       Alert.alert('Print Error', 'Could not communicate with the printer.');
     }
   };
@@ -348,7 +373,7 @@ export default function BluetoothPrinterRoute() {
                   )}
                 </View>
               ) : (
-                <Text style={styles.receiptLogoText}>★ MINI POS ★</Text>
+                <Text style={styles.receiptLogoText}>★ SHOPBOOK POS ★</Text>
               )}
 
               <Text style={styles.receiptStoreName}>{activeBusiness.name}</Text>
@@ -401,7 +426,7 @@ export default function BluetoothPrinterRoute() {
                 Thank you for visiting!
               </Text>
               <Text style={[styles.receiptStoreSub, { textAlign: 'center' }]}>
-                Powered by Mini POS
+                Powered by Shopbook POS
               </Text>
 
               <View style={styles.barcodeBox}>

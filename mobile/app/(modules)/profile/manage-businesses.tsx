@@ -1,18 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheet } from '../../../components/common/BottomSheet';
+import { BottomSheet, BottomSheetTextInput } from '../../../components/common/BottomSheet';
 import { Business, cartState } from '../../../components/data/cartState';
 import { TOKENS } from '../../../constants/tokens';
 import {
@@ -25,6 +16,7 @@ import { getTopSafeInset } from '../../../utils/safeArea';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
+import { hapticFeedback } from '@/utils/haptics';
 
 const BUSINESS_TYPES = [
   { label: 'Cafe', icon: '☕' },
@@ -82,11 +74,13 @@ export default function ManageBusinessesRoute() {
     setEditAddress(biz.address);
     setEditPhone(biz.phone);
     setIsEditModalOpen(true);
+    hapticFeedback.impactLight();
   };
 
   const handleSaveEditBusiness = () => {
     if (!editingBusiness) return;
     if (!editName.trim() || !editBusinessType.trim() || !editAddress.trim() || !editPhone.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('All fields are required!');
       return;
     }
@@ -106,9 +100,11 @@ export default function ManageBusinessesRoute() {
           setIsEditModalOpen(false);
           setEditingBusiness(null);
           triggerToast('Business details updated successfully! 🚀');
+          hapticFeedback.notificationSuccess();
         },
         onError: () => {
           triggerToast('Failed to update business details.');
+          hapticFeedback.notificationError();
         },
       }
     );
@@ -116,6 +112,7 @@ export default function ManageBusinessesRoute() {
 
   const handleConfirmDelete = (biz: Business) => {
     if (biz.id === activeBusiness.id) {
+      hapticFeedback.notificationError();
       Alert.alert(
         'Action Restricted',
         'You cannot delete your active business branch. Please switch to another business branch first before attempting to delete this one.'
@@ -124,6 +121,7 @@ export default function ManageBusinessesRoute() {
     }
 
     if (businesses.length <= 1) {
+      hapticFeedback.notificationWarning();
       Alert.alert(
         'Action Restricted',
         'You cannot delete the only business in the catalog. You must have at least one active store branch.'
@@ -131,6 +129,7 @@ export default function ManageBusinessesRoute() {
       return;
     }
 
+    hapticFeedback.notificationWarning();
     Alert.alert(
       'Delete Business Branch',
       `Are you sure you want to permanently delete "${biz.name}"? This action cannot be undone.`,
@@ -140,12 +139,15 @@ export default function ManageBusinessesRoute() {
           text: 'Delete Branch',
           style: 'destructive',
           onPress: () => {
+            hapticFeedback.impactMedium();
             deleteMutation.mutate(biz.id, {
               onSuccess: () => {
                 triggerToast('Business branch deleted successfully! 🗑️');
+                hapticFeedback.notificationSuccess();
               },
               onError: () => {
                 triggerToast('Failed to delete business branch.');
+                hapticFeedback.notificationError();
               },
             });
           },
@@ -156,23 +158,28 @@ export default function ManageBusinessesRoute() {
 
   const handleCreateBusiness = () => {
     if (!canPerform('create', 'settings')) {
+      hapticFeedback.notificationError();
       triggerToast('Access Denied: Cashiers are not authorized to create branches.');
       return;
     }
 
     if (!newName.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter business name!');
       return;
     }
     if (!newBusinessType.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please select business type!');
       return;
     }
     if (!newAddress.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter business address!');
       return;
     }
     if (!newPhone.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter phone number!');
       return;
     }
@@ -193,6 +200,7 @@ export default function ManageBusinessesRoute() {
           setNewPhone('');
           triggerToast('Business store created successfully! 🎉');
 
+          hapticFeedback.notificationSuccess();
           Alert.alert(
             'Activate New Branch',
             `Would you like to set "${newBiz.name}" as your active business branch immediately?`,
@@ -222,6 +230,7 @@ export default function ManageBusinessesRoute() {
           );
         },
         onError: () => {
+          hapticFeedback.notificationError();
           triggerToast('Failed to register business.');
         },
       }
@@ -382,20 +391,55 @@ export default function ManageBusinessesRoute() {
         })}
       </ScrollView>
 
+      {/* FIX: All plain <TextInput> instances inside these two <BottomSheet> forms
+  have been changed to <BottomSheetTextInput>.
+
+  Why this fixes it:
+  @gorhom/bottom-sheet's keyboard-avoidance logic (keyboardBehavior="extend")
+  only works if the FOCUSED input is a BottomSheetTextInput — that's how the
+  library knows a text field inside the sheet is focused and resizes/extends
+  the sheet to sit above the keyboard. A plain react-native TextInput is
+  invisible to that logic, so the sheet never adjusts, and the footer button
+  stays pinned under the keyboard instead of above it.
+
+  Make sure this import is added at the top of the file (adjust the path to
+  wherever your BottomSheet.tsx wrapper lives — it already re-exports
+  BottomSheetTextInput):
+
+    import { BottomSheet, BottomSheetTextInput } from '../path/to/BottomSheet';
+*/}
+
       {/* Modal for creating a new business */}
       <BottomSheet
         visible={isModalOpen}
+        useScrollView
         onClose={() => setIsModalOpen(false)}
         title="Create New Business"
+        footerComponent={
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (!newName.trim() ||
+                !newBusinessType.trim() ||
+                !newAddress.trim() ||
+                !newPhone.trim()) &&
+                styles.submitButtonDisabled,
+            ]}
+            activeOpacity={0.8}
+            onPress={handleCreateBusiness}
+            disabled={
+              !newName.trim() || !newBusinessType.trim() || !newAddress.trim() || !newPhone.trim()
+            }
+          >
+            <Text style={styles.submitButtonText}>Create & Activate Business</Text>
+            <Feather name="plus-circle" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        }
       >
-        <ScrollView
-          contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 500 }}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Business / Brand Name</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Shopbook Retail Store"
               placeholderTextColor="#9CA3AF"
@@ -404,7 +448,7 @@ export default function ManageBusinessesRoute() {
             />
           </View>
 
-          <View style={[styles.formGroup, { zIndex: 10 }]}>
+          <View style={[styles.formGroup, { zIndex: isCreateDropdownOpen ? 1000 : 1 }]}>
             <Text style={styles.formLabel}>Business Type</Text>
             <TouchableOpacity
               activeOpacity={0.8}
@@ -515,7 +559,7 @@ export default function ManageBusinessesRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Store Address</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. 142 Galle Road, Colombo 03"
               placeholderTextColor="#9CA3AF"
@@ -526,7 +570,7 @@ export default function ManageBusinessesRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Phone Number</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. +94 11 234 5678"
               placeholderTextColor="#9CA3AF"
@@ -535,26 +579,7 @@ export default function ManageBusinessesRoute() {
               keyboardType="phone-pad"
             />
           </View>
-        </ScrollView>
-
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!newName.trim() ||
-              !newBusinessType.trim() ||
-              !newAddress.trim() ||
-              !newPhone.trim()) &&
-              styles.submitButtonDisabled,
-          ]}
-          activeOpacity={0.8}
-          onPress={handleCreateBusiness}
-          disabled={
-            !newName.trim() || !newBusinessType.trim() || !newAddress.trim() || !newPhone.trim()
-          }
-        >
-          <Text style={styles.submitButtonText}>Create & Activate Business</Text>
-          <Feather name="plus-circle" size={16} color={TOKENS.card} />
-        </TouchableOpacity>
+        </View>
       </BottomSheet>
 
       {/* Modal for editing a business */}
@@ -565,15 +590,34 @@ export default function ManageBusinessesRoute() {
           setEditingBusiness(null);
         }}
         title="Edit Business Details"
+        footerComponent={
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (!editName.trim() ||
+                !editBusinessType.trim() ||
+                !editAddress.trim() ||
+                !editPhone.trim()) &&
+                styles.submitButtonDisabled,
+            ]}
+            activeOpacity={0.8}
+            onPress={handleSaveEditBusiness}
+            disabled={
+              !editName.trim() ||
+              !editBusinessType.trim() ||
+              !editAddress.trim() ||
+              !editPhone.trim()
+            }
+          >
+            <Text style={styles.submitButtonText}>Update Business Details</Text>
+            <Feather name="check" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        }
       >
-        <ScrollView
-          contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 500 }}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Business / Brand Name</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Shopbook Retail Store"
               placeholderTextColor="#9CA3AF"
@@ -582,7 +626,7 @@ export default function ManageBusinessesRoute() {
             />
           </View>
 
-          <View style={[styles.formGroup, { zIndex: 10 }]}>
+          <View style={[styles.formGroup, { zIndex: isEditDropdownOpen ? 1000 : 1 }]}>
             <Text style={styles.formLabel}>Business Type</Text>
             <TouchableOpacity
               activeOpacity={0.8}
@@ -693,7 +737,7 @@ export default function ManageBusinessesRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Store Address</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. 142 Galle Road, Colombo 03"
               placeholderTextColor="#9CA3AF"
@@ -704,7 +748,7 @@ export default function ManageBusinessesRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Phone Number</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={[
                 styles.formInput,
                 { backgroundColor: '#F3F4F6', color: '#6B7280', borderColor: '#E5E7EB' },
@@ -716,26 +760,7 @@ export default function ManageBusinessesRoute() {
               selectTextOnFocus={false}
             />
           </View>
-        </ScrollView>
-
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!editName.trim() ||
-              !editBusinessType.trim() ||
-              !editAddress.trim() ||
-              !editPhone.trim()) &&
-              styles.submitButtonDisabled,
-          ]}
-          activeOpacity={0.8}
-          onPress={handleSaveEditBusiness}
-          disabled={
-            !editName.trim() || !editBusinessType.trim() || !editAddress.trim() || !editPhone.trim()
-          }
-        >
-          <Text style={styles.submitButtonText}>Update Business Details</Text>
-          <Feather name="check" size={16} color={TOKENS.card} />
-        </TouchableOpacity>
+        </View>
       </BottomSheet>
     </View>
   );
@@ -916,13 +941,14 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalScroll: {
-    paddingTop: 4,
-    paddingBottom: 8,
+    paddingTop: 6,
+    paddingBottom: 24,
     paddingHorizontal: 0,
-    gap: 16,
+    gap: 18,
   },
   formGroup: {
     gap: 6,
+    position: 'relative',
   },
   formLabel: {
     fontSize: 12,
@@ -930,7 +956,7 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   formInput: {
-    height: 44,
+    height: 46,
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 10,
@@ -942,19 +968,18 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flexDirection: 'row',
-    height: 48,
+    height: 50,
     backgroundColor: TOKENS.primary,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 8,
+    marginTop: 18,
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
   },
   submitButtonDisabled: {
     backgroundColor: '#E5E7EB',
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: 'none',
   },
   submitButtonText: {
     fontSize: 14,
@@ -962,16 +987,16 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
   },
   dropdownOverlayList: {
-    marginTop: 4,
+    position: 'absolute',
+    top: 72,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 10,
     backgroundColor: TOKENS.card,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
+    boxShadow: '0px 6px 16px 0px rgba(0, 0, 0, 0.12)',
   },
   dropdownOverlayItem: {
     flexDirection: 'row',

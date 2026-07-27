@@ -43,7 +43,9 @@ export const InsightsScreen: React.FC = () => {
   const [premiumFeatureName, setPremiumFeatureName] = useState('This feature');
 
   // Period filters
-  const [period, setPeriod] = useState<'daily' | 'monthly' | 'yearly' | 'custom'>('monthly');
+  const [period, setPeriod] = useState<
+    'daily' | 'yesterday' | 'weekly' | 'monthly' | 'yearly' | 'custom'
+  >('monthly');
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'all' | 'cash' | 'card' | 'bank'>('all');
 
@@ -120,6 +122,25 @@ export const InsightsScreen: React.FC = () => {
       setIsSyncing(false);
     }
   };
+
+  const chartTitle = React.useMemo(() => {
+    switch (period) {
+      case 'daily':
+        return 'Hourly Revenue (Today)';
+      case 'yesterday':
+        return 'Hourly Revenue (Yesterday)';
+      case 'weekly':
+        return 'Revenue Distribution by Weekday';
+      case 'monthly':
+        return 'Revenue Distribution by Week';
+      case 'yearly':
+        return 'Revenue Distribution by Month';
+      case 'custom':
+        return 'Revenue Distribution by Date';
+      default:
+        return 'Revenue Distribution';
+    }
+  }, [period]);
 
   const handleExport = (type: 'PDF' | 'CSV') => {
     if (!isPremium) {
@@ -221,8 +242,8 @@ export const InsightsScreen: React.FC = () => {
     try {
       const content =
         exportType === 'CSV'
-          ? `Mini POS - Tabular CSV Statement for ${activeBiz.name}\nGross Revenue: Rs. ${stats?.grossRevenue.toLocaleString()}\nTotal Orders: ${stats?.ordersCount}`
-          : `Mini POS - Premium PDF Invoice statement for ${activeBiz.name}\nGenerated on Sri Lanka Helplines.`;
+          ? `Shopbook POS - Tabular CSV Statement for ${activeBiz.name}\nGross Revenue: Rs. ${stats?.grossRevenue.toLocaleString()}\nTotal Orders: ${stats?.ordersCount}`
+          : `Shopbook POS - Premium PDF Invoice statement for ${activeBiz.name}\nGenerated on Sri Lanka Helplines.`;
       await Share.share({
         message: content,
       });
@@ -294,8 +315,13 @@ export const InsightsScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
       >
-        {/* Period Selector pills */}
-        <View style={styles.periodPillsRow}>
+        {/* Period Selector pills - Horizontal ScrollView */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.periodPillsScroll}
+          contentContainerStyle={styles.periodPillsRow}
+        >
           <TouchableOpacity
             style={[styles.periodPill, period === 'daily' && styles.periodPillActive]}
             onPress={() => setPeriod('daily')}
@@ -304,6 +330,28 @@ export const InsightsScreen: React.FC = () => {
               style={[styles.periodPillText, period === 'daily' && styles.periodPillTextActive]}
             >
               Today
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.periodPill, period === 'yesterday' && styles.periodPillActive]}
+            onPress={() => setPeriod('yesterday')}
+          >
+            <Text
+              style={[styles.periodPillText, period === 'yesterday' && styles.periodPillTextActive]}
+            >
+              Yesterday
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.periodPill, period === 'weekly' && styles.periodPillActive]}
+            onPress={() => setPeriod('weekly')}
+          >
+            <Text
+              style={[styles.periodPillText, period === 'weekly' && styles.periodPillTextActive]}
+            >
+              Weekly
             </Text>
           </TouchableOpacity>
 
@@ -339,7 +387,7 @@ export const InsightsScreen: React.FC = () => {
               Custom
             </Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
 
         {/* Loading Spinner */}
         {isLoading ? (
@@ -381,7 +429,10 @@ export const InsightsScreen: React.FC = () => {
                 style={styles.kpiCard}
                 activeOpacity={0.7}
                 onPress={() => {
-                  if (stats?.lowStockCount && stats.lowStockCount > 0) {
+                  if (
+                    (stats?.lowStockCount && stats.lowStockCount > 0) ||
+                    (stats?.outOfStockCount && stats.outOfStockCount > 0)
+                  ) {
                     setIsLowStockModalOpen(true);
                   } else {
                     Alert.alert(
@@ -394,18 +445,23 @@ export const InsightsScreen: React.FC = () => {
                 <View style={[styles.kpiIconCircle, { backgroundColor: '#FCE8E6' }]}>
                   <Feather name="alert-triangle" size={16} color={TOKENS.error} />
                 </View>
-                <Text style={styles.kpiLabel}>Low Stock Items</Text>
+                <Text style={styles.kpiLabel}>Stock Alerts</Text>
                 <Text
-                  style={[styles.kpiValue, stats?.lowStockCount! > 0 && { color: TOKENS.error }]}
+                  style={[
+                    styles.kpiValue,
+                    ((stats?.lowStockCount || 0) > 0 || (stats?.outOfStockCount || 0) > 0) && {
+                      color: TOKENS.error,
+                    },
+                  ]}
                 >
-                  {stats?.lowStockCount}
+                  {(stats?.lowStockCount || 0) + (stats?.outOfStockCount || 0)}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Simulated Live Bar Chart */}
             <View style={styles.chartWrapper}>
-              <Text style={styles.sectionTitle}>Weekly Sales Distribution</Text>
+              <Text style={styles.sectionTitle}>{chartTitle}</Text>
               <View style={styles.barGraphRow}>
                 {stats?.chartData.map((item, index) => {
                   const maxVal = Math.max(...stats.chartData.map((c) => c.value), 1000);
@@ -570,6 +626,7 @@ export const InsightsScreen: React.FC = () => {
         visible={isLowStockModalOpen}
         onClose={() => setIsLowStockModalOpen(false)}
         lowStockItems={stats?.lowStockItems}
+        outOfStockItems={stats?.outOfStockItems}
       />
 
       <ReportsBottomSheet
