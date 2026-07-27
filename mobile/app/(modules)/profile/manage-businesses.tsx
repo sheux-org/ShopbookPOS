@@ -1,18 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheet } from '../../../components/common/BottomSheet';
+import { BottomSheet, BottomSheetTextInput } from '../../../components/common/BottomSheet';
 import { Business, cartState } from '../../../components/data/cartState';
 import { TOKENS } from '../../../constants/tokens';
 import {
@@ -382,20 +373,55 @@ export default function ManageBusinessesRoute() {
         })}
       </ScrollView>
 
+      {/* FIX: All plain <TextInput> instances inside these two <BottomSheet> forms
+  have been changed to <BottomSheetTextInput>.
+
+  Why this fixes it:
+  @gorhom/bottom-sheet's keyboard-avoidance logic (keyboardBehavior="extend")
+  only works if the FOCUSED input is a BottomSheetTextInput — that's how the
+  library knows a text field inside the sheet is focused and resizes/extends
+  the sheet to sit above the keyboard. A plain react-native TextInput is
+  invisible to that logic, so the sheet never adjusts, and the footer button
+  stays pinned under the keyboard instead of above it.
+
+  Make sure this import is added at the top of the file (adjust the path to
+  wherever your BottomSheet.tsx wrapper lives — it already re-exports
+  BottomSheetTextInput):
+
+    import { BottomSheet, BottomSheetTextInput } from '../path/to/BottomSheet';
+*/}
+
       {/* Modal for creating a new business */}
       <BottomSheet
         visible={isModalOpen}
+        useScrollView
         onClose={() => setIsModalOpen(false)}
         title="Create New Business"
+        footerComponent={
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (!newName.trim() ||
+                !newBusinessType.trim() ||
+                !newAddress.trim() ||
+                !newPhone.trim()) &&
+                styles.submitButtonDisabled,
+            ]}
+            activeOpacity={0.8}
+            onPress={handleCreateBusiness}
+            disabled={
+              !newName.trim() || !newBusinessType.trim() || !newAddress.trim() || !newPhone.trim()
+            }
+          >
+            <Text style={styles.submitButtonText}>Create & Activate Business</Text>
+            <Feather name="plus-circle" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        }
       >
-        <ScrollView
-          contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 500 }}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Business / Brand Name</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Shopbook Retail Store"
               placeholderTextColor="#9CA3AF"
@@ -404,7 +430,7 @@ export default function ManageBusinessesRoute() {
             />
           </View>
 
-          <View style={[styles.formGroup, { zIndex: 10 }]}>
+          <View style={[styles.formGroup, { zIndex: isCreateDropdownOpen ? 1000 : 1 }]}>
             <Text style={styles.formLabel}>Business Type</Text>
             <TouchableOpacity
               activeOpacity={0.8}
@@ -515,7 +541,7 @@ export default function ManageBusinessesRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Store Address</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. 142 Galle Road, Colombo 03"
               placeholderTextColor="#9CA3AF"
@@ -526,7 +552,7 @@ export default function ManageBusinessesRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Phone Number</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. +94 11 234 5678"
               placeholderTextColor="#9CA3AF"
@@ -535,26 +561,7 @@ export default function ManageBusinessesRoute() {
               keyboardType="phone-pad"
             />
           </View>
-        </ScrollView>
-
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!newName.trim() ||
-              !newBusinessType.trim() ||
-              !newAddress.trim() ||
-              !newPhone.trim()) &&
-              styles.submitButtonDisabled,
-          ]}
-          activeOpacity={0.8}
-          onPress={handleCreateBusiness}
-          disabled={
-            !newName.trim() || !newBusinessType.trim() || !newAddress.trim() || !newPhone.trim()
-          }
-        >
-          <Text style={styles.submitButtonText}>Create & Activate Business</Text>
-          <Feather name="plus-circle" size={16} color={TOKENS.card} />
-        </TouchableOpacity>
+        </View>
       </BottomSheet>
 
       {/* Modal for editing a business */}
@@ -565,15 +572,34 @@ export default function ManageBusinessesRoute() {
           setEditingBusiness(null);
         }}
         title="Edit Business Details"
+        footerComponent={
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (!editName.trim() ||
+                !editBusinessType.trim() ||
+                !editAddress.trim() ||
+                !editPhone.trim()) &&
+                styles.submitButtonDisabled,
+            ]}
+            activeOpacity={0.8}
+            onPress={handleSaveEditBusiness}
+            disabled={
+              !editName.trim() ||
+              !editBusinessType.trim() ||
+              !editAddress.trim() ||
+              !editPhone.trim()
+            }
+          >
+            <Text style={styles.submitButtonText}>Update Business Details</Text>
+            <Feather name="check" size={16} color={TOKENS.card} />
+          </TouchableOpacity>
+        }
       >
-        <ScrollView
-          contentContainerStyle={styles.modalScroll}
-          style={{ maxHeight: 500 }}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Business / Brand Name</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Shopbook Retail Store"
               placeholderTextColor="#9CA3AF"
@@ -582,7 +608,7 @@ export default function ManageBusinessesRoute() {
             />
           </View>
 
-          <View style={[styles.formGroup, { zIndex: 10 }]}>
+          <View style={[styles.formGroup, { zIndex: isEditDropdownOpen ? 1000 : 1 }]}>
             <Text style={styles.formLabel}>Business Type</Text>
             <TouchableOpacity
               activeOpacity={0.8}
@@ -693,7 +719,7 @@ export default function ManageBusinessesRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Store Address</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. 142 Galle Road, Colombo 03"
               placeholderTextColor="#9CA3AF"
@@ -704,7 +730,7 @@ export default function ManageBusinessesRoute() {
 
           <View style={styles.formGroup}>
             <Text style={styles.formLabel}>Phone Number</Text>
-            <TextInput
+            <BottomSheetTextInput
               style={[
                 styles.formInput,
                 { backgroundColor: '#F3F4F6', color: '#6B7280', borderColor: '#E5E7EB' },
@@ -716,26 +742,7 @@ export default function ManageBusinessesRoute() {
               selectTextOnFocus={false}
             />
           </View>
-        </ScrollView>
-
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!editName.trim() ||
-              !editBusinessType.trim() ||
-              !editAddress.trim() ||
-              !editPhone.trim()) &&
-              styles.submitButtonDisabled,
-          ]}
-          activeOpacity={0.8}
-          onPress={handleSaveEditBusiness}
-          disabled={
-            !editName.trim() || !editBusinessType.trim() || !editAddress.trim() || !editPhone.trim()
-          }
-        >
-          <Text style={styles.submitButtonText}>Update Business Details</Text>
-          <Feather name="check" size={16} color={TOKENS.card} />
-        </TouchableOpacity>
+        </View>
       </BottomSheet>
     </View>
   );
@@ -916,13 +923,14 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   modalScroll: {
-    paddingTop: 4,
-    paddingBottom: 8,
+    paddingTop: 6,
+    paddingBottom: 24,
     paddingHorizontal: 0,
-    gap: 16,
+    gap: 18,
   },
   formGroup: {
     gap: 6,
+    position: 'relative',
   },
   formLabel: {
     fontSize: 12,
@@ -930,7 +938,7 @@ const styles = StyleSheet.create({
     color: TOKENS.dark,
   },
   formInput: {
-    height: 44,
+    height: 46,
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 10,
@@ -942,19 +950,18 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     flexDirection: 'row',
-    height: 48,
+    height: 50,
     backgroundColor: TOKENS.primary,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 8,
+    marginTop: 18,
     boxShadow: `0px 4px 6px 0px ${TOKENS.primary}33`,
   },
   submitButtonDisabled: {
     backgroundColor: '#E5E7EB',
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: 'none',
   },
   submitButtonText: {
     fontSize: 14,
@@ -962,16 +969,16 @@ const styles = StyleSheet.create({
     color: TOKENS.card,
   },
   dropdownOverlayList: {
-    marginTop: 4,
+    position: 'absolute',
+    top: 72,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
     borderWidth: 1,
     borderColor: TOKENS.border,
     borderRadius: 10,
     backgroundColor: TOKENS.card,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
+    boxShadow: '0px 6px 16px 0px rgba(0, 0, 0, 0.12)',
   },
   dropdownOverlayItem: {
     flexDirection: 'row',

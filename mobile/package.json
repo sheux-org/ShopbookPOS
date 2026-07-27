@@ -17,6 +17,7 @@
     "@expo-google-fonts/arimo": "^0.4.3",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
+    "@gorhom/bottom-sheet": "^5.2.14",
     "@noble/ciphers": "^2.2.0",
     "@noble/hashes": "^2.2.0",
     "@nozbe/watermelondb": "^0.28.0",
