@@ -15,6 +15,7 @@ import {
 import { getTopSafeInset } from '../../../utils/safeArea';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
+import { hapticFeedback } from '@/utils/haptics';
 
 export default function ManageStaffRoute() {
   const insets = useSafeAreaInsets();
@@ -54,6 +55,7 @@ export default function ManageStaffRoute() {
     setEditPhone(member.phone);
     setIsEditModalOpen(true);
   };
+  hapticFeedback.impactLight();
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -63,6 +65,7 @@ export default function ManageStaffRoute() {
   const handleSaveEditStaff = () => {
     if (!editingStaff) return;
     if (!editName.trim() || !editPhone.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Name and phone number are required!');
       return;
     }
@@ -80,15 +83,18 @@ export default function ManageStaffRoute() {
           triggerToast('Staff details updated successfully! 🚀');
           setIsEditModalOpen(false);
           setEditingStaff(null);
+          hapticFeedback.notificationSuccess();
         },
         onError: () => {
           triggerToast('Failed to update staff details.');
+          hapticFeedback.notificationError();
         },
       }
     );
   };
 
   const handleConfirmDeleteStaff = (staff: StaffMember) => {
+    hapticFeedback.notificationWarning();
     Alert.alert(
       'Remove Staff Member',
       `Are you sure you want to permanently remove "${staff.name}"? This action cannot be undone.`,
@@ -98,12 +104,15 @@ export default function ManageStaffRoute() {
           text: 'Remove Staff',
           style: 'destructive',
           onPress: () => {
+            hapticFeedback.impactMedium();
             deleteMutation.mutate(staff.id, {
               onSuccess: () => {
                 triggerToast('Staff member removed successfully! 🗑️');
+                hapticFeedback.notificationSuccess();
               },
               onError: () => {
                 triggerToast('Failed to delete staff member.');
+                hapticFeedback.notificationError();
               },
             });
           },
@@ -114,11 +123,13 @@ export default function ManageStaffRoute() {
 
   const handleAddStaff = () => {
     if (!newName.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter staff name!');
       return;
     }
     // Email is optional
     if (!newPhone.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter phone number!');
       return;
     }
@@ -140,9 +151,11 @@ export default function ManageStaffRoute() {
           setNewRole('Cashier');
           setNewEmail('');
           setNewPhone('');
+          hapticFeedback.notificationSuccess();
         },
         onError: () => {
           triggerToast('Failed to add staff member.');
+          hapticFeedback.notificationError();
         },
       }
     );
@@ -312,7 +325,10 @@ export default function ManageStaffRoute() {
                     key={role}
                     style={[styles.roleSelectTab, isSelected && styles.roleSelectTabActive]}
                     activeOpacity={0.8}
-                    onPress={() => setNewRole(role)}
+                    onPress={() => {
+                      hapticFeedback.selection();
+                      setNewRole(role);
+                    }}
                   >
                     <Text
                       style={[

@@ -7,6 +7,7 @@ import { useCartQtyForProduct } from '../../hooks/useCartQtyForProduct';
 import { getCartAdjustedStock } from '../../utils/stockDisplay';
 import { cartState } from '../data/cartState';
 import type { DBProduct } from '../../hooks/useProducts';
+import { hapticFeedback } from '@/utils/haptics';
 
 interface SearchProductRowProps {
   item: DBProduct;
@@ -22,9 +23,11 @@ export const SearchProductRow = React.memo(function SearchProductRow({
 
   const handleAdd = useCallback(() => {
     if (stockType === 'out') {
+      hapticFeedback.notificationWarning();
       onAdded('Product is out of stock!');
       return;
     }
+    hapticFeedback.impactLight();
     cartState.addCartItem(item.name, item.price, item.icon, `SKU 23400${item.id}`, item.stockCount);
     onAdded(`Added ${item.name} to active invoice`);
   }, [item, stockType, onAdded]);

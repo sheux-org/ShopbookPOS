@@ -16,6 +16,7 @@ import { getTopSafeInset } from '../../../utils/safeArea';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
+import { hapticFeedback } from '@/utils/haptics';
 
 const BUSINESS_TYPES = [
   { label: 'Cafe', icon: '☕' },
@@ -73,11 +74,13 @@ export default function ManageBusinessesRoute() {
     setEditAddress(biz.address);
     setEditPhone(biz.phone);
     setIsEditModalOpen(true);
+    hapticFeedback.impactLight();
   };
 
   const handleSaveEditBusiness = () => {
     if (!editingBusiness) return;
     if (!editName.trim() || !editBusinessType.trim() || !editAddress.trim() || !editPhone.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('All fields are required!');
       return;
     }
@@ -97,9 +100,11 @@ export default function ManageBusinessesRoute() {
           setIsEditModalOpen(false);
           setEditingBusiness(null);
           triggerToast('Business details updated successfully! 🚀');
+          hapticFeedback.notificationSuccess();
         },
         onError: () => {
           triggerToast('Failed to update business details.');
+          hapticFeedback.notificationError();
         },
       }
     );
@@ -107,6 +112,7 @@ export default function ManageBusinessesRoute() {
 
   const handleConfirmDelete = (biz: Business) => {
     if (biz.id === activeBusiness.id) {
+      hapticFeedback.notificationError();
       Alert.alert(
         'Action Restricted',
         'You cannot delete your active business branch. Please switch to another business branch first before attempting to delete this one.'
@@ -115,6 +121,7 @@ export default function ManageBusinessesRoute() {
     }
 
     if (businesses.length <= 1) {
+      hapticFeedback.notificationWarning();
       Alert.alert(
         'Action Restricted',
         'You cannot delete the only business in the catalog. You must have at least one active store branch.'
@@ -122,6 +129,7 @@ export default function ManageBusinessesRoute() {
       return;
     }
 
+    hapticFeedback.notificationWarning();
     Alert.alert(
       'Delete Business Branch',
       `Are you sure you want to permanently delete "${biz.name}"? This action cannot be undone.`,
@@ -131,12 +139,15 @@ export default function ManageBusinessesRoute() {
           text: 'Delete Branch',
           style: 'destructive',
           onPress: () => {
+            hapticFeedback.impactMedium();
             deleteMutation.mutate(biz.id, {
               onSuccess: () => {
                 triggerToast('Business branch deleted successfully! 🗑️');
+                hapticFeedback.notificationSuccess();
               },
               onError: () => {
                 triggerToast('Failed to delete business branch.');
+                hapticFeedback.notificationError();
               },
             });
           },
@@ -147,23 +158,28 @@ export default function ManageBusinessesRoute() {
 
   const handleCreateBusiness = () => {
     if (!canPerform('create', 'settings')) {
+      hapticFeedback.notificationError();
       triggerToast('Access Denied: Cashiers are not authorized to create branches.');
       return;
     }
 
     if (!newName.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter business name!');
       return;
     }
     if (!newBusinessType.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please select business type!');
       return;
     }
     if (!newAddress.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter business address!');
       return;
     }
     if (!newPhone.trim()) {
+      hapticFeedback.notificationWarning();
       triggerToast('Please enter phone number!');
       return;
     }
@@ -184,6 +200,7 @@ export default function ManageBusinessesRoute() {
           setNewPhone('');
           triggerToast('Business store created successfully! 🎉');
 
+          hapticFeedback.notificationSuccess();
           Alert.alert(
             'Activate New Branch',
             `Would you like to set "${newBiz.name}" as your active business branch immediately?`,
@@ -213,6 +230,7 @@ export default function ManageBusinessesRoute() {
           );
         },
         onError: () => {
+          hapticFeedback.notificationError();
           triggerToast('Failed to register business.');
         },
       }

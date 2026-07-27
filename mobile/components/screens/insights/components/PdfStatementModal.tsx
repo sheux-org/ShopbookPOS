@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { TOKENS } from '../../../../constants/tokens';
 import { ReportType } from '../../../../utils/reportTemplates';
 import { styles } from '../styles';
+import { hapticFeedback } from '@/utils/haptics';
 
 interface PdfStatementModalProps {
   visible: boolean;
@@ -146,7 +147,10 @@ export const PdfStatementModal: React.FC<PdfStatementModalProps> = ({
                   key={opt.id}
                   activeOpacity={0.8}
                   style={[styles.pdfOptionCard, isSelected && styles.pdfOptionCardSelected]}
-                  onPress={() => onSelectReportType(opt.id as ReportType)}
+                  onPress={() => {
+                    hapticFeedback.selection();
+                    onSelectReportType(opt.id as ReportType);
+                  }}
                 >
                   <View style={[styles.pdfOptionIconBox, { backgroundColor: opt.bgColor }]}>
                     <Feather name={opt.icon as any} size={15} color={opt.color} />
@@ -169,7 +173,10 @@ export const PdfStatementModal: React.FC<PdfStatementModalProps> = ({
             <TouchableOpacity
               style={styles.pdfGenerateBtn}
               activeOpacity={0.85}
-              onPress={() => onGenerateReport(selectedReportType)}
+              onPress={() => {
+                hapticFeedback.notificationSuccess();
+                onGenerateReport(selectedReportType);
+              }}
             >
               <Feather name="file-text" size={16} color="#FFFFFF" />
               <Text style={styles.pdfGenerateBtnText}>Generate PDF Report</Text>

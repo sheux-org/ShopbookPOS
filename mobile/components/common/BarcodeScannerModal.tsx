@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
 import { usePermission } from '../../hooks/usePermissionHandler';
+import { hapticFeedback } from '@/utils/haptics';
 
 export interface BarcodeScannerModalProps {
   visible: boolean;
@@ -99,6 +100,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
               }}
               onBarcodeScanned={({ data }) => {
                 if (data) {
+                  hapticFeedback.notificationSuccess();
                   onBarcodeScanned(data);
                 }
               }}
