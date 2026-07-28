@@ -94,9 +94,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
                 value={newStaffRole}
                 onChange={(e: any) => {
                   const val = e.target.value;
-                  const isOwner =
-                    editingStaff?.role === 'admin' ||
-                    editingStaff?.name.toLowerCase() === 'owner / admin';
+                  const isOwner = editingStaff?.name.toLowerCase() === 'owner / admin';
                   if (isOwner && val !== 'admin') {
                     alert('Owner / Admin role cannot be demoted.');
                     return;
@@ -142,7 +140,7 @@ export const StaffModal: React.FC<StaffModalProps> = ({
             <h4 className="form-title">Active Store Personnel ({employees.length})</h4>
             <div className="staff-scroller">
               {employees.map((emp) => {
-                const isOwner = emp.role === 'admin' || emp.name.toLowerCase() === 'owner / admin';
+                const isOwner = emp.name.toLowerCase() === 'owner / admin';
                 return (
                   <div key={emp.id} className="staff-card">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
