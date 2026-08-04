@@ -23,6 +23,7 @@ import { BottomSheet } from '../common/BottomSheet';
 import { ProductImage } from '../common/ProductImage';
 import { useCart } from '../../stores/useCart';
 import { hapticFeedback } from '../../utils/haptics';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -62,6 +63,7 @@ const getInitials = (name: string) => {
 export const CartScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<CartItem[]>([]);
@@ -390,7 +392,8 @@ export const CartScreen: React.FC = () => {
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitle}>Cart</Text>
           <Text style={styles.headerSubtitle}>
-            {invoiceItems.reduce((sum, item) => sum + item.quantity, 0)} items · #2041
+            {invoiceItems.reduce((sum, item) => sum + item.quantity, 0)} {t('cart.totalItems')} ·
+            #2041
           </Text>
         </View>
 
@@ -455,9 +458,9 @@ export const CartScreen: React.FC = () => {
         {invoiceItems.length === 0 && (
           <View style={styles.emptyCart}>
             <Feather name="shopping-cart" size={48} color={TOKENS.muted} />
-            <Text style={styles.emptyText}>Your cart checkout is empty</Text>
+            <Text style={styles.emptyText}>{t('cart.emptyCartTitle')}</Text>
             <TouchableOpacity style={styles.browseBtn} onPress={() => router.push('/pos')}>
-              <Text style={styles.browseBtnText}>Go back to POS</Text>
+              <Text style={styles.browseBtnText}>{t('pos.proceedToCheckout')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -480,7 +483,7 @@ export const CartScreen: React.FC = () => {
           <View style={styles.summaryCard}>
             {/* Subtotal */}
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryLabel}>{t('cart.subtotal')}</Text>
               <Text style={styles.summaryValue}>Rs. {subtotal.toLocaleString()}.00</Text>
             </View>
 
@@ -604,7 +607,7 @@ export const CartScreen: React.FC = () => {
 
             {/* Total bold blue */}
             <View style={styles.summaryRow}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalLabel}>{t('cart.totalAmount')}</Text>
               <Text style={styles.totalValue}>Rs. {total.toLocaleString()}.00</Text>
             </View>
           </View>
@@ -660,7 +663,7 @@ export const CartScreen: React.FC = () => {
             onPress={handleProceedToPayment}
           >
             <Text style={styles.checkoutPayText}>
-              Proceed to Pay (Rs. {total.toLocaleString()})
+              {t('cart.checkoutButton', { total: total.toLocaleString() })}
             </Text>
             <Feather name="arrow-right" size={18} color={TOKENS.card} />
           </TouchableOpacity>

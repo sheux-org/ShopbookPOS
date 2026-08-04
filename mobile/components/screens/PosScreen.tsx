@@ -23,6 +23,7 @@ import { InvoiceItemCard } from '../common/InvoiceItemCard';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 import { hapticFeedback } from '../../utils/haptics';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface InvoiceItem {
   id: string;
@@ -39,6 +40,7 @@ export const PosScreen: React.FC = () => {
   const router = useRouter();
   const { requestCameraAccess, hasCameraAccess } = usePermission();
   const { role } = useUserPermissions();
+  const { t } = useTranslation();
 
   const [activeMode, setActiveMode] = useState<'scan' | 'quick_code'>('scan');
 
@@ -198,9 +200,9 @@ export const PosScreen: React.FC = () => {
         addItemToInvoice(prod.name, prod.price, prod.icon, `SKU 23400${prod.id}`, prod.stockCount);
       } else {
         Alert.alert(
-          'Product Not Registered',
+          t('common.error'),
           `Scanned code "${data}" is not registered in catalog. Please register it in Stocks Screen first.`,
-          [{ text: 'Okay' }]
+          [{ text: t('common.ok') }]
         );
       }
     });
@@ -228,7 +230,9 @@ export const PosScreen: React.FC = () => {
 
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitle}>Shopbook POS</Text>
-          <Text style={styles.headerSubtitle}>Invoice {invoiceNumber}</Text>
+          <Text style={styles.headerSubtitle}>
+            {t('history.invoiceNo', { invoiceNo: invoiceNumber })}
+          </Text>
         </View>
 
         <View style={styles.headerRightActions}>
@@ -247,7 +251,7 @@ export const PosScreen: React.FC = () => {
                   marginLeft: 4,
                 }}
               >
-                Orders
+                {t('navigation.history')}
               </Text>
             </TouchableOpacity>
           )}
@@ -269,10 +273,8 @@ export const PosScreen: React.FC = () => {
         {invoiceItems.length === 0 && (
           <View style={styles.emptyInvoiceState}>
             <Feather name="shopping-bag" size={40} color={TOKENS.muted} />
-            <Text style={styles.emptyInvoiceTitle}>No items in invoice</Text>
-            <Text style={styles.emptyInvoiceSub}>
-              Use quick codes or search below to add items.
-            </Text>
+            <Text style={styles.emptyInvoiceTitle}>{t('cart.emptyCartTitle')}</Text>
+            <Text style={styles.emptyInvoiceSub}>{t('cart.emptyCartSubtitle')}</Text>
           </View>
         )}
       </ScrollView>
@@ -300,7 +302,7 @@ export const PosScreen: React.FC = () => {
             <Text
               style={[styles.segmentText, activeMode === 'quick_code' && styles.segmentTextActive]}
             >
-              Quick code
+              {t('pos.quickCode')}
             </Text>
           </TouchableOpacity>
 
@@ -322,7 +324,7 @@ export const PosScreen: React.FC = () => {
               color={activeMode === 'scan' ? TOKENS.card : TOKENS.dark}
             />
             <Text style={[styles.segmentText, activeMode === 'scan' && styles.segmentTextActive]}>
-              Scan
+              {t('pos.scan')}
             </Text>
           </TouchableOpacity>
 
@@ -335,7 +337,7 @@ export const PosScreen: React.FC = () => {
             activeOpacity={0.8}
           >
             <Feather name="search" size={15} color={TOKENS.dark} />
-            <Text style={styles.segmentText}>Search</Text>
+            <Text style={styles.segmentText}>{t('pos.search')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -346,7 +348,7 @@ export const PosScreen: React.FC = () => {
               {/* Quick Code box styled exactly as image */}
               <View style={styles.quickCodeBox}>
                 <View style={styles.quickCodeTextCol}>
-                  <Text style={styles.quickCodeBoxLabel}>Quick code</Text>
+                  <Text style={styles.quickCodeBoxLabel}>{t('pos.quickCode')}</Text>
                   <View style={styles.codeTextRow}>
                     <Text style={styles.quickCodeVal}>{quickCode}</Text>
                     {cursorVisible && <View style={styles.blueCursor} />}
@@ -437,7 +439,7 @@ export const PosScreen: React.FC = () => {
 
           {activeMode === 'scan' && (
             <View style={styles.scanWrapper}>
-              <Text style={styles.scanLabel}>CAMERA VIEWFINDER ACTIVE</Text>
+              <Text style={styles.scanLabel}>{t('pos.barcodeScanActive')}</Text>
 
               {/* Viewfinder box containing live CameraView */}
               <View style={styles.mockViewfinder}>
@@ -466,7 +468,7 @@ export const PosScreen: React.FC = () => {
                         marginBottom: 10,
                       }}
                     >
-                      Camera Access Required
+                      {t('pos.scanCameraRequired')}
                     </Text>
                     <TouchableOpacity
                       onPress={() => requestCameraAccess()}
@@ -484,7 +486,7 @@ export const PosScreen: React.FC = () => {
                           fontWeight: 'bold',
                         }}
                       >
-                        Grant Permission
+                        {t('pos.scanCameraPermissionBtn')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -519,7 +521,7 @@ export const PosScreen: React.FC = () => {
           >
             <View style={styles.summaryBarLeft}>
               <Feather name="shopping-bag" size={16} color={TOKENS.card} style={styles.bagIcon} />
-              <Text style={styles.summaryLabelActive}>Proceed to Checkout</Text>
+              <Text style={styles.summaryLabelActive}>{t('pos.proceedToCheckout')}</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Text style={styles.summaryValueActive}>

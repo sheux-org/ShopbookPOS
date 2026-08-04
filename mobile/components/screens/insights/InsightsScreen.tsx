@@ -32,12 +32,14 @@ import { DateRangeModal } from './components/DateRangeModal';
 import { LowStockBottomSheet } from './components/LowStockBottomSheet';
 import { ReportsBottomSheet } from './components/ReportsBottomSheet';
 import { hapticFeedback } from '../../../utils/haptics';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
   const activeBiz = useActiveBusiness();
+  const { t } = useTranslation();
 
   const isPremium = useSettingsStore((s) => s.isPremium);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
@@ -113,17 +115,14 @@ export const InsightsScreen: React.FC = () => {
       if (result) {
         hapticFeedback.notificationSuccess();
         queryClient.invalidateQueries({ queryKey: ['insights'] });
-        Alert.alert('Sync Success', 'Database successfully synchronized with Cloud Storage!');
+        Alert.alert(t('insights.syncSuccessTitle'), t('insights.syncSuccess'));
       } else {
         hapticFeedback.notificationWarning();
-        Alert.alert(
-          'Sync Skipped',
-          'Backup/sync is disabled or environment is not configured. Please enable it in Settings.'
-        );
+        Alert.alert(t('insights.syncSkippedTitle'), t('insights.syncSkipped'));
       }
     } catch (err: any) {
       hapticFeedback.notificationError();
-      Alert.alert('Sync Failed', err.message || 'Failed to synchronize database.');
+      Alert.alert(t('insights.syncFailedTitle'), err.message || t('insights.syncFailed'));
     } finally {
       setIsSyncing(false);
     }
@@ -132,21 +131,21 @@ export const InsightsScreen: React.FC = () => {
   const chartTitle = React.useMemo(() => {
     switch (period) {
       case 'daily':
-        return 'Hourly Revenue (Today)';
+        return t('insights.chartHourlyToday');
       case 'yesterday':
-        return 'Hourly Revenue (Yesterday)';
+        return t('insights.chartHourlyYesterday');
       case 'weekly':
-        return 'Revenue Distribution by Weekday';
+        return t('insights.chartWeekday');
       case 'monthly':
-        return 'Revenue Distribution by Week';
+        return t('insights.chartWeek');
       case 'yearly':
-        return 'Revenue Distribution by Month';
+        return t('insights.chartMonth');
       case 'custom':
-        return 'Revenue Distribution by Date';
+        return t('insights.chartDate');
       default:
-        return 'Revenue Distribution';
+        return t('insights.chartDefault');
     }
-  }, [period]);
+  }, [period, t]);
 
   const handleExport = (type: 'PDF' | 'CSV') => {
     if (!isPremium) {
@@ -201,7 +200,10 @@ export const InsightsScreen: React.FC = () => {
       hapticFeedback.notificationSuccess();
     } catch (err: any) {
       hapticFeedback.notificationError();
-      Alert.alert('Report Export Failed', err.message || 'Failed to generate report CSV.');
+      Alert.alert(
+        t('insights.reportExportFailed'),
+        err.message || t('insights.reportExportFailedCsv')
+      );
     } finally {
       setIsExporting(false);
     }
@@ -244,7 +246,10 @@ export const InsightsScreen: React.FC = () => {
       hapticFeedback.notificationSuccess();
     } catch (err: any) {
       hapticFeedback.notificationError();
-      Alert.alert('Report Export Failed', err.message || 'Failed to generate report statement.');
+      Alert.alert(
+        t('insights.reportExportFailed'),
+        err.message || t('insights.reportExportFailedPdf')
+      );
     } finally {
       setIsExporting(false);
     }
@@ -261,7 +266,7 @@ export const InsightsScreen: React.FC = () => {
       });
       setExportResultModal(false);
     } catch (err: any) {
-      Alert.alert('Share Failed', err.message);
+      Alert.alert(t('insights.shareFailed'), err.message);
     }
   };
 
@@ -293,7 +298,7 @@ export const InsightsScreen: React.FC = () => {
             Business Insights
           </Text>
           <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
-            {isSyncing ? 'Syncing...' : 'Real-time reports'}
+            {isSyncing ? t('insights.headerSubSyncing') : t('insights.headerSubDefault')}
           </Text>
         </View>
 
@@ -304,7 +309,7 @@ export const InsightsScreen: React.FC = () => {
             onPress={() => setIsReportsModalOpen(true)}
           >
             <Feather name="bar-chart-2" size={15} color={TOKENS.primary} />
-            <Text style={styles.headerTextBtnLabel}>Reports</Text>
+            <Text style={styles.headerTextBtnLabel}>{t('insights.headerReportsBtn')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -344,7 +349,7 @@ export const InsightsScreen: React.FC = () => {
             <Text
               style={[styles.periodPillText, period === 'daily' && styles.periodPillTextActive]}
             >
-              Today
+              {t('insights.periodToday')}
             </Text>
           </TouchableOpacity>
 
@@ -358,7 +363,7 @@ export const InsightsScreen: React.FC = () => {
             <Text
               style={[styles.periodPillText, period === 'yesterday' && styles.periodPillTextActive]}
             >
-              Yesterday
+              {t('insights.periodYesterday')}
             </Text>
           </TouchableOpacity>
 
@@ -372,7 +377,7 @@ export const InsightsScreen: React.FC = () => {
             <Text
               style={[styles.periodPillText, period === 'weekly' && styles.periodPillTextActive]}
             >
-              Weekly
+              {t('insights.periodWeekly')}
             </Text>
           </TouchableOpacity>
 
@@ -386,7 +391,7 @@ export const InsightsScreen: React.FC = () => {
             <Text
               style={[styles.periodPillText, period === 'monthly' && styles.periodPillTextActive]}
             >
-              Monthly
+              {t('insights.periodMonthly')}
             </Text>
           </TouchableOpacity>
 
@@ -400,7 +405,7 @@ export const InsightsScreen: React.FC = () => {
             <Text
               style={[styles.periodPillText, period === 'yearly' && styles.periodPillTextActive]}
             >
-              Yearly
+              {t('insights.periodYearly')}
             </Text>
           </TouchableOpacity>
 
@@ -411,7 +416,7 @@ export const InsightsScreen: React.FC = () => {
             <Text
               style={[styles.periodPillText, period === 'custom' && styles.periodPillTextActive]}
             >
-              Custom
+              {t('insights.periodCustom')}
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -420,7 +425,7 @@ export const InsightsScreen: React.FC = () => {
         {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={TOKENS.primary} />
-            <Text style={styles.loadingText}>Computing sales logs...</Text>
+            <Text style={styles.loadingText}>{t('insights.computingSales')}</Text>
           </View>
         ) : (
           <>
@@ -430,7 +435,7 @@ export const InsightsScreen: React.FC = () => {
                 <View style={[styles.kpiIconCircle, { backgroundColor: '#E8FDF0' }]}>
                   <Feather name="trending-up" size={16} color="#10B981" />
                 </View>
-                <Text style={styles.kpiLabel}>Gross Sales</Text>
+                <Text style={styles.kpiLabel}>{t('insights.kpiGrossSales')}</Text>
                 <Text style={styles.kpiValue}>Rs. {stats?.grossRevenue.toLocaleString()}</Text>
               </View>
 
@@ -438,7 +443,7 @@ export const InsightsScreen: React.FC = () => {
                 <View style={[styles.kpiIconCircle, { backgroundColor: '#EFF6FF' }]}>
                   <Feather name="file-text" size={16} color={TOKENS.primary} />
                 </View>
-                <Text style={styles.kpiLabel}>Transactions</Text>
+                <Text style={styles.kpiLabel}>{t('insights.kpiTransactions')}</Text>
                 <Text style={styles.kpiValue}>{stats?.ordersCount}</Text>
               </View>
 
@@ -446,7 +451,7 @@ export const InsightsScreen: React.FC = () => {
                 <View style={[styles.kpiIconCircle, { backgroundColor: '#FEF7E0' }]}>
                   <Feather name="shopping-bag" size={16} color="#B06000" />
                 </View>
-                <Text style={styles.kpiLabel}>Avg Basket</Text>
+                <Text style={styles.kpiLabel}>{t('insights.kpiAvgBasket')}</Text>
                 <Text style={styles.kpiValue}>
                   Rs. {Math.round(stats?.avgTicket || 0).toLocaleString()}
                 </Text>
@@ -462,17 +467,14 @@ export const InsightsScreen: React.FC = () => {
                   ) {
                     setIsLowStockModalOpen(true);
                   } else {
-                    Alert.alert(
-                      'All Stock Normal',
-                      'All product stock counts are above the alert threshold! Great job!'
-                    );
+                    Alert.alert(t('insights.allStockNormal'), t('insights.allStockNormalMsg'));
                   }
                 }}
               >
                 <View style={[styles.kpiIconCircle, { backgroundColor: '#FCE8E6' }]}>
                   <Feather name="alert-triangle" size={16} color={TOKENS.error} />
                 </View>
-                <Text style={styles.kpiLabel}>Stock Alerts</Text>
+                <Text style={styles.kpiLabel}>{t('insights.kpiStockAlerts')}</Text>
                 <Text
                   style={[
                     styles.kpiValue,
@@ -509,9 +511,7 @@ export const InsightsScreen: React.FC = () => {
             {stats?.ordersCount === 0 && (
               <View style={styles.seederContainer}>
                 <Feather name="refresh-cw" size={24} color={TOKENS.muted} />
-                <Text style={styles.seederText}>
-                  No sales invoices recorded for this active branch yet.
-                </Text>
+                <Text style={styles.seederText}>{t('insights.noSalesText')}</Text>
                 <TouchableOpacity
                   style={styles.seederBtn}
                   activeOpacity={0.8}
@@ -527,7 +527,7 @@ export const InsightsScreen: React.FC = () => {
                   >
                     {isSyncing && <ActivityIndicator size="small" color="#fff" />}
                     <Text style={styles.seederBtnText}>
-                      {isSyncing ? 'Syncing...' : 'Sync Database Now'}
+                      {isSyncing ? t('insights.syncingBtn') : t('insights.syncDbNow')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -537,7 +537,7 @@ export const InsightsScreen: React.FC = () => {
             {/* Best Sellers Section */}
             {stats?.bestSellers.length! > 0 && (
               <View style={styles.statsSection}>
-                <Text style={styles.sectionTitle}>🔥 Best Selling Products</Text>
+                <Text style={styles.sectionTitle}>{t('insights.bestSellers')}</Text>
                 <View style={styles.statsCardList}>
                   {stats?.bestSellers.map((item, index) => (
                     <View key={index} style={styles.statListItem}>
@@ -552,7 +552,9 @@ export const InsightsScreen: React.FC = () => {
                         <Text style={styles.rankText}>{index + 1}</Text>
                       </View>
                       <Text style={styles.statItemName}>{item.name}</Text>
-                      <Text style={styles.statItemQty}>{item.quantity} units</Text>
+                      <Text style={styles.statItemQty}>
+                        {item.quantity} {t('insights.units')}
+                      </Text>
                       <Text style={styles.statItemRevenue}>
                         Rs. {item.revenue.toLocaleString()}
                       </Text>
@@ -565,7 +567,7 @@ export const InsightsScreen: React.FC = () => {
             {/* Slow Movers Section */}
             {stats?.slowMovers.length! > 0 && (
               <View style={styles.statsSection}>
-                <Text style={styles.sectionTitle}>⏳ Slow Moving Inventory</Text>
+                <Text style={styles.sectionTitle}>{t('insights.slowMovers')}</Text>
                 <View style={styles.statsCardList}>
                   {stats?.slowMovers.map((item, index) => (
                     <View key={index} style={styles.statListItem}>
@@ -573,7 +575,9 @@ export const InsightsScreen: React.FC = () => {
                         <Text style={[styles.rankText, { color: TOKENS.muted }]}>{index + 1}</Text>
                       </View>
                       <Text style={styles.statItemName}>{item.name}</Text>
-                      <Text style={styles.statItemQty}>{item.quantity} units</Text>
+                      <Text style={styles.statItemQty}>
+                        {item.quantity} {t('insights.units')}
+                      </Text>
                       <Text style={styles.statItemRevenue}>
                         Rs. {item.revenue.toLocaleString()}
                       </Text>
@@ -586,7 +590,7 @@ export const InsightsScreen: React.FC = () => {
             {/* Export Actions Section */}
             {stats?.ordersCount! > 0 && (
               <View style={styles.exportSection}>
-                <Text style={styles.sectionTitle}>📄 Export Business Reports</Text>
+                <Text style={styles.sectionTitle}>{t('insights.exportSection')}</Text>
                 <View style={styles.exportButtonsRow}>
                   <TouchableOpacity
                     style={[styles.exportCardBtn, styles.exportPdfCard]}
@@ -596,8 +600,8 @@ export const InsightsScreen: React.FC = () => {
                     <View style={styles.exportIconBadgePdf}>
                       <Feather name="file-text" size={18} color="#EF4444" />
                     </View>
-                    <Text style={styles.exportPdfTextTitle}>PDF Statement</Text>
-                    <Text style={styles.exportCardSubtitle}>Formatted store summary</Text>
+                    <Text style={styles.exportPdfTextTitle}>{t('insights.exportPdf')}</Text>
+                    <Text style={styles.exportCardSubtitle}>{t('insights.exportPdfSub')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -608,8 +612,8 @@ export const InsightsScreen: React.FC = () => {
                     <View style={styles.exportIconBadgeCsv}>
                       <Feather name="grid" size={18} color="#10B981" />
                     </View>
-                    <Text style={styles.exportCsvTextTitle}>CSV Ledger</Text>
-                    <Text style={styles.exportCardSubtitle}>Spreadsheet ledger data</Text>
+                    <Text style={styles.exportCsvTextTitle}>{t('insights.exportCsv')}</Text>
+                    <Text style={styles.exportCardSubtitle}>{t('insights.exportCsvSub')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -629,13 +633,10 @@ export const InsightsScreen: React.FC = () => {
                   <Feather name="refresh-cw" size={16} color="#fff" style={{ marginRight: 8 }} />
                 )}
                 <Text style={styles.syncDatabaseBtnText}>
-                  {isSyncing ? 'Syncing Database...' : 'Sync Database Now'}
+                  {isSyncing ? t('insights.syncingDatabase') : t('insights.syncDbNow')}
                 </Text>
               </TouchableOpacity>
-              <Text style={styles.syncDatabaseHelpText}>
-                Pull latest transaction reports and product inventory directly from your remote
-                Cloud Storage.
-              </Text>
+              <Text style={styles.syncDatabaseHelpText}>{t('insights.syncDbHelpText')}</Text>
             </View>
           </>
         )}
@@ -678,7 +679,7 @@ export const InsightsScreen: React.FC = () => {
           <View style={styles.exportProgressCard}>
             <ActivityIndicator size="large" color={TOKENS.primary} />
             <Text style={styles.exportProgressText}>
-              Structuring {exportType} statement reports...
+              {t('insights.exportProgressText', { type: exportType || '' })}
             </Text>
           </View>
         </View>
@@ -688,7 +689,7 @@ export const InsightsScreen: React.FC = () => {
       <BottomSheet
         visible={exportResultModal}
         onClose={() => setExportResultModal(false)}
-        title={`${exportType} Export Successful!`}
+        title={t('insights.exportSuccessTitle', { type: exportType || '' })}
       >
         <View style={{ alignItems: 'center', gap: 16 }}>
           <View style={styles.successIconCircle}>
@@ -696,8 +697,7 @@ export const InsightsScreen: React.FC = () => {
           </View>
 
           <Text style={styles.successSubtitle}>
-            Your business statement files for {activeBiz.name} are structured and ready to
-            distribute.
+            {t('insights.exportSuccessSubtitle', { name: activeBiz.name })}
           </Text>
 
           <View style={styles.successActions}>
@@ -707,11 +707,11 @@ export const InsightsScreen: React.FC = () => {
               onPress={handleShare}
             >
               <Feather name="share-2" size={16} color="#fff" style={{ marginRight: 6 }} />
-              <Text style={styles.shareReportBtnText}>Share & Save Statement</Text>
+              <Text style={styles.shareReportBtnText}>{t('insights.shareStatement')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.dismissBtn} onPress={() => setExportResultModal(false)}>
-              <Text style={styles.dismissBtnText}>Dismiss</Text>
+              <Text style={styles.dismissBtnText}>{t('insights.dismiss')}</Text>
             </TouchableOpacity>
           </View>
         </View>

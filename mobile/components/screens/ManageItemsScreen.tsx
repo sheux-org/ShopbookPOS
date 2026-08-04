@@ -3,7 +3,7 @@ import { SearchInput } from '../common/SearchInput';
 import { BarcodeScannerModal } from '../common/BarcodeScannerModal';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,10 +14,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Animated,
-  Pressable,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
 import { usePermission } from '../../hooks/usePermissionHandler';
@@ -33,14 +32,17 @@ import {
 import { deleteUploadThingFile, uploadToUploadThing } from '../../services/uploadQueue';
 import { ProductImage } from '../common/ProductImage';
 import { ScreenWrapper } from '../common/ScreenWrapper';
+import { ImagePickerBottomSheet } from '../common/ImagePickerBottomSheet';
 import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { getBusinessTypeConfig, getCategoryLabel } from '../../utils/businessTypeConfig';
 import { hapticFeedback } from '@/utils/haptics';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export const ManageItemsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestCameraAccess } = usePermission();
+  const { t } = useTranslation();
   const isPremium = useSettingsStore((s) => s.isPremium);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
@@ -118,23 +120,9 @@ export const ManageItemsScreen: React.FC = () => {
 
   // Image picker bottom sheet state
   const [imgSheetVisible, setImgSheetVisible] = useState(false);
-  const imgSheetAnim = useRef(new Animated.Value(300)).current;
 
   const openImgSheet = () => {
     setImgSheetVisible(true);
-    Animated.spring(imgSheetAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      bounciness: 4,
-    }).start();
-  };
-
-  const closeImgSheet = () => {
-    Animated.timing(imgSheetAnim, {
-      toValue: 300,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => setImgSheetVisible(false));
   };
 
   const triggerToast = (msg: string) => {
@@ -219,10 +207,8 @@ export const ManageItemsScreen: React.FC = () => {
 
   // Image handling inside editing modal
   const handlePickImage = async (source: 'camera' | 'gallery') => {
-    closeImgSheet();
-
     // Small delay to let the sheet close before opening picker
-    await new Promise((r) => setTimeout(r, 280));
+    await new Promise((r) => setTimeout(r, 200));
 
     let localUri: string | null = null;
 
@@ -393,7 +379,9 @@ export const ManageItemsScreen: React.FC = () => {
 
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitle}>Manage Items</Text>
-          <Text style={styles.headerSubtitle}>{productsList.length} items registered</Text>
+          <Text style={styles.headerSubtitle}>
+            {t('stocks.itemsCount', { count: String(productsList.length) })}
+          </Text>
         </View>
       </View>
 
@@ -405,7 +393,7 @@ export const ManageItemsScreen: React.FC = () => {
             setSearchQuery(text);
             if (scannedBarcode) setScannedBarcode(null);
           }}
-          placeholder="Search items by name, code or category..."
+          placeholder={t('common.searchPlaceholder')}
           onScanPress={triggerBarcodeScanner}
           onClear={() => {
             setScannedBarcode(null);
@@ -576,320 +564,318 @@ export const ManageItemsScreen: React.FC = () => {
         visible={editModalVisible}
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <ScreenWrapper withKeyboard style={styles.modalContainer}>
-          {/* Modal Header */}
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              style={styles.backButton}
-              activeOpacity={0.7}
-              onPress={() => setEditModalVisible(false)}
+        <BottomSheetModalProvider>
+          <ScreenWrapper withKeyboard style={styles.modalContainer}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                style={styles.backButton}
+                activeOpacity={0.7}
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Feather name="x" size={22} color={TOKENS.dark} />
+              </TouchableOpacity>
+
+              <View style={styles.headerTitleWrapper}>
+                <Text style={styles.headerTitle}>Edit Product</Text>
+                <Text style={styles.headerSubtitle}>{t('catalog.editProductSub')}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalSaveBtnHeader}
+                activeOpacity={0.7}
+                onPress={handleUpdateProduct}
+              >
+                <Text style={styles.modalSaveTextHeader}>{t('common.save')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal Form ScrollView */}
+            <ScrollView
+              style={styles.modalFormScroll}
+              contentContainerStyle={[styles.modalFormContent, { paddingBottom: 60 }]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
-              <Feather name="x" size={22} color={TOKENS.dark} />
-            </TouchableOpacity>
+              {/* Field: Name */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>{t('catalog.productName')} *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="e.g. Anchor Milk Powder 400g"
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholderTextColor="#A0AEC0"
+                />
+              </View>
 
-            <View style={styles.headerTitleWrapper}>
-              <Text style={styles.headerTitle}>Edit Product</Text>
-              <Text style={styles.headerSubtitle}>Modify details and save changes</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.modalSaveBtnHeader}
-              activeOpacity={0.7}
-              onPress={handleUpdateProduct}
-            >
-              <Text style={styles.modalSaveTextHeader}>Save</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Modal Form ScrollView */}
-          <ScrollView
-            style={styles.modalFormScroll}
-            contentContainerStyle={[styles.modalFormContent, { paddingBottom: 60 }]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Field: Name */}
-            <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Product Name *</Text>
-              <TextInput
-                style={styles.formInput}
-                placeholder="e.g. Anchor Milk Powder 400g"
-                value={editName}
-                onChangeText={setEditName}
-                placeholderTextColor="#A0AEC0"
-              />
-            </View>
-
-            {/* Field: Category Selector */}
-            <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Category</Text>
-              <View style={styles.chipsSelector}>
-                {(() => {
-                  const categoriesToRender = [...CATEGORIES_LIST];
-                  if (
-                    editCategory &&
-                    !categoriesToRender.some((c) => c.toLowerCase() === editCategory.toLowerCase())
-                  ) {
-                    categoriesToRender.push(editCategory);
-                  }
-                  return categoriesToRender.map((cat) => {
-                    const isSelected = editCategory.toLowerCase() === cat.toLowerCase();
-                    return (
-                      <TouchableOpacity
-                        key={cat}
-                        style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                        onPress={() => setEditCategory(cat)}
-                      >
-                        <Text
-                          style={[
-                            styles.selectorChipText,
-                            isSelected && styles.selectorChipTextActive,
-                          ]}
+              {/* Field: Category Selector */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>{t('catalog.category')}</Text>
+                <View style={styles.chipsSelector}>
+                  {(() => {
+                    const categoriesToRender = [...CATEGORIES_LIST];
+                    if (
+                      editCategory &&
+                      !categoriesToRender.some(
+                        (c) => c.toLowerCase() === editCategory.toLowerCase()
+                      )
+                    ) {
+                      categoriesToRender.push(editCategory);
+                    }
+                    return categoriesToRender.map((cat) => {
+                      const isSelected = editCategory.toLowerCase() === cat.toLowerCase();
+                      return (
+                        <TouchableOpacity
+                          key={cat}
+                          style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
+                          onPress={() => setEditCategory(cat)}
                         >
-                          {getCategoryLabel(cat, activeBiz?.category)}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  });
-                })()}
-              </View>
-            </View>
-
-            {/* Double Row: Price & Cost Price */}
-            <View style={styles.inputGridRow}>
-              <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Selling Price (Rs.) *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="0.00"
-                  value={editSalesPrice}
-                  onChangeText={setEditSalesPrice}
-                  keyboardType="numeric"
-                  placeholderTextColor="#A0AEC0"
-                />
-              </View>
-
-              <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Cost Price (Rs.)</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="0.00"
-                  value={editCostPrice}
-                  onChangeText={setEditCostPrice}
-                  keyboardType="numeric"
-                  placeholderTextColor="#A0AEC0"
-                />
-              </View>
-            </View>
-
-            {/* Double Row: Stock & Low Alert Level */}
-            <View style={styles.inputGridRow}>
-              <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Stock Quantity *</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 50"
-                  value={editStockCount}
-                  onChangeText={setEditStockCount}
-                  keyboardType="numeric"
-                  placeholderTextColor="#A0AEC0"
-                />
-              </View>
-
-              <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Low Alert Level</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 5"
-                  value={editLowStock}
-                  onChangeText={setEditLowStock}
-                  keyboardType="numeric"
-                  placeholderTextColor="#A0AEC0"
-                />
-              </View>
-            </View>
-
-            {/* Field: Unit Type */}
-            <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Unit Type</Text>
-              <View style={styles.chipsSelector}>
-                {(() => {
-                  const unitsToRender = [...UNIT_TYPES];
-                  if (
-                    editUnitType &&
-                    !unitsToRender.some((u) => u.toLowerCase() === editUnitType.toLowerCase())
-                  ) {
-                    unitsToRender.push(editUnitType);
-                  }
-                  return unitsToRender.map((unit) => {
-                    const isSelected = editUnitType.toLowerCase() === unit.toLowerCase();
-                    return (
-                      <TouchableOpacity
-                        key={unit}
-                        style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                        onPress={() => setEditUnitType(unit)}
-                      >
-                        <Text
-                          style={[
-                            styles.selectorChipText,
-                            isSelected && styles.selectorChipTextActive,
-                          ]}
-                        >
-                          {unit}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  });
-                })()}
-              </View>
-            </View>
-
-            {/* Identification row */}
-            <View style={styles.inputGridRow}>
-              <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Quick Code</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 101"
-                  value={editQuickCode}
-                  onChangeText={setEditQuickCode}
-                  keyboardType="numeric"
-                  maxLength={6}
-                  placeholderTextColor="#A0AEC0"
-                />
-              </View>
-
-              <View style={[styles.fieldRow, { flex: 1 }]}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={styles.fieldLabel}>Barcode</Text>
-                  <TouchableOpacity onPress={handleAutoGenerateEditBarcode} activeOpacity={0.7}>
-                    <Text style={{ fontSize: 11, fontWeight: 'bold', color: TOKENS.primary }}>
-                      Auto-Gen
-                    </Text>
-                  </TouchableOpacity>
+                          <Text
+                            style={[
+                              styles.selectorChipText,
+                              isSelected && styles.selectorChipTextActive,
+                            ]}
+                          >
+                            {getCategoryLabel(cat, activeBiz?.category)}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    });
+                  })()}
                 </View>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="e.g. 4792002340..."
-                  value={editBarcode}
-                  onChangeText={setEditBarcode}
-                  keyboardType="numeric"
-                  placeholderTextColor="#A0AEC0"
-                />
               </View>
-            </View>
 
-            {/* 📸 Brand-identical dashed centered product photo picker 📸 */}
-            <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Product Image</Text>
-              <Text style={styles.fieldHelpText}>
-                Tap preview to capture from camera or browse files
-              </Text>
+              {/* Double Row: Price & Cost Price */}
+              <View style={styles.inputGridRow}>
+                <View style={[styles.fieldRow, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>{t('catalog.price')} (Rs.) *</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="0.00"
+                    value={editSalesPrice}
+                    onChangeText={setEditSalesPrice}
+                    keyboardType="numeric"
+                    placeholderTextColor="#A0AEC0"
+                  />
+                </View>
 
-              <View style={styles.imgPickerPanel}>
-                {editImage ? (
-                  <View style={styles.imgContainerWrap}>
-                    <ProductImage
-                      icon={editImage}
-                      category={editCategory}
-                      size={160}
-                      style={styles.premiumImagePreview}
-                    />
+                <View style={[styles.fieldRow, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>{t('catalog.costPrice')} (Rs.)</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="0.00"
+                    value={editCostPrice}
+                    onChangeText={setEditCostPrice}
+                    keyboardType="numeric"
+                    placeholderTextColor="#A0AEC0"
+                  />
+                </View>
+              </View>
 
-                    {/* Change Button Overlay */}
-                    {!editImageUploading && (
+              {/* Double Row: Stock & Low Alert Level */}
+              <View style={styles.inputGridRow}>
+                <View style={[styles.fieldRow, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>{t('catalog.stockQuantity')} *</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. 50"
+                    value={editStockCount}
+                    onChangeText={setEditStockCount}
+                    keyboardType="numeric"
+                    placeholderTextColor="#A0AEC0"
+                  />
+                </View>
+
+                <View style={[styles.fieldRow, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>{t('catalog.lowStockAlert')}</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. 5"
+                    value={editLowStock}
+                    onChangeText={setEditLowStock}
+                    keyboardType="numeric"
+                    placeholderTextColor="#A0AEC0"
+                  />
+                </View>
+              </View>
+
+              {/* Field: Unit Type */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>{t('catalog.unitType')}</Text>
+                <View style={styles.chipsSelector}>
+                  {(() => {
+                    const unitsToRender = [...UNIT_TYPES];
+                    if (
+                      editUnitType &&
+                      !unitsToRender.some((u) => u.toLowerCase() === editUnitType.toLowerCase())
+                    ) {
+                      unitsToRender.push(editUnitType);
+                    }
+                    return unitsToRender.map((unit) => {
+                      const isSelected = editUnitType.toLowerCase() === unit.toLowerCase();
+                      return (
+                        <TouchableOpacity
+                          key={unit}
+                          style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
+                          onPress={() => setEditUnitType(unit)}
+                        >
+                          <Text
+                            style={[
+                              styles.selectorChipText,
+                              isSelected && styles.selectorChipTextActive,
+                            ]}
+                          >
+                            {unit}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    });
+                  })()}
+                </View>
+              </View>
+
+              {/* Identification row */}
+              <View style={styles.inputGridRow}>
+                <View style={[styles.fieldRow, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>{t('catalog.quickCode')}</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. 101"
+                    value={editQuickCode}
+                    onChangeText={setEditQuickCode}
+                    keyboardType="numeric"
+                    maxLength={6}
+                    placeholderTextColor="#A0AEC0"
+                  />
+                </View>
+
+                <View style={[styles.fieldRow, { flex: 1 }]}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={styles.fieldLabel}>{t('catalog.barcode')}</Text>
+                    <TouchableOpacity onPress={handleAutoGenerateEditBarcode} activeOpacity={0.7}>
+                      <Text style={{ fontSize: 11, fontWeight: 'bold', color: TOKENS.primary }}>
+                        {t('catalog.autoGen')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="e.g. 4792002340..."
+                    value={editBarcode}
+                    onChangeText={setEditBarcode}
+                    keyboardType="numeric"
+                    placeholderTextColor="#A0AEC0"
+                  />
+                </View>
+              </View>
+
+              {/* 📸 Brand-identical dashed centered product photo picker 📸 */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>{t('catalog.productImage')}</Text>
+                <Text style={styles.fieldHelpText}>{t('catalog.uploadImageHint')}</Text>
+
+                <View style={styles.imgPickerPanel}>
+                  {editImage ? (
+                    <View style={styles.imgContainerWrap}>
+                      <ProductImage
+                        icon={editImage}
+                        category={editCategory}
+                        size={160}
+                        style={styles.premiumImagePreview}
+                      />
+
+                      {/* Change Button Overlay */}
+                      {!editImageUploading && (
+                        <TouchableOpacity
+                          style={styles.changeImageOverlay}
+                          activeOpacity={0.8}
+                          onPress={() => {
+                            hapticFeedback.impactMedium();
+                            openImgSheet();
+                          }}
+                        >
+                          <View style={styles.changeImageBadge}>
+                            <Feather name="camera" size={14} color="#FFFFFF" />
+                            <Text style={styles.changeImageText}>{t('catalog.changeImage')}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Delete Floating Pill */}
+                      {!editImageUploading && (
+                        <TouchableOpacity
+                          style={styles.floatingRemoveBtn}
+                          activeOpacity={0.8}
+                          onPress={handleRemoveEditImage}
+                        >
+                          <Feather name="trash-2" size={14} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Loading overlay */}
+                      {editImageUploading && (
+                        <View style={styles.imgUploadingOverlay}>
+                          <ActivityIndicator
+                            size="small"
+                            color="#FFFFFF"
+                            style={{ marginBottom: 6 }}
+                          />
+                          <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                        </View>
+                      )}
+                    </View>
+                  ) : (
+                    <View style={{ position: 'relative' }}>
                       <TouchableOpacity
-                        style={styles.changeImageOverlay}
-                        activeOpacity={0.8}
+                        style={styles.premiumUploadArea}
+                        activeOpacity={0.7}
                         onPress={() => {
                           hapticFeedback.impactMedium();
                           openImgSheet();
                         }}
+                        disabled={editImageUploading}
                       >
-                        <View style={styles.changeImageBadge}>
-                          <Feather name="camera" size={14} color="#FFFFFF" />
-                          <Text style={styles.changeImageText}>Change Image</Text>
+                        <View style={styles.uploadIconCircle}>
+                          <Ionicons name="cloud-upload-outline" size={24} color={TOKENS.primary} />
                         </View>
+                        <Text style={styles.uploadAreaTitle}>Upload Product Image</Text>
+                        <Text style={styles.uploadAreaSubtitle}>
+                          Tap to take a photo or select from gallery
+                        </Text>
                       </TouchableOpacity>
-                    )}
 
-                    {/* Delete Floating Pill */}
-                    {!editImageUploading && (
-                      <TouchableOpacity
-                        style={styles.floatingRemoveBtn}
-                        activeOpacity={0.8}
-                        onPress={handleRemoveEditImage}
-                      >
-                        <Feather name="trash-2" size={14} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    )}
-
-                    {/* Loading overlay */}
-                    {editImageUploading && (
-                      <View style={styles.imgUploadingOverlay}>
-                        <ActivityIndicator
-                          size="small"
-                          color="#FFFFFF"
-                          style={{ marginBottom: 6 }}
-                        />
-                        <Text style={styles.imgUploadingText}>Uploading image…</Text>
-                      </View>
-                    )}
-                  </View>
-                ) : (
-                  <View style={{ position: 'relative' }}>
-                    <TouchableOpacity
-                      style={styles.premiumUploadArea}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        hapticFeedback.impactMedium();
-                        openImgSheet();
-                      }}
-                      disabled={editImageUploading}
-                    >
-                      <View style={styles.uploadIconCircle}>
-                        <Ionicons name="cloud-upload-outline" size={24} color={TOKENS.primary} />
-                      </View>
-                      <Text style={styles.uploadAreaTitle}>Upload Product Image</Text>
-                      <Text style={styles.uploadAreaSubtitle}>
-                        Tap to take a photo or select from gallery
-                      </Text>
-                    </TouchableOpacity>
-
-                    {/* Loading overlay for empty image state */}
-                    {editImageUploading && (
-                      <View style={[styles.imgUploadingOverlay, { borderRadius: 12 }]}>
-                        <ActivityIndicator
-                          size="small"
-                          color="#FFFFFF"
-                          style={{ marginBottom: 6 }}
-                        />
-                        <Text style={styles.imgUploadingText}>Uploading image…</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
+                      {/* Loading overlay for empty image state */}
+                      {editImageUploading && (
+                        <View style={[styles.imgUploadingOverlay, { borderRadius: 12 }]}>
+                          <ActivityIndicator
+                            size="small"
+                            color="#FFFFFF"
+                            style={{ marginBottom: 6 }}
+                          />
+                          <Text style={styles.imgUploadingText}>Uploading image…</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
               </View>
-            </View>
-          </ScrollView>
+            </ScrollView>
 
-          {/* Fixed Bottom Footer for Update Button */}
-          <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-            <TouchableOpacity
-              style={styles.saveSubmitBtn}
-              activeOpacity={0.85}
-              onPress={handleUpdateProduct}
-            >
-              <Text style={styles.saveSubmitBtnText}>Save Changes</Text>
-            </TouchableOpacity>
-          </View>
-        </ScreenWrapper>
+            {/* ── Image Picker Bottom Sheet inside Modal to stack on top ── */}
+            <ImagePickerBottomSheet
+              visible={imgSheetVisible}
+              onClose={() => setImgSheetVisible(false)}
+              onSelectSource={handlePickImage}
+            />
+          </ScreenWrapper>
+        </BottomSheetModalProvider>
       </Modal>
 
       {/* SIMULATED HIGH-FIDELITY BARCODE SCANNER OVERLAY MODAL */}
@@ -903,81 +889,6 @@ export const ManageItemsScreen: React.FC = () => {
           await handleSelectProductByBarcode(data);
         }}
       />
-
-      {/* ── Image Picker Bottom Sheet ── */}
-      <Modal
-        visible={imgSheetVisible}
-        transparent
-        animationType="none"
-        statusBarTranslucent
-        onRequestClose={closeImgSheet}
-      >
-        {/* Scrim — tap to dismiss */}
-        <Pressable style={styles.sheetScrim} onPress={closeImgSheet}>
-          <Animated.View
-            style={[styles.sheetContainer, { transform: [{ translateY: imgSheetAnim }] }]}
-          >
-            {/* Stop tap-through on the sheet itself */}
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              {/* Drag handle */}
-              <View style={styles.sheetHandle} />
-
-              <Text style={styles.sheetTitle}>Product Photo</Text>
-              <Text style={styles.sheetSubtitle}>Choose how to add an image for this product</Text>
-
-              {/* Camera option */}
-              <TouchableOpacity
-                style={styles.sheetOption}
-                activeOpacity={0.75}
-                onPress={() => {
-                  hapticFeedback.impactMedium();
-                  handlePickImage('camera');
-                }}
-              >
-                <View style={[styles.sheetOptionIcon, { backgroundColor: TOKENS.lightBlue }]}>
-                  <Feather name="camera" size={22} color={TOKENS.primary} />
-                </View>
-                <View style={styles.sheetOptionText}>
-                  <Text style={styles.sheetOptionTitle}>Camera</Text>
-                  <Text style={styles.sheetOptionSub}>Take a new photo right now</Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-              </TouchableOpacity>
-
-              {/* Gallery option */}
-              <TouchableOpacity
-                style={styles.sheetOption}
-                activeOpacity={0.75}
-                onPress={() => {
-                  hapticFeedback.impactMedium();
-                  handlePickImage('gallery');
-                }}
-              >
-                <View style={[styles.sheetOptionIcon, { backgroundColor: '#F0FDF4' }]}>
-                  <Feather name="image" size={22} color="#16A34A" />
-                </View>
-                <View style={styles.sheetOptionText}>
-                  <Text style={styles.sheetOptionTitle}>Photo Library</Text>
-                  <Text style={styles.sheetOptionSub}>Pick from your gallery</Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-              </TouchableOpacity>
-
-              {/* Cancel */}
-              <TouchableOpacity
-                style={styles.sheetCancelBtn}
-                activeOpacity={0.8}
-                onPress={() => {
-                  hapticFeedback.selection();
-                  closeImgSheet();
-                }}
-              >
-                <Text style={styles.sheetCancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </Pressable>
-          </Animated.View>
-        </Pressable>
-      </Modal>
 
       <PremiumUpgradeModal
         visible={premiumModalVisible}

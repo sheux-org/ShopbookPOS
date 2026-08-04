@@ -13,6 +13,7 @@ import { TOKENS } from '../../../../constants/tokens';
 import { ReportType } from '../../../../utils/reportTemplates';
 import { styles } from '../styles';
 import { hapticFeedback } from '@/utils/haptics';
+import { useTranslation } from '../../../../hooks/useTranslation';
 
 interface CsvLedgerModalProps {
   visible: boolean;
@@ -22,81 +23,6 @@ interface CsvLedgerModalProps {
   onGenerateReport: (type: ReportType) => void;
 }
 
-const REPORT_OPTIONS = [
-  {
-    id: 'best_sellers',
-    title: 'Best Selling Products',
-    desc: 'Sales ranking, units sold, and revenue shares.',
-    icon: 'trending-up',
-    color: '#10B981',
-    bgColor: '#E8FDF0',
-  },
-  {
-    id: 'slow_movers',
-    title: 'Slow Moving Inventory',
-    desc: 'Identify stagnant stock items with low sales.',
-    icon: 'clock',
-    color: '#F59E0B',
-    bgColor: '#FEF7E0',
-  },
-  {
-    id: 'orders_ledger',
-    title: 'Orders History Ledger',
-    desc: 'Chronological transaction database logs.',
-    icon: 'list',
-    color: '#3B82F6',
-    bgColor: '#EFF6FF',
-  },
-  {
-    id: 'ledger_cash',
-    title: 'Cash Payment Settlement Ledger',
-    desc: 'Audit cash payments and register cash settlements.',
-    icon: 'dollar-sign',
-    color: '#059669',
-    bgColor: '#D1FAE5',
-  },
-  {
-    id: 'ledger_card',
-    title: 'Credit / Debit Card Settlements',
-    desc: 'Card transactions and card terminal settlement audit.',
-    icon: 'credit-card',
-    color: '#6366F1',
-    bgColor: '#EEF2FF',
-  },
-  {
-    id: 'ledger_bank',
-    title: 'Bank Transfer & QR Audit',
-    desc: 'Direct bank transfers, online payments, and QR settlements.',
-    icon: 'briefcase',
-    color: '#0284C7',
-    bgColor: '#E0F2FE',
-  },
-  {
-    id: 'item_sales',
-    title: 'Item-Wise Sales Summary',
-    desc: 'Total quantities and revenues per catalog product.',
-    icon: 'package',
-    color: '#7C3AED',
-    bgColor: '#EDE9FE',
-  },
-  {
-    id: 'branch_performance',
-    title: 'Branch Audit & Low Stock',
-    desc: 'Cashier checkout ranks and critical stock alerts.',
-    icon: 'activity',
-    color: '#EF4444',
-    bgColor: '#FCE8E6',
-  },
-  {
-    id: 'invoice_sales',
-    title: 'Invoice-by-Invoice Audit',
-    desc: 'Detailed line item breakdown for every issued invoice.',
-    icon: 'file-text',
-    color: '#D97706',
-    bgColor: '#FEF3C7',
-  },
-];
-
 export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
   visible,
   onClose,
@@ -105,6 +31,82 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
   onGenerateReport,
 }) => {
   const { height: windowHeight } = useWindowDimensions();
+  const { t } = useTranslation();
+
+  const REPORT_OPTIONS = [
+    {
+      id: 'best_sellers',
+      title: t('insights.reportBestSellers'),
+      desc: t('insights.reportBestSellersSub'),
+      icon: 'trending-up',
+      color: '#10B981',
+      bgColor: '#E8FDF0',
+    },
+    {
+      id: 'slow_movers',
+      title: t('insights.reportSlowMovers'),
+      desc: t('insights.reportSlowMoversSub'),
+      icon: 'clock',
+      color: '#F59E0B',
+      bgColor: '#FEF7E0',
+    },
+    {
+      id: 'orders_ledger',
+      title: t('insights.reportOrdersLedger'),
+      desc: t('insights.reportOrdersLedgerSub'),
+      icon: 'list',
+      color: '#3B82F6',
+      bgColor: '#EFF6FF',
+    },
+    {
+      id: 'ledger_cash',
+      title: t('insights.reportCashLedger'),
+      desc: t('insights.reportCashLedgerSub'),
+      icon: 'dollar-sign',
+      color: '#059669',
+      bgColor: '#D1FAE5',
+    },
+    {
+      id: 'ledger_card',
+      title: t('insights.reportCardLedger'),
+      desc: t('insights.reportCardLedgerSub'),
+      icon: 'credit-card',
+      color: '#6366F1',
+      bgColor: '#EEF2FF',
+    },
+    {
+      id: 'ledger_bank',
+      title: t('insights.reportBankLedger'),
+      desc: t('insights.reportBankLedgerSub'),
+      icon: 'briefcase',
+      color: '#0284C7',
+      bgColor: '#E0F2FE',
+    },
+    {
+      id: 'item_sales',
+      title: t('insights.reportItemSales'),
+      desc: t('insights.reportItemSalesSub'),
+      icon: 'package',
+      color: '#7C3AED',
+      bgColor: '#EDE9FE',
+    },
+    {
+      id: 'branch_performance',
+      title: t('insights.reportBranchAudit'),
+      desc: t('insights.reportBranchAuditSub'),
+      icon: 'activity',
+      color: '#EF4444',
+      bgColor: '#FCE8E6',
+    },
+    {
+      id: 'invoice_sales',
+      title: t('insights.reportInvoiceAudit'),
+      desc: t('insights.reportInvoiceAuditSub'),
+      icon: 'file-text',
+      color: '#D97706',
+      bgColor: '#FEF3C7',
+    },
+  ];
 
   return (
     <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
@@ -127,11 +129,9 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
           <View style={styles.premiumModalHeader}>
             <View style={styles.pdfModalTitleRow}>
               <Feather name="download" size={20} color={TOKENS.primary} />
-              <Text style={styles.pdfModalTitle}>Export CSV Spreadsheet</Text>
+              <Text style={styles.pdfModalTitle}>{t('insights.csvModalTitle')}</Text>
             </View>
-            <Text style={styles.pdfModalDescription}>
-              Export raw dataset logs in CSV table format to analyze in Microsoft Excel.
-            </Text>
+            <Text style={styles.pdfModalDescription}>{t('insights.csvModalDesc')}</Text>
           </View>
 
           <ScrollView
@@ -178,11 +178,11 @@ export const CsvLedgerModal: React.FC<CsvLedgerModalProps> = ({
               }}
             >
               <Feather name="grid" size={16} color="#FFFFFF" />
-              <Text style={styles.pdfGenerateBtnText}>Generate CSV Report</Text>
+              <Text style={styles.pdfGenerateBtnText}>{t('insights.generateCsvBtn')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.pdfCancelBtn} activeOpacity={0.8} onPress={onClose}>
-              <Text style={styles.pdfCancelBtnText}>Cancel</Text>
+              <Text style={styles.pdfCancelBtnText}>{t('insights.cancelBtn')}</Text>
             </TouchableOpacity>
           </View>
         </View>

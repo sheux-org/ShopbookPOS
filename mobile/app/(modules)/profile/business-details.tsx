@@ -25,6 +25,7 @@ import { BusinessAvatar } from '../../../components/common/BusinessAvatar';
 import { useSettingsStore } from '../../../stores/useSettingsStore';
 import { hapticFeedback } from '../../../utils/haptics';
 import { useProductCount } from '../../../hooks/useProducts';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const PRESET_EMOJIS = ['🛒', '🛍️', '🥛', '👕', '💊', '☕', '🍔', '📦', '🌾', '🏢', '🛠️', '📚'];
 
@@ -44,6 +45,7 @@ export default function BusinessDetailsRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { canPerform } = useUserPermissions();
+  const { t } = useTranslation();
 
   const activeBusiness = useBusinessStore((state) => state.activeBusiness);
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
@@ -201,16 +203,13 @@ export default function BusinessDetailsRoute() {
   const handleSaveChanges = () => {
     if (!canPerform('update', 'settings')) {
       hapticFeedback.notificationError();
-      Alert.alert(
-        'Access Denied',
-        'Your profile role is not authorized to edit business settings.'
-      );
+      Alert.alert(t('common.accessDenied'), t('businessDetails.toastAccessDenied'));
       return;
     }
 
     if (!name.trim() || !category.trim() || !address.trim() || !phone.trim()) {
       hapticFeedback.notificationWarning();
-      Alert.alert('Required Fields', 'All business profile fields must be filled out.');
+      Alert.alert(t('common.requiredFields'), t('businessDetails.toastRequiredFields'));
       return;
     }
 
@@ -227,11 +226,11 @@ export default function BusinessDetailsRoute() {
         onSuccess: () => {
           hapticFeedback.notificationSuccess();
           setIsEditing(false);
-          triggerToast('Store Profile updated successfully! 🚀');
+          triggerToast(t('businessDetails.toastSuccess'));
         },
         onError: () => {
           hapticFeedback.notificationError();
-          Alert.alert('Update Error', 'Failed to persist business profile changes.');
+          Alert.alert(t('common.error'), t('businessDetails.toastUpdateError'));
         },
       }
     );
@@ -284,7 +283,9 @@ export default function BusinessDetailsRoute() {
                   setIsEditing(!isEditing);
                 }}
               >
-                <Text style={styles.editToggleText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
+                <Text style={styles.editToggleText}>
+                  {isEditing ? t('businessDetails.cancel') : t('businessDetails.edit')}
+                </Text>
               </TouchableOpacity>
             );
           })()}
@@ -325,7 +326,9 @@ export default function BusinessDetailsRoute() {
               {phone}
             </Text>
             <Text style={styles.storeStatus}>
-              {isEditing ? 'Tap icon to change profile image 📸' : '🛡️ Admin Control Terminal'}
+              {isEditing
+                ? t('businessDetails.changeImageHint')
+                : t('businessDetails.adminControlTerminal')}
             </Text>
           </View>
 
@@ -368,7 +371,7 @@ export default function BusinessDetailsRoute() {
 
           {/* Info Group */}
           <View style={styles.infoGroup}>
-            <Text style={styles.groupLabel}>Administrative Profile</Text>
+            <Text style={styles.groupLabel}>{t('businessDetails.adminProfileHeader')}</Text>
 
             {/* Business Name Field */}
             <View
@@ -377,13 +380,13 @@ export default function BusinessDetailsRoute() {
                 isEditing && { borderBottomWidth: 0, paddingBottom: 0, gap: 2 },
               ]}
             >
-              <Text style={styles.infoLabel}>Business Name</Text>
+              <Text style={styles.infoLabel}>{t('businessDetails.bizName')}</Text>
               {isEditing ? (
                 <TextInput
                   style={[styles.inputField, { paddingVertical: 0 }]}
                   value={name}
                   onChangeText={setName}
-                  placeholder="Enter Business Name"
+                  placeholder={t('businessDetails.placeholderName')}
                   placeholderTextColor={TOKENS.muted}
                 />
               ) : (
@@ -399,7 +402,7 @@ export default function BusinessDetailsRoute() {
                 isEditing && { borderBottomWidth: 0, paddingBottom: 0, gap: 2 },
               ]}
             >
-              <Text style={styles.infoLabel}>Business Type / Category</Text>
+              <Text style={styles.infoLabel}>{t('businessDetails.bizType')}</Text>
               {isEditing ? (
                 <View style={{ width: '100%', position: 'relative' }}>
                   <TouchableOpacity
@@ -446,7 +449,7 @@ export default function BusinessDetailsRoute() {
                           fontWeight: '500',
                         }}
                       >
-                        {category || 'Select business type'}
+                        {category || t('businessDetails.placeholderType')}
                       </Text>
                     </View>
                     <Feather
@@ -460,8 +463,7 @@ export default function BusinessDetailsRoute() {
                     <Text
                       style={{ fontSize: 10, color: TOKENS.muted, marginTop: 4, lineHeight: 14 }}
                     >
-                      Business type cannot be changed because items have already been created in the
-                      catalog.
+                      {t('businessDetails.categoryLockMsg')}
                     </Text>
                   )}
 
@@ -534,13 +536,13 @@ export default function BusinessDetailsRoute() {
                 isEditing && { borderBottomWidth: 0, paddingBottom: 0, gap: 2 },
               ]}
             >
-              <Text style={styles.infoLabel}>Address</Text>
+              <Text style={styles.infoLabel}>{t('businessDetails.address')}</Text>
               {isEditing ? (
                 <TextInput
                   style={[styles.inputField, { paddingVertical: 0 }]}
                   value={address}
                   onChangeText={setAddress}
-                  placeholder="Enter Address"
+                  placeholder={t('businessDetails.placeholderAddress')}
                   placeholderTextColor={TOKENS.muted}
                 />
               ) : (
@@ -550,9 +552,9 @@ export default function BusinessDetailsRoute() {
 
             {/* Static details showing admin privileges */}
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Admin Privilege Status</Text>
+              <Text style={styles.infoLabel}>{t('businessDetails.adminPrivilegeStatus')}</Text>
               <Text style={[styles.infoVal, { color: TOKENS.success }]}>
-                FULL READ-WRITE PRIVILEGES
+                {t('businessDetails.fullReadWrite')}
               </Text>
             </View>
           </View>
@@ -571,7 +573,7 @@ export default function BusinessDetailsRoute() {
               onPress={handleSaveChanges}
             >
               <Feather name="check" size={16} color={TOKENS.card} />
-              <Text style={styles.saveButtonText}>Update Details</Text>
+              <Text style={styles.saveButtonText}>{t('businessDetails.updateDetails')}</Text>
             </TouchableOpacity>
           </View>
         )}

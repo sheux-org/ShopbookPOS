@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { BottomSheet } from '../../../common/BottomSheet';
 import { styles } from '../styles';
+import { useTranslation } from '../../../../hooks/useTranslation';
 
 interface LowStockBottomSheetProps {
   visible: boolean;
@@ -20,12 +21,11 @@ export const LowStockBottomSheet: React.FC<LowStockBottomSheetProps> = ({
   const hasOutOfStock = outOfStockItems && outOfStockItems.length > 0;
   const hasLowStock = lowStockItems && lowStockItems.length > 0;
   const isEmpty = !hasOutOfStock && !hasLowStock;
+  const { t } = useTranslation();
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title="Inventory Stock Alerts">
-      <Text style={styles.lowStockModalSubtitle}>
-        Review items that are completely out of stock or running low on inventory:
-      </Text>
+    <BottomSheet visible={visible} onClose={onClose} title={t('insights.lowStockTitle')}>
+      <Text style={styles.lowStockModalSubtitle}>{t('insights.lowStockSubtitle')}</Text>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -38,7 +38,7 @@ export const LowStockBottomSheet: React.FC<LowStockBottomSheetProps> = ({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Feather name="alert-circle" size={14} color="#EF4444" />
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#EF4444' }}>
-                Out of Stock ({outOfStockItems.length})
+                {t('insights.outOfStockHeader', { count: String(outOfStockItems.length) })}
               </Text>
             </View>
             {outOfStockItems.map((item: any) => (
@@ -57,8 +57,12 @@ export const LowStockBottomSheet: React.FC<LowStockBottomSheetProps> = ({
                   <Text style={styles.lowStockItemSku}>SKU: {item.sku}</Text>
                 </View>
                 <View style={[styles.lowStockCountBadge, { backgroundColor: '#EF4444' }]}>
-                  <Text style={[styles.lowStockCountText, { color: '#FFFFFF' }]}>0 Left</Text>
-                  <Text style={[styles.lowStockLimitText, { color: '#FEE2E2' }]}>Out of Stock</Text>
+                  <Text style={[styles.lowStockCountText, { color: '#FFFFFF' }]}>
+                    {t('insights.zeroLeft')}
+                  </Text>
+                  <Text style={[styles.lowStockLimitText, { color: '#FEE2E2' }]}>
+                    {t('insights.outOfStockBadge')}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -71,7 +75,7 @@ export const LowStockBottomSheet: React.FC<LowStockBottomSheetProps> = ({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Feather name="alert-triangle" size={14} color="#F59E0B" />
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#D97706' }}>
-                Low Stock Warnings ({lowStockItems.length})
+                {t('insights.lowStockHeader', { count: String(lowStockItems.length) })}
               </Text>
             </View>
             {lowStockItems.map((item: any) => (
@@ -84,9 +88,11 @@ export const LowStockBottomSheet: React.FC<LowStockBottomSheetProps> = ({
                   <Text style={styles.lowStockItemSku}>SKU: {item.sku}</Text>
                 </View>
                 <View style={styles.lowStockCountBadge}>
-                  <Text style={styles.lowStockCountText}>{item.stockCount} left</Text>
+                  <Text style={styles.lowStockCountText}>
+                    {item.stockCount} {t('insights.leftLabel')}
+                  </Text>
                   <Text style={styles.lowStockLimitText}>
-                    Alert Threshold: {item.lowStockAlert}
+                    {t('insights.alertThreshold', { threshold: String(item.lowStockAlert) })}
                   </Text>
                 </View>
               </View>
@@ -97,7 +103,7 @@ export const LowStockBottomSheet: React.FC<LowStockBottomSheetProps> = ({
         {isEmpty && (
           <View style={styles.emptyLowStockState}>
             <Feather name="check-circle" size={32} color="#10B981" />
-            <Text style={styles.emptyLowStockText}>All products are sufficiently stocked!</Text>
+            <Text style={styles.emptyLowStockText}>{t('insights.allStockedText')}</Text>
           </View>
         )}
       </ScrollView>

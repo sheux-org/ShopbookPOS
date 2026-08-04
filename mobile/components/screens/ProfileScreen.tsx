@@ -15,6 +15,7 @@ import { BusinessAvatar } from '../common/BusinessAvatar';
 import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 import { hapticFeedback } from '../../utils/haptics';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const FAQS = [
   {
@@ -47,11 +48,20 @@ const FAQS = [
   },
 ];
 
+const LANGUAGES = [
+  { code: 'en', name: 'English' },
+  { code: 'si', name: 'සිංහල (Sinhala)' },
+  { code: 'ta', name: 'தமிழ் (Tamil)' },
+] as const;
+
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
   const isPremium = useSettingsStore((s) => s.isPremium);
+
+  const { t, language, setLanguage } = useTranslation();
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<'1_month' | '3_month' | '1_year'>('3_month');
@@ -121,25 +131,33 @@ export const ProfileScreen: React.FC = () => {
             size={72}
           />
 
-          <Text style={styles.partnerName}>{activeBusiness?.name || 'Shopbook Partner Store'}</Text>
+          <Text style={styles.partnerName}>
+            {activeBusiness?.name || t('profile.partnerStore')}
+          </Text>
           <Text style={styles.partnerPlan}>
             🛡️{' '}
             {userRole === 'admin'
-              ? 'Administrator / Store Owner'
+              ? t('profile.adminPrivilege')
               : userRole === 'manager'
-                ? 'Store Manager'
-                : 'Store Cashier'}
+                ? t('profile.managerPrivilege')
+                : t('profile.cashierPrivilege')}
           </Text>
 
           <View style={styles.activeBadge}>
             <View style={styles.activeDot} />
-            <Text style={styles.activeText}>System {userRole.toUpperCase()} Active</Text>
+            <Text style={styles.activeText}>
+              {userRole === 'admin'
+                ? t('profile.adminStatusActive')
+                : userRole === 'manager'
+                  ? t('profile.managerStatusActive')
+                  : t('profile.cashierStatusActive')}
+            </Text>
           </View>
         </View>
 
         {/* Setting options list group */}
         <View style={styles.optionsGroup}>
-          <Text style={styles.groupHeader}>Business Settings</Text>
+          <Text style={styles.groupHeader}>{t('profile.groupBusiness')}</Text>
 
           {/* Option: Shop Details */}
           <TouchableOpacity
@@ -154,11 +172,11 @@ export const ProfileScreen: React.FC = () => {
               <Feather name="home" size={18} color={TOKENS.primary} />
             </View>
             <View style={styles.optionTextWrapper}>
-              <Text style={styles.optionTitle}>Store Details</Text>
+              <Text style={styles.optionTitle}>{t('profile.storeDetailsTitle')}</Text>
               <Text style={styles.optionSubtitle}>
                 {userRole === 'cashier'
-                  ? 'View business details and addresses'
-                  : 'Configure business logo, receipt details & addresses'}
+                  ? t('profile.storeDetailsSubStaff')
+                  : t('profile.storeDetailsSubAdmin')}
               </Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
@@ -179,11 +197,11 @@ export const ProfileScreen: React.FC = () => {
               <Feather name="briefcase" size={18} color="#B06000" />
             </View>
             <View style={styles.optionTextWrapper}>
-              <Text style={styles.optionTitle}>Business Management</Text>
+              <Text style={styles.optionTitle}>{t('profile.businessMgmtTitle')}</Text>
               <Text style={styles.optionSubtitle}>
                 {userRole === 'cashier'
-                  ? 'View registered businesses and branches'
-                  : 'Create and manage multiple businesses or branches'}
+                  ? t('profile.businessMgmtSubStaff')
+                  : t('profile.businessMgmtSubAdmin')}
               </Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
@@ -204,11 +222,11 @@ export const ProfileScreen: React.FC = () => {
               <Feather name="printer" size={18} color={TOKENS.primary} />
             </View>
             <View style={styles.optionTextWrapper}>
-              <Text style={styles.optionTitle}>Bluetooth Thermal Printer</Text>
+              <Text style={styles.optionTitle}>{t('profile.printerTitle')}</Text>
               <Text style={styles.optionSubtitle}>
                 {pairedPrinter
-                  ? `Connected: ${pairedPrinter} ✅`
-                  : 'Scan and connect to receipt printers'}
+                  ? t('profile.printerSubConnected', { printer: pairedPrinter.name })
+                  : t('profile.printerSubScan')}
               </Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
@@ -229,10 +247,8 @@ export const ProfileScreen: React.FC = () => {
               <Feather name="smartphone" size={18} color={TOKENS.primary} />
             </View>
             <View style={styles.optionTextWrapper}>
-              <Text style={styles.optionTitle}>Active Devices</Text>
-              <Text style={styles.optionSubtitle}>
-                Monitor and manage active devices logged into your account
-              </Text>
+              <Text style={styles.optionTitle}>{t('profile.devicesTitle')}</Text>
+              <Text style={styles.optionSubtitle}>{t('profile.devicesSub')}</Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
@@ -253,10 +269,8 @@ export const ProfileScreen: React.FC = () => {
                 <Feather name="users" size={18} color="#137333" />
               </View>
               <View style={styles.optionTextWrapper}>
-                <Text style={styles.optionTitle}>Staff Management</Text>
-                <Text style={styles.optionSubtitle}>
-                  Add and configure Admins, Managers & Cashiers
-                </Text>
+                <Text style={styles.optionTitle}>{t('profile.staffTitle')}</Text>
+                <Text style={styles.optionSubtitle}>{t('profile.staffSub')}</Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
@@ -276,20 +290,39 @@ export const ProfileScreen: React.FC = () => {
                 <Ionicons name="diamond" size={18} color="#D97706" />
               </View>
               <View style={styles.optionTextWrapper}>
-                <Text style={styles.optionTitle}>Premium Plans</Text>
-                <Text style={styles.optionSubtitle}>
-                  Manage subscriptions, billing cycles, and feature access
-                </Text>
+                <Text style={styles.optionTitle}>{t('profile.premiumTitle')}</Text>
+                <Text style={styles.optionSubtitle}>{t('profile.premiumSub')}</Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
           )}
+
+          {/* Option: Language Selector */}
+          <TouchableOpacity
+            style={styles.optionRow}
+            activeOpacity={0.7}
+            onPress={() => {
+              hapticFeedback.selection();
+              setIsLanguageModalOpen(true);
+            }}
+          >
+            <View style={[styles.optionIconBox, { backgroundColor: '#F1F5F9' }]}>
+              <Feather name="globe" size={18} color="#475569" />
+            </View>
+            <View style={styles.optionTextWrapper}>
+              <Text style={styles.optionTitle}>{t('profile.languageTitle')}</Text>
+              <Text style={styles.optionSubtitle}>
+                {LANGUAGES.find((l) => l.code === language)?.name || 'English'}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+          </TouchableOpacity>
         </View>
 
         {/* Option Group: Sync & Backup (Hidden for Cashier!) */}
         {canPerform('read', 'sync') && (
           <View style={styles.optionsGroup}>
-            <Text style={styles.groupHeader}>Data Sync & Backup</Text>
+            <Text style={styles.groupHeader}>{t('profile.groupSync')}</Text>
 
             {/* Option: Manual Sync */}
             <TouchableOpacity
@@ -298,17 +331,14 @@ export const ProfileScreen: React.FC = () => {
               onPress={async () => {
                 hapticFeedback.impactMedium();
                 checkPremiumAction('Manual database synchronization', async () => {
-                  triggerToast('Syncing database... 🔄');
+                  triggerToast(t('profile.syncing'));
                   const success = await syncDatabase();
                   if (success) {
                     hapticFeedback.notificationSuccess();
-                    triggerToast('Database synced successfully! ✅');
+                    triggerToast(t('profile.syncSuccess'));
                   } else {
                     hapticFeedback.notificationError();
-                    Alert.alert(
-                      'Sync Failed',
-                      'Check your internet connection and Supabase environment configuration.'
-                    );
+                    Alert.alert(t('profile.syncFailed'), t('profile.syncFailedMsg'));
                   }
                 });
               }}
@@ -317,10 +347,8 @@ export const ProfileScreen: React.FC = () => {
                 <Feather name="refresh-cw" size={18} color="#137333" />
               </View>
               <View style={styles.optionTextWrapper}>
-                <Text style={styles.optionTitle}>Sync Database Now</Text>
-                <Text style={styles.optionSubtitle}>
-                  Trigger manual synchronization of offline data
-                </Text>
+                <Text style={styles.optionTitle}>{t('profile.syncTitle')}</Text>
+                <Text style={styles.optionSubtitle}>{t('profile.syncSub')}</Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
@@ -328,7 +356,7 @@ export const ProfileScreen: React.FC = () => {
         )}
 
         <View style={styles.optionsGroup}>
-          <Text style={styles.groupHeader}>Support</Text>
+          <Text style={styles.groupHeader}>{t('profile.groupSupport')}</Text>
 
           {/* Option: Help */}
           <TouchableOpacity
@@ -343,8 +371,8 @@ export const ProfileScreen: React.FC = () => {
               <Feather name="help-circle" size={18} color={TOKENS.dark} />
             </View>
             <View style={styles.optionTextWrapper}>
-              <Text style={styles.optionTitle}>Help & Customer Support</Text>
-              <Text style={styles.optionSubtitle}>Get priority live assistance immediately</Text>
+              <Text style={styles.optionTitle}>{t('profile.helpTitle')}</Text>
+              <Text style={styles.optionSubtitle}>{t('profile.helpSub')}</Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
@@ -355,39 +383,37 @@ export const ProfileScreen: React.FC = () => {
             activeOpacity={0.7}
             onPress={() => {
               hapticFeedback.notificationWarning();
-              Alert.alert(
-                'Disconnect Profile',
-                'Are you sure you want to log out from this Shopbook POS terminal?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Sign Out',
-                    style: 'destructive',
-                    onPress: async () => {
-                      hapticFeedback.notificationSuccess();
-                      await deleteCurrentDeviceSession();
-                      cartState.logout();
-                      triggerToast('Profile logged out');
-                      router.replace('/auth/number-input');
-                    },
+              Alert.alert(t('profile.disconnectConfirmTitle'), t('profile.disconnectConfirmMsg'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('profile.signOutTitle'),
+                  style: 'destructive',
+                  onPress: async () => {
+                    hapticFeedback.notificationSuccess();
+                    await deleteCurrentDeviceSession();
+                    cartState.logout();
+                    triggerToast(t('profile.profileLoggedOut'));
+                    router.replace('/auth/number-input');
                   },
-                ]
-              );
+                },
+              ]);
             }}
           >
             <View style={[styles.optionIconBox, { backgroundColor: '#FCE8E6' }]}>
               <Feather name="log-out" size={18} color={TOKENS.error} />
             </View>
             <View style={styles.optionTextWrapper}>
-              <Text style={[styles.optionTitle, { color: TOKENS.error }]}>Sign Out</Text>
-              <Text style={styles.optionSubtitle}>Disconnect POS session safely</Text>
+              <Text style={[styles.optionTitle, { color: TOKENS.error }]}>
+                {t('profile.signOutTitle')}
+              </Text>
+              <Text style={styles.optionSubtitle}>{t('profile.signOutSub')}</Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
         </View>
         {/* Footer info: Made in Sri Lanka & App Version */}
         <View style={styles.footerContainer}>
-          <Text style={styles.versionText}>Version: 1.0.4</Text>
+          <Text style={styles.versionText}>{t('profile.appVersion')}</Text>
           <Text style={styles.madeInText}>Made in 🇱🇰 with ❤️</Text>
         </View>
       </ScrollView>
@@ -475,6 +501,39 @@ export const ProfileScreen: React.FC = () => {
         onClose={() => setPremiumModalVisible(false)}
         featureName={premiumFeatureName}
       />
+
+      {/* Language Switcher Bottom Sheet */}
+      <BottomSheet
+        visible={isLanguageModalOpen}
+        onClose={() => setIsLanguageModalOpen(false)}
+        title={t('profile.languageTitle')}
+      >
+        <View style={styles.languageList}>
+          {LANGUAGES.map((lang) => {
+            const isSelected = language === lang.code;
+            return (
+              <TouchableOpacity
+                key={lang.code}
+                style={[styles.languageCard, isSelected && styles.languageCardActive]}
+                activeOpacity={0.7}
+                onPress={() => {
+                  hapticFeedback.notificationSuccess();
+                  setLanguage(lang.code);
+                  setIsLanguageModalOpen(false);
+                  triggerToast(`${lang.name} set successfully!`);
+                }}
+              >
+                <Text
+                  style={[styles.languageCardText, isSelected && styles.languageCardTextActive]}
+                >
+                  {lang.name}
+                </Text>
+                {isSelected && <Feather name="check" size={18} color={TOKENS.success} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </BottomSheet>
     </ScreenWrapper>
   );
 };
@@ -883,5 +942,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: TOKENS.muted,
     lineHeight: 16,
+  },
+  languageList: {
+    paddingVertical: 12,
+    gap: 8,
+  },
+  languageCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  languageCardActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: TOKENS.primary,
+  },
+  languageCardText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: TOKENS.dark,
+  },
+  languageCardTextActive: {
+    color: TOKENS.primary,
+    fontWeight: '600',
   },
 });
