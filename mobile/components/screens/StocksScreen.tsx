@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenWrapper } from '../common/ScreenWrapper';
+import { ImagePickerBottomSheet } from '../common/ImagePickerBottomSheet';
 import { TOKENS } from '../../constants/tokens';
 import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { cartState } from '../data/cartState';
@@ -75,25 +76,9 @@ export const StocksScreen: React.FC = () => {
   // Image picker bottom sheet state
   const [imgSheetVisible, setImgSheetVisible] = useState(false);
   const [formImageUploading, setFormImageUploading] = useState(false);
-  const imgSheetAnim = useRef(new Animated.Value(300)).current;
 
   const openImgSheet = () => {
     setImgSheetVisible(true);
-    Animated.spring(imgSheetAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      bounciness: 4,
-    }).start();
-  };
-
-  const closeImgSheet = () => {
-    Animated.timing(imgSheetAnim, {
-      toValue: 300,
-      duration: 180,
-      useNativeDriver: true,
-    }).start(() => {
-      setImgSheetVisible(false);
-    });
   };
 
   const [formName, setFormName] = useState('');
@@ -147,10 +132,8 @@ export const StocksScreen: React.FC = () => {
   };
 
   const handlePickImage = async (source: 'camera' | 'gallery') => {
-    closeImgSheet();
-
     // Small delay to let the sheet close before opening picker
-    await new Promise((r) => setTimeout(r, 280));
+    await new Promise((r) => setTimeout(r, 200));
 
     let localUri: string | null = null;
 
@@ -820,79 +803,11 @@ export const StocksScreen: React.FC = () => {
       </ScrollView>
 
       {/* ── Image Picker Bottom Sheet ── */}
-      <Modal
+      <ImagePickerBottomSheet
         visible={imgSheetVisible}
-        transparent
-        animationType="none"
-        statusBarTranslucent
-        onRequestClose={closeImgSheet}
-      >
-        {/* Scrim — tap to dismiss */}
-        <Pressable style={styles.sheetScrim} onPress={closeImgSheet}>
-          <Animated.View
-            style={[styles.sheetContainer, { transform: [{ translateY: imgSheetAnim }] }]}
-          >
-            {/* Stop tap-through on the sheet itself */}
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              {/* Drag handle */}
-              <View style={styles.sheetHandle} />
-
-              <Text style={styles.sheetTitle}>{t('catalog.photoSheetTitle')}</Text>
-              <Text style={styles.sheetSubtitle}>{t('catalog.photoSheetSubtitle')}</Text>
-
-              {/* Camera option */}
-              <TouchableOpacity
-                style={styles.sheetOption}
-                activeOpacity={0.75}
-                onPress={() => {
-                  hapticFeedback.impactMedium();
-                  handlePickImage('camera');
-                }}
-              >
-                <View style={[styles.sheetOptionIcon, { backgroundColor: TOKENS.lightBlue }]}>
-                  <Feather name="camera" size={22} color={TOKENS.primary} />
-                </View>
-                <View style={styles.sheetOptionText}>
-                  <Text style={styles.sheetOptionTitle}>{t('catalog.cameraOption')}</Text>
-                  <Text style={styles.sheetOptionSub}>{t('catalog.cameraOptionSub')}</Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-              </TouchableOpacity>
-
-              {/* Gallery option */}
-              <TouchableOpacity
-                style={styles.sheetOption}
-                activeOpacity={0.75}
-                onPress={() => {
-                  hapticFeedback.impactMedium();
-                  handlePickImage('gallery');
-                }}
-              >
-                <View style={[styles.sheetOptionIcon, { backgroundColor: '#F0FDF4' }]}>
-                  <Feather name="image" size={22} color="#16A34A" />
-                </View>
-                <View style={styles.sheetOptionText}>
-                  <Text style={styles.sheetOptionTitle}>{t('catalog.galleryOption')}</Text>
-                  <Text style={styles.sheetOptionSub}>{t('catalog.galleryOptionSub')}</Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-              </TouchableOpacity>
-
-              {/* Cancel */}
-              <TouchableOpacity
-                style={styles.sheetCancelBtn}
-                activeOpacity={0.8}
-                onPress={() => {
-                  hapticFeedback.selection();
-                  closeImgSheet();
-                }}
-              >
-                <Text style={styles.sheetCancelText}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-            </Pressable>
-          </Animated.View>
-        </Pressable>
-      </Modal>
+        onClose={() => setImgSheetVisible(false)}
+        onSelectSource={handlePickImage}
+      />
 
       {/* SIMULATED HIGH-FIDELITY BARCODE SCANNER OVERLAY MODAL */}
       <BarcodeScannerModal
