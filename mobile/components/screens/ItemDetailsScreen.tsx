@@ -27,12 +27,14 @@ import { syncDatabase } from '../../services/sync';
 import { BarcodeLabelModal } from '../product/BarcodeLabelModal';
 import { ImagePreviewModal } from '../product/ImagePreviewModal';
 import { hapticFeedback } from '../../utils/haptics';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export const ItemDetailsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
 
   // Form states
   const [stockInQty, setStockInQty] = useState('');
@@ -213,8 +215,8 @@ export const ItemDetailsScreen: React.FC = () => {
 
   const sections = [
     {
-      title: 'Inventory Transaction History',
-      subtitle: 'History of stock inflows and sales transactions.',
+      title: t('stocks.historyTitle'),
+      subtitle: t('stocks.historyEmptySub'),
       data: processedStockHistory,
     },
   ];
@@ -300,12 +302,12 @@ export const ItemDetailsScreen: React.FC = () => {
                   </View>
                   <View style={styles.sheetPricesRow}>
                     <View style={styles.sheetPriceColumn}>
-                      <Text style={styles.sheetPriceLabel}>Selling Price</Text>
+                      <Text style={styles.sheetPriceLabel}>{t('catalog.price')}</Text>
                       <Text style={styles.sheetPriceVal}>Rs. {product.price.toLocaleString()}</Text>
                     </View>
                     {product.costPrice ? (
                       <View style={styles.sheetPriceColumn}>
-                        <Text style={styles.sheetPriceLabel}>Cost Price</Text>
+                        <Text style={styles.sheetPriceLabel}>{t('catalog.costPrice')}</Text>
                         <Text style={styles.sheetPriceValSec}>
                           Rs. {product.costPrice.toLocaleString()}
                         </Text>
@@ -338,7 +340,7 @@ export const ItemDetailsScreen: React.FC = () => {
                         color={TOKENS.primary}
                         style={{ marginRight: 4 }}
                       />
-                      <Text style={styles.actionButtonTextOutline}>View Label</Text>
+                      <Text style={styles.actionButtonTextOutline}>{t('stocks.viewLabel')}</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
@@ -368,7 +370,7 @@ export const ItemDetailsScreen: React.FC = () => {
             {/* 2. Stock Indicator Status Panel */}
             <View style={styles.sheetStatusPanel}>
               <View style={styles.statusPanelCol}>
-                <Text style={styles.statusPanelLabel}>Current Inventory</Text>
+                <Text style={styles.statusPanelLabel}>{t('stocks.currentInventory')}</Text>
                 <Text style={styles.statusPanelCount}>
                   {product.stockCount}{' '}
                   <Text style={styles.statusPanelUnit}>{product.unitType || 'pcs'}</Text>
@@ -405,14 +407,14 @@ export const ItemDetailsScreen: React.FC = () => {
 
             {/* 3. Manual Stock In Form */}
             <View style={styles.stockAdjustmentForm}>
-              <Text style={styles.sectionTitle}>Manual Stock In (Add Stock)</Text>
+              <Text style={styles.sectionTitle}>{t('stocks.restockTitle')}</Text>
               <Text style={styles.sectionSubtitle}>
                 Increment the count of this product in your catalog.
               </Text>
 
               <View style={styles.stockInRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Quantity to Add *</Text>
+                  <Text style={styles.fieldLabel}>{t('stocks.quantityToAdd')}</Text>
                   <View style={styles.inputWithSuffix}>
                     <TextInput
                       style={styles.suffixInput}
@@ -430,7 +432,7 @@ export const ItemDetailsScreen: React.FC = () => {
               </View>
 
               <View style={[styles.fieldRow, { marginTop: 10 }]}>
-                <Text style={styles.fieldLabel}>Reason for Adjustment</Text>
+                <Text style={styles.fieldLabel}>{t('stocks.adjustmentReason')}</Text>
 
                 {/* Adjustment reason chips with emerald highlight states */}
                 <View style={styles.suggestionChips}>
@@ -441,6 +443,15 @@ export const ItemDetailsScreen: React.FC = () => {
                     { name: 'Customer Return', icon: 'corner-up-left' },
                   ].map((item) => {
                     const isChipSelected = activeReasonChip === item.name;
+                    const translationKeys: Record<string, string> = {
+                      Restock: 'stocks.restockChip',
+                      'Supplier Order': 'stocks.supplierChip',
+                      'Inventory Correction': 'stocks.correctionChip',
+                      'Customer Return': 'stocks.returnChip',
+                    };
+                    const displayLabel = translationKeys[item.name]
+                      ? t(translationKeys[item.name] as any)
+                      : item.name;
                     return (
                       <TouchableOpacity
                         key={item.name}
@@ -466,7 +477,7 @@ export const ItemDetailsScreen: React.FC = () => {
                             isChipSelected && styles.suggestionChipTextActive,
                           ]}
                         >
-                          {item.name}
+                          {displayLabel}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -475,7 +486,7 @@ export const ItemDetailsScreen: React.FC = () => {
 
                 <TextInput
                   style={styles.formInput}
-                  placeholder="Or enter a custom reason..."
+                  placeholder={t('stocks.placeholderCustomReason')}
                   value={customReasonText}
                   onChangeText={setCustomReasonText}
                   placeholderTextColor="#A0AEC0"
@@ -493,7 +504,7 @@ export const ItemDetailsScreen: React.FC = () => {
                 ) : (
                   <>
                     <Feather name="plus-circle" size={16} color="#FFFFFF" />
-                    <Text style={styles.stockInSubmitBtnText}>Perform Stock In</Text>
+                    <Text style={styles.stockInSubmitBtnText}>{t('stocks.buttonAddStock')}</Text>
                   </>
                 )}
               </TouchableOpacity>

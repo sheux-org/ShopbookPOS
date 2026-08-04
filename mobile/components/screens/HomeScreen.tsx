@@ -29,12 +29,14 @@ import { useBusinessStore } from '../../stores/useBusinessStore';
 import { hapticFeedback } from '../../utils/haptics';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const numColumns = width > 768 ? 4 : 2;
+  const { t } = useTranslation();
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -182,7 +184,7 @@ export const HomeScreen: React.FC = () => {
       <SearchInput
         value={searchQuery}
         onChangeText={setSearchQuery}
-        placeholder="Quick search products..."
+        placeholder={t('common.searchPlaceholder')}
         onScanPress={() => {
           if (isPremium) {
             setIsScanning(true);
@@ -225,6 +227,7 @@ export const HomeScreen: React.FC = () => {
         >
           {categories.map((cat) => {
             const isActive = selectedCategory === cat.id;
+            const displayLabel = cat.label === 'All Items' ? t('home.allCategories') : cat.label;
             return (
               <TouchableOpacity
                 key={cat.id}
@@ -244,7 +247,7 @@ export const HomeScreen: React.FC = () => {
                     isActive ? styles.categoryTextActive : styles.categoryTextInactive,
                   ]}
                 >
-                  {cat.label}
+                  {displayLabel}
                 </Text>
               </TouchableOpacity>
             );
@@ -280,10 +283,8 @@ export const HomeScreen: React.FC = () => {
         ListEmptyComponent={
           <View style={styles.emptyGridState}>
             <Feather name="search" size={48} color="#D1D5DB" />
-            <Text style={styles.emptyGridTitle}>No items found</Text>
-            <Text style={styles.emptyGridSub}>
-              Try searching for another product or add a new one to catalog.
-            </Text>
+            <Text style={styles.emptyGridTitle}>{t('home.noProductsTitle')}</Text>
+            <Text style={styles.emptyGridSub}>{t('home.noProductsSubtitle')}</Text>
           </View>
         }
       />
@@ -304,7 +305,7 @@ export const HomeScreen: React.FC = () => {
             <Ionicons name="qr-code-outline" size={18} color="#FFFFFF" />
           </View>
           <Animated.View style={[styles.fabTextWrapper, fabTextStyle]}>
-            <Text style={styles.fabText}>Scan</Text>
+            <Text style={styles.fabText}>{t('pos.scan')}</Text>
           </Animated.View>
         </TouchableOpacity>
       </Animated.View>
@@ -313,7 +314,7 @@ export const HomeScreen: React.FC = () => {
       <BottomSheet
         visible={isBusinessSheetOpen}
         onClose={() => setIsBusinessSheetOpen(false)}
-        title="Select Active Business"
+        title={t('home.switchStoreTitle')}
       >
         <ScrollView
           contentContainerStyle={styles.sheetScrollContent}
@@ -332,7 +333,7 @@ export const HomeScreen: React.FC = () => {
                   if (isPremium || isSelected) {
                     cartState.setActiveBusiness(biz.id);
                     setIsBusinessSheetOpen(false);
-                    triggerToast(`Switched to ${biz.name}`);
+                    triggerToast(t('home.storeSelected', { storeName: biz.name }));
                   } else {
                     setIsBusinessSheetOpen(false);
                     setPremiumModalVisible(true);

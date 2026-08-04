@@ -21,12 +21,14 @@ import { useProducts } from '../../hooks/useProducts';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { InvoiceItemCard } from '../common/InvoiceItemCard';
 import { hapticFeedback } from '@/utils/haptics';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export const ScanScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestCameraAccess, hasCameraAccess } = usePermission();
   const { role } = useUserPermissions();
+  const { t } = useTranslation();
 
   const [invoiceItems, setInvoiceItems] = useState<CartItem[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -136,7 +138,7 @@ export const ScanScreen: React.FC = () => {
               <Text
                 style={{ fontSize: 12, fontWeight: 'bold', color: TOKENS.primary, marginLeft: 4 }}
               >
-                Orders
+                {t('navigation.history')}
               </Text>
             </TouchableOpacity>
           )}
@@ -158,15 +160,15 @@ export const ScanScreen: React.FC = () => {
         {invoiceItems.length === 0 && (
           <View style={styles.emptyInvoiceState}>
             <Ionicons name="barcode-outline" size={48} color={TOKENS.muted} />
-            <Text style={styles.emptyInvoiceTitle}>No items scanned yet</Text>
-            <Text style={styles.emptyInvoiceSub}>Align product barcode in the scanner below</Text>
+            <Text style={styles.emptyInvoiceTitle}>{t('cart.emptyCartTitle')}</Text>
+            <Text style={styles.emptyInvoiceSub}>{t('pos.barcodeScanHint')}</Text>
           </View>
         )}
       </ScrollView>
 
       {/* Bottom Panel - Live Camera Viewfinder & Proceed to Checkout Button */}
       <View style={[styles.bottomPanel, { paddingBottom: insets.bottom > 0 ? insets.bottom : 16 }]}>
-        <Text style={styles.scannerLabel}>CAMERA VIEWFINDER ACTIVE</Text>
+        <Text style={styles.scannerLabel}>{t('pos.barcodeScanActive')}</Text>
 
         <View style={styles.mockViewfinder}>
           {hasCameraAccess ? (
@@ -180,7 +182,7 @@ export const ScanScreen: React.FC = () => {
           ) : (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
               <Text style={{ color: '#fff', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>
-                Camera Access Required
+                {t('pos.scanCameraRequired')}
               </Text>
               <TouchableOpacity
                 onPress={() => requestCameraAccess()}
@@ -192,7 +194,7 @@ export const ScanScreen: React.FC = () => {
                 }}
               >
                 <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>
-                  Grant Permission
+                  {t('pos.scanCameraPermissionBtn')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -234,7 +236,7 @@ export const ScanScreen: React.FC = () => {
                 invoiceItems.length === 0 && styles.summaryLabelDisabled,
               ]}
             >
-              Proceed to Checkout
+              {t('pos.proceedToCheckout')}
             </Text>
           </View>
           {invoiceItems.length > 0 ? (

@@ -36,11 +36,13 @@ import { ScreenWrapper } from '../common/ScreenWrapper';
 import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { getBusinessTypeConfig, getCategoryLabel } from '../../utils/businessTypeConfig';
 import { hapticFeedback } from '@/utils/haptics';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export const ManageItemsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestCameraAccess } = usePermission();
+  const { t } = useTranslation();
   const isPremium = useSettingsStore((s) => s.isPremium);
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
@@ -121,20 +123,23 @@ export const ManageItemsScreen: React.FC = () => {
   const imgSheetAnim = useRef(new Animated.Value(300)).current;
 
   const openImgSheet = () => {
+    imgSheetAnim.setValue(300);
     setImgSheetVisible(true);
-    Animated.spring(imgSheetAnim, {
+    Animated.timing(imgSheetAnim, {
       toValue: 0,
+      duration: 240,
       useNativeDriver: true,
-      bounciness: 4,
     }).start();
   };
 
   const closeImgSheet = () => {
     Animated.timing(imgSheetAnim, {
       toValue: 300,
-      duration: 220,
+      duration: 180,
       useNativeDriver: true,
-    }).start(() => setImgSheetVisible(false));
+    }).start(() => {
+      setImgSheetVisible(false);
+    });
   };
 
   const triggerToast = (msg: string) => {
@@ -393,7 +398,9 @@ export const ManageItemsScreen: React.FC = () => {
 
         <View style={styles.headerTitleWrapper}>
           <Text style={styles.headerTitle}>Manage Items</Text>
-          <Text style={styles.headerSubtitle}>{productsList.length} items registered</Text>
+          <Text style={styles.headerSubtitle}>
+            {t('stocks.itemsCount', { count: String(productsList.length) })}
+          </Text>
         </View>
       </View>
 
@@ -405,7 +412,7 @@ export const ManageItemsScreen: React.FC = () => {
             setSearchQuery(text);
             if (scannedBarcode) setScannedBarcode(null);
           }}
-          placeholder="Search items by name, code or category..."
+          placeholder={t('common.searchPlaceholder')}
           onScanPress={triggerBarcodeScanner}
           onClear={() => {
             setScannedBarcode(null);
@@ -589,7 +596,7 @@ export const ManageItemsScreen: React.FC = () => {
 
             <View style={styles.headerTitleWrapper}>
               <Text style={styles.headerTitle}>Edit Product</Text>
-              <Text style={styles.headerSubtitle}>Modify details and save changes</Text>
+              <Text style={styles.headerSubtitle}>{t('catalog.editProductSub')}</Text>
             </View>
 
             <TouchableOpacity
@@ -597,7 +604,7 @@ export const ManageItemsScreen: React.FC = () => {
               activeOpacity={0.7}
               onPress={handleUpdateProduct}
             >
-              <Text style={styles.modalSaveTextHeader}>Save</Text>
+              <Text style={styles.modalSaveTextHeader}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -610,7 +617,7 @@ export const ManageItemsScreen: React.FC = () => {
           >
             {/* Field: Name */}
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Product Name *</Text>
+              <Text style={styles.fieldLabel}>{t('catalog.productName')} *</Text>
               <TextInput
                 style={styles.formInput}
                 placeholder="e.g. Anchor Milk Powder 400g"
@@ -622,7 +629,7 @@ export const ManageItemsScreen: React.FC = () => {
 
             {/* Field: Category Selector */}
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Category</Text>
+              <Text style={styles.fieldLabel}>{t('catalog.category')}</Text>
               <View style={styles.chipsSelector}>
                 {(() => {
                   const categoriesToRender = [...CATEGORIES_LIST];
@@ -658,7 +665,7 @@ export const ManageItemsScreen: React.FC = () => {
             {/* Double Row: Price & Cost Price */}
             <View style={styles.inputGridRow}>
               <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Selling Price (Rs.) *</Text>
+                <Text style={styles.fieldLabel}>{t('catalog.price')} (Rs.) *</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="0.00"
@@ -670,7 +677,7 @@ export const ManageItemsScreen: React.FC = () => {
               </View>
 
               <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Cost Price (Rs.)</Text>
+                <Text style={styles.fieldLabel}>{t('catalog.costPrice')} (Rs.)</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="0.00"
@@ -685,7 +692,7 @@ export const ManageItemsScreen: React.FC = () => {
             {/* Double Row: Stock & Low Alert Level */}
             <View style={styles.inputGridRow}>
               <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Stock Quantity *</Text>
+                <Text style={styles.fieldLabel}>{t('catalog.stockQuantity')} *</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="e.g. 50"
@@ -697,7 +704,7 @@ export const ManageItemsScreen: React.FC = () => {
               </View>
 
               <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Low Alert Level</Text>
+                <Text style={styles.fieldLabel}>{t('catalog.lowStockAlert')}</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="e.g. 5"
@@ -711,7 +718,7 @@ export const ManageItemsScreen: React.FC = () => {
 
             {/* Field: Unit Type */}
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Unit Type</Text>
+              <Text style={styles.fieldLabel}>{t('catalog.unitType')}</Text>
               <View style={styles.chipsSelector}>
                 {(() => {
                   const unitsToRender = [...UNIT_TYPES];
@@ -747,7 +754,7 @@ export const ManageItemsScreen: React.FC = () => {
             {/* Identification row */}
             <View style={styles.inputGridRow}>
               <View style={[styles.fieldRow, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>Quick Code</Text>
+                <Text style={styles.fieldLabel}>{t('catalog.quickCode')}</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="e.g. 101"
@@ -767,10 +774,10 @@ export const ManageItemsScreen: React.FC = () => {
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={styles.fieldLabel}>Barcode</Text>
+                  <Text style={styles.fieldLabel}>{t('catalog.barcode')}</Text>
                   <TouchableOpacity onPress={handleAutoGenerateEditBarcode} activeOpacity={0.7}>
                     <Text style={{ fontSize: 11, fontWeight: 'bold', color: TOKENS.primary }}>
-                      Auto-Gen
+                      {t('catalog.autoGen')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -787,10 +794,8 @@ export const ManageItemsScreen: React.FC = () => {
 
             {/* 📸 Brand-identical dashed centered product photo picker 📸 */}
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Product Image</Text>
-              <Text style={styles.fieldHelpText}>
-                Tap preview to capture from camera or browse files
-              </Text>
+              <Text style={styles.fieldLabel}>{t('catalog.productImage')}</Text>
+              <Text style={styles.fieldHelpText}>{t('catalog.uploadImageHint')}</Text>
 
               <View style={styles.imgPickerPanel}>
                 {editImage ? (
@@ -814,7 +819,7 @@ export const ManageItemsScreen: React.FC = () => {
                       >
                         <View style={styles.changeImageBadge}>
                           <Feather name="camera" size={14} color="#FFFFFF" />
-                          <Text style={styles.changeImageText}>Change Image</Text>
+                          <Text style={styles.changeImageText}>{t('catalog.changeImage')}</Text>
                         </View>
                       </TouchableOpacity>
                     )}
@@ -879,16 +884,80 @@ export const ManageItemsScreen: React.FC = () => {
             </View>
           </ScrollView>
 
-          {/* Fixed Bottom Footer for Update Button */}
-          <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-            <TouchableOpacity
-              style={styles.saveSubmitBtn}
-              activeOpacity={0.85}
-              onPress={handleUpdateProduct}
-            >
-              <Text style={styles.saveSubmitBtnText}>Save Changes</Text>
-            </TouchableOpacity>
-          </View>
+          {/* ── Image Picker Bottom Sheet inside Modal to stack on top ── */}
+          <Modal
+            visible={imgSheetVisible}
+            transparent
+            animationType="none"
+            statusBarTranslucent
+            onRequestClose={closeImgSheet}
+          >
+            {/* Scrim — tap to dismiss */}
+            <Pressable style={styles.sheetScrim} onPress={closeImgSheet}>
+              <Animated.View
+                style={[styles.sheetContainer, { transform: [{ translateY: imgSheetAnim }] }]}
+              >
+                {/* Stop tap-through on the sheet itself */}
+                <Pressable onPress={(e) => e.stopPropagation()}>
+                  {/* Drag handle */}
+                  <View style={styles.sheetHandle} />
+
+                  <Text style={styles.sheetTitle}>{t('catalog.photoSheetTitle')}</Text>
+                  <Text style={styles.sheetSubtitle}>{t('catalog.photoSheetSubtitle')}</Text>
+
+                  {/* Camera option */}
+                  <TouchableOpacity
+                    style={styles.sheetOption}
+                    activeOpacity={0.75}
+                    onPress={() => {
+                      hapticFeedback.impactMedium();
+                      handlePickImage('camera');
+                    }}
+                  >
+                    <View style={[styles.sheetOptionIcon, { backgroundColor: TOKENS.lightBlue }]}>
+                      <Feather name="camera" size={22} color={TOKENS.primary} />
+                    </View>
+                    <View style={styles.sheetOptionText}>
+                      <Text style={styles.sheetOptionTitle}>{t('catalog.cameraOption')}</Text>
+                      <Text style={styles.sheetOptionSub}>{t('catalog.cameraOptionSub')}</Text>
+                    </View>
+                    <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+                  </TouchableOpacity>
+
+                  {/* Gallery option */}
+                  <TouchableOpacity
+                    style={styles.sheetOption}
+                    activeOpacity={0.75}
+                    onPress={() => {
+                      hapticFeedback.impactMedium();
+                      handlePickImage('gallery');
+                    }}
+                  >
+                    <View style={[styles.sheetOptionIcon, { backgroundColor: '#F0FDF4' }]}>
+                      <Feather name="image" size={22} color="#16A34A" />
+                    </View>
+                    <View style={styles.sheetOptionText}>
+                      <Text style={styles.sheetOptionTitle}>{t('catalog.galleryOption')}</Text>
+                      <Text style={styles.sheetOptionSub}>{t('catalog.galleryOptionSub')}</Text>
+                    </View>
+                    <Feather name="chevron-right" size={18} color={TOKENS.muted} />
+                  </TouchableOpacity>
+
+                  {/* Cancel */}
+                  <TouchableOpacity
+                    style={styles.sheetCancelBtn}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      hapticFeedback.selection();
+                      closeImgSheet();
+                    }}
+                  >
+                    <Text style={styles.sheetCancelText}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                </Pressable>
+              </Animated.View>
+            </Pressable>
+          </Modal>
         </ScreenWrapper>
       </Modal>
 
@@ -903,81 +972,6 @@ export const ManageItemsScreen: React.FC = () => {
           await handleSelectProductByBarcode(data);
         }}
       />
-
-      {/* ── Image Picker Bottom Sheet ── */}
-      <Modal
-        visible={imgSheetVisible}
-        transparent
-        animationType="none"
-        statusBarTranslucent
-        onRequestClose={closeImgSheet}
-      >
-        {/* Scrim — tap to dismiss */}
-        <Pressable style={styles.sheetScrim} onPress={closeImgSheet}>
-          <Animated.View
-            style={[styles.sheetContainer, { transform: [{ translateY: imgSheetAnim }] }]}
-          >
-            {/* Stop tap-through on the sheet itself */}
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              {/* Drag handle */}
-              <View style={styles.sheetHandle} />
-
-              <Text style={styles.sheetTitle}>Product Photo</Text>
-              <Text style={styles.sheetSubtitle}>Choose how to add an image for this product</Text>
-
-              {/* Camera option */}
-              <TouchableOpacity
-                style={styles.sheetOption}
-                activeOpacity={0.75}
-                onPress={() => {
-                  hapticFeedback.impactMedium();
-                  handlePickImage('camera');
-                }}
-              >
-                <View style={[styles.sheetOptionIcon, { backgroundColor: TOKENS.lightBlue }]}>
-                  <Feather name="camera" size={22} color={TOKENS.primary} />
-                </View>
-                <View style={styles.sheetOptionText}>
-                  <Text style={styles.sheetOptionTitle}>Camera</Text>
-                  <Text style={styles.sheetOptionSub}>Take a new photo right now</Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-              </TouchableOpacity>
-
-              {/* Gallery option */}
-              <TouchableOpacity
-                style={styles.sheetOption}
-                activeOpacity={0.75}
-                onPress={() => {
-                  hapticFeedback.impactMedium();
-                  handlePickImage('gallery');
-                }}
-              >
-                <View style={[styles.sheetOptionIcon, { backgroundColor: '#F0FDF4' }]}>
-                  <Feather name="image" size={22} color="#16A34A" />
-                </View>
-                <View style={styles.sheetOptionText}>
-                  <Text style={styles.sheetOptionTitle}>Photo Library</Text>
-                  <Text style={styles.sheetOptionSub}>Pick from your gallery</Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-              </TouchableOpacity>
-
-              {/* Cancel */}
-              <TouchableOpacity
-                style={styles.sheetCancelBtn}
-                activeOpacity={0.8}
-                onPress={() => {
-                  hapticFeedback.selection();
-                  closeImgSheet();
-                }}
-              >
-                <Text style={styles.sheetCancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </Pressable>
-          </Animated.View>
-        </Pressable>
-      </Modal>
 
       <PremiumUpgradeModal
         visible={premiumModalVisible}

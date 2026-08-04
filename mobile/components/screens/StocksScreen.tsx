@@ -36,6 +36,7 @@ import { hapticFeedback } from '../../utils/haptics';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 import { getBusinessTypeConfig } from '../../utils/businessTypeConfig';
+import { useTranslation } from '../../hooks/useTranslation';
 
 function getRelativeTimeAgo(timestamp?: number): string {
   if (!timestamp) return 'Just now';
@@ -55,6 +56,7 @@ function getRelativeTimeAgo(timestamp?: number): string {
 export const StocksScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const activeBiz = useActiveBusiness();
   const config = getBusinessTypeConfig(activeBiz?.category);
@@ -87,9 +89,11 @@ export const StocksScreen: React.FC = () => {
   const closeImgSheet = () => {
     Animated.timing(imgSheetAnim, {
       toValue: 300,
-      duration: 220,
+      duration: 180,
       useNativeDriver: true,
-    }).start(() => setImgSheetVisible(false));
+    }).start(() => {
+      setImgSheetVisible(false);
+    });
   };
 
   const [formName, setFormName] = useState('');
@@ -308,7 +312,9 @@ export const StocksScreen: React.FC = () => {
 
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.headerTitle}>Stocks</Text>
-          <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 1 }}>Catalog Manager</Text>
+          <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 1 }}>
+            {t('catalog.subtitle')}
+          </Text>
         </View>
 
         <View style={styles.headerRightActions}>
@@ -324,7 +330,7 @@ export const StocksScreen: React.FC = () => {
             <Text
               style={{ fontSize: 12, fontWeight: 'bold', color: TOKENS.primary, marginLeft: 4 }}
             >
-              Items
+              {t('catalog.itemsBtn')}
             </Text>
           </TouchableOpacity>
 
@@ -342,15 +348,13 @@ export const StocksScreen: React.FC = () => {
         {/* ➕ ADD NEW PRODUCT FORM CARD (Sleek and beautiful border card) ➕ */}
         {canPerform('create', 'products') ? (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>➕ Add Product to Catalog</Text>
-            <Text style={styles.formSubtitle}>
-              Enter item specifications to dynamically update sales catalog list
-            </Text>
+            <Text style={styles.formTitle}>➕ {t('catalog.addProduct')}</Text>
+            <Text style={styles.formSubtitle}>{t('catalog.addProductSub')}</Text>
 
             <View style={styles.formGrid}>
               {/* Field: Name */}
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Product Name *</Text>
+                <Text style={styles.fieldLabel}>{t('catalog.productName')} *</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="e.g. Munchee Chocolate Puff"
@@ -363,7 +367,7 @@ export const StocksScreen: React.FC = () => {
               {/* Field: Quick Code & Barcode Row */}
               <View style={styles.fieldColumnsRow}>
                 <View style={styles.flexField}>
-                  <Text style={styles.fieldLabel}>Quick Code</Text>
+                  <Text style={styles.fieldLabel}>{t('catalog.quickCode')}</Text>
                   <TextInput
                     style={styles.formInput}
                     placeholder="e.g. QC-302"
@@ -381,10 +385,10 @@ export const StocksScreen: React.FC = () => {
                       alignItems: 'center',
                     }}
                   >
-                    <Text style={styles.fieldLabel}>Barcode</Text>
+                    <Text style={styles.fieldLabel}>{t('catalog.barcode')}</Text>
                     <TouchableOpacity onPress={handleAutoGenerateBarcode} activeOpacity={0.7}>
                       <Text style={{ fontSize: 11, fontWeight: 'bold', color: TOKENS.primary }}>
-                        Auto-Gen
+                        {t('catalog.autoGen')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -413,7 +417,7 @@ export const StocksScreen: React.FC = () => {
 
               {/* Field: Category Chips selector */}
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Category</Text>
+                <Text style={styles.fieldLabel}>{t('catalog.category')}</Text>
                 <View style={styles.chipsSelector}>
                   {CATEGORIES_LIST.map((cat) => {
                     const isSelected = formCategory === cat;
@@ -442,7 +446,7 @@ export const StocksScreen: React.FC = () => {
 
               {/* Field: Unit Type Chips selector */}
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Unit Type</Text>
+                <Text style={styles.fieldLabel}>{t('catalog.unitType')}</Text>
                 <View style={styles.chipsSelector}>
                   {UNIT_TYPES.map((u) => {
                     const isSelected = formUnitType === u;
@@ -472,7 +476,7 @@ export const StocksScreen: React.FC = () => {
               {/* Field: Cost & Selling Price Row */}
               <View style={styles.fieldColumnsRow}>
                 <View style={styles.flexField}>
-                  <Text style={styles.fieldLabel}>Cost Price (Rs.)</Text>
+                  <Text style={styles.fieldLabel}>{t('catalog.costPrice')} (Rs.)</Text>
                   <TextInput
                     style={styles.formInput}
                     placeholder="e.g. 140"
@@ -484,7 +488,7 @@ export const StocksScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.flexField}>
-                  <Text style={styles.fieldLabel}>Selling Price * (Rs.)</Text>
+                  <Text style={styles.fieldLabel}>{t('catalog.price')} * (Rs.)</Text>
                   <TextInput
                     style={styles.formInput}
                     placeholder="e.g. 180"
@@ -499,7 +503,7 @@ export const StocksScreen: React.FC = () => {
               {/* Field: Initial Stock & Low Threshold Row */}
               <View style={styles.fieldColumnsRow}>
                 <View style={styles.flexField}>
-                  <Text style={styles.fieldLabel}>Stock Quantity *</Text>
+                  <Text style={styles.fieldLabel}>{t('catalog.stockQuantity')} *</Text>
                   <TextInput
                     style={styles.formInput}
                     placeholder="e.g. 50"
@@ -511,7 +515,7 @@ export const StocksScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.flexField}>
-                  <Text style={styles.fieldLabel}>Low Alert Level</Text>
+                  <Text style={styles.fieldLabel}>{t('catalog.lowStockAlert')}</Text>
                   <TextInput
                     style={styles.formInput}
                     placeholder="e.g. 5"
@@ -525,10 +529,8 @@ export const StocksScreen: React.FC = () => {
 
               {/* ────── Product Image / Icon field ────── */}
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>Product Image *</Text>
-                <Text style={styles.fieldHelpText}>
-                  Tap the image to take a photo or pick from gallery
-                </Text>
+                <Text style={styles.fieldLabel}>{t('catalog.productImage')} *</Text>
+                <Text style={styles.fieldHelpText}>{t('catalog.uploadImageHint')}</Text>
 
                 <View style={styles.imgPickerPanel}>
                   {formImage ? (
@@ -552,7 +554,7 @@ export const StocksScreen: React.FC = () => {
                         >
                           <View style={styles.changeImageBadge}>
                             <Feather name="camera" size={14} color="#FFFFFF" />
-                            <Text style={styles.changeImageText}>Change Image</Text>
+                            <Text style={styles.changeImageText}>{t('catalog.changeImage')}</Text>
                           </View>
                         </TouchableOpacity>
                       )}
@@ -594,9 +596,11 @@ export const StocksScreen: React.FC = () => {
                         <View style={styles.uploadIconCircle}>
                           <Ionicons name="cloud-upload-outline" size={24} color={TOKENS.primary} />
                         </View>
-                        <Text style={styles.uploadAreaTitle}>Upload Product Image</Text>
+                        <Text style={styles.uploadAreaTitle}>
+                          {t('catalog.uploadProductImage')}
+                        </Text>
                         <Text style={styles.uploadAreaSubtitle}>
-                          Tap to take a photo or select from gallery
+                          {t('catalog.uploadImageHint')}
                         </Text>
                       </TouchableOpacity>
 
@@ -622,7 +626,7 @@ export const StocksScreen: React.FC = () => {
                 activeOpacity={0.8}
                 onPress={handleSaveProduct}
               >
-                <Text style={styles.submitBtnText}>Save Product to Catalog</Text>
+                <Text style={styles.submitBtnText}>{t('catalog.saveProductToCatalog')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -833,8 +837,8 @@ export const StocksScreen: React.FC = () => {
               {/* Drag handle */}
               <View style={styles.sheetHandle} />
 
-              <Text style={styles.sheetTitle}>Product Photo</Text>
-              <Text style={styles.sheetSubtitle}>Choose how to add an image for this product</Text>
+              <Text style={styles.sheetTitle}>{t('catalog.photoSheetTitle')}</Text>
+              <Text style={styles.sheetSubtitle}>{t('catalog.photoSheetSubtitle')}</Text>
 
               {/* Camera option */}
               <TouchableOpacity
@@ -849,8 +853,8 @@ export const StocksScreen: React.FC = () => {
                   <Feather name="camera" size={22} color={TOKENS.primary} />
                 </View>
                 <View style={styles.sheetOptionText}>
-                  <Text style={styles.sheetOptionTitle}>Camera</Text>
-                  <Text style={styles.sheetOptionSub}>Take a new photo right now</Text>
+                  <Text style={styles.sheetOptionTitle}>{t('catalog.cameraOption')}</Text>
+                  <Text style={styles.sheetOptionSub}>{t('catalog.cameraOptionSub')}</Text>
                 </View>
                 <Feather name="chevron-right" size={18} color={TOKENS.muted} />
               </TouchableOpacity>
@@ -868,8 +872,8 @@ export const StocksScreen: React.FC = () => {
                   <Feather name="image" size={22} color="#16A34A" />
                 </View>
                 <View style={styles.sheetOptionText}>
-                  <Text style={styles.sheetOptionTitle}>Photo Library</Text>
-                  <Text style={styles.sheetOptionSub}>Pick from your gallery</Text>
+                  <Text style={styles.sheetOptionTitle}>{t('catalog.galleryOption')}</Text>
+                  <Text style={styles.sheetOptionSub}>{t('catalog.galleryOptionSub')}</Text>
                 </View>
                 <Feather name="chevron-right" size={18} color={TOKENS.muted} />
               </TouchableOpacity>
@@ -883,7 +887,7 @@ export const StocksScreen: React.FC = () => {
                   closeImgSheet();
                 }}
               >
-                <Text style={styles.sheetCancelText}>Cancel</Text>
+                <Text style={styles.sheetCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
             </Pressable>
           </Animated.View>

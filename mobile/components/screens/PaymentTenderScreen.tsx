@@ -28,6 +28,7 @@ import { hapticFeedback } from '../../utils/haptics';
 import { printReceipt } from '../../utils/printThermalReceipt';
 import { getInvoiceLabel } from '../../utils/orderInvoice';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
+import { useTranslation } from '../../hooks/useTranslation';
 
 type TenderMethod = 'cash' | 'card';
 
@@ -53,6 +54,7 @@ export const PaymentTenderScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { t } = useTranslation();
 
   const totalAmount = parseFloat(params.totalAmount as string) || 2905;
   const subtotal = parseFloat(params.subtotal as string) || totalAmount;
@@ -263,7 +265,9 @@ export const PaymentTenderScreen: React.FC = () => {
           <Text style={styles.headerTitle}>
             {activeMethod === 'cash' ? 'Cash' : 'Card Payment'}
           </Text>
-          <Text style={styles.headerSubtitle}>Total · Rs. {totalAmount.toLocaleString()}.00</Text>
+          <Text style={styles.headerSubtitle}>
+            {t('payment.total')} · Rs. {totalAmount.toLocaleString()}.00
+          </Text>
         </View>
         <View style={styles.placeholderWidth} />
       </View>
@@ -289,7 +293,7 @@ export const PaymentTenderScreen: React.FC = () => {
               activeMethod === 'cash' && styles.selectorTabTextActive,
             ]}
           >
-            Cash
+            {t('payment.cash')}
           </Text>
         </TouchableOpacity>
 
@@ -312,7 +316,7 @@ export const PaymentTenderScreen: React.FC = () => {
               activeMethod === 'card' && styles.selectorTabTextActive,
             ]}
           >
-            Card
+            {t('payment.card')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -322,13 +326,13 @@ export const PaymentTenderScreen: React.FC = () => {
         <>
           <View style={styles.tenderDetailsCard}>
             <View style={styles.totalAmountBox}>
-              <Text style={styles.totalAmountLabel}>Total Bill Amount</Text>
+              <Text style={styles.totalAmountLabel}>{t('payment.amountDue')}</Text>
               <Text style={styles.totalAmountValue}>Rs. {totalAmount.toLocaleString()}.00</Text>
             </View>
 
             <View style={styles.divider} />
 
-            <Text style={styles.tenderLabel}>Cash Tendered</Text>
+            <Text style={styles.tenderLabel}>{t('payment.amountTendered')}</Text>
             <Text style={styles.tenderValueText}>
               Rs. {parsedTendered > 0 ? parsedTendered.toLocaleString() : '0'}
             </Text>
@@ -336,7 +340,7 @@ export const PaymentTenderScreen: React.FC = () => {
             {parsedTendered > totalAmount && (
               <View style={styles.changeBubble}>
                 <Text style={styles.changeBubbleText}>
-                  Change : Rs. {changeDue.toLocaleString()}
+                  {t('payment.changeDue')} : Rs. {changeDue.toLocaleString()}
                 </Text>
               </View>
             )}
@@ -378,7 +382,9 @@ export const PaymentTenderScreen: React.FC = () => {
               activeOpacity={0.8}
               onPress={handleExactMatch}
             >
-              <Text style={styles.exactMatchText}>Exact · Rs. {totalAmount.toLocaleString()}</Text>
+              <Text style={styles.exactMatchText}>
+                {t('payment.exactAmount', { amount: totalAmount.toLocaleString() })}
+              </Text>
             </TouchableOpacity>
 
             {/* Large Custom Numeric Numpad */}
@@ -447,7 +453,7 @@ export const PaymentTenderScreen: React.FC = () => {
             activeOpacity={0.85}
             onPress={handleCompleteSale}
           >
-            <Text style={styles.completeBtnText}>Complete Sale & Print Receipt</Text>
+            <Text style={styles.completeBtnText}>{t('payment.processTransaction')}</Text>
             <Feather name="printer" size={18} color={TOKENS.card} />
           </TouchableOpacity>
         </>
@@ -466,7 +472,7 @@ export const PaymentTenderScreen: React.FC = () => {
               <View style={[styles.tenderDetailsCard, { flex: 0, minHeight: 480 }]}>
                 <View style={styles.cardPaymentContainer}>
                   <View style={styles.totalAmountBox}>
-                    <Text style={styles.totalAmountLabel}>Total Bill Amount</Text>
+                    <Text style={styles.totalAmountLabel}>{t('payment.amountDue')}</Text>
                     <Text style={styles.totalAmountValue}>
                       Rs. {totalAmount.toLocaleString()}.00
                     </Text>
@@ -517,7 +523,7 @@ export const PaymentTenderScreen: React.FC = () => {
                       }}
                     >
                       <View style={styles.dropdownContent}>
-                        <Text style={styles.inputLabel}>Bank Name</Text>
+                        <Text style={styles.inputLabel}>{t('payment.bankName')}</Text>
                         <Text
                           style={[
                             styles.dropdownValue,
@@ -532,7 +538,7 @@ export const PaymentTenderScreen: React.FC = () => {
 
                     {/* Card Last 4 Digits Input */}
                     <View style={styles.inputContainer}>
-                      <Text style={styles.inputLabel}>Last 4 Digits</Text>
+                      <Text style={styles.inputLabel}>{t('payment.lastFourDigits')}</Text>
                       <TextInput
                         style={styles.textInput}
                         value={lastFourDigits}
@@ -550,10 +556,8 @@ export const PaymentTenderScreen: React.FC = () => {
 
                   <View style={styles.cardStatusBox}>
                     <Feather name="loader" size={18} color={TOKENS.primary} />
-                    <Text style={styles.cardAreaTitle}>Process on Card Terminal</Text>
-                    <Text style={styles.cardAreaSubtitle}>
-                      Swipe, tap, or insert the card on your physical terminal.
-                    </Text>
+                    <Text style={styles.cardAreaTitle}>{t('payment.cardTerminalTitle')}</Text>
+                    <Text style={styles.cardAreaSubtitle}>{t('payment.cardTerminalSubtitle')}</Text>
                   </View>
                 </View>
               </View>
@@ -575,7 +579,7 @@ export const PaymentTenderScreen: React.FC = () => {
               activeOpacity={0.85}
               onPress={handleCompleteSale}
             >
-              <Text style={styles.completeBtnText}>Complete Sale & Print Receipt</Text>
+              <Text style={styles.completeBtnText}>{t('payment.processTransaction')}</Text>
               <Feather name="printer" size={18} color={TOKENS.card} />
             </TouchableOpacity>
           )}

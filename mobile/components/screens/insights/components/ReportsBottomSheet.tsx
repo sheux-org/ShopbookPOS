@@ -19,6 +19,7 @@ import { useStockInProduct } from '../../../../hooks/useProducts';
 import { TOKENS } from '../../../../constants/tokens';
 import { styles } from '../styles';
 import { OrderItemsList, OrderCardHeaderRight } from './OrderHistoryHelpers';
+import { useTranslation } from '../../../../hooks/useTranslation';
 
 interface ReportsBottomSheetProps {
   visible: boolean;
@@ -54,6 +55,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { height: windowHeight } = useWindowDimensions();
+  const { t } = useTranslation();
 
   const [reportsActiveTab, setReportsActiveTab] = useState<'orders' | 'inventory'>('orders');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -66,7 +68,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      title="Reports & Management"
+      title={t('insights.reportsTitle')}
       maxHeight={windowHeight * 0.88}
     >
       <View style={{ height: windowHeight * 0.88 - 75 }}>
@@ -87,7 +89,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                 reportsActiveTab === 'orders' && styles.modalTabTextActive,
               ]}
             >
-              Order History
+              {t('insights.tabOrderHistory')}
             </Text>
           </TouchableOpacity>
 
@@ -106,7 +108,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                 reportsActiveTab === 'inventory' && styles.modalTabTextActive,
               ]}
             >
-              Stock-In Refills
+              {t('insights.tabStockInRefills')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -151,11 +153,15 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
               return (
                 <View style={localStyles.summaryBar}>
                   <View style={localStyles.summaryCol}>
-                    <Text style={localStyles.summaryLabel}>Transactions</Text>
+                    <Text style={localStyles.summaryLabel}>
+                      {t('insights.summaryTransactions')}
+                    </Text>
                     <Text style={localStyles.summaryVal}>{count}</Text>
                   </View>
                   <View style={[localStyles.summaryCol, { alignItems: 'flex-end' }]}>
-                    <Text style={localStyles.summaryLabel}>Total Revenue</Text>
+                    <Text style={localStyles.summaryLabel}>
+                      {t('insights.summaryTotalRevenue')}
+                    </Text>
                     <Text style={localStyles.summaryValSec}>
                       Rs. {totalSum.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </Text>
@@ -197,7 +203,9 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                       onPress={() => setExpandedOrderId(isExpanded ? null : order.id)}
                     >
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.historyInvoiceNum}>Invoice #{order.invoiceNumber}</Text>
+                        <Text style={styles.historyInvoiceNum}>
+                          {t('insights.invoiceLabel', { invoiceNo: order.invoiceNumber })}
+                        </Text>
                         <Text style={styles.historyDateText}>
                           {orderDate.toLocaleDateString()} at {orderDate.toLocaleTimeString()}
                         </Text>
@@ -227,10 +235,8 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                     color="#D1D5DB"
                     style={{ marginBottom: 12 }}
                   />
-                  <Text style={localStyles.emptyStateTitle}>No invoices found</Text>
-                  <Text style={localStyles.emptyStateSubtitle}>
-                    No sales invoices recorded for this active branch during this period.
-                  </Text>
+                  <Text style={localStyles.emptyStateTitle}>{t('insights.noInvoicesFound')}</Text>
+                  <Text style={localStyles.emptyStateSubtitle}>{t('insights.noInvoicesSub')}</Text>
                 </View>
               }
             />
@@ -262,9 +268,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
               ) : null
             }
             ListHeaderComponent={
-              <Text style={styles.refillSectionLabel}>
-                Select a product below to refill / Stock-In units:
-              </Text>
+              <Text style={styles.refillSectionLabel}>{t('insights.refillSectionLabel')}</Text>
             }
             renderItem={({ item: prod }) => {
               const isExpanded = expandedProductId === prod.id;
@@ -287,7 +291,8 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                         {prod.name}
                       </Text>
                       <Text style={styles.refillProductMeta} numberOfLines={1}>
-                        Code: {prod.quickCode || prod.sku || '—'} | Price: Rs. {prod.price}
+                        {t('insights.codeLabel')} {prod.quickCode || prod.sku || '—'} |{' '}
+                        {t('insights.priceLabel')} Rs. {prod.price}
                       </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -297,7 +302,7 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                           prod.stockCount <= 5 && { color: TOKENS.error },
                         ]}
                       >
-                        Stock: {prod.stockCount}
+                        {t('insights.stockLabel')} {prod.stockCount}
                       </Text>
                       <Feather
                         name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -312,21 +317,23 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                       <View style={styles.expandedDivider} />
 
                       <View style={styles.refillInfoRow}>
-                        <Text style={styles.refillCurrentStockLabel}>Current Stock:</Text>
+                        <Text style={styles.refillCurrentStockLabel}>
+                          {t('insights.currentStockLabel')}
+                        </Text>
                         <Text
                           style={[
                             styles.refillCurrentStockValue,
                             prod.stockCount <= 5 && { color: TOKENS.error },
                           ]}
                         >
-                          {prod.stockCount} units
+                          {prod.stockCount} {t('insights.unitsLabel')}
                         </Text>
                       </View>
 
                       <View style={styles.refillInputContainer}>
                         <TextInput
                           style={styles.refillInputInline}
-                          placeholder="Refill amount (e.g. 10)"
+                          placeholder={t('insights.refillPlaceholder')}
                           placeholderTextColor="#9CA3AF"
                           keyboardType="number-pad"
                           value={val}
@@ -344,8 +351,8 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                             const refillAmt = parseInt(val, 10);
                             if (isNaN(refillAmt) || refillAmt <= 0) {
                               Alert.alert(
-                                'Invalid Quantity',
-                                'Please enter a valid stock refill quantity!'
+                                t('insights.invalidQuantity'),
+                                t('insights.invalidQuantityMsg')
                               );
                               return;
                             }
@@ -359,15 +366,15 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                                 onSuccess: () => {
                                   queryClient.invalidateQueries({ queryKey: ['insights'] });
                                   Alert.alert(
-                                    'Stock In success',
-                                    'Product stock refilled successfully!'
+                                    t('insights.stockInSuccess'),
+                                    t('insights.stockInSuccessMsg')
                                   );
                                   // Reset expanded refill values
                                   setRefillValues({});
                                   setExpandedProductId(null);
                                 },
                                 onError: (err: any) => {
-                                  Alert.alert('Refill Failed', err.message);
+                                  Alert.alert(t('insights.refillFailed'), err.message);
                                 },
                               }
                             );
@@ -382,7 +389,9 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
                           ) : (
                             <>
                               <Feather name="plus-circle" size={14} color="#fff" />
-                              <Text style={styles.refillSubmitBtnInlineText}>Stock-In</Text>
+                              <Text style={styles.refillSubmitBtnInlineText}>
+                                {t('insights.stockInBtn')}
+                              </Text>
                             </>
                           )}
                         </TouchableOpacity>
@@ -395,10 +404,8 @@ export const ReportsBottomSheet: React.FC<ReportsBottomSheetProps> = ({
             ListEmptyComponent={
               <View style={localStyles.emptyStateContainer}>
                 <Feather name="package" size={48} color="#D1D5DB" style={{ marginBottom: 12 }} />
-                <Text style={localStyles.emptyStateTitle}>No products found</Text>
-                <Text style={localStyles.emptyStateSubtitle}>
-                  Add some products in Catalog or Refill screens first.
-                </Text>
+                <Text style={localStyles.emptyStateTitle}>{t('insights.noProductsFound')}</Text>
+                <Text style={localStyles.emptyStateSubtitle}>{t('insights.noProductsSub')}</Text>
               </View>
             }
           />

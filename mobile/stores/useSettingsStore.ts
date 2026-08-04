@@ -12,11 +12,13 @@ interface SettingsState {
   pairedPrinter: PrinterDevice | null;
   hapticsEnabled: boolean;
   isPremium: boolean;
+  language: 'en' | 'si' | 'ta';
   toggleBackup: () => void;
   setBackupEnabled: (enabled: boolean) => void;
   setPairedPrinter: (printer: PrinterDevice | null) => void;
   toggleHaptics: () => void;
   setPremium: (premium: boolean) => void;
+  setLanguage: (lang: 'en' | 'si' | 'ta') => void;
 }
 
 const useSettingsStoreRaw = create<SettingsState>()(
@@ -26,11 +28,13 @@ const useSettingsStoreRaw = create<SettingsState>()(
       pairedPrinter: null,
       hapticsEnabled: true,
       isPremium: true,
+      language: 'en',
       toggleBackup: () => set((state) => ({ isBackupEnabled: !state.isBackupEnabled })),
       setBackupEnabled: (enabled) => set({ isBackupEnabled: enabled }),
       setPairedPrinter: (printer) => set({ pairedPrinter: printer }),
       toggleHaptics: () => set((state) => ({ hapticsEnabled: !state.hapticsEnabled })),
       setPremium: (premium) => set({ isPremium: premium }),
+      setLanguage: (lang) => set({ language: lang }),
     }),
     {
       name: 'settings-storage',
@@ -39,6 +43,7 @@ const useSettingsStoreRaw = create<SettingsState>()(
         isBackupEnabled: state.isBackupEnabled,
         pairedPrinter: state.pairedPrinter,
         hapticsEnabled: state.hapticsEnabled,
+        language: state.language,
       }),
     }
   )
