@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Modal, Alert, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Print from 'expo-print';
 import Barcode from 'react-native-barcode-svg';
 import { SvgXml } from 'react-native-svg';
-import QRCode from 'qrcode';
 import { TOKENS } from '../../constants/tokens';
 
 interface BarcodeLabelModalProps {
@@ -21,8 +20,8 @@ interface BarcodeLabelModalProps {
 }
 
 /**
- * Offline-first EAN-13 SVG Generator.
- * Returns an inline XML SVG string for the printed HTML.
+ * Offline-first EAN-13 SVG Generator according to standard EAN-13 specification.
+ * Renders lead digit on far left, split 6+6 digit groups under data bars, and extended guard bars.
  */
 function generateEan13Svg(barcode: string): string {
   if (!/^\d{13}$/.test(barcode)) return '';
@@ -104,18 +103,15 @@ function generateEan13Svg(barcode: string): string {
 
   binary += '101'; // Right guard
 
-  // Build the SVG vector elements. Total modules: 95. We use a viewBox of 0 0 115 65 to add margins.
   let svg =
-    '<svg viewBox="0 0 115 65" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg" style="image-rendering: pixelated; max-height: 80px;">';
+    '<svg viewBox="0 0 115 65" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg" style="image-rendering: pixelated; max-height: 85px;">';
   for (let i = 0; i < 95; i++) {
     if (binary[i] === '1') {
-      // Guards (left, center, right) extend slightly lower (55px) than data bars (48px)
       const isGuard = i < 3 || (i >= 45 && i < 50) || i >= 92;
       const height = isGuard ? 53 : 46;
       svg += `<rect x="${i + 10}" y="0" width="1" height="${height}" fill="#000000" />`;
     }
   }
-  // Add human-readable numbers
   svg += `<text x="2" y="58" font-family="monospace" font-size="10" font-weight="bold">${barcode[0]}</text>`;
   svg += `<text x="18" y="58" font-family="monospace" font-size="10" font-weight="bold" letter-spacing="3.5">${left}</text>`;
   svg += `<text x="65" y="58" font-family="monospace" font-size="10" font-weight="bold" letter-spacing="3.5">${right}</text>`;
@@ -130,31 +126,129 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
   product,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [qrCodeSvg, setQrCodeSvg] = useState<string>('');
   const isEan13 = /^\d{13}$/.test(product.barcode);
 
-  // Generate offline-friendly QR code as vector SVG
-  useEffect(() => {
-    if (visible && product.barcode) {
-      QRCode.toString(
-        product.barcode,
-        {
-          type: 'svg',
-          width: 80,
-          margin: 1,
-        },
-        (err, xml) => {
-          if (err) {
-            console.error('Failed to generate local QR Code SVG:', err);
-          } else {
-            setQrCodeSvg(xml);
-          }
-        }
-      );
+  const getLabelHtml = () => {
+    const barcodeFormat = isEan13 ? 'EAN13' : 'CODE128';
+    let barcodeHtml = '';
+
+    if (isEan13) {
+      barcodeHtml = generateEan13Svg(product.barcode);
     } else {
-      setQrCodeSvg('');
+      barcodeHtml = `
+        <svg id="barcode-elem" style="width: 100%; max-height: 55px;"></svg>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+        <script>
+          setTimeout(function() {
+            try {
+              JsBarcode('#barcode-elem', '${product.barcode}', {
+                format: '${barcodeFormat}',
+                lineColor: '#000000',
+                width: 2,
+                height: 50,
+                displayValue: true,
+                font: 'monospace',
+                fontSize: 12,
+                margin: 5
+              });
+            } catch(e) {
+              console.error('JsBarcode render error:', e);
+            }
+          }, 50);
+        </script>
+      `;
     }
-  }, [visible, product.barcode]);
+
+    return `
+      <html>
+        <head>
+          <title>Print Label - ${product.name}</title>
+          <style>
+            @page {
+              size: 58mm 80mm;
+              margin: 0;
+            }
+            body {
+              font-family: system-ui, -apple-system, sans-serif;
+              margin: 0;
+              padding: 16px 14px;
+              text-align: center;
+              color: #111827;
+              background-color: #ffffff;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              box-sizing: border-box;
+              height: 100vh;
+            }
+            .label-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              width: 100%;
+              box-sizing: border-box;
+            }
+            .business-name {
+              font-size: 10px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 1.5px;
+              margin-bottom: 6px;
+              color: #4b5563;
+            }
+            .product-name {
+              font-size: 15px;
+              font-weight: 800;
+              margin: 4px 0;
+              word-wrap: break-word;
+              max-width: 100%;
+              line-height: 1.25;
+            }
+            .price {
+              font-size: 17px;
+              font-weight: 900;
+              margin-bottom: 12px;
+              color: #000000;
+            }
+            .barcode-wrapper {
+              margin: 8px 0 4px 0;
+              width: 100%;
+              display: flex;
+              justify-content: center;
+            }
+            .barcode-wrapper svg {
+              width: 100% !important;
+              height: auto !important;
+              max-height: 60px;
+            }
+            .barcode-number {
+              font-family: monospace;
+              font-size: 12px;
+              font-weight: 700;
+              color: #111827;
+              letter-spacing: 1.5px;
+              margin-top: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="label-container">
+            <div class="business-name">SHOPBOOK POS</div>
+            <div class="product-name">${product.name}</div>
+            <div class="price">Rs. ${product.price.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+            })}</div>
+            <div class="barcode-wrapper">
+              ${barcodeHtml}
+            </div>
+            ${!isEan13 ? `<div class="barcode-number">${product.barcode}</div>` : ''}
+          </div>
+        </body>
+      </html>
+    `;
+  };
 
   const handleCopyBarcode = async () => {
     await Clipboard.setStringAsync(product.barcode);
@@ -164,144 +258,24 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
 
   const handlePrintLabel = async () => {
     try {
-      const barcodeFormat = isEan13 ? 'EAN13' : 'CODE128';
-      let barcodeHtml = '';
-
-      if (isEan13) {
-        barcodeHtml = generateEan13Svg(product.barcode);
-      } else {
-        // Fallback for non-EAN-13: load JsBarcode from CDN
-        barcodeHtml = `
-          <svg id="barcode-elem" style="width: 100%; max-height: 55px;"></svg>
-          <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-          <script>
-            setTimeout(function() {
-              try {
-                JsBarcode('#barcode-elem', '${product.barcode}', {
-                  format: '${barcodeFormat}',
-                  lineColor: '#000000',
-                  width: 2,
-                  height: 50,
-                  displayValue: true,
-                  font: 'monospace',
-                  fontSize: 12,
-                  margin: 5
-                });
-              } catch(e) {
-                console.error('JsBarcode render error:', e);
-              }
-            }, 50);
-          </script>
-        `;
-      }
-
-      const html = `
-        <html>
-          <head>
-            <title>Print Label - ${product.name}</title>
-            <style>
-              @page {
-                size: 58mm 80mm;
-                margin: 0;
-              }
-              body {
-                font-family: system-ui, -apple-system, sans-serif;
-                margin: 0;
-                padding: 10px 14px;
-                text-align: center;
-                color: #111827;
-                background-color: #ffffff;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                box-sizing: border-box;
-                height: 100vh;
-              }
-              .label-container {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                width: 100%;
-                box-sizing: border-box;
-              }
-              .business-name {
-                font-size: 9px;
-                font-weight: 800;
-                text-transform: uppercase;
-                letter-spacing: 1.5px;
-                margin-bottom: 4px;
-                color: #4b5563;
-              }
-              .product-name {
-                font-size: 14px;
-                font-weight: 800;
-                margin: 4px 0;
-                word-wrap: break-word;
-                max-width: 100%;
-                line-height: 1.2;
-              }
-              .price {
-                font-size: 16px;
-                font-weight: 900;
-                margin-bottom: 6px;
-                color: #000000;
-              }
-              .barcode-wrapper {
-                margin: 6px 0;
-                width: 100%;
-                display: flex;
-                justify-content: center;
-              }
-              .barcode-wrapper svg {
-                width: 100% !important;
-                height: auto !important;
-                max-height: 55px;
-              }
-              .qr-code {
-                width: 70px;
-                height: 70px;
-                margin-top: 6px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-              }
-              .qr-code svg {
-                width: 70px !important;
-                height: 70px !important;
-              }
-              .footer-sku {
-                font-size: 8px;
-                color: #6b7280;
-                margin-top: 6px;
-                font-weight: 600;
-                letter-spacing: 0.5px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="label-container">
-              <div class="business-name">SHOPBOOK POS SYSTEM</div>
-              <div class="product-name">${product.name}</div>
-              <div class="price">Rs. ${product.price.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-              })}</div>
-              <div class="barcode-wrapper">
-                ${barcodeHtml}
-              </div>
-              <div class="qr-code">
-                ${qrCodeSvg}
-              </div>
-              <div class="footer-sku">CODE: ${product.barcode}</div>
-            </div>
-          </body>
-        </html>
-      `;
-
+      const html = getLabelHtml();
       await Print.printAsync({ html });
     } catch (err: any) {
       Alert.alert('Print Failed', err.message || 'Failed to print thermal label.');
+    }
+  };
+
+  const handleDownloadLabel = async () => {
+    try {
+      const html = getLabelHtml();
+      const { uri } = await Print.printToFileAsync({ html });
+      Alert.alert(
+        'Label Document Created 📄',
+        `Label file for "${product.name}" has been generated.\nLocation: ${uri}`,
+        [{ text: 'OK' }]
+      );
+    } catch (err: any) {
+      Alert.alert('Download Failed', err.message || 'Failed to generate label file.');
     }
   };
 
@@ -338,30 +312,23 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
                 Rs. {product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </Text>
 
-              {/* Barcode SVG rendering using react-native-barcode-svg */}
+              {/* Standard EAN-13 SVG / Code128 vector rendering */}
               <View style={styles.barcodeBox}>
-                <Barcode
-                  value={product.barcode}
-                  format={isEan13 ? 'EAN13' : 'CODE128'}
-                  singleBarWidth={1.8}
-                  height={50}
-                  maxWidth={240}
-                />
-              </View>
-
-              {/* QR Code */}
-              <View style={styles.qrBox}>
-                {qrCodeSvg ? (
-                  <View style={styles.qrSvgContainer}>
-                    <SvgXml xml={qrCodeSvg} width={64} height={64} />
-                  </View>
+                {isEan13 ? (
+                  <SvgXml xml={generateEan13Svg(product.barcode)} width={230} height={70} />
                 ) : (
-                  <View style={styles.qrPlaceholder} />
+                  <>
+                    <Barcode
+                      value={product.barcode}
+                      format="CODE128"
+                      singleBarWidth={1.8}
+                      height={52}
+                      maxWidth={240}
+                    />
+                    <Text style={styles.barcodeNumberText}>{product.barcode}</Text>
+                  </>
                 )}
-                <Text style={styles.qrText}>Scan to Quick Sale</Text>
               </View>
-
-              <Text style={styles.labelFooter}>* SYSTEM REGISTERED DIGITAL LABEL *</Text>
             </View>
 
             {/* Meta Info & Actions */}
@@ -386,6 +353,15 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={styles.downloadBtn}
+              activeOpacity={0.8}
+              onPress={handleDownloadLabel}
+            >
+              <Feather name="download" size={16} color={TOKENS.dark} style={{ marginRight: 8 }} />
+              <Text style={styles.downloadBtnText}>Download Label</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.copyBtn}
               activeOpacity={0.8}
               onPress={handleCopyBarcode}
@@ -397,7 +373,7 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
                 style={{ marginRight: 8 }}
               />
               <Text style={[styles.copyBtnText, copied && { color: TOKENS.success }]}>
-                {copied ? 'Barcode Copied!' : 'Copy Barcode String'}
+                {copied ? 'Barcode Copied!' : 'Copy Barcode'}
               </Text>
             </TouchableOpacity>
           </ScrollView>
@@ -483,62 +459,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   labelBrand: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: 'bold',
-    color: '#9CA3AF',
-    letterSpacing: 1,
+    color: '#6B7280',
+    letterSpacing: 1.5,
   },
   labelProductName: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#111827',
     marginTop: 6,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 18,
   },
   labelPrice: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: '#111827',
     marginTop: 4,
   },
   barcodeBox: {
-    marginVertical: 12,
+    marginVertical: 14,
     width: '100%',
     alignItems: 'center',
   },
-  qrBox: {
-    alignItems: 'center',
+  barcodeNumberText: {
+    fontFamily: 'monospace',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a',
+    letterSpacing: 2,
     marginTop: 6,
-  },
-  qrSvgContainer: {
-    width: 64,
-    height: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qrPlaceholder: {
-    width: 64,
-    height: 64,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  qrText: {
-    fontSize: 7,
-    fontWeight: 'bold',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 3,
-  },
-  labelFooter: {
-    fontSize: 7,
-    color: '#D1D5DB',
-    marginTop: 12,
-    fontWeight: 'bold',
-    letterSpacing: 0.3,
+    textAlign: 'center',
   },
   metaBox: {
     backgroundColor: '#F9FAFB',
@@ -579,6 +531,23 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 13,
+  },
+  downloadBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  downloadBtnText: {
+    color: TOKENS.dark,
+    fontWeight: '600',
+    fontSize: 12,
   },
   copyBtn: {
     backgroundColor: '#FFFFFF',

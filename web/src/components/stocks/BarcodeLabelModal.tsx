@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, Printer, Download, Sparkles, CheckCircle2 } from 'lucide-react';
-import QRCode from 'qrcode';
+import { X, Printer, Download, Sparkles, CheckCircle2, Copy } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
 
 interface BarcodeLabelModalProps {
@@ -21,8 +20,6 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
   product,
 }) => {
   const barcodeSvgRef = useRef<SVGSVGElement>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
-  const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Detect format (EAN-13 if 13 digits, otherwise CODE128)
@@ -31,7 +28,6 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
 
   useEffect(() => {
     if (isOpen && product.barcode) {
-      // Generate Barcode SVG using JsBarcode
       setTimeout(() => {
         if (barcodeSvgRef.current) {
           try {
@@ -39,9 +35,9 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
               format: barcodeFormat,
               lineColor: '#0f172a',
               width: 2,
-              height: 70,
+              height: 60,
               displayValue: true,
-              font: 'Inter, sans-serif',
+              font: 'monospace',
               fontSize: 14,
               fontOptions: 'bold',
               margin: 10,
@@ -51,30 +47,12 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
           }
         }
       }, 50);
-
-      // Generate QR Code Data URL using qrcode library
-      QRCode.toDataURL(
-        product.barcode,
-        {
-          width: 300,
-          margin: 1,
-          color: {
-            dark: '#0f172a',
-            light: '#ffffff',
-          },
-        },
-        (err, url) => {
-          if (err) console.error('Failed to generate QR Code:', err);
-          else setQrCodeUrl(url);
-        }
-      );
     }
   }, [isOpen, product.barcode, barcodeFormat]);
 
   if (!isOpen) return null;
 
   const handlePrint = () => {
-    // Open a print-specific window and print the label
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       alert('Pop-up blocker is enabled. Please allow pop-ups to print labels.');
@@ -95,70 +73,68 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
             body {
               font-family: 'Inter', system-ui, sans-serif;
               margin: 0;
-              padding: 10px;
+              padding: 14px;
               text-align: center;
               color: #0f172a;
               background-color: #ffffff;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              box-sizing: border-box;
+              height: 100vh;
             }
             .label-container {
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              height: 100%;
+              width: 100%;
               box-sizing: border-box;
             }
             .business-name {
-              font-size: 8px;
+              font-size: 10px;
               font-weight: 800;
               text-transform: uppercase;
-              letter-spacing: 1px;
-              margin-bottom: 2px;
+              letter-spacing: 1.5px;
+              margin-bottom: 6px;
               color: #64748b;
             }
             .product-name {
-              font-size: 13px;
+              font-size: 15px;
               font-weight: 800;
               margin: 4px 0;
               word-wrap: break-word;
               max-width: 100%;
+              line-height: 1.25;
             }
             .price {
-              font-size: 15px;
+              font-size: 17px;
               font-weight: 900;
-              margin-bottom: 6px;
+              margin-bottom: 12px;
+              color: #000000;
             }
             .barcode-wrapper {
-              margin: 4px 0;
-              max-width: 100%;
+              margin: 8px 0;
+              width: 100%;
+              display: flex;
+              justify-content: center;
             }
             .barcode-wrapper svg {
               width: 100% !important;
               height: auto !important;
-              max-height: 55px;
-            }
-            .qr-code {
-              width: 75px;
-              height: 75px;
-              margin-top: 6px;
-            }
-            .footer-sku {
-              font-size: 8px;
-              color: #94a3b8;
-              margin-top: 4px;
+              max-height: 65px;
             }
           </style>
         </head>
         <body>
           <div class="label-container">
-            <div class="business-name">SHOPBOOK POS SYSTEM</div>
+            <div class="business-name">SHOPBOOK POS</div>
             <div class="product-name">${product.name}</div>
             <div class="price">Rs. ${product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
             <div class="barcode-wrapper">
               ${barcodeSvgHtml}
             </div>
-            ${qrCodeUrl ? `<img class="qr-code" src="${qrCodeUrl}" alt="QR Code" />` : ''}
-            <div class="footer-sku">CODE: ${product.barcode}</div>
           </div>
           <script>
             window.onload = function() {
@@ -172,14 +148,34 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
     printWindow.document.close();
   };
 
-  const handleDownloadQR = () => {
-    if (!qrCodeUrl) return;
-    const link = document.createElement('a');
-    link.href = qrCodeUrl;
-    link.download = `QR_${product.name.replace(/\s+/g, '_')}_${product.barcode}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadLabel = () => {
+    try {
+      const barcodeSvgHtml = barcodeSvgRef.current?.outerHTML || '';
+
+      const fullLabelSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="360" height="240" viewBox="0 0 360 240" style="background:#ffffff; font-family: system-ui, sans-serif;">
+          <rect width="360" height="240" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" />
+          <text x="180" y="32" font-size="11" font-weight="800" fill="#64748b" text-anchor="middle" letter-spacing="2">SHOPBOOK POS</text>
+          <text x="180" y="58" font-size="16" font-weight="800" fill="#0f172a" text-anchor="middle">${product.name.length > 28 ? product.name.slice(0, 26) + '...' : product.name}</text>
+          <text x="180" y="84" font-size="18" font-weight="900" fill="#000000" text-anchor="middle">Rs. ${product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</text>
+          <g transform="translate(45, 95)">
+            ${barcodeSvgHtml}
+          </g>
+        </svg>
+      `;
+
+      const blob = new Blob([fullLabelSvg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = `Label_${product.name.replace(/\s+/g, '_')}_${product.barcode}.svg`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download barcode label:', err);
+    }
   };
 
   const handleCopyCode = () => {
@@ -241,19 +237,9 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
               <div style={styles.barcodeWrapper}>
                 <svg
                   ref={barcodeSvgRef}
-                  style={{ width: '100%', height: 'auto', maxHeight: '80px' }}
+                  style={{ width: '100%', height: 'auto', maxHeight: '75px' }}
                 />
               </div>
-
-              {/* QR Code Container */}
-              {qrCodeUrl && (
-                <div style={styles.qrWrapper}>
-                  <img src={qrCodeUrl} alt="QR Code" style={styles.qrImage} />
-                  <span style={styles.qrText}>Scan to Quick Sale</span>
-                </div>
-              )}
-
-              <div style={styles.labelFooter}>* SYSTEM REGISTERED DIGITAL LABEL *</div>
             </div>
           </div>
 
@@ -276,18 +262,14 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
                 <span>Print Thermal Label</span>
               </button>
 
-              <button onClick={handleDownloadQR} style={styles.actionBtn}>
+              <button onClick={handleDownloadLabel} style={styles.actionBtn}>
                 <Download size={16} />
-                <span>Download QR Image</span>
+                <span>Download Label</span>
               </button>
 
               <button onClick={handleCopyCode} style={styles.actionBtn}>
-                {copied ? (
-                  <CheckCircle2 size={16} color="var(--success)" />
-                ) : (
-                  <Printer size={16} style={{ opacity: 0 }} />
-                )}
-                <span>{copied ? 'Code Copied!' : 'Copy Barcode String'}</span>
+                {copied ? <CheckCircle2 size={16} color="var(--success)" /> : <Copy size={16} />}
+                <span>{copied ? 'Barcode Copied!' : 'Copy Barcode'}</span>
               </button>
             </div>
           </div>
@@ -300,70 +282,59 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
 const styles: Record<string, React.CSSProperties> = {
   modalOverlay: {
     position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    inset: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backdropFilter: 'blur(4px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 99999,
-    backdropFilter: 'blur(6px)',
+    zIndex: 1000,
     padding: '16px',
   },
   modalContent: {
-    width: '100%',
-    maxWidth: '560px',
     backgroundColor: '#ffffff',
     borderRadius: '16px',
-    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
-    border: '1px solid var(--border)',
+    width: '100%',
+    maxWidth: '420px',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
     overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    maxHeight: '90vh',
-    animation: 'scale-up 0.2s ease-out',
+    animation: 'modalSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
   },
   modalHeader: {
-    padding: '16px 20px',
-    borderBottom: '1px solid var(--border)',
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '16px 20px',
+    borderBottom: '1px solid #f1f5f9',
     backgroundColor: '#f8fafc',
   },
   modalTitle: {
-    fontSize: '15px',
-    fontWeight: '800',
-    color: '#0f172a',
     margin: 0,
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#0f172a',
   },
   modalSubtitle: {
-    fontSize: '11px',
-    color: 'var(--muted)',
-    marginTop: '2px',
-    fontWeight: '500',
+    margin: 0,
+    fontSize: '12px',
+    color: '#64748b',
   },
   modalCloseBtn: {
+    background: 'none',
     border: 'none',
-    backgroundColor: 'transparent',
-    color: 'var(--muted)',
     cursor: 'pointer',
-    padding: '6px',
-    borderRadius: '50%',
+    color: '#94a3b8',
+    padding: '4px',
+    borderRadius: '6px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    transition: 'background-color 0.2s',
   },
   modalBody: {
-    padding: '24px',
-    display: 'grid',
-    gridTemplateColumns: '1.1fr 1fr',
-    gap: '24px',
-    overflowY: 'auto',
-    backgroundColor: '#ffffff',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
   },
   previewSection: {
     display: 'flex',
@@ -371,82 +342,54 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '8px',
   },
   previewLabel: {
-    fontSize: '9px',
-    fontWeight: '800',
-    color: 'var(--muted)',
-    letterSpacing: '1px',
+    fontSize: '10px',
+    fontWeight: 700,
+    letterSpacing: '0.05em',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
   },
   labelCard: {
-    width: '100%',
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '12px',
-    padding: '18px 12px',
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
   },
   labelBrand: {
-    fontSize: '8px',
-    fontWeight: '800',
-    color: '#94a3b8',
-    letterSpacing: '1px',
+    fontSize: '9px',
+    fontWeight: 800,
+    letterSpacing: '0.1em',
+    color: '#64748b',
     textTransform: 'uppercase',
   },
   labelProductName: {
-    fontSize: '13px',
-    fontWeight: '800',
-    color: '#0f172a',
-    marginTop: '6px',
-    textAlign: 'center',
-    lineHeight: '1.3',
-  },
-  labelPrice: {
-    fontSize: '15px',
-    fontWeight: '900',
+    fontSize: '14px',
+    fontWeight: 800,
     color: '#0f172a',
     marginTop: '4px',
+    textAlign: 'center',
+    lineHeight: 1.25,
+  },
+  labelPrice: {
+    fontSize: '16px',
+    fontWeight: 900,
+    color: '#0f172a',
+    marginTop: '2px',
   },
   barcodeWrapper: {
+    margin: '12px 0 0 0',
     width: '100%',
-    margin: '12px 0 6px 0',
     display: 'flex',
     justifyContent: 'center',
-  },
-  qrWrapper: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginTop: '8px',
-    gap: '4px',
-  },
-  qrImage: {
-    width: '75px',
-    height: '75px',
-    border: '1px solid #f1f5f9',
-    borderRadius: '6px',
-  },
-  qrText: {
-    fontSize: '7px',
-    fontWeight: '700',
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  },
-  labelFooter: {
-    fontSize: '7px',
-    color: '#cbd5e1',
-    marginTop: '12px',
-    fontWeight: '700',
-    letterSpacing: '0.3px',
   },
   actionsPanel: {
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'space-between',
-    height: '100%',
+    gap: '12px',
   },
   metaBox: {
     backgroundColor: '#f8fafc',
@@ -455,7 +398,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid #f1f5f9',
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '6px',
   },
   metaRow: {
     display: 'flex',
@@ -463,50 +406,45 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '12px',
   },
   metaLabel: {
-    color: 'var(--muted)',
-    fontWeight: '500',
+    color: '#64748b',
+    fontWeight: 500,
   },
   metaValue: {
     color: '#0f172a',
-    fontWeight: '700',
+    fontWeight: 700,
+    fontFamily: 'monospace',
   },
   buttonCol: {
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
-    marginTop: '20px',
   },
   printBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    width: '100%',
-    padding: '11px',
-    borderRadius: '8px',
-    backgroundColor: 'var(--primary)',
+    backgroundColor: 'var(--primary, #2563eb)',
     color: '#ffffff',
     border: 'none',
-    fontWeight: '700',
+    borderRadius: '10px',
+    padding: '11px 16px',
     fontSize: '13px',
+    fontWeight: 700,
     cursor: 'pointer',
-    boxShadow: '0 4px 6px -1px rgba(59, 130, 246, 0.2)',
-    transition: 'background-color 0.2s',
-  },
-  actionBtn: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    width: '100%',
-    padding: '10px',
-    borderRadius: '8px',
+  },
+  actionBtn: {
     backgroundColor: '#ffffff',
     color: '#334155',
     border: '1px solid #cbd5e1',
-    fontWeight: '600',
-    fontSize: '12px',
+    borderRadius: '10px',
+    padding: '10px 16px',
+    fontSize: '13px',
+    fontWeight: 600,
     cursor: 'pointer',
-    transition: 'background-color 0.2s',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
   },
 };

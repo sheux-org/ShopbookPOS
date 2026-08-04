@@ -108,8 +108,13 @@ export function useUpdateStaff(businessId: string) {
 
       const cleanPhone = normalizePhone(phone);
       const dbRole = role === 'Admin' ? 'admin' : role === 'Manager' ? 'manager' : 'cashier';
+      const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
+      const dbBiz = businesses[0] as any;
+      const ownerPhone = dbBiz?.phoneNumber ? normalizePhone(dbBiz.phoneNumber) : '';
+
       const isOwner =
-        targetEmp.role === 'admin' || targetEmp.name.toLowerCase() === 'owner / admin';
+        targetEmp.name.toLowerCase() === 'owner / admin' ||
+        (ownerPhone !== '' && normalizePhone(targetEmp.phone) === ownerPhone);
 
       if (isOwner && dbRole !== 'admin') {
         throw new Error('Owner / Admin role cannot be changed.');
@@ -142,8 +147,20 @@ export function useDeleteStaff(businessId: string) {
       }
 
       const targetEmp = employees[0] as any;
+      const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
+      const dbBiz = businesses[0] as any;
+      const normalizePhone = (phoneStr: string): string => {
+        let cleaned = (phoneStr || '').replace(/\D/g, '');
+        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
+        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
+        return cleaned;
+      };
+      const ownerPhone = dbBiz?.phoneNumber ? normalizePhone(dbBiz.phoneNumber) : '';
+
       const isOwner =
-        targetEmp.role === 'admin' || targetEmp.name.toLowerCase() === 'owner / admin';
+        targetEmp.name.toLowerCase() === 'owner / admin' ||
+        (ownerPhone !== '' && normalizePhone(targetEmp.phone) === ownerPhone);
+
       if (isOwner) {
         throw new Error('Owner / Admin cannot be deleted.');
       }

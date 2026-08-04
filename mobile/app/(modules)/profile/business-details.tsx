@@ -24,6 +24,7 @@ import { BottomSheet } from '../../../components/common/BottomSheet';
 import { BusinessAvatar } from '../../../components/common/BusinessAvatar';
 import { useSettingsStore } from '../../../stores/useSettingsStore';
 import { hapticFeedback } from '../../../utils/haptics';
+import { useProductCount } from '../../../hooks/useProducts';
 
 const PRESET_EMOJIS = ['🛒', '🛍️', '🥛', '👕', '💊', '☕', '🍔', '📦', '🌾', '🏢', '🛠️', '📚'];
 
@@ -90,6 +91,7 @@ export default function BusinessDetailsRoute() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showLogoSelector, setShowLogoSelector] = useState(false);
+  const { data: productCount = 0 } = useProductCount();
 
   // Sync edit form states if activeBusiness changes externally
   useEffect(() => {
@@ -198,6 +200,7 @@ export default function BusinessDetailsRoute() {
 
   const handleSaveChanges = () => {
     if (!canPerform('update', 'settings')) {
+      hapticFeedback.notificationError();
       Alert.alert(
         'Access Denied',
         'Your profile role is not authorized to edit business settings.'
@@ -206,10 +209,12 @@ export default function BusinessDetailsRoute() {
     }
 
     if (!name.trim() || !category.trim() || !address.trim() || !phone.trim()) {
+      hapticFeedback.notificationWarning();
       Alert.alert('Required Fields', 'All business profile fields must be filled out.');
       return;
     }
 
+    hapticFeedback.impactMedium();
     updateActiveBizMutation.mutate(
       {
         name: name.trim(),
@@ -220,10 +225,12 @@ export default function BusinessDetailsRoute() {
       },
       {
         onSuccess: () => {
+          hapticFeedback.notificationSuccess();
           setIsEditing(false);
           triggerToast('Store Profile updated successfully! 🚀');
         },
         onError: () => {
+          hapticFeedback.notificationError();
           Alert.alert('Update Error', 'Failed to persist business profile changes.');
         },
       }
@@ -265,6 +272,7 @@ export default function BusinessDetailsRoute() {
                 style={styles.editToggleBtn}
                 activeOpacity={0.7}
                 onPress={() => {
+                  hapticFeedback.selection();
                   if (isEditing) {
                     // Cancel edit
                     setName(activeBusiness.name);
@@ -293,7 +301,10 @@ export default function BusinessDetailsRoute() {
             <TouchableOpacity
               style={[styles.storeIconBox, isEditing && styles.storeIconBoxEditing]}
               disabled={!isEditing || isUploading}
-              onPress={() => setShowLogoSelector(true)}
+              onPress={() => {
+                hapticFeedback.impactLight();
+                setShowLogoSelector(true);
+              }}
               activeOpacity={0.75}
             >
               <BusinessAvatar
@@ -310,6 +321,9 @@ export default function BusinessDetailsRoute() {
               )}
             </TouchableOpacity>
             <Text style={styles.storeName}>{isEditing ? name : activeBusiness.name}</Text>
+            <Text style={{ fontSize: 13, color: TOKENS.muted, marginTop: 2, fontWeight: '600' }}>
+              {phone}
+            </Text>
             <Text style={styles.storeStatus}>
               {isEditing ? 'Tap icon to change profile image 📸' : '🛡️ Admin Control Terminal'}
             </Text>
@@ -357,11 +371,16 @@ export default function BusinessDetailsRoute() {
             <Text style={styles.groupLabel}>Administrative Profile</Text>
 
             {/* Business Name Field */}
-            <View style={styles.infoRow}>
+            <View
+              style={[
+                styles.infoRow,
+                isEditing && { borderBottomWidth: 0, paddingBottom: 0, gap: 2 },
+              ]}
+            >
               <Text style={styles.infoLabel}>Business Name</Text>
               {isEditing ? (
                 <TextInput
-                  style={styles.inputField}
+                  style={[styles.inputField, { paddingVertical: 0 }]}
                   value={name}
                   onChangeText={setName}
                   placeholder="Enter Business Name"
@@ -377,6 +396,7 @@ export default function BusinessDetailsRoute() {
               style={[
                 styles.infoRow,
                 { zIndex: isCategoryDropdownOpen ? 1000 : 1, position: 'relative' },
+                isEditing && { borderBottomWidth: 0, paddingBottom: 0, gap: 2 },
               ]}
             >
               <Text style={styles.infoLabel}>Business Type / Category</Text>
@@ -384,6 +404,7 @@ export default function BusinessDetailsRoute() {
                 <View style={{ width: '100%', position: 'relative' }}>
                   <TouchableOpacity
                     activeOpacity={0.8}
+                    disabled={productCount > 0}
                     style={[
                       styles.inputField,
                       {
@@ -393,6 +414,7 @@ export default function BusinessDetailsRoute() {
                         paddingHorizontal: 12,
                       },
                       isCategoryDropdownOpen && { borderColor: TOKENS.primary },
+                      productCount > 0 && { opacity: 0.6, backgroundColor: '#F1F5F9' },
                     ]}
                     onPress={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                   >
@@ -433,6 +455,15 @@ export default function BusinessDetailsRoute() {
                       color={TOKENS.muted}
                     />
                   </TouchableOpacity>
+
+                  {productCount > 0 && (
+                    <Text
+                      style={{ fontSize: 10, color: TOKENS.muted, marginTop: 4, lineHeight: 14 }}
+                    >
+                      Business type cannot be changed because items have already been created in the
+                      catalog.
+                    </Text>
+                  )}
 
                   {isCategoryDropdownOpen && (
                     <View style={styles.categoryDropdownOverlayList}>
@@ -497,11 +528,16 @@ export default function BusinessDetailsRoute() {
             </View>
 
             {/* Address Field */}
-            <View style={styles.infoRow}>
+            <View
+              style={[
+                styles.infoRow,
+                isEditing && { borderBottomWidth: 0, paddingBottom: 0, gap: 2 },
+              ]}
+            >
               <Text style={styles.infoLabel}>Address</Text>
               {isEditing ? (
                 <TextInput
-                  style={styles.inputField}
+                  style={[styles.inputField, { paddingVertical: 0 }]}
                   value={address}
                   onChangeText={setAddress}
                   placeholder="Enter Address"
@@ -509,23 +545,6 @@ export default function BusinessDetailsRoute() {
                 />
               ) : (
                 <Text style={styles.infoVal}>{activeBusiness.address}</Text>
-              )}
-            </View>
-
-            {/* Phone Field */}
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phone Number</Text>
-              {isEditing ? (
-                <TextInput
-                  style={styles.inputField}
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  placeholder="Enter Phone Number"
-                  placeholderTextColor={TOKENS.muted}
-                />
-              ) : (
-                <Text style={styles.infoVal}>{activeBusiness.phone}</Text>
               )}
             </View>
 
@@ -791,8 +810,9 @@ const styles = StyleSheet.create({
     borderColor: TOKENS.border,
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    height: 42,
     marginTop: 4,
+    justifyContent: 'center',
   },
   saveButton: {
     flexDirection: 'row',

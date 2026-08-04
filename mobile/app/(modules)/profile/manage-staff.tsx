@@ -206,7 +206,13 @@ export default function ManageStaffRoute() {
       )}
 
       {/* Scrollable list */}
-      <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollWrapper}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom + 24, 32) },
+        ]}
+      >
         <Text style={styles.groupLabel}>Authorized Staff Members</Text>
 
         {staffList.map((member) => {
@@ -239,7 +245,7 @@ export default function ManageStaffRoute() {
               </View>
               {/* Only admins can edit/delete staff */}
               {canPerform('create', 'staff') &&
-                !(member.role === 'Admin' || member.name.toLowerCase() === 'owner / admin') && (
+                !(member.name.toLowerCase() === 'owner / admin') && (
                   <View
                     style={{
                       flexDirection: 'row',
@@ -414,9 +420,7 @@ export default function ManageStaffRoute() {
             <View style={styles.rolesSelectorRow}>
               {(['Admin', 'Manager', 'Cashier'] as const).map((role) => {
                 const isSelected = editRole === role;
-                const isOwner =
-                  editingStaff?.role === 'Admin' ||
-                  editingStaff?.name.toLowerCase() === 'owner / admin';
+                const isOwner = editingStaff?.name.toLowerCase() === 'owner / admin';
                 const isDemoting = isOwner && role !== 'Admin';
                 return (
                   <TouchableOpacity

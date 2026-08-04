@@ -586,3 +586,15 @@ export function useFindProduct() {
     generateUniqueBarcode,
   };
 }
+
+export function useProductCount() {
+  const activeBiz = useBusinessStore((s) => s.activeBusiness);
+  return useQuery({
+    queryKey: ['products', activeBiz?.id, 'count'],
+    queryFn: async () => {
+      if (!activeBiz?.id || activeBiz.id === '0') return 0;
+      return database.get('products').query(Q.where('business_id', activeBiz.id)).fetchCount();
+    },
+    enabled: !!activeBiz?.id,
+  });
+}

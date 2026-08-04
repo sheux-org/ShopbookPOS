@@ -97,7 +97,7 @@ export const ManageItemsScreen: React.FC = () => {
   const [editImage, setEditImage] = useState('');
   const [editImageUploading, setEditImageUploading] = useState(false);
 
-  const { generateUniqueBarcode } = useFindProduct();
+  const { generateUniqueBarcode, checkDuplicateCodes } = useFindProduct();
 
   const handleAutoGenerateEditBarcode = async () => {
     try {
@@ -144,12 +144,27 @@ export const ManageItemsScreen: React.FC = () => {
 
   const handleEditPress = (prod: any) => {
     setEditingProduct(prod);
-    setEditName(prod.name);
-    setEditCategory(prod.category || config.defaultCategory);
-    setEditUnitType(prod.unitType || config.defaultUnitType);
+    setEditName(prod.name || '');
+
+    const rawCategory = prod.category || '';
+    const matchedCategory =
+      CATEGORIES_LIST.find((cat) => cat.toLowerCase() === rawCategory.toLowerCase()) ||
+      rawCategory ||
+      config.defaultCategory;
+    setEditCategory(matchedCategory);
+
+    const rawUnit = prod.unitType || '';
+    const matchedUnit =
+      UNIT_TYPES.find((u) => u.toLowerCase() === rawUnit.toLowerCase()) ||
+      rawUnit ||
+      config.defaultUnitType;
+    setEditUnitType(matchedUnit);
+
     setEditCostPrice(prod.costPrice ? prod.costPrice.toString() : '');
     setEditSalesPrice(prod.price ? prod.price.toString() : '');
-    setEditStockCount(prod.stockCount ? prod.stockCount.toString() : '0');
+    setEditStockCount(
+      prod.stockCount !== undefined && prod.stockCount !== null ? prod.stockCount.toString() : '0'
+    );
     setEditLowStock(prod.lowStockAlert ? prod.lowStockAlert.toString() : '5');
     setEditQuickCode(prod.quickCode || '');
     setEditBarcode(prod.barcode || '');
@@ -276,7 +291,7 @@ export const ManageItemsScreen: React.FC = () => {
     setEditImage('');
   };
 
-  const handleUpdateProduct = () => {
+  const handleUpdateProduct = async () => {
     if (!editName || !editSalesPrice || !editStockCount) {
       Alert.alert(
         'Required Fields Missing',
@@ -302,6 +317,30 @@ export const ManageItemsScreen: React.FC = () => {
         'Please check that price and stock fields contain valid numbers.'
       );
       return;
+    }
+
+    // Validate duplicate codes across products
+    if (editingProduct) {
+      const dupResult = await checkDuplicateCodes({
+        barcode: editBarcode.trim() || undefined,
+        quickCode: editQuickCode.trim() || undefined,
+        excludeProductId: editingProduct.id,
+      });
+
+      if (dupResult?.barcodeDuplicate) {
+        Alert.alert(
+          'Duplicate Barcode Error',
+          `The barcode "${editBarcode}" is already in use by product "${dupResult.barcodeDuplicate.name}". Barcodes must be unique!`
+        );
+        return;
+      }
+      if (dupResult?.quickCodeDuplicate) {
+        Alert.alert(
+          'Duplicate Quick Code Error',
+          `The quick code "${editQuickCode}" is already in use by product "${dupResult.quickCodeDuplicate.name}". Quick codes must be unique!`
+        );
+        return;
+      }
     }
 
     updateProductMutation.mutate(
@@ -385,7 +424,7 @@ export const ManageItemsScreen: React.FC = () => {
           data={productsList}
           keyExtractor={(item) => item.id}
           drawDistance={500}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
           onEndReached={() => {
             if (hasNextPage) {
               fetchNextPage();
@@ -408,92 +447,112 @@ export const ManageItemsScreen: React.FC = () => {
               <View
                 style={[styles.productItemCard, isScannedMatch && styles.productItemCardActive]}
               >
-                <TouchableOpacity
-                  style={styles.productCardBody}
-                  activeOpacity={0.7}
-                  onPress={() => handleProductCardPress(item)}
-                >
-                  <ProductImage
-                    icon={item.icon}
-                    category={item.category}
-                    recyclingKey={item.id}
-                    size={47}
-                    style={styles.productImage}
-                  />
+                <View style={styles.productCardMainRow}>
+                  <TouchableOpacity
+                    style={styles.productCardBody}
+                    activeOpacity={0.7}
+                    onPress={() => handleProductCardPress(item)}
+                  >
+                    <ProductImage
+                      icon={item.icon}
+                      category={item.category}
+                      recyclingKey={item.id}
+                      size={74}
+                      style={styles.productImage}
+                    />
 
-                  <View style={styles.productMetaCol}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                      }}
-                    >
-                      <Text style={[styles.productName, { flexShrink: 1 }]} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      {isScannedMatch && (
-                        <View style={styles.scannedBadge}>
-                          <Feather name="check" size={10} color="#FFFFFF" />
-                          <Text style={styles.scannedBadgeText}>MATCH</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.badgesRow}>
-                      <Text style={styles.productPriceText}>Rs. {item.price.toLocaleString()}</Text>
-                      <View style={styles.dotDivider} />
-                      <Text
-                        style={[
-                          styles.productStockText,
-                          item.stockType === 'low' && styles.stockLowText,
-                          item.stockType === 'out' && styles.stockOutText,
-                        ]}
+                    <View style={styles.productMetaCol}>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
                       >
-                        {item.stockCount} {item.unitType || 'pcs'}
-                      </Text>
-                    </View>
+                        <Text style={[styles.productName, { flexShrink: 1 }]} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        {isScannedMatch && (
+                          <View style={styles.scannedBadge}>
+                            <Feather name="check" size={10} color="#FFFFFF" />
+                            <Text style={styles.scannedBadgeText}>MATCH</Text>
+                          </View>
+                        )}
+                      </View>
 
-                    <View style={styles.codesRow}>
-                      {item.quickCode ? (
-                        <View style={styles.codePill}>
-                          <Text style={styles.codeText}>Code: {item.quickCode}</Text>
-                        </View>
-                      ) : null}
-                      {item.barcode ? (
-                        <View style={[styles.codePill, { backgroundColor: '#F1F5F9' }]}>
-                          <Text style={styles.codeText}>Barcode: {item.barcode}</Text>
-                        </View>
-                      ) : null}
-                      <View style={[styles.codePill, { backgroundColor: '#EFF6FF' }]}>
-                        <Text style={[styles.codeText, { color: TOKENS.primary }]}>
-                          {item.category.toUpperCase()}
+                      <View style={styles.badgesRow}>
+                        <Text style={styles.productPriceText}>
+                          Rs. {item.price.toLocaleString()}
+                        </Text>
+                        <View style={styles.dotDivider} />
+                        <Text
+                          style={[
+                            styles.productStockText,
+                            item.stockType === 'low' && styles.stockLowText,
+                            item.stockType === 'out' && styles.stockOutText,
+                          ]}
+                        >
+                          {item.stockCount} {item.unitType || 'pcs'}
                         </Text>
                       </View>
+
+                      <View style={styles.codesRow}>
+                        {item.quickCode ? (
+                          <View style={[styles.codePill, { flexShrink: 1 }]}>
+                            <Text style={styles.codeText} numberOfLines={1} ellipsizeMode="tail">
+                              Code: {item.quickCode}
+                            </Text>
+                          </View>
+                        ) : null}
+                        <View
+                          style={[styles.codePill, { backgroundColor: '#EFF6FF', flexShrink: 1 }]}
+                        >
+                          <Text
+                            style={[styles.codeText, { color: TOKENS.primary }]}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                          >
+                            {item.category.toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Actions column */}
+                  <View style={styles.itemActionCol}>
+                    <View style={styles.editDeleteRow}>
+                      <TouchableOpacity
+                        style={styles.editIconBtn}
+                        activeOpacity={0.7}
+                        onPress={() => handleEditPress(item)}
+                      >
+                        <Feather name="edit-2" size={15} color={TOKENS.primary} />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.deleteIconBtn}
+                        activeOpacity={0.7}
+                        onPress={() => handleDeletePress(item)}
+                      >
+                        <Feather name="trash-2" size={15} color={TOKENS.error} />
+                      </TouchableOpacity>
                     </View>
                   </View>
-                </TouchableOpacity>
-
-                {/* Actions column */}
-                <View style={styles.itemActionCol}>
-                  <View style={styles.editDeleteRow}>
-                    <TouchableOpacity
-                      style={styles.editIconBtn}
-                      activeOpacity={0.7}
-                      onPress={() => handleEditPress(item)}
-                    >
-                      <Feather name="edit-2" size={15} color={TOKENS.primary} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.deleteIconBtn}
-                      activeOpacity={0.7}
-                      onPress={() => handleDeletePress(item)}
-                    >
-                      <Feather name="trash-2" size={15} color={TOKENS.error} />
-                    </TouchableOpacity>
-                  </View>
                 </View>
+
+                {/* Dedicated Barcode Sub-Strip if barcode exists */}
+                {item.barcode ? (
+                  <View style={styles.cardBarcodeSubStrip}>
+                    <Feather
+                      name="bar-chart-2"
+                      size={11}
+                      color={TOKENS.muted}
+                      style={{ transform: [{ rotate: '90deg' }] }}
+                    />
+                    <Text style={styles.cardBarcodeSubText}>Barcode: {item.barcode}</Text>
+                  </View>
+                ) : null}
               </View>
             );
           }}
@@ -565,25 +624,34 @@ export const ManageItemsScreen: React.FC = () => {
             <View style={styles.fieldRow}>
               <Text style={styles.fieldLabel}>Category</Text>
               <View style={styles.chipsSelector}>
-                {CATEGORIES_LIST.map((cat) => {
-                  const isSelected = editCategory === cat;
-                  return (
-                    <TouchableOpacity
-                      key={cat}
-                      style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                      onPress={() => setEditCategory(cat)}
-                    >
-                      <Text
-                        style={[
-                          styles.selectorChipText,
-                          isSelected && styles.selectorChipTextActive,
-                        ]}
+                {(() => {
+                  const categoriesToRender = [...CATEGORIES_LIST];
+                  if (
+                    editCategory &&
+                    !categoriesToRender.some((c) => c.toLowerCase() === editCategory.toLowerCase())
+                  ) {
+                    categoriesToRender.push(editCategory);
+                  }
+                  return categoriesToRender.map((cat) => {
+                    const isSelected = editCategory.toLowerCase() === cat.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
+                        onPress={() => setEditCategory(cat)}
                       >
-                        {getCategoryLabel(cat, activeBiz?.category)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text
+                          style={[
+                            styles.selectorChipText,
+                            isSelected && styles.selectorChipTextActive,
+                          ]}
+                        >
+                          {getCategoryLabel(cat, activeBiz?.category)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
               </View>
             </View>
 
@@ -645,25 +713,34 @@ export const ManageItemsScreen: React.FC = () => {
             <View style={styles.fieldRow}>
               <Text style={styles.fieldLabel}>Unit Type</Text>
               <View style={styles.chipsSelector}>
-                {UNIT_TYPES.map((unit) => {
-                  const isSelected = editUnitType === unit;
-                  return (
-                    <TouchableOpacity
-                      key={unit}
-                      style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
-                      onPress={() => setEditUnitType(unit)}
-                    >
-                      <Text
-                        style={[
-                          styles.selectorChipText,
-                          isSelected && styles.selectorChipTextActive,
-                        ]}
+                {(() => {
+                  const unitsToRender = [...UNIT_TYPES];
+                  if (
+                    editUnitType &&
+                    !unitsToRender.some((u) => u.toLowerCase() === editUnitType.toLowerCase())
+                  ) {
+                    unitsToRender.push(editUnitType);
+                  }
+                  return unitsToRender.map((unit) => {
+                    const isSelected = editUnitType.toLowerCase() === unit.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={unit}
+                        style={[styles.selectorChip, isSelected && styles.selectorChipActive]}
+                        onPress={() => setEditUnitType(unit)}
                       >
-                        {unit}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text
+                          style={[
+                            styles.selectorChipText,
+                            isSelected && styles.selectorChipTextActive,
+                          ]}
+                        >
+                          {unit}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
               </View>
             </View>
 
@@ -988,17 +1065,36 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   productItemCard: {
-    flexDirection: 'row',
     backgroundColor: TOKENS.card,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: TOKENS.border,
+    marginBottom: 0,
+    overflow: 'hidden',
+  },
+  productCardMainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingRight: 16,
     paddingLeft: 3,
     paddingTop: 3,
     paddingBottom: 3,
     gap: 12,
+  },
+  cardBarcodeSubStrip: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 6,
+  },
+  cardBarcodeSubText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: TOKENS.muted,
   },
   productImage: {
     width: 74,
@@ -1045,9 +1141,11 @@ const styles = StyleSheet.create({
   },
   codesRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
     gap: 6,
     marginTop: 2,
+    overflow: 'hidden',
   },
   codePill: {
     backgroundColor: '#F1F5F9',

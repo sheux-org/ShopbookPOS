@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../stores/authStore';
 import { useBusinessStore } from '../../stores/businessStore';
+import { useProductCount } from '../../hooks/useProducts';
 import { syncDatabase, uploadBusinessLogo } from '../../services/sync';
 import {
   User,
@@ -96,6 +97,7 @@ export default function ProfilePage() {
   const [newBranchName, setNewBranchName] = useState('');
   const [newBranchCategory, setNewBranchCategory] = useState('Cafe');
   const [newBranchAddress, setNewBranchAddress] = useState('');
+  const { data: productCount = 0 } = useProductCount();
 
   // React Query Hooks
   const { data: staffList = [] } = useStaff(activeBusiness?.id || '0');
@@ -648,6 +650,7 @@ export default function ProfilePage() {
         setEditLogoUri={setEditLogoUri}
         onLogoUpload={handleDetailsLogoUpload}
         onSubmit={handleStoreDetailsSubmit}
+        hasItems={productCount > 0}
       />
 
       <StaffModal
