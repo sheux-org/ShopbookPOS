@@ -25,6 +25,8 @@ import { ProductImage } from '../common/ProductImage';
 import { ScreenWrapper } from '../common/ScreenWrapper';
 import { syncDatabase } from '../../services/sync';
 import { BarcodeLabelModal } from '../product/BarcodeLabelModal';
+import { ImagePreviewModal } from '../product/ImagePreviewModal';
+import { hapticFeedback } from '../../utils/haptics';
 
 export const ItemDetailsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -38,6 +40,7 @@ export const ItemDetailsScreen: React.FC = () => {
   const [customReasonText, setCustomReasonText] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+  const [isPreviewImageModalOpen, setIsPreviewImageModalOpen] = useState(false);
 
   const { generateUniqueBarcode } = useFindProduct();
   const updateProductMutation = useUpdateProduct();
@@ -244,53 +247,76 @@ export const ItemDetailsScreen: React.FC = () => {
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
         ListHeaderComponent={
           <View style={styles.sheetHeaderWrapper}>
-            {/* 1. Product Details Card with 3px Spacing Top/Left/Bottom */}
+            {/* 1. Product Details Card */}
             <View style={styles.sheetProductCard}>
-              <ProductImage
-                icon={product.icon}
-                category={product.category}
-                size={74}
-                style={styles.sheetProductImage}
-              />
-              <View style={styles.sheetProductMeta}>
-                <Text style={styles.sheetProductName} numberOfLines={2}>
-                  {product.name}
-                </Text>
-                <View style={styles.sheetProductBadges}>
-                  <View style={[styles.codePill, { backgroundColor: '#EFF6FF' }]}>
-                    <Text style={[styles.codeText, { color: TOKENS.primary }]}>
-                      {product.category.toUpperCase()}
-                    </Text>
+              {/* Top Section: Image + Meta */}
+              <View style={styles.sheetCardTopRow}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    hapticFeedback.impactLight();
+                    setIsPreviewImageModalOpen(true);
+                  }}
+                  style={styles.imagePreviewTrigger}
+                >
+                  <ProductImage
+                    icon={product.icon}
+                    category={product.category}
+                    size={76}
+                    style={styles.sheetProductImage}
+                  />
+                  <View style={styles.zoomHintBadge}>
+                    <Feather name="maximize-2" size={10} color="#FFFFFF" />
                   </View>
-                  {product.quickCode ? (
-                    <View style={styles.codePill}>
-                      <Text style={styles.codeText}>Code: {product.quickCode}</Text>
-                    </View>
-                  ) : null}
-                  {product.barcode ? (
-                    <View style={[styles.codePill, { backgroundColor: '#F1F5F9' }]}>
-                      <Text style={styles.codeText}>Barcode: {product.barcode}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <View style={styles.sheetPricesRow}>
-                  <View style={styles.sheetPriceColumn}>
-                    <Text style={styles.sheetPriceLabel}>Selling Price</Text>
-                    <Text style={styles.sheetPriceVal}>Rs. {product.price.toLocaleString()}</Text>
-                  </View>
-                  {product.costPrice ? (
-                    <View style={styles.sheetPriceColumn}>
-                      <Text style={styles.sheetPriceLabel}>Cost Price</Text>
-                      <Text style={styles.sheetPriceValSec}>
-                        Rs. {product.costPrice.toLocaleString()}
+                </TouchableOpacity>
+                <View style={styles.sheetProductMeta}>
+                  <Text style={styles.sheetProductName} numberOfLines={2}>
+                    {product.name}
+                  </Text>
+                  <View style={styles.sheetProductBadges}>
+                    <View style={[styles.codePill, { backgroundColor: '#EFF6FF', flexShrink: 1 }]}>
+                      <Text
+                        style={[styles.codeText, { color: TOKENS.primary }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {product.category.toUpperCase()}
                       </Text>
                     </View>
-                  ) : null}
+                    {product.quickCode ? (
+                      <View style={[styles.codePill, { flexShrink: 1 }]}>
+                        <Text style={styles.codeText} numberOfLines={1} ellipsizeMode="tail">
+                          Code: {product.quickCode}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <View style={styles.sheetPricesRow}>
+                    <View style={styles.sheetPriceColumn}>
+                      <Text style={styles.sheetPriceLabel}>Selling Price</Text>
+                      <Text style={styles.sheetPriceVal}>Rs. {product.price.toLocaleString()}</Text>
+                    </View>
+                    {product.costPrice ? (
+                      <View style={styles.sheetPriceColumn}>
+                        <Text style={styles.sheetPriceLabel}>Cost Price</Text>
+                        <Text style={styles.sheetPriceValSec}>
+                          Rs. {product.costPrice.toLocaleString()}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
+              </View>
 
-                {/* Barcode/Label Print Action Row */}
-                <View style={styles.barcodeActionRow}>
-                  {product.barcode ? (
+              {/* Full-Width Bottom Section: Barcode + View Label */}
+              <View style={styles.barcodeActionRowFull}>
+                {product.barcode ? (
+                  <>
+                    <View style={styles.barcodePillInline}>
+                      <Text style={styles.barcodeTextInline} numberOfLines={1}>
+                        Barcode: {product.barcode}
+                      </Text>
+                    </View>
                     <TouchableOpacity
                       style={styles.actionButtonOutline}
                       activeOpacity={0.7}
@@ -304,28 +330,28 @@ export const ItemDetailsScreen: React.FC = () => {
                       />
                       <Text style={styles.actionButtonTextOutline}>View Label</Text>
                     </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={[
-                        styles.actionButtonFilled,
-                        updateProductMutation.isPending && { opacity: 0.7 },
-                      ]}
-                      activeOpacity={0.7}
-                      onPress={handleGenerateBarcode}
-                      disabled={updateProductMutation.isPending}
-                    >
-                      <Feather
-                        name="plus-circle"
-                        size={13}
-                        color="#FFFFFF"
-                        style={{ marginRight: 4 }}
-                      />
-                      <Text style={styles.actionButtonTextFilled}>
-                        {updateProductMutation.isPending ? 'Generating...' : 'Generate Barcode'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
+                  </>
+                ) : (
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButtonFilled,
+                      updateProductMutation.isPending && { opacity: 0.7 },
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={handleGenerateBarcode}
+                    disabled={updateProductMutation.isPending}
+                  >
+                    <Feather
+                      name="plus-circle"
+                      size={13}
+                      color="#FFFFFF"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={styles.actionButtonTextFilled}>
+                      {updateProductMutation.isPending ? 'Generating...' : 'Generate Barcode'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -582,6 +608,18 @@ export const ItemDetailsScreen: React.FC = () => {
           barcode: product.barcode || '',
         }}
       />
+
+      <ImagePreviewModal
+        visible={isPreviewImageModalOpen}
+        onClose={() => setIsPreviewImageModalOpen(false)}
+        product={{
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          icon: product.icon,
+          quickCode: product.quickCode,
+        }}
+      />
     </ScreenWrapper>
   );
 };
@@ -679,27 +717,28 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   sheetProductCard: {
-    flexDirection: 'row',
     backgroundColor: TOKENS.card,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: TOKENS.border,
-    paddingRight: 16,
-    paddingLeft: 3,
-    paddingTop: 3,
-    paddingBottom: 3,
+    padding: 12,
+    gap: 10,
+  },
+  sheetCardTopRow: {
+    flexDirection: 'row',
     gap: 12,
     alignItems: 'center',
   },
   sheetProductImage: {
-    width: 74,
-    height: 74,
-    borderRadius: 10,
+    width: 76,
+    height: 76,
+    borderRadius: 12,
     backgroundColor: '#F1F5F9',
   },
   sheetProductMeta: {
     flex: 1,
-    gap: 2,
+    gap: 3,
+    justifyContent: 'center',
   },
   sheetProductName: {
     fontSize: 15,
@@ -708,9 +747,11 @@ const styles = StyleSheet.create({
   },
   sheetProductBadges: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
     gap: 6,
     marginTop: 0,
+    overflow: 'hidden',
   },
   codePill: {
     backgroundColor: '#F1F5F9',
@@ -817,19 +858,20 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 11,
     color: TOKENS.muted,
-    marginBottom: 6,
+    marginBottom: 10,
   },
   stockInRow: {
     flexDirection: 'row',
     gap: 12,
   },
   fieldRow: {
-    gap: 4,
+    gap: 6,
   },
   fieldLabel: {
     fontSize: 12,
     fontWeight: '600',
     color: TOKENS.dark,
+    marginBottom: 6,
   },
   inputWithSuffix: {
     flexDirection: 'row',
@@ -1045,18 +1087,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     lineHeight: 16,
   },
-  barcodeActionRow: {
+  barcodeActionRowFull: {
     flexDirection: 'row',
-    marginTop: 8,
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 8,
+  },
+  barcodePillInline: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    flexShrink: 1,
+  },
+  barcodeTextInline: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: TOKENS.muted,
   },
   actionButtonOutline: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: TOKENS.primary,
-    borderRadius: 6,
-    paddingHorizontal: 10,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     paddingVertical: 5,
     backgroundColor: '#EFF6FF',
   },
@@ -1069,13 +1127,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: TOKENS.primary,
-    borderRadius: 6,
-    paddingHorizontal: 10,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     paddingVertical: 5,
   },
   actionButtonTextFilled: {
     fontSize: 11,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  imagePreviewTrigger: {
+    position: 'relative',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  zoomHintBadge: {
+    position: 'absolute',
+    bottom: 3,
+    right: 3,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    borderRadius: 6,
+    padding: 3,
   },
 });

@@ -61,7 +61,7 @@ export default function StockDetailPage() {
   const adjustStockMutation = useAdjustStock();
   const updateProductMutation = useUpdateProduct();
   const deleteProductMutation = useDeleteProduct();
-  const { generateUniqueBarcode } = useFindProduct();
+  const { generateUniqueBarcode, checkDuplicateCodes } = useFindProduct();
 
   // Permission guard
   if (!canPerform('update', 'products')) {
@@ -167,6 +167,25 @@ export default function StockDetailPage() {
 
   const handleEditSubmit = async (formData: any) => {
     try {
+      const dupResult = await checkDuplicateCodes({
+        barcode: formData.barcode?.trim() || undefined,
+        quickCode: formData.quickCode?.trim() || undefined,
+        excludeProductId: id,
+      });
+
+      if (dupResult?.barcodeDuplicate) {
+        alert(
+          `The barcode "${formData.barcode}" is already assigned to product "${dupResult.barcodeDuplicate.name}". Barcodes must be unique!`
+        );
+        return;
+      }
+      if (dupResult?.quickCodeDuplicate) {
+        alert(
+          `The quick code "${formData.quickCode}" is already assigned to product "${dupResult.quickCodeDuplicate.name}". Quick codes must be unique!`
+        );
+        return;
+      }
+
       await updateProductMutation.mutateAsync({
         id,
         name: formData.name,

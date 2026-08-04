@@ -19,6 +19,7 @@ interface StoreDetailsModalProps {
   setEditLogoUri: (val: string) => void;
   onLogoUpload: (file: File) => void;
   onSubmit: (e: React.FormEvent) => void;
+  hasItems?: boolean;
 }
 
 export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
@@ -36,6 +37,7 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
   setEditLogoUri,
   onLogoUpload,
   onSubmit,
+  hasItems = false,
 }) => {
   const { canPerform } = useUserPermissions();
   const canUpdate = canPerform('update', 'settings');
@@ -125,6 +127,21 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
                 <span>Remove logo</span>
               </button>
             )}
+            <div style={{ textAlign: 'center', marginTop: '12px' }}>
+              <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+                {editName}
+              </h4>
+              <p
+                style={{
+                  margin: '4px 0 0 0',
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  fontWeight: '500',
+                }}
+              >
+                📞 {editPhone}
+              </p>
+            </div>
           </div>
 
           <div className="modal-input-group">
@@ -145,7 +162,7 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               value={editCategory}
               onChange={(e) => setEditCategory(e.target.value)}
               required
-              disabled={!canUpdate}
+              disabled={!canUpdate || hasItems}
               className="modal-select"
             >
               <option value="Cafe">Cafe</option>
@@ -158,6 +175,12 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               <option value="Hardware">Hardware</option>
               <option value="Other">Other</option>
             </select>
+            {hasItems && (
+              <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                Business type cannot be changed because items have already been created in the
+                catalog.
+              </p>
+            )}
           </div>
 
           <div className="modal-input-group">
@@ -166,18 +189,6 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
               type="text"
               value={editAddress}
               onChange={(e) => setEditAddress(e.target.value)}
-              required
-              disabled={!canUpdate}
-              className="modal-input"
-            />
-          </div>
-
-          <div className="modal-input-group">
-            <label className="modal-label">Receipt Phone Number</label>
-            <input
-              type="text"
-              value={editPhone}
-              onChange={(e) => setEditPhone(e.target.value)}
               required
               disabled={!canUpdate}
               className="modal-input"
