@@ -47,6 +47,7 @@ export const ItemDetailsScreen: React.FC = () => {
 
   const handleGenerateBarcode = async () => {
     if (!product) return;
+    hapticFeedback.impactMedium();
     try {
       const newBarcode = await generateUniqueBarcode();
       await updateProductMutation.mutateAsync({
@@ -62,11 +63,13 @@ export const ItemDetailsScreen: React.FC = () => {
         lowStockAlert: product.lowStockAlert,
         barcode: newBarcode,
       });
+      hapticFeedback.notificationSuccess();
       queryClient.invalidateQueries({ queryKey: ['product', product.id] });
       triggerToast('EAN-13 barcode generated! 🏷️');
       // Immediately trigger background sync
       syncDatabase().catch((err) => console.error('Sync failed:', err));
     } catch (err: any) {
+      hapticFeedback.notificationError();
       Alert.alert(
         'Barcode Generation Failed',
         err.message || 'Could not generate a unique barcode.'
@@ -138,12 +141,14 @@ export const ItemDetailsScreen: React.FC = () => {
     if (!product) return;
     const qtyNum = parseInt(stockInQty, 10);
     if (isNaN(qtyNum) || qtyNum <= 0) {
+      hapticFeedback.notificationWarning();
       Alert.alert('Invalid Quantity', 'Please enter a valid quantity greater than 0.');
       return;
     }
 
     const finalReason = customReasonText.trim() || activeReasonChip;
 
+    hapticFeedback.impactMedium();
     stockInMutation.mutate(
       {
         productId: product.id,
@@ -152,6 +157,7 @@ export const ItemDetailsScreen: React.FC = () => {
       },
       {
         onSuccess: () => {
+          hapticFeedback.notificationSuccess();
           queryClient.invalidateQueries({ queryKey: ['product', product.id] });
           triggerToast('Stock updated successfully! 📦');
           setStockInQty('');
@@ -161,6 +167,7 @@ export const ItemDetailsScreen: React.FC = () => {
           syncDatabase().catch((err) => console.error('Sync failed:', err));
         },
         onError: () => {
+          hapticFeedback.notificationError();
           Alert.alert('Error', 'Failed to update product stock.');
         },
       }
@@ -320,7 +327,10 @@ export const ItemDetailsScreen: React.FC = () => {
                     <TouchableOpacity
                       style={styles.actionButtonOutline}
                       activeOpacity={0.7}
-                      onPress={() => setIsLabelModalOpen(true)}
+                      onPress={() => {
+                        hapticFeedback.selection();
+                        setIsLabelModalOpen(true);
+                      }}
                     >
                       <Feather
                         name="tag"
@@ -440,6 +450,7 @@ export const ItemDetailsScreen: React.FC = () => {
                         ]}
                         activeOpacity={0.7}
                         onPress={() => {
+                          hapticFeedback.selection();
                           setActiveReasonChip(item.name);
                           setCustomReasonText('');
                         }}

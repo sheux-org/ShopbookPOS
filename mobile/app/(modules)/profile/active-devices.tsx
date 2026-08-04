@@ -18,6 +18,7 @@ import { TOKENS } from '../../../constants/tokens';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { getTopSafeInset } from '../../../utils/safeArea';
 import { DEVICE_ID_KEY } from '../../../hooks/useActiveDeviceTracker';
+import { hapticFeedback } from '../../../utils/haptics';
 import {
   fetchRecentlyOfflineDevices,
   getPresenceDevices,
@@ -77,6 +78,7 @@ export default function ActiveDevicesRoute() {
   }, [activeBusinessId, refreshOnlineDevices, loadOfflineDevices]);
 
   const handleTerminateSession = (targetDeviceId: string, name: string) => {
+    hapticFeedback.notificationWarning();
     Alert.alert(
       'Terminate Session',
       `Are you sure you want to remotely sign out "${name}" from this device?`,
@@ -95,14 +97,17 @@ export default function ActiveDevicesRoute() {
               });
 
               if (error) {
+                hapticFeedback.notificationError();
                 triggerToast('Failed to terminate session.');
               } else {
+                hapticFeedback.notificationSuccess();
                 triggerToast('Session terminated successfully! 🗑️');
                 refreshOnlineDevices();
                 void loadOfflineDevices();
               }
             } catch (err) {
               console.error(err);
+              hapticFeedback.notificationError();
               triggerToast('An error occurred.');
             }
           },

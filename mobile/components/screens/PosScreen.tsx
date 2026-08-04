@@ -22,6 +22,7 @@ import { cartState } from '../data/cartState';
 import { InvoiceItemCard } from '../common/InvoiceItemCard';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
+import { hapticFeedback } from '../../utils/haptics';
 
 interface InvoiceItem {
   id: string;
@@ -156,6 +157,7 @@ export const PosScreen: React.FC = () => {
 
   // Handle numpad key presses
   const handleNumPress = (val: string) => {
+    hapticFeedback.impactLight();
     if (val === 'backspace') {
       setQuickCode((prev) => prev.slice(0, -1));
     } else if (val === '.') {
@@ -284,7 +286,10 @@ export const PosScreen: React.FC = () => {
               styles.segmentButton,
               activeMode === 'quick_code' && styles.segmentButtonActive,
             ]}
-            onPress={() => setActiveMode('quick_code')}
+            onPress={() => {
+              hapticFeedback.selection();
+              setActiveMode('quick_code');
+            }}
             activeOpacity={0.8}
           >
             <Feather
@@ -302,6 +307,7 @@ export const PosScreen: React.FC = () => {
           <TouchableOpacity
             style={[styles.segmentButton, activeMode === 'scan' && styles.segmentButtonActive]}
             onPress={() => {
+              hapticFeedback.selection();
               if (isPremium) {
                 setActiveMode('scan');
               } else {
@@ -322,7 +328,10 @@ export const PosScreen: React.FC = () => {
 
           <TouchableOpacity
             style={styles.segmentButton}
-            onPress={() => router.push('/pos/search')}
+            onPress={() => {
+              hapticFeedback.selection();
+              router.push('/pos/search');
+            }}
             activeOpacity={0.8}
           >
             <Feather name="search" size={15} color={TOKENS.dark} />
@@ -503,7 +512,10 @@ export const PosScreen: React.FC = () => {
           <TouchableOpacity
             style={[styles.summaryBarButton, { marginTop: 12 }]}
             activeOpacity={0.85}
-            onPress={() => router.push('/pos/cart')}
+            onPress={() => {
+              hapticFeedback.selection();
+              router.push('/pos/cart');
+            }}
           >
             <View style={styles.summaryBarLeft}>
               <Feather name="shopping-bag" size={16} color={TOKENS.card} style={styles.bagIcon} />

@@ -31,6 +31,7 @@ import { CsvLedgerModal } from './components/CsvLedgerModal';
 import { DateRangeModal } from './components/DateRangeModal';
 import { LowStockBottomSheet } from './components/LowStockBottomSheet';
 import { ReportsBottomSheet } from './components/ReportsBottomSheet';
+import { hapticFeedback } from '../../../utils/haptics';
 
 export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -100,23 +101,28 @@ export const InsightsScreen: React.FC = () => {
 
   const handleSyncDatabase = async () => {
     if (!isPremium) {
+      hapticFeedback.notificationWarning();
       setPremiumFeatureName('Cloud database sync');
       setPremiumModalVisible(true);
       return;
     }
+    hapticFeedback.impactMedium();
     setIsSyncing(true);
     try {
       const result = await syncDatabase();
       if (result) {
+        hapticFeedback.notificationSuccess();
         queryClient.invalidateQueries({ queryKey: ['insights'] });
         Alert.alert('Sync Success', 'Database successfully synchronized with Cloud Storage!');
       } else {
+        hapticFeedback.notificationWarning();
         Alert.alert(
           'Sync Skipped',
           'Backup/sync is disabled or environment is not configured. Please enable it in Settings.'
         );
       }
     } catch (err: any) {
+      hapticFeedback.notificationError();
       Alert.alert('Sync Failed', err.message || 'Failed to synchronize database.');
     } finally {
       setIsSyncing(false);
@@ -163,6 +169,7 @@ export const InsightsScreen: React.FC = () => {
       return;
     }
     setIsCsvModalOpen(false);
+    hapticFeedback.impactMedium();
     setIsExporting(true);
     setExportType('CSV');
     try {
@@ -191,7 +198,9 @@ export const InsightsScreen: React.FC = () => {
         message: csvText,
         title: `${(business as any).name || 'Store'} - CSV Ledger Report`,
       });
+      hapticFeedback.notificationSuccess();
     } catch (err: any) {
+      hapticFeedback.notificationError();
       Alert.alert('Report Export Failed', err.message || 'Failed to generate report CSV.');
     } finally {
       setIsExporting(false);
@@ -206,6 +215,7 @@ export const InsightsScreen: React.FC = () => {
       return;
     }
     setIsPdfModalOpen(false);
+    hapticFeedback.impactMedium();
     setIsExporting(true);
     setExportType('PDF');
     try {
@@ -231,7 +241,9 @@ export const InsightsScreen: React.FC = () => {
 
       // 3. Trigger System Printing (allows Save as PDF natively)
       await Print.printAsync({ html });
+      hapticFeedback.notificationSuccess();
     } catch (err: any) {
+      hapticFeedback.notificationError();
       Alert.alert('Report Export Failed', err.message || 'Failed to generate report statement.');
     } finally {
       setIsExporting(false);
@@ -324,7 +336,10 @@ export const InsightsScreen: React.FC = () => {
         >
           <TouchableOpacity
             style={[styles.periodPill, period === 'daily' && styles.periodPillActive]}
-            onPress={() => setPeriod('daily')}
+            onPress={() => {
+              hapticFeedback.selection();
+              setPeriod('daily');
+            }}
           >
             <Text
               style={[styles.periodPillText, period === 'daily' && styles.periodPillTextActive]}
@@ -335,7 +350,10 @@ export const InsightsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={[styles.periodPill, period === 'yesterday' && styles.periodPillActive]}
-            onPress={() => setPeriod('yesterday')}
+            onPress={() => {
+              hapticFeedback.selection();
+              setPeriod('yesterday');
+            }}
           >
             <Text
               style={[styles.periodPillText, period === 'yesterday' && styles.periodPillTextActive]}
@@ -346,7 +364,10 @@ export const InsightsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={[styles.periodPill, period === 'weekly' && styles.periodPillActive]}
-            onPress={() => setPeriod('weekly')}
+            onPress={() => {
+              hapticFeedback.selection();
+              setPeriod('weekly');
+            }}
           >
             <Text
               style={[styles.periodPillText, period === 'weekly' && styles.periodPillTextActive]}
@@ -357,7 +378,10 @@ export const InsightsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={[styles.periodPill, period === 'monthly' && styles.periodPillActive]}
-            onPress={() => setPeriod('monthly')}
+            onPress={() => {
+              hapticFeedback.selection();
+              setPeriod('monthly');
+            }}
           >
             <Text
               style={[styles.periodPillText, period === 'monthly' && styles.periodPillTextActive]}
@@ -368,7 +392,10 @@ export const InsightsScreen: React.FC = () => {
 
           <TouchableOpacity
             style={[styles.periodPill, period === 'yearly' && styles.periodPillActive]}
-            onPress={() => setPeriod('yearly')}
+            onPress={() => {
+              hapticFeedback.selection();
+              setPeriod('yearly');
+            }}
           >
             <Text
               style={[styles.periodPillText, period === 'yearly' && styles.periodPillTextActive]}

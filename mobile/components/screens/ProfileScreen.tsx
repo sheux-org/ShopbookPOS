@@ -14,6 +14,7 @@ import { BottomSheet } from '../common/BottomSheet';
 import { BusinessAvatar } from '../common/BusinessAvatar';
 import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
+import { hapticFeedback } from '../../utils/haptics';
 
 const FAQS = [
   {
@@ -144,7 +145,10 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => router.push('/profile/business-details')}
+            onPress={() => {
+              hapticFeedback.selection();
+              router.push('/profile/business-details');
+            }}
           >
             <View style={[styles.optionIconBox, { backgroundColor: '#E8F0FE' }]}>
               <Feather name="home" size={18} color={TOKENS.primary} />
@@ -164,11 +168,12 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() =>
+            onPress={() => {
+              hapticFeedback.selection();
               checkPremiumAction('Multiple branch management', () =>
                 router.push('/profile/manage-businesses')
-              )
-            }
+              );
+            }}
           >
             <View style={[styles.optionIconBox, { backgroundColor: '#FEF7E0' }]}>
               <Feather name="briefcase" size={18} color="#B06000" />
@@ -188,11 +193,12 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() =>
+            onPress={() => {
+              hapticFeedback.selection();
               checkPremiumAction('Bluetooth thermal printer printing', () =>
                 router.push('/profile/bluetooth-printer')
-              )
-            }
+              );
+            }}
           >
             <View style={[styles.optionIconBox, { backgroundColor: '#EFF6FF' }]}>
               <Feather name="printer" size={18} color={TOKENS.primary} />
@@ -212,11 +218,12 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() =>
+            onPress={() => {
+              hapticFeedback.selection();
               checkPremiumAction('Active devices monitoring', () =>
                 router.push('/profile/active-devices')
-              )
-            }
+              );
+            }}
           >
             <View style={[styles.optionIconBox, { backgroundColor: '#E8F0FE' }]}>
               <Feather name="smartphone" size={18} color={TOKENS.primary} />
@@ -235,11 +242,12 @@ export const ProfileScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
-              onPress={() =>
+              onPress={() => {
+                hapticFeedback.selection();
                 checkPremiumAction('Staff accounts management', () =>
                   router.push('/profile/manage-staff')
-                )
-              }
+                );
+              }}
             >
               <View style={[styles.optionIconBox, { backgroundColor: '#E6F4EA' }]}>
                 <Feather name="users" size={18} color="#137333" />
@@ -259,7 +267,10 @@ export const ProfileScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.optionRow}
               activeOpacity={0.7}
-              onPress={() => router.push('/profile/premium-plans')}
+              onPress={() => {
+                hapticFeedback.selection();
+                router.push('/profile/premium-plans');
+              }}
             >
               <View style={[styles.optionIconBox, { backgroundColor: '#FEF3C7' }]}>
                 <Ionicons name="diamond" size={18} color="#D97706" />
@@ -285,12 +296,15 @@ export const ProfileScreen: React.FC = () => {
               style={styles.optionRow}
               activeOpacity={0.7}
               onPress={async () => {
+                hapticFeedback.impactMedium();
                 checkPremiumAction('Manual database synchronization', async () => {
                   triggerToast('Syncing database... 🔄');
                   const success = await syncDatabase();
                   if (success) {
+                    hapticFeedback.notificationSuccess();
                     triggerToast('Database synced successfully! ✅');
                   } else {
+                    hapticFeedback.notificationError();
                     Alert.alert(
                       'Sync Failed',
                       'Check your internet connection and Supabase environment configuration.'
@@ -320,7 +334,10 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => setIsHelpModalOpen(true)}
+            onPress={() => {
+              hapticFeedback.selection();
+              setIsHelpModalOpen(true);
+            }}
           >
             <View style={[styles.optionIconBox, { backgroundColor: '#F3F4F6' }]}>
               <Feather name="help-circle" size={18} color={TOKENS.dark} />
@@ -336,7 +353,8 @@ export const ProfileScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() =>
+            onPress={() => {
+              hapticFeedback.notificationWarning();
               Alert.alert(
                 'Disconnect Profile',
                 'Are you sure you want to log out from this Shopbook POS terminal?',
@@ -346,6 +364,7 @@ export const ProfileScreen: React.FC = () => {
                     text: 'Sign Out',
                     style: 'destructive',
                     onPress: async () => {
+                      hapticFeedback.notificationSuccess();
                       await deleteCurrentDeviceSession();
                       cartState.logout();
                       triggerToast('Profile logged out');
@@ -353,8 +372,8 @@ export const ProfileScreen: React.FC = () => {
                     },
                   },
                 ]
-              )
-            }
+              );
+            }}
           >
             <View style={[styles.optionIconBox, { backgroundColor: '#FCE8E6' }]}>
               <Feather name="log-out" size={18} color={TOKENS.error} />

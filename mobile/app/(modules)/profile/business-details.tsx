@@ -200,6 +200,7 @@ export default function BusinessDetailsRoute() {
 
   const handleSaveChanges = () => {
     if (!canPerform('update', 'settings')) {
+      hapticFeedback.notificationError();
       Alert.alert(
         'Access Denied',
         'Your profile role is not authorized to edit business settings.'
@@ -208,10 +209,12 @@ export default function BusinessDetailsRoute() {
     }
 
     if (!name.trim() || !category.trim() || !address.trim() || !phone.trim()) {
+      hapticFeedback.notificationWarning();
       Alert.alert('Required Fields', 'All business profile fields must be filled out.');
       return;
     }
 
+    hapticFeedback.impactMedium();
     updateActiveBizMutation.mutate(
       {
         name: name.trim(),
@@ -222,10 +225,12 @@ export default function BusinessDetailsRoute() {
       },
       {
         onSuccess: () => {
+          hapticFeedback.notificationSuccess();
           setIsEditing(false);
           triggerToast('Store Profile updated successfully! 🚀');
         },
         onError: () => {
+          hapticFeedback.notificationError();
           Alert.alert('Update Error', 'Failed to persist business profile changes.');
         },
       }
@@ -267,6 +272,7 @@ export default function BusinessDetailsRoute() {
                 style={styles.editToggleBtn}
                 activeOpacity={0.7}
                 onPress={() => {
+                  hapticFeedback.selection();
                   if (isEditing) {
                     // Cancel edit
                     setName(activeBusiness.name);
@@ -295,7 +301,10 @@ export default function BusinessDetailsRoute() {
             <TouchableOpacity
               style={[styles.storeIconBox, isEditing && styles.storeIconBoxEditing]}
               disabled={!isEditing || isUploading}
-              onPress={() => setShowLogoSelector(true)}
+              onPress={() => {
+                hapticFeedback.impactLight();
+                setShowLogoSelector(true);
+              }}
               activeOpacity={0.75}
             >
               <BusinessAvatar
