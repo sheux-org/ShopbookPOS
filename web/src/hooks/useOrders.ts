@@ -47,24 +47,21 @@ const mapDBOrder = (o: any): DBOrder => ({
     : 'Cashier',
 });
 
-export function useGetOrders(searchQuery?: string) {
+export function useGetPaginatedOrders(page: number, pageSize: number, searchQuery?: string) {
   const activeBiz = useBusinessStore((s) => s.activeBusiness);
-  const PAGE_SIZE = 30;
 
-  const result = useInfiniteQuery<DBOrder[]>({
-    queryKey: ['orders', activeBiz?.id, searchQuery],
-    queryFn: async ({ pageParam = 0 }) => {
-      if (!activeBiz || activeBiz.id === '0') return [];
+  return useQuery({
+    queryKey: ['orders-paginated', activeBiz?.id, page, pageSize, searchQuery],
+    queryFn: async () => {
+      if (!activeBiz || activeBiz.id === '0') {
+        return { orders: [], totalCount: 0, totalPages: 0 };
+      }
 
-      let query = database
-        .get('orders')
-        .query(Q.where('business_id', activeBiz.id), Q.sortBy('created_at', Q.desc));
+      const clauses: any[] = [Q.where('business_id', activeBiz.id)];
 
-      const isSearchActive = searchQuery && searchQuery.trim() !== '';
-
-      if (isSearchActive) {
+      if (searchQuery && searchQuery.trim() !== '') {
         const sanitized = Q.sanitizeLikeString(searchQuery);
-        query = query.extend(
+        clauses.push(
           Q.or(
             Q.where('invoice_number', Q.like(`%${sanitized}%`)),
             Q.where('payment_method', Q.like(`%${sanitized}%`)),
@@ -73,24 +70,27 @@ export function useGetOrders(searchQuery?: string) {
         );
       }
 
-      const offset = (pageParam as number) * PAGE_SIZE;
-      query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
+      // Total count query matching filters
+      const countQuery = database.get('orders').query(...clauses);
+      const totalCount = await countQuery.fetchCount();
 
-      const dbOrders = await query.fetch();
-      return dbOrders.map(mapDBOrder);
-    },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      return lastPage.length < PAGE_SIZE ? undefined : allPages.length;
+      // Page data query
+      const offset = (page - 1) * pageSize;
+      const pageQuery = database
+        .get('orders')
+        .query(...clauses, Q.sortBy('created_at', Q.desc), Q.skip(offset), Q.take(pageSize));
+
+      const dbOrders = await pageQuery.fetch();
+      const orders = dbOrders.map(mapDBOrder);
+      const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+      return {
+        orders,
+        totalCount,
+        totalPages,
+      };
     },
   });
-
-  const flattenedData = result.data ? result.data.pages.flat() : [];
-
-  return {
-    ...result,
-    data: flattenedData,
-  };
 }
 
 export function useGetOrderItems(orderId?: string) {
@@ -260,66 +260,6 @@ export function useVoidOrder() {
       syncDatabase(); // Trigger real-time background replication
     },
   });
-}
-
-export function useGetPeriodOrders(
-  period: 'daily' | 'monthly' | 'yearly' | 'custom',
-  startDate: Date | null,
-  endDate: Date | null
-) {
-  const activeBiz = useBusinessStore((s) => s.activeBusiness);
-  const PAGE_SIZE = 20;
-
-  const result = useInfiniteQuery<DBOrder[]>({
-    queryKey: ['period-orders', activeBiz?.id, period, startDate, endDate],
-    queryFn: async ({ pageParam = 0 }) => {
-      if (!activeBiz || activeBiz.id === '0') return [];
-
-      const offset = (pageParam as number) * PAGE_SIZE;
-      let query = database
-        .get('orders')
-        .query(Q.where('business_id', activeBiz.id), Q.where('status', 'paid'));
-
-      const today = new Date();
-      let startTs = 0;
-      let endTs = Date.now();
-
-      if (period === 'daily') {
-        startTs = new Date().setHours(0, 0, 0, 0);
-        endTs = new Date().setHours(23, 59, 59, 999);
-      } else if (period === 'monthly') {
-        startTs = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
-        endTs = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-      } else if (period === 'yearly') {
-        startTs = new Date(today.getFullYear(), 0, 1).getTime();
-        endTs = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999).getTime();
-      } else if (period === 'custom' && startDate && endDate) {
-        startTs = new Date(startDate).getTime();
-        endTs = new Date(endDate).getTime();
-      }
-
-      query = query.extend(
-        Q.where('created_at', Q.between(startTs, endTs)),
-        Q.sortBy('created_at', Q.desc),
-        Q.skip(offset),
-        Q.take(PAGE_SIZE)
-      );
-
-      const dbOrders = await query.fetch();
-      return dbOrders.map(mapDBOrder);
-    },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      return lastPage.length < PAGE_SIZE ? undefined : allPages.length;
-    },
-  });
-
-  const flattenedData = result.data ? result.data.pages.flat() : [];
-
-  return {
-    ...result,
-    data: flattenedData,
-  };
 }
 
 export function useGetAllOrders() {

@@ -1,8 +1,14 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { Eye, FileText } from 'lucide-react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import {
+  Eye,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
 
 interface OrderRecord {
   id: string;
@@ -24,37 +30,48 @@ interface InvoiceListTableProps {
   loading: boolean;
   filteredOrders: OrderRecord[];
   onViewReceipt: (order: OrderRecord) => void;
+  page: number;
+  pageSize: number;
+  setPage: (page: number) => void;
+  setPageSize: (pageSize: number) => void;
+  totalCount: number;
+  totalPages: number;
+}
+
+function getPageNumbers(current: number, total: number): (number | string)[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total];
+  }
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total];
 }
 
 export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
   loading,
   filteredOrders,
   onViewReceipt,
+  page,
+  pageSize,
+  setPage,
+  setPageSize,
+  totalCount,
+  totalPages,
 }) => {
   const tableWrapperRef = useRef<HTMLDivElement>(null);
 
-  const rowVirtualizer = useVirtualizer({
-    count: filteredOrders.length,
-    getScrollElement: () => tableWrapperRef.current,
-    estimateSize: () => 58,
-    overscan: 10,
-  });
-
-  const virtualItems = rowVirtualizer.getVirtualItems();
-  const totalSize = rowVirtualizer.getTotalSize();
-
-  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
-  const paddingBottom =
-    virtualItems.length > 0
-      ? totalSize -
-        (virtualItems[virtualItems.length - 1].start + virtualItems[virtualItems.length - 1].size)
-      : 0;
   return (
     <div style={styles.tableCard}>
       {loading ? (
         <div style={styles.emptyContainer}>
           <div style={styles.spinner} />
-          <p style={{ marginTop: '12px' }}>Loading historical sales logs...</p>
+          <p style={{ marginTop: '12px', fontSize: '13px', color: '#6B7280' }}>
+            Loading historical sales logs...
+          </p>
         </div>
       ) : (
         <div ref={tableWrapperRef} style={styles.tableWrapper}>
@@ -71,94 +88,59 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
               </tr>
             </thead>
             <tbody>
-              {paddingTop > 0 && (
-                <tr
-                  style={{ height: `${paddingTop}px`, pointerEvents: 'none' }}
-                  aria-hidden="true"
-                  tabIndex={-1}
-                >
-                  <td
-                    colSpan={7}
-                    aria-hidden="true"
-                    tabIndex={-1}
-                    style={{ padding: 0, border: 'none', background: 'transparent' }}
-                  />
+              {filteredOrders.map((o) => (
+                <tr key={o.id} style={styles.trRow} className="history-table-row">
+                  <td style={styles.td}>
+                    <strong>{o.invoiceNumber}</strong>
+                  </td>
+                  <td style={styles.td}>{o.dateStr}</td>
+                  <td style={styles.td}>{o.cashierName}</td>
+                  <td style={styles.td}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        alignItems: 'flex-start',
+                      }}
+                    >
+                      <span style={styles.methodBadge}>{o.paymentMethod.toUpperCase()}</span>
+                      {(o.paymentMethod === 'card' || o.paymentMethod === 'bank') && o.bankName && (
+                        <span
+                          style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '500' }}
+                        >
+                          {o.bankName} {o.cardLastFour ? `(**** ${o.cardLastFour})` : ''}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td style={styles.td}>
+                    <span
+                      style={{
+                        ...styles.statusBadge,
+                        backgroundColor: o.status === 'voided' ? '#fff1f2' : '#f0fdf4',
+                        color: o.status === 'voided' ? 'var(--error)' : 'var(--success)',
+                        border: o.status === 'voided' ? '1px solid #fecaca' : '1px solid #bbf7d0',
+                      }}
+                    >
+                      {o.status.toUpperCase()}
+                    </span>
+                  </td>
+                  <td style={styles.td}>
+                    <strong
+                      style={{ color: o.status === 'voided' ? 'var(--muted)' : 'var(--primary)' }}
+                    >
+                      Rs. {o.totalAmount.toLocaleString()}
+                    </strong>
+                  </td>
+                  <td style={{ ...styles.td, textAlign: 'right' }}>
+                    <button onClick={() => onViewReceipt(o)} style={styles.viewReceiptBtn}>
+                      <Eye size={14} />
+                      <span>Inspect</span>
+                    </button>
+                  </td>
                 </tr>
-              )}
-
-              {virtualItems.map((virtualRow) => {
-                const o = filteredOrders[virtualRow.index];
-                if (!o) return null;
-                return (
-                  <tr key={o.id} style={styles.trRow} className="history-table-row">
-                    <td style={styles.td}>
-                      <strong>{o.invoiceNumber}</strong>
-                    </td>
-                    <td style={styles.td}>{o.dateStr}</td>
-                    <td style={styles.td}>{o.cashierName}</td>
-                    <td style={styles.td}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '2px',
-                          alignItems: 'flex-start',
-                        }}
-                      >
-                        <span style={styles.methodBadge}>{o.paymentMethod.toUpperCase()}</span>
-                        {(o.paymentMethod === 'card' || o.paymentMethod === 'bank') &&
-                          o.bankName && (
-                            <span
-                              style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: '500' }}
-                            >
-                              {o.bankName} {o.cardLastFour ? `(**** ${o.cardLastFour})` : ''}
-                            </span>
-                          )}
-                      </div>
-                    </td>
-                    <td style={styles.td}>
-                      <span
-                        style={{
-                          ...styles.statusBadge,
-                          backgroundColor: o.status === 'voided' ? '#fff1f2' : '#f0fdf4',
-                          color: o.status === 'voided' ? 'var(--error)' : 'var(--success)',
-                          border: o.status === 'voided' ? '1px solid #fecaca' : '1px solid #bbf7d0',
-                        }}
-                      >
-                        {o.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <strong
-                        style={{ color: o.status === 'voided' ? 'var(--muted)' : 'var(--primary)' }}
-                      >
-                        Rs. {o.totalAmount.toLocaleString()}
-                      </strong>
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'right' }}>
-                      <button onClick={() => onViewReceipt(o)} style={styles.viewReceiptBtn}>
-                        <Eye size={14} />
-                        <span>Inspect</span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {paddingBottom > 0 && (
-                <tr
-                  style={{ height: `${paddingBottom}px`, pointerEvents: 'none' }}
-                  aria-hidden="true"
-                  tabIndex={-1}
-                >
-                  <td
-                    colSpan={7}
-                    aria-hidden="true"
-                    tabIndex={-1}
-                    style={{ padding: 0, border: 'none', background: 'transparent' }}
-                  />
-                </tr>
-              )}
+              ))}
 
               {filteredOrders.length === 0 && (
                 <tr>
@@ -179,6 +161,106 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
           </table>
         </div>
       )}
+
+      {/* Senior Table Pagination Footer */}
+      <div style={styles.paginationFooter}>
+        <div style={styles.paginationLeft}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', color: '#4B5563', fontWeight: '500' }}>
+              Rows per page:
+            </span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              style={styles.pageSizeSelect}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          <span style={{ fontSize: '13px', color: '#6B7280', fontWeight: '500' }}>
+            {totalCount > 0
+              ? `Showing ${Math.min((page - 1) * pageSize + 1, totalCount)}–${Math.min(
+                  page * pageSize,
+                  totalCount
+                )} of ${totalCount.toLocaleString()} sales records`
+              : 'No records found'}
+          </span>
+        </div>
+
+        <div style={styles.paginationRight}>
+          <button
+            onClick={() => setPage(1)}
+            disabled={page === 1 || loading}
+            title="First Page"
+            style={{
+              ...styles.pageNavBtn,
+              opacity: page === 1 || loading ? 0.4 : 1,
+              cursor: page === 1 || loading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <ChevronsLeft size={16} />
+          </button>
+          <button
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1 || loading}
+            title="Previous Page"
+            style={{
+              ...styles.pageNavBtn,
+              opacity: page === 1 || loading ? 0.4 : 1,
+              cursor: page === 1 || loading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 8px',
+              height: '32px',
+              borderRadius: '6px',
+              backgroundColor: '#ffffff',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--dark)' }}>
+              Page {page} of {totalPages || 1}
+            </span>
+          </div>
+
+          <button
+            onClick={() => setPage(page + 1)}
+            disabled={page >= totalPages || loading}
+            title="Next Page"
+            style={{
+              ...styles.pageNavBtn,
+              opacity: page >= totalPages || loading ? 0.4 : 1,
+              cursor: page >= totalPages || loading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <ChevronRight size={16} />
+          </button>
+          <button
+            onClick={() => setPage(totalPages)}
+            disabled={page >= totalPages || loading}
+            title="Last Page"
+            style={{
+              ...styles.pageNavBtn,
+              opacity: page >= totalPages || loading ? 0.4 : 1,
+              cursor: page >= totalPages || loading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <ChevronsRight size={16} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -190,10 +272,10 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--border)',
     boxShadow: 'var(--shadow)',
     overflow: 'hidden',
-    flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    minHeight: 0,
+    flex: 1,
+    minHeight: '380px',
   },
   tableWrapper: {
     overflowX: 'auto',
@@ -218,70 +300,113 @@ const styles: Record<string, React.CSSProperties> = {
   th: {
     padding: '10px 16px',
     textAlign: 'left',
-    fontWeight: '700',
-    color: '#475569',
     fontSize: '11px',
+    fontWeight: '700',
+    color: 'var(--muted)',
     textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    letterSpacing: '0.5px',
   },
   trRow: {
     borderBottom: '1px solid var(--border)',
+    height: '52px',
   },
   td: {
-    padding: '12px 16px',
-    verticalAlign: 'middle',
+    padding: '10px 16px',
+    fontSize: '13px',
     color: 'var(--dark)',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   methodBadge: {
+    display: 'inline-block',
+    padding: '3px 8px',
+    borderRadius: '12px',
     fontSize: '10px',
-    fontWeight: '600',
+    fontWeight: 'bold',
     backgroundColor: 'var(--light-blue)',
     color: 'var(--primary)',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    border: '1px solid var(--accent-blue)',
   },
   statusBadge: {
+    display: 'inline-block',
+    padding: '3px 8px',
+    borderRadius: '12px',
     fontSize: '10px',
-    fontWeight: '600',
-    padding: '2px 6px',
-    borderRadius: '4px',
-    display: 'inline-flex',
-    alignItems: 'center',
+    fontWeight: 'bold',
   },
   viewReceiptBtn: {
-    padding: '5px 10px',
-    borderRadius: 'var(--radius)',
+    padding: '5px 12px',
+    borderRadius: '6px',
     border: '1px solid var(--border)',
     backgroundColor: '#ffffff',
-    color: 'var(--muted)',
-    fontWeight: '500',
+    color: 'var(--dark)',
     fontSize: '12px',
+    fontWeight: '500',
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '4px',
-    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    gap: '6px',
+    transition: 'all 0.2s ease',
   },
   emptyContainer: {
-    padding: '64px',
-    textAlign: 'center',
-    color: 'var(--muted)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '8px',
+    padding: '60px 20px',
+    color: 'var(--muted)',
+    height: '100%',
   },
   spinner: {
-    width: '24px',
-    height: '24px',
-    border: '2px solid rgba(0,0,0,0.1)',
-    borderTopColor: 'var(--primary)',
+    width: '28px',
+    height: '28px',
+    border: '3px solid #E5E7EB',
+    borderTop: '3px solid var(--primary)',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
+  },
+  paginationFooter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '12px 18px',
+    borderTop: '1px solid var(--border)',
+    backgroundColor: 'var(--background)',
+    flexShrink: 0,
+    gap: '12px',
+    flexWrap: 'wrap',
+  },
+  paginationLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  pageSizeSelect: {
+    padding: '4px 8px',
+    borderRadius: '6px',
+    border: '1px solid #D1D5DB',
+    backgroundColor: '#ffffff',
+    fontSize: '13px',
+    color: '#374151',
+    fontWeight: '600',
+    cursor: 'pointer',
+    outline: 'none',
+  },
+  paginationRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  pageNavBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '32px',
+    height: '32px',
+    borderRadius: '6px',
+    border: '1px solid #E5E7EB',
+    backgroundColor: '#ffffff',
+    color: '#4B5563',
+    transition: 'all 0.15s ease',
   },
 };

@@ -8,7 +8,7 @@ import { Search, CheckCircle, FileSpreadsheet, FileText } from 'lucide-react';
 import { InvoiceListTable } from '../../components/history/InvoiceListTable';
 import { InvoiceDetailModal } from '../../components/history/InvoiceDetailModal';
 import {
-  useGetOrders,
+  useGetPaginatedOrders,
   useGetOrderItems,
   useVoidOrder,
   useGetAllOrders,
@@ -49,21 +49,29 @@ export default function OrderHistoryPage() {
 
   // States
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Reset to page 1 when search query changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
 
   // Detail Modal States
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderRecord | null>(null);
 
   // React Query Hooks
-  const {
-    data: orders = [],
-    isLoading: loading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useGetOrders(searchQuery);
+  const { data: paginatedData, isLoading: loading } = useGetPaginatedOrders(
+    page,
+    pageSize,
+    searchQuery
+  );
+  const orders = paginatedData?.orders || [];
+  const totalCount = paginatedData?.totalCount || 0;
+  const totalPages = paginatedData?.totalPages || 1;
 
   const { fetchAllOrders } = useGetAllOrders();
 
@@ -367,19 +375,13 @@ Thank you for shopping with us!
         loading={loading}
         filteredOrders={mappedOrders}
         onViewReceipt={handleViewReceipt}
+        page={page}
+        pageSize={pageSize}
+        setPage={setPage}
+        setPageSize={setPageSize}
+        totalCount={totalCount}
+        totalPages={totalPages}
       />
-
-      {hasNextPage && (
-        <div style={styles.loadMoreContainer}>
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            style={styles.loadMoreBtn}
-          >
-            {isFetchingNextPage ? 'Loading more...' : 'Load More Invoices ⬇️'}
-          </button>
-        </div>
-      )}
 
       <InvoiceDetailModal
         isOpen={showReceipt}
