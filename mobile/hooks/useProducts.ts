@@ -743,14 +743,18 @@ export function useFindProduct() {
   };
 }
 
+export function useBusinessProductCount(businessId?: string) {
+  return useQuery({
+    queryKey: ['products', businessId, 'count'],
+    queryFn: async () => {
+      if (!businessId || businessId === '0') return 0;
+      return database.get('products').query(Q.where('business_id', businessId)).fetchCount();
+    },
+    enabled: !!businessId,
+  });
+}
+
 export function useProductCount() {
   const activeBiz = useActiveBusiness();
-  return useQuery({
-    queryKey: ['products', activeBiz?.id, 'count'],
-    queryFn: async () => {
-      if (!activeBiz?.id || activeBiz.id === '0') return 0;
-      return database.get('products').query(Q.where('business_id', activeBiz.id)).fetchCount();
-    },
-    enabled: !!activeBiz?.id,
-  });
+  return useBusinessProductCount(activeBiz?.id);
 }

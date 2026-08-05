@@ -16,8 +16,9 @@ import { getTopSafeInset } from '../../../utils/safeArea';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
-import { hapticFeedback } from '@/utils/haptics';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useBusinessProductCount } from '../../../hooks/useProducts';
+import { hapticFeedback } from '@/utils/haptics';
 
 const BUSINESS_TYPES = [
   { label: 'Cafe', icon: '☕' },
@@ -61,8 +62,9 @@ export default function ManageBusinessesRoute() {
   const [editPhone, setEditPhone] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditDropdownOpen, setIsEditDropdownOpen] = useState(false);
-
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { data: editingBizProductCount = 0 } = useBusinessProductCount(editingBusiness?.id);
+  const isEditingCategoryDisabled = editingBizProductCount > 0;
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -393,24 +395,6 @@ export default function ManageBusinessesRoute() {
         })}
       </ScrollView>
 
-      {/* FIX: All plain <TextInput> instances inside these two <BottomSheet> forms
-  have been changed to <BottomSheetTextInput>.
-
-  Why this fixes it:
-  @gorhom/bottom-sheet's keyboard-avoidance logic (keyboardBehavior="extend")
-  only works if the FOCUSED input is a BottomSheetTextInput — that's how the
-  library knows a text field inside the sheet is focused and resizes/extends
-  the sheet to sit above the keyboard. A plain react-native TextInput is
-  invisible to that logic, so the sheet never adjusts, and the footer button
-  stays pinned under the keyboard instead of above it.
-
-  Make sure this import is added at the top of the file (adjust the path to
-  wherever your BottomSheet.tsx wrapper lives — it already re-exports
-  BottomSheetTextInput):
-
-    import { BottomSheet, BottomSheetTextInput } from '../path/to/BottomSheet';
-*/}
-
       {/* Modal for creating a new business */}
       <BottomSheet
         visible={isModalOpen}
@@ -632,6 +616,7 @@ export default function ManageBusinessesRoute() {
             <Text style={styles.formLabel}>{t('businessMgmt.bizTypeLabel')}</Text>
             <TouchableOpacity
               activeOpacity={0.8}
+              disabled={isEditingCategoryDisabled}
               style={[
                 styles.formInput,
                 {
@@ -640,6 +625,7 @@ export default function ManageBusinessesRoute() {
                   justifyContent: 'space-between',
                 },
                 isEditDropdownOpen && { borderColor: TOKENS.primary },
+                isEditingCategoryDisabled && { opacity: 0.6, backgroundColor: '#F1F5F9' },
               ]}
               onPress={() => setIsEditDropdownOpen(!isEditDropdownOpen)}
             >
@@ -678,6 +664,12 @@ export default function ManageBusinessesRoute() {
                 color={TOKENS.muted}
               />
             </TouchableOpacity>
+
+            {isEditingCategoryDisabled && (
+              <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 4 }}>
+                {t('businessDetails.categoryLockMsg')}
+              </Text>
+            )}
 
             {isEditDropdownOpen && (
               <View style={styles.dropdownOverlayList}>
