@@ -91,6 +91,7 @@ export function useProducts(category?: string, search?: string, activeChip?: str
 
       // Paginate everything except Recents (Low Stock uses SQL pre-filter + page-level refine)
       if (activeChip !== 'Recents' && activeChip !== 'recents') {
+        query = query.extend(Q.sortBy('created_at', Q.asc));
         const offset = (pageParam as number) * PAGE_SIZE;
         query = query.extend(Q.skip(offset), Q.take(PAGE_SIZE));
       }
