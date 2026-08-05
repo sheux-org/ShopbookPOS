@@ -16,11 +16,13 @@ import { getTopSafeInset } from '../../../utils/safeArea';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
 import { hapticFeedback } from '@/utils/haptics';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 export default function ManageStaffRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { canPerform } = useUserPermissions();
+  const { t } = useTranslation();
 
   const activeBusiness = useBusinessStore((state) => state.activeBusiness);
 
@@ -213,7 +215,7 @@ export default function ManageStaffRoute() {
           { paddingBottom: Math.max(insets.bottom + 24, 32) },
         ]}
       >
-        <Text style={styles.groupLabel}>Authorized Staff Members</Text>
+        <Text style={styles.groupLabel}>{t('staff.authorizedMembers')}</Text>
 
         {staffList.map((member) => {
           const badge = getRoleBadgeStyle(member.role);
@@ -293,7 +295,7 @@ export default function ManageStaffRoute() {
       <BottomSheet
         visible={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Add Staff Member"
+        title="Add New Staff Member"
         footerComponent={
           <TouchableOpacity
             style={[
@@ -304,14 +306,14 @@ export default function ManageStaffRoute() {
             onPress={handleAddStaff}
             disabled={!newName.trim() || !newPhone.trim()}
           >
-            <Text style={styles.submitButtonText}>Authorize Staff Member</Text>
+            <Text style={styles.submitButtonText}>{t('staff.addBtn')}</Text>
             <Feather name="user-plus" size={16} color={TOKENS.card} />
           </TouchableOpacity>
         }
       >
         <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Staff Full Name</Text>
+            <Text style={styles.formLabel}>{t('staff.nameLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Pahasara"
@@ -322,7 +324,7 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Staff Role</Text>
+            <Text style={styles.formLabel}>{t('staff.roleLabel')}</Text>
             <View style={styles.rolesSelectorRow}>
               {(['Admin', 'Manager', 'Cashier'] as const).map((role) => {
                 const isSelected = newRole === role;
@@ -351,7 +353,7 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Mobile Number</Text>
+            <Text style={styles.formLabel}>{t('staff.phoneLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. +94 77 987 6543"
@@ -363,10 +365,7 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>
-              Email Address{' '}
-              <Text style={{ fontWeight: 'normal', color: TOKENS.muted }}>(Optional)</Text>
-            </Text>
+            <Text style={styles.formLabel}>{t('staff.emailLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. pahasara@shopbook.lk"
@@ -398,14 +397,14 @@ export default function ManageStaffRoute() {
             onPress={handleSaveEditStaff}
             disabled={!editName.trim() || !editPhone.trim()}
           >
-            <Text style={styles.submitButtonText}>Update Staff Details</Text>
+            <Text style={styles.submitButtonText}>{t('staff.saveEditBtn')}</Text>
             <Feather name="check" size={16} color={TOKENS.card} />
           </TouchableOpacity>
         }
       >
         <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Staff Full Name</Text>
+            <Text style={styles.formLabel}>{t('staff.nameLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Aruni Silva"
@@ -416,7 +415,7 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Staff Role</Text>
+            <Text style={styles.formLabel}>{t('staff.roleLabel')}</Text>
             <View style={styles.rolesSelectorRow}>
               {(['Admin', 'Manager', 'Cashier'] as const).map((role) => {
                 const isSelected = editRole === role;
@@ -455,10 +454,7 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>
-              Email Address{' '}
-              <Text style={{ fontWeight: 'normal', color: TOKENS.muted }}>(Optional)</Text>
-            </Text>
+            <Text style={styles.formLabel}>{t('staff.emailLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. aruni@shopbook.lk"
@@ -471,7 +467,7 @@ export default function ManageStaffRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Mobile Number</Text>
+            <Text style={styles.formLabel}>{t('staff.phoneLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. +94 77 987 6543"

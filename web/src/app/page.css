@@ -35,7 +35,7 @@
 }
 
 .pos-left-pane {
-  flex: 7;
+  flex: 1 1 0%;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -43,7 +43,8 @@
 }
 
 .pos-right-pane {
-  flex: 3;
+  width: clamp(340px, 26vw, 440px);
+  flex: 0 0 clamp(340px, 26vw, 440px);
   display: flex;
   flex-direction: column;
   background-color: #ffffff;
@@ -184,6 +185,7 @@
   }
 
   .pos-right-pane {
+    width: 100%;
     height: auto;
     flex: none;
     margin-bottom: 24px;

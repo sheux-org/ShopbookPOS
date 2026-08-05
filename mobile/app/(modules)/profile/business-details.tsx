@@ -343,12 +343,12 @@ export default function BusinessDetailsRoute() {
             >
               <View style={{ flex: 1, marginRight: 8 }}>
                 <Text style={{ fontSize: 14, fontWeight: 'bold', color: TOKENS.dark }}>
-                  Haptic Feedback
+                  {t('businessDetails.hapticsTitle')}
                 </Text>
                 <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 4 }}>
                   {hapticsEnabled
-                    ? 'Vibration feedback is active across the app'
-                    : 'Enable tactile vibration feedback for interactions'}
+                    ? t('businessDetails.hapticsActive')
+                    : t('businessDetails.hapticsInactive')}
                 </Text>
               </View>
               <TouchableOpacity
@@ -582,7 +582,7 @@ export default function BusinessDetailsRoute() {
         <BottomSheet
           visible={showLogoSelector}
           onClose={() => setShowLogoSelector(false)}
-          title="Choose Profile Image"
+          title={t('businessDetails.photoSheetTitle')}
         >
           <View style={styles.sheetBody}>
             {/* Option 1: Gallery Picker */}
@@ -591,8 +591,8 @@ export default function BusinessDetailsRoute() {
                 <Feather name="image" size={20} color={TOKENS.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.pickerOptionTitle}>Select from Gallery</Text>
-                <Text style={styles.pickerOptionSub}>Choose a custom photo or logo</Text>
+                <Text style={styles.pickerOptionTitle}>{t('businessDetails.galleryOption')}</Text>
+                <Text style={styles.pickerOptionSub}>{t('businessDetails.galleryOptionSub')}</Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
@@ -605,8 +605,8 @@ export default function BusinessDetailsRoute() {
                 <Feather name="camera" size={20} color={TOKENS.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.pickerOptionTitle}>Take Photo</Text>
-                <Text style={styles.pickerOptionSub}>Capture a live image via camera</Text>
+                <Text style={styles.pickerOptionTitle}>{t('businessDetails.cameraOption')}</Text>
+                <Text style={styles.pickerOptionSub}>{t('businessDetails.cameraOptionSub')}</Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>

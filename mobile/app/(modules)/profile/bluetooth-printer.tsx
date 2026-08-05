@@ -22,10 +22,12 @@ import { useBusinessStore } from '../../../stores/useBusinessStore';
 import RNBluetoothClassic, { BluetoothDevice } from 'react-native-bluetooth-classic';
 import Barcode from 'react-native-barcode-svg';
 import { hapticFeedback } from '@/utils/haptics';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 export default function BluetoothPrinterRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
   const setPairedPrinter = useSettingsStore((s) => s.setPairedPrinter);
@@ -247,12 +249,12 @@ export default function BluetoothPrinterRoute() {
               <Text style={styles.pairedTitle}>{pairedPrinter.name}</Text>
               <View style={styles.onlineBadge}>
                 <View style={styles.onlineDot} />
-                <Text style={styles.onlineText}>Connected & Ready</Text>
+                <Text style={styles.onlineText}>{t('printer.connectedAndReady')}</Text>
               </View>
             </View>
 
             <TouchableOpacity style={styles.disconnectBtn} onPress={handleDisconnect}>
-              <Text style={styles.disconnectBtnText}>Remove</Text>
+              <Text style={styles.disconnectBtnText}>{t('printer.disconnectBtn')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -260,7 +262,7 @@ export default function BluetoothPrinterRoute() {
             <View style={styles.noPrinterIconBox}>
               <Feather name="printer" size={32} color={TOKENS.muted} />
             </View>
-            <Text style={styles.noPrinterTitle}>No Printer Connected</Text>
+            <Text style={styles.noPrinterTitle}>{t('printer.noDevicesFound')}</Text>
             <Text style={styles.noPrinterSub}>
               Connect a Bluetooth 58mm or 80mm ESC/POS thermal printer to generate instant paper
               bills.
@@ -277,7 +279,7 @@ export default function BluetoothPrinterRoute() {
                 <Feather name="file-text" size={18} color={TOKENS.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.actionRowTitle}>Print Test Page</Text>
+                <Text style={styles.actionRowTitle}>{t('printer.testPrintBtn')}</Text>
                 <Text style={styles.actionRowSub}>
                   Send test invoice layout to verify print alignments
                 </Text>
@@ -290,20 +292,20 @@ export default function BluetoothPrinterRoute() {
         {/* Scan section */}
         <View style={styles.scanSection}>
           <View style={styles.scanHeader}>
-            <Text style={styles.sectionTitle}>Available Devices</Text>
+            <Text style={styles.sectionTitle}>{t('printer.availableDevices')}</Text>
             {isScanning && <ActivityIndicator size="small" color={TOKENS.primary} />}
           </View>
 
           {!isScanning && devices.length === 0 && (
             <TouchableOpacity style={styles.scanBtn} activeOpacity={0.8} onPress={handleStartScan}>
               <Feather name="search" size={16} color={TOKENS.card} />
-              <Text style={styles.scanBtnText}>Scan for Bluetooth Printers</Text>
+              <Text style={styles.scanBtnText}>{t('printer.scanPrinterBtn')}</Text>
             </TouchableOpacity>
           )}
 
           {isScanning && (
             <View style={styles.scanningBox}>
-              <Text style={styles.scanningText}>Searching for Bluetooth peripherals...</Text>
+              <Text style={styles.scanningText}>{t('printer.scanningText')}</Text>
               <Text style={styles.scanningSub}>
                 Make sure your receipt printer is switched on and discoverable.
               </Text>
@@ -356,7 +358,7 @@ export default function BluetoothPrinterRoute() {
         <View style={styles.previewOverlay}>
           <View style={styles.previewCard}>
             <View style={styles.previewHeader}>
-              <Text style={styles.previewTitle}>Virtual Printer Output</Text>
+              <Text style={styles.previewTitle}>{t('printer.testReceiptTitle')}</Text>
               <TouchableOpacity onPress={() => setShowReceiptPreview(false)}>
                 <Feather name="x" size={20} color={TOKENS.dark} />
               </TouchableOpacity>
@@ -447,7 +449,7 @@ export default function BluetoothPrinterRoute() {
               onPress={executePhysicalPrint}
             >
               <Feather name="printer" size={16} color={TOKENS.card} />
-              <Text style={styles.printActionBtnText}>Trigger Hardware Print</Text>
+              <Text style={styles.printActionBtnText}>{t('printer.sendToPrinter')}</Text>
             </TouchableOpacity>
           </View>
         </View>

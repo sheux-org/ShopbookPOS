@@ -105,14 +105,14 @@ export function useProducts(category?: string, search?: string, activeChip?: str
         );
       }
 
-      // Apply Search pagination rule:
-      // "For search, first fetch all data from database, then paginate the returning data."
-      const isSearchActive = search && search.trim() !== '';
       const isLowStockChip = activeChip === 'Low Stock';
       const isRecentsChip = activeChip?.toLowerCase() === 'recents';
-
-      // Paginate at database level if not in-memory filtering (Low Stock chip is processed in memory)
       const shouldPaginateInDb = !isLowStockChip && !isRecentsChip;
+
+      // Apply deterministic created_at sorting so updating stockCount never re-orders catalog items
+      if (!isRecentsChip) {
+        query = query.extend(Q.sortBy('created_at', Q.asc));
+      }
 
       if (shouldPaginateInDb) {
         const offset = (pageParam as number) * PAGE_SIZE;

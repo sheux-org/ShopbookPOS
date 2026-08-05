@@ -16,6 +16,8 @@ import { getTopSafeInset } from '../../../utils/safeArea';
 import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
+import { useTranslation } from '../../../hooks/useTranslation';
+import { useBusinessProductCount } from '../../../hooks/useProducts';
 import { hapticFeedback } from '@/utils/haptics';
 
 const BUSINESS_TYPES = [
@@ -34,6 +36,7 @@ export default function ManageBusinessesRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { canPerform } = useUserPermissions();
+  const { t } = useTranslation();
 
   const { data: businesses = [] } = useBusinesses();
   const activeBusiness = useBusinessStore((state) => state.activeBusiness);
@@ -59,8 +62,9 @@ export default function ManageBusinessesRoute() {
   const [editPhone, setEditPhone] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditDropdownOpen, setIsEditDropdownOpen] = useState(false);
-
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { data: editingBizProductCount = 0 } = useBusinessProductCount(editingBusiness?.id);
+  const isEditingCategoryDisabled = editingBizProductCount > 0;
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -286,7 +290,7 @@ export default function ManageBusinessesRoute() {
 
       {/* Scrollable list */}
       <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.groupLabel}>Registered Business Categories</Text>
+        <Text style={styles.groupLabel}>{t('businessMgmt.registeredCategories')}</Text>
 
         {businesses.map((biz) => {
           const isActive = activeBusiness.id === biz.id;
@@ -391,24 +395,6 @@ export default function ManageBusinessesRoute() {
         })}
       </ScrollView>
 
-      {/* FIX: All plain <TextInput> instances inside these two <BottomSheet> forms
-  have been changed to <BottomSheetTextInput>.
-
-  Why this fixes it:
-  @gorhom/bottom-sheet's keyboard-avoidance logic (keyboardBehavior="extend")
-  only works if the FOCUSED input is a BottomSheetTextInput — that's how the
-  library knows a text field inside the sheet is focused and resizes/extends
-  the sheet to sit above the keyboard. A plain react-native TextInput is
-  invisible to that logic, so the sheet never adjusts, and the footer button
-  stays pinned under the keyboard instead of above it.
-
-  Make sure this import is added at the top of the file (adjust the path to
-  wherever your BottomSheet.tsx wrapper lives — it already re-exports
-  BottomSheetTextInput):
-
-    import { BottomSheet, BottomSheetTextInput } from '../path/to/BottomSheet';
-*/}
-
       {/* Modal for creating a new business */}
       <BottomSheet
         visible={isModalOpen}
@@ -431,14 +417,14 @@ export default function ManageBusinessesRoute() {
               !newName.trim() || !newBusinessType.trim() || !newAddress.trim() || !newPhone.trim()
             }
           >
-            <Text style={styles.submitButtonText}>Create & Activate Business</Text>
+            <Text style={styles.submitButtonText}>{t('businessMgmt.createAndActivate')}</Text>
             <Feather name="plus-circle" size={16} color={TOKENS.card} />
           </TouchableOpacity>
         }
       >
         <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Business / Brand Name</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.bizNameLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Shopbook Retail Store"
@@ -449,7 +435,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={[styles.formGroup, { zIndex: isCreateDropdownOpen ? 1000 : 1 }]}>
-            <Text style={styles.formLabel}>Business Type</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.bizTypeLabel')}</Text>
             <TouchableOpacity
               activeOpacity={0.8}
               style={[
@@ -489,7 +475,7 @@ export default function ManageBusinessesRoute() {
                     fontWeight: '500',
                   }}
                 >
-                  {newBusinessType || 'Select business type'}
+                  {newBusinessType || t('businessDetails.placeholderType')}
                 </Text>
               </View>
               <Feather
@@ -558,7 +544,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Store Address</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.storeAddressLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. 142 Galle Road, Colombo 03"
@@ -569,7 +555,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Phone Number</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.phoneLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. +94 11 234 5678"
@@ -609,14 +595,14 @@ export default function ManageBusinessesRoute() {
               !editPhone.trim()
             }
           >
-            <Text style={styles.submitButtonText}>Update Business Details</Text>
+            <Text style={styles.submitButtonText}>{t('businessMgmt.saveEdit')}</Text>
             <Feather name="check" size={16} color={TOKENS.card} />
           </TouchableOpacity>
         }
       >
         <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Business / Brand Name</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.bizNameLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Shopbook Retail Store"
@@ -627,9 +613,10 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={[styles.formGroup, { zIndex: isEditDropdownOpen ? 1000 : 1 }]}>
-            <Text style={styles.formLabel}>Business Type</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.bizTypeLabel')}</Text>
             <TouchableOpacity
               activeOpacity={0.8}
+              disabled={isEditingCategoryDisabled}
               style={[
                 styles.formInput,
                 {
@@ -638,6 +625,7 @@ export default function ManageBusinessesRoute() {
                   justifyContent: 'space-between',
                 },
                 isEditDropdownOpen && { borderColor: TOKENS.primary },
+                isEditingCategoryDisabled && { opacity: 0.6, backgroundColor: '#F1F5F9' },
               ]}
               onPress={() => setIsEditDropdownOpen(!isEditDropdownOpen)}
             >
@@ -676,6 +664,12 @@ export default function ManageBusinessesRoute() {
                 color={TOKENS.muted}
               />
             </TouchableOpacity>
+
+            {isEditingCategoryDisabled && (
+              <Text style={{ fontSize: 11, color: TOKENS.muted, marginTop: 4 }}>
+                {t('businessDetails.categoryLockMsg')}
+              </Text>
+            )}
 
             {isEditDropdownOpen && (
               <View style={styles.dropdownOverlayList}>
@@ -736,7 +730,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Store Address</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.storeAddressLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. 142 Galle Road, Colombo 03"
@@ -747,7 +741,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Phone Number</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.phoneLabel')}</Text>
             <BottomSheetTextInput
               style={[
                 styles.formInput,
