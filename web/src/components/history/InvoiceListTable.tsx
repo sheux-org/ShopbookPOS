@@ -38,19 +38,6 @@ interface InvoiceListTableProps {
   totalPages: number;
 }
 
-function getPageNumbers(current: number, total: number): (number | string)[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-  if (current <= 4) {
-    return [1, 2, 3, 4, 5, '...', total];
-  }
-  if (current >= total - 3) {
-    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
-  }
-  return [1, '...', current - 1, current, current + 1, '...', total];
-}
-
 export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
   loading,
   filteredOrders,
@@ -78,13 +65,13 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
           <table style={styles.table}>
             <thead>
               <tr style={styles.trHead}>
-                <th style={{ ...styles.th, width: '18%' }}>Invoice Number</th>
-                <th style={{ ...styles.th, width: '18%' }}>Date & Time</th>
-                <th style={{ ...styles.th, width: '15%' }}>Cashier</th>
-                <th style={{ ...styles.th, width: '17%' }}>Payment Method</th>
-                <th style={{ ...styles.th, width: '11%' }}>Status</th>
-                <th style={{ ...styles.th, width: '11%' }}>Total Value</th>
-                <th style={{ ...styles.th, width: '10%', textAlign: 'right' }}>Audit</th>
+                <th style={{ ...styles.th, width: '280px' }}>Invoice Number</th>
+                <th style={{ ...styles.th, width: '160px' }}>Date & Time</th>
+                <th style={{ ...styles.th, width: '140px' }}>Cashier</th>
+                <th style={{ ...styles.th, width: '190px' }}>Payment Method</th>
+                <th style={{ ...styles.th, width: '100px' }}>Status</th>
+                <th style={{ ...styles.th, width: '140px' }}>Total Value</th>
+                <th style={{ ...styles.th, width: '140px', textAlign: 'right' }}>Audit</th>
               </tr>
             </thead>
             <tbody>
@@ -281,6 +268,8 @@ const styles: Record<string, React.CSSProperties> = {
     overflowX: 'auto',
     overflowY: 'auto',
     flex: 1,
+    minWidth: 0,
+    WebkitOverflowScrolling: 'touch',
   },
   table: {
     width: '100%',
@@ -288,7 +277,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'left',
     fontSize: '13px',
     tableLayout: 'fixed',
-    minWidth: '850px',
+    minWidth: '1150px',
   },
   trHead: {
     borderBottom: '1px solid var(--border)',
@@ -369,12 +358,14 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '12px 18px',
+    padding: '10px 18px',
     borderTop: '1px solid var(--border)',
     backgroundColor: 'var(--background)',
     flexShrink: 0,
     gap: '12px',
     flexWrap: 'wrap',
+    position: 'relative',
+    zIndex: 10,
   },
   paginationLeft: {
     display: 'flex',
