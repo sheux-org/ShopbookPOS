@@ -16,6 +16,7 @@ import { TOKENS } from '../../../constants/tokens';
 import { useSettingsStore } from '../../../stores/useSettingsStore';
 import { hapticFeedback } from '../../../utils/haptics';
 import { PoweredBy } from '../../../components/common/PoweredBy';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const PLANS = [
   {
@@ -70,6 +71,7 @@ const PRO_FEATURES = [
 export default function PremiumPlansRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const isPremium = useSettingsStore((s) => s.isPremium);
   const setPremium = useSettingsStore((s) => s.setPremium);
@@ -159,17 +161,15 @@ export default function PremiumPlansRoute() {
           <View style={styles.proPassCard}>
             <View style={styles.proPassLeft}>
               <View style={styles.vipBadge}>
-                <Text style={styles.vipBadgeText}>ACTIVE MEMBER</Text>
+                <Text style={styles.vipBadgeText}>{t('premium.activeMember')}</Text>
               </View>
-              <Text style={styles.proPassTitle}>SHOPBOOK POS PRO LICENSE</Text>
-              <Text style={styles.proPassSubtitle}>
-                Active Cloud Sync • Multi-Branch Outlets • Printer Support
-              </Text>
+              <Text style={styles.proPassTitle}>{t('premium.licenseTitle')}</Text>
+              <Text style={styles.proPassSubtitle}>{t('premium.subActiveNotice')}</Text>
             </View>
             <View style={styles.proPassRight}>
               <Ionicons name="diamond" size={28} color="#D97706" />
               <TouchableOpacity style={styles.downgradeLink} onPress={handleDowngrade}>
-                <Text style={styles.downgradeLinkText}>Downgrade</Text>
+                <Text style={styles.downgradeLinkText}>{t('premium.downgrade')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -180,7 +180,7 @@ export default function PremiumPlansRoute() {
               <Ionicons name="diamond" size={18} color="#D97706" />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.warningCardTitle}>Upgrade to Shopbook POS Pro</Text>
+              <Text style={styles.warningCardTitle}>{t('premium.upgradeTitle')}</Text>
               <Text style={styles.alertDesc}>
                 Unlock auto cloud sync backups, printing, staff accounts, web terminal, and camera
                 barcode scanning.
@@ -191,7 +191,7 @@ export default function PremiumPlansRoute() {
 
         {/* Tab Selection Bar */}
         <View style={styles.tabSection}>
-          <Text style={styles.tabSectionHeader}>Select Subscription Period</Text>
+          <Text style={styles.tabSectionHeader}>{t('premium.selectPeriod')}</Text>
           <View style={styles.tabBarContainer}>
             {PLANS.map((plan) => {
               const isTabSelected = selectedPlanId === plan.id;

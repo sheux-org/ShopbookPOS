@@ -17,6 +17,7 @@ import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
 import { hapticFeedback } from '@/utils/haptics';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 const BUSINESS_TYPES = [
   { label: 'Cafe', icon: '☕' },
@@ -34,6 +35,7 @@ export default function ManageBusinessesRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { canPerform } = useUserPermissions();
+  const { t } = useTranslation();
 
   const { data: businesses = [] } = useBusinesses();
   const activeBusiness = useBusinessStore((state) => state.activeBusiness);
@@ -286,7 +288,7 @@ export default function ManageBusinessesRoute() {
 
       {/* Scrollable list */}
       <ScrollView style={styles.scrollWrapper} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.groupLabel}>Registered Business Categories</Text>
+        <Text style={styles.groupLabel}>{t('businessMgmt.registeredCategories')}</Text>
 
         {businesses.map((biz) => {
           const isActive = activeBusiness.id === biz.id;
@@ -431,14 +433,14 @@ export default function ManageBusinessesRoute() {
               !newName.trim() || !newBusinessType.trim() || !newAddress.trim() || !newPhone.trim()
             }
           >
-            <Text style={styles.submitButtonText}>Create & Activate Business</Text>
+            <Text style={styles.submitButtonText}>{t('businessMgmt.createAndActivate')}</Text>
             <Feather name="plus-circle" size={16} color={TOKENS.card} />
           </TouchableOpacity>
         }
       >
         <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Business / Brand Name</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.bizNameLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Shopbook Retail Store"
@@ -449,7 +451,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={[styles.formGroup, { zIndex: isCreateDropdownOpen ? 1000 : 1 }]}>
-            <Text style={styles.formLabel}>Business Type</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.bizTypeLabel')}</Text>
             <TouchableOpacity
               activeOpacity={0.8}
               style={[
@@ -489,7 +491,7 @@ export default function ManageBusinessesRoute() {
                     fontWeight: '500',
                   }}
                 >
-                  {newBusinessType || 'Select business type'}
+                  {newBusinessType || t('businessDetails.placeholderType')}
                 </Text>
               </View>
               <Feather
@@ -558,7 +560,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Store Address</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.storeAddressLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. 142 Galle Road, Colombo 03"
@@ -569,7 +571,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Phone Number</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.phoneLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. +94 11 234 5678"
@@ -609,14 +611,14 @@ export default function ManageBusinessesRoute() {
               !editPhone.trim()
             }
           >
-            <Text style={styles.submitButtonText}>Update Business Details</Text>
+            <Text style={styles.submitButtonText}>{t('businessMgmt.saveEdit')}</Text>
             <Feather name="check" size={16} color={TOKENS.card} />
           </TouchableOpacity>
         }
       >
         <View style={styles.modalScroll}>
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Business / Brand Name</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.bizNameLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. Shopbook Retail Store"
@@ -627,7 +629,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={[styles.formGroup, { zIndex: isEditDropdownOpen ? 1000 : 1 }]}>
-            <Text style={styles.formLabel}>Business Type</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.bizTypeLabel')}</Text>
             <TouchableOpacity
               activeOpacity={0.8}
               style={[
@@ -736,7 +738,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Store Address</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.storeAddressLabel')}</Text>
             <BottomSheetTextInput
               style={styles.formInput}
               placeholder="e.g. 142 Galle Road, Colombo 03"
@@ -747,7 +749,7 @@ export default function ManageBusinessesRoute() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Phone Number</Text>
+            <Text style={styles.formLabel}>{t('businessMgmt.phoneLabel')}</Text>
             <BottomSheetTextInput
               style={[
                 styles.formInput,

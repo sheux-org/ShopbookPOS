@@ -7,12 +7,14 @@ interface PrinterDevice {
   address: string;
 }
 
+export type LanguageCode = 'en' | 'si' | 'ta';
+
 interface SettingsState {
   isBackupEnabled: boolean;
   pairedPrinter: PrinterDevice | null;
   hapticsEnabled: boolean;
   isPremium: boolean;
-  language: 'en' | 'si' | 'ta';
+  language: LanguageCode;
   toggleBackup: () => void;
   setBackupEnabled: (enabled: boolean) => void;
   setPairedPrinter: (printer: PrinterDevice | null) => void;

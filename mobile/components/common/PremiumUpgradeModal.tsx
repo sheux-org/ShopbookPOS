@@ -13,6 +13,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TOKENS } from '../../constants/tokens';
 import { hapticFeedback } from '../../utils/haptics';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface PremiumUpgradeModalProps {
   visible: boolean;
@@ -78,6 +79,7 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
   featureName = 'This feature',
 }) => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
   const modalHeight = SCREEN_HEIGHT * 0.82; // Set a fixed height (82% of screen height) to prevent collapsing and match spacious layout
@@ -146,7 +148,7 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
 
             {/* Feature list */}
             <View style={styles.featureGrid}>
-              <Text style={styles.sectionTitle}>✨ Premium capabilities included</Text>
+              <Text style={styles.sectionTitle}>{t('premium.proFeaturesTitle')}</Text>
               <View style={styles.featuresList}>
                 {PREMIUM_FEATURES.map((item, index) => (
                   <View key={index} style={styles.featureRowCard}>
@@ -174,12 +176,12 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
               activeOpacity={0.85}
               onPress={handleUpgradePress}
             >
-              <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
+              <Text style={styles.upgradeBtnText}>{t('premium.upgradeNowBtn')}</Text>
               <Feather name="arrow-right" size={18} color="#FFFFFF" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.cancelBtn} activeOpacity={0.8} onPress={onClose}>
-              <Text style={styles.cancelBtnText}>Maybe Later</Text>
+              <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>

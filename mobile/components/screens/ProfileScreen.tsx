@@ -10,49 +10,13 @@ import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { syncDatabase } from '../../services/sync';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
-import { BottomSheet } from '../common/BottomSheet';
 import { BusinessAvatar } from '../common/BusinessAvatar';
 import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
+import { HelpSupportModal } from '../common/HelpSupportModal';
+import { LanguageSwitcherModal } from '../common/LanguageSwitcherModal';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTranslation } from '../../hooks/useTranslation';
-
-const FAQS = [
-  {
-    q: 'Does Shopbook POS work without an internet connection?',
-    a: 'Yes! Shopbook POS saves all transactions to a secure local database. You can perform billing, scan barcodes, and manage inventory offline. Cloud backup and synchronization is a premium feature available in the Shopbook POS Pro version.',
-  },
-  {
-    q: "What is a 'Quick Code' and how do cashiers use it?",
-    a: "Quick Codes are short numeric shortcuts (e.g., '101' for Bread) assigned to products. Cashiers can type these in the Search bar to add items to the invoice instantly without using a scanner.",
-  },
-  {
-    q: 'How do I scan barcodes to add items in Shopbook POS?',
-    a: "Tap 'Scan' in the bottom navigation or tap the search icon in the header and click the camera icon. Line up the product barcode within the viewfinder to search and add it.",
-  },
-  {
-    q: 'How do I connect a Bluetooth thermal printer?',
-    a: 'Go to Profile Settings > Bluetooth Thermal Printer. Scan for nearby devices, select your printer, and pair it. Once connected, printing receipts via Bluetooth thermal printers is a premium feature available for Shopbook POS Pro users.',
-  },
-  {
-    q: 'What can Managers and Cashiers access in Shopbook POS?',
-    a: 'Cashiers can only perform sales and scan barcodes, while Managers can manage stock. Granting multi-user access for staff (Managers/Cashiers) is a premium feature included in the Shopbook POS Pro plan.',
-  },
-  {
-    q: 'Can I manage multiple store locations or branches?',
-    a: 'Yes! Creating and switching between multiple business branches is a premium feature in Shopbook POS Pro. Upgrading lets you manage separate staff, products, and order histories for each branch.',
-  },
-  {
-    q: 'How do Low Stock Alerts work in Shopbook POS?',
-    a: "When adding/editing a product, you can set a 'Low Stock Alert' threshold. When the item count drops below this, the stock text turns orange on the Home Screen to warn cashiers.",
-  },
-];
-
-const LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'si', name: 'සිංහල (Sinhala)' },
-  { code: 'ta', name: 'தமிழ் (Tamil)' },
-] as const;
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -60,11 +24,10 @@ export const ProfileScreen: React.FC = () => {
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
   const isPremium = useSettingsStore((s) => s.isPremium);
 
-  const { t, language, setLanguage } = useTranslation();
+  const { t, language } = useTranslation();
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<'1_month' | '3_month' | '1_year'>('3_month');
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
   const [premiumFeatureName, setPremiumFeatureName] = useState('');
 
@@ -72,7 +35,6 @@ export const ProfileScreen: React.FC = () => {
 
   // Help & Support Modal state
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
-  const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -312,7 +274,11 @@ export const ProfileScreen: React.FC = () => {
             <View style={styles.optionTextWrapper}>
               <Text style={styles.optionTitle}>{t('profile.languageTitle')}</Text>
               <Text style={styles.optionSubtitle}>
-                {LANGUAGES.find((l) => l.code === language)?.name || 'English'}
+                {language === 'si'
+                  ? 'සිංහල (Sinhala)'
+                  : language === 'ta'
+                    ? 'தமிழ் (Tamil)'
+                    : 'English (US)'}
               </Text>
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
@@ -419,82 +385,7 @@ export const ProfileScreen: React.FC = () => {
       </ScrollView>
 
       {/* Help & Customer Support Bottom Sheet */}
-      <BottomSheet
-        visible={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-        title="Help & Support"
-      >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          style={[styles.modalHelpScroll, { maxHeight: 500 }]}
-        >
-          <Text style={styles.supportIntro}>
-            Need assistance with your Shopbook POS terminal? Get priority response 24/7.
-          </Text>
-
-          {/* Action Buttons as Premium Card Rows */}
-          <View style={styles.supportActions}>
-            <TouchableOpacity
-              style={styles.premiumSupportCard}
-              activeOpacity={0.7}
-              onPress={() => Linking.openURL('tel:+94782470168')}
-            >
-              <View style={[styles.supportIconCircle, { backgroundColor: '#EFF6FF' }]}>
-                <Feather name="phone" size={18} color={TOKENS.primary} />
-              </View>
-              <View style={styles.supportCardTextWrapper}>
-                <Text style={styles.supportCardTitle}>Call Helpline</Text>
-                <Text style={styles.supportCardSubtitle}>Call +94 78 247 0168 · Active 24/7</Text>
-              </View>
-              <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.premiumSupportCard}
-              activeOpacity={0.7}
-              onPress={() => Linking.openURL('https://wa.me/94782470168')}
-            >
-              <View style={[styles.supportIconCircle, { backgroundColor: '#E8FDF0' }]}>
-                <Feather name="message-circle" size={18} color="#10B981" />
-              </View>
-              <View style={styles.supportCardTextWrapper}>
-                <Text style={styles.supportCardTitle}>WhatsApp Support</Text>
-                <Text style={styles.supportCardSubtitle}>Chat immediately & send screenshots</Text>
-              </View>
-              <Feather name="chevron-right" size={18} color={TOKENS.muted} />
-            </TouchableOpacity>
-          </View>
-
-          {/* FAQs Section */}
-          <Text style={styles.faqHeader}>Frequently Asked Questions</Text>
-          <View style={styles.faqList}>
-            {FAQS.map((faq, index) => {
-              const isExpanded = expandedFaqIndex === index;
-              return (
-                <View key={index} style={styles.faqCard}>
-                  <TouchableOpacity
-                    style={styles.faqQuestionRow}
-                    activeOpacity={0.7}
-                    onPress={() => setExpandedFaqIndex(isExpanded ? null : index)}
-                  >
-                    <Text style={styles.faqQuestionText}>{faq.q}</Text>
-                    <Feather
-                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                      size={16}
-                      color={TOKENS.muted}
-                    />
-                  </TouchableOpacity>
-                  {isExpanded && (
-                    <View style={styles.faqAnswerWrapper}>
-                      <Text style={styles.faqAnswerText}>{faq.a}</Text>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        </ScrollView>
-      </BottomSheet>
+      <HelpSupportModal visible={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
 
       <PremiumUpgradeModal
         visible={premiumModalVisible}
@@ -502,38 +393,12 @@ export const ProfileScreen: React.FC = () => {
         featureName={premiumFeatureName}
       />
 
-      {/* Language Switcher Bottom Sheet */}
-      <BottomSheet
+      {/* Language Switcher Bottom Sheet Component */}
+      <LanguageSwitcherModal
         visible={isLanguageModalOpen}
         onClose={() => setIsLanguageModalOpen(false)}
-        title={t('profile.languageTitle')}
-      >
-        <View style={styles.languageList}>
-          {LANGUAGES.map((lang) => {
-            const isSelected = language === lang.code;
-            return (
-              <TouchableOpacity
-                key={lang.code}
-                style={[styles.languageCard, isSelected && styles.languageCardActive]}
-                activeOpacity={0.7}
-                onPress={() => {
-                  hapticFeedback.notificationSuccess();
-                  setLanguage(lang.code);
-                  setIsLanguageModalOpen(false);
-                  triggerToast(`${lang.name} set successfully!`);
-                }}
-              >
-                <Text
-                  style={[styles.languageCardText, isSelected && styles.languageCardTextActive]}
-                >
-                  {lang.name}
-                </Text>
-                {isSelected && <Feather name="check" size={18} color={TOKENS.success} />}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </BottomSheet>
+        onSelectLanguage={(name) => triggerToast(`${name} set successfully!`)}
+      />
     </ScreenWrapper>
   );
 };
@@ -772,203 +637,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: TOKENS.muted,
     opacity: 0.7,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalHelpContent: {
-    backgroundColor: TOKENS.background,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    maxHeight: '85%',
-    boxShadow: '0px -6px 16px 0px rgba(0, 0, 0, 0.12)',
-  },
-  dragHandle: {
-    width: 40,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#E5E7EB',
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  modalHelpHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: TOKENS.border,
-    backgroundColor: TOKENS.card,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-  },
-  premiumSupportCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: TOKENS.card,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: TOKENS.border,
-    padding: 14,
-    boxShadow: '0px 2px 3px 0px rgba(0, 0, 0, 0.02)',
-  },
-  supportIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  supportCardTextWrapper: {
-    flex: 1,
-  },
-  supportCardTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: TOKENS.dark,
-  },
-  supportCardSubtitle: {
-    fontSize: 11,
-    color: TOKENS.muted,
-    marginTop: 2,
-    lineHeight: 14,
-  },
-  modalHelpTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: TOKENS.dark,
-  },
-  modalHelpCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalHelpScroll: {
-    paddingVertical: 16,
-    paddingHorizontal: 0,
-  },
-  supportIntro: {
-    fontSize: 13,
-    color: TOKENS.muted,
-    lineHeight: 18,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  supportActions: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  callSupportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: TOKENS.primary,
-    height: 48,
-    borderRadius: 12,
-    gap: 8,
-    boxShadow: `0px 4px 6px 0px ${TOKENS.primary}26`,
-  },
-  callSupportText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  whatsappBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#25D366',
-    height: 48,
-    borderRadius: 12,
-    gap: 8,
-    boxShadow: '0px 4px 6px 0px rgba(37, 211, 102, 0.15)',
-  },
-  whatsappText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  supportIcon: {
-    marginRight: 4,
-  },
-  faqHeader: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: TOKENS.dark,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  faqList: {
-    gap: 10,
-    marginBottom: 40,
-  },
-  faqCard: {
-    backgroundColor: TOKENS.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-    overflow: 'hidden',
-  },
-  faqQuestionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-  },
-  faqQuestionText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: TOKENS.dark,
-    flex: 1,
-    marginRight: 8,
-  },
-  faqAnswerWrapper: {
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    paddingTop: 10,
-  },
-  faqAnswerText: {
-    fontSize: 12,
-    color: TOKENS.muted,
-    lineHeight: 16,
-  },
-  languageList: {
-    paddingVertical: 12,
-    gap: 8,
-  },
-  languageCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  languageCardActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: TOKENS.primary,
-  },
-  languageCardText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: TOKENS.dark,
-  },
-  languageCardTextActive: {
-    color: TOKENS.primary,
-    fontWeight: '600',
   },
 });
