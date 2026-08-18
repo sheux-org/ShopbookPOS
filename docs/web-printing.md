@@ -6,7 +6,8 @@ The web POS prints thermal receipts with **[chittie](https://github.com/octalpix
 battle-tested agent (proven on real 58mm hardware, incl. Sinhala).
 
 > Setting up a till or testing locally? See **[`printing-setup-and-test.md`](./printing-setup-and-test.md)**
-> (store-owner + developer runbook). This page is the architecture.
+> (store-owner + developer runbook). Editing the receipt layout? See
+> **[`chittie-elements.md`](./chittie-elements.md)** (element/prop reference). This page is the architecture.
 
 ## Architecture
 
@@ -18,14 +19,19 @@ ReceiptModal / hook ──▶ thermalReceipt.tsx (chittie JSX → ESC/POS bytes)
 ```
 
 - **Bytes:** `web/src/utils/thermalReceipt.tsx` builds the receipt with `@angadie/chittie`
-  (`<Printer>/<Text>/<Row>/<Line>/<Cut>/<Cashdraw>`) from `receiptModel.ts`.
+  (`<Printer>/<Text>/<Row>/<Line>/<Feed>/<Cut>/<Cashdraw>`) from `receiptModel.ts`. It takes a
+  chittie `PRINTER_PROFILES` key (`'58mm' | '80mm'`), which carries columns, dot width, and DPI
+  together, and a numeric `cashDrawerDevice` (0 = pin 2, 1 = pin 5) as ESC/POS numbers them.
 - **Transport:** `web/src/services/printerTransport.ts` wraps `@angadie/chittie-companion`
   (`createCompanionClient` → `localhost:8930`), which drives USB printer-class / OS-queue / TCP printers.
 - **No Web Serial.** We dropped it: it can't see USB printer-class devices, is Chromium-desktop-only,
   and pops a confusing port picker. ordereka (the reference) is companion-only too. When the companion
   isn't reachable, `ReceiptModal` falls back to the **system print dialog**.
 - **Non-Latin:** a browser-canvas rasterizer (`browserRasterizer` in `thermalReceipt.tsx`) shapes
-  **Sinhala/Tamil** correctly. (The old UTF-8 path printed garbage on ESC/POS.)
+  **Sinhala/Tamil** correctly. (The old UTF-8 path printed garbage on ESC/POS.) chittie sizes the
+  glyphs in dots from the profile's DPI, so they are the same physical size on 203 and 300 DPI.
+- **Preview:** `pnpm --filter web print:preview` renders the real bytes to PNG at both profiles —
+  no printer needed. See [`chittie-elements.md`](./chittie-elements.md).
 
 ## Setup (per till)
 

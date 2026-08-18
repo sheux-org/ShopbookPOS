@@ -49,34 +49,37 @@ describe('thermalReceipt', () => {
     expect(Array.from(data)).toEqual(expect.arrayContaining([0x1b, 0x40]));
   });
 
-  test('58mm width renders without error and differs from 80mm', async () => {
-    const narrow = await renderReceiptBytes({
-      order,
-      items,
-      activeBusiness: business,
-      changeDue: 50,
-      widthChars: 32,
-    });
-    const wide = await renderReceiptBytes({
-      order,
-      items,
-      activeBusiness: business,
-      changeDue: 50,
-      widthChars: 48,
-    });
+  test('58mm and 80mm profiles both render and produce different bytes', async () => {
+    const base = { order, items, activeBusiness: business, changeDue: 50 };
+    const narrow = await renderReceiptBytes({ ...base, profile: '58mm' });
+    const wide = await renderReceiptBytes({ ...base, profile: '80mm' });
     expect(narrow.length).toBeGreaterThan(0);
     expect(wide.length).toBeGreaterThan(0);
+    expect(Array.from(narrow)).not.toEqual(Array.from(wide));
   });
 
   test('renderTestReceiptBytes produces data', async () => {
-    const data = await renderTestReceiptBytes(business, 48);
+    const data = await renderTestReceiptBytes(business, '80mm');
     expect(data.length).toBeGreaterThan(0);
   });
 
-  test('renderCashDrawerBytes emits the ESC/POS drawer-kick command', async () => {
-    const data = await renderCashDrawerBytes('2pin');
-    expect(data.length).toBeGreaterThan(0);
-    expect(containsSequence(data, [0x1b, 0x70])).toBe(true);
+  test('renderCashDrawerBytes emits the ESC/POS drawer-kick command on both pins', async () => {
+    for (const device of [0, 1]) {
+      const data = await renderCashDrawerBytes(device);
+      expect(data.length).toBeGreaterThan(0);
+      expect(containsSequence(data, [0x1b, 0x70, device])).toBe(true);
+    }
+  });
+
+  test('every receipt carries the ESC/POS init and cut markers', async () => {
+    const data = await renderReceiptBytes({
+      order,
+      items,
+      activeBusiness: business,
+      changeDue: 50,
+    });
+    expect(containsSequence(data, [0x1b, 0x40])).toBe(true); // ESC @  initialize
+    expect(containsSequence(data, [0x1d, 0x56])).toBe(true); // GS V   cut
   });
 
   test('openCashDrawer flag prepends a drawer kick to the receipt', async () => {

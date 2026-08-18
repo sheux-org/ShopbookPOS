@@ -4,44 +4,55 @@ import {
   Text,
   Row,
   Line,
-  Br,
+  Feed,
   Cut,
   Cashdraw,
   render,
+  dotsPerMm,
   PRINTER_PROFILES,
   type TextRasterizer,
 } from '@angadie/chittie';
 import { buildReceiptModel, formatMoney, type ReceiptModelInput } from './receiptModel';
 
-export type CashDrawerPin = '2pin' | '5pin';
+/** '58mm' (32 cols) | '80mm' (48 cols) | the 300-DPI variants. */
+export type PrinterProfile = keyof typeof PRINTER_PROFILES;
 
 export type RenderReceiptParams = ReceiptModelInput & {
-  /** Characters per line — 32 for 58mm rolls, 48 for 80mm rolls. */
-  widthChars?: number;
+  profile?: PrinterProfile;
   /** When true, prepend a cash-drawer kick so the drawer opens as the receipt prints. */
   openCashDrawer?: boolean;
-  cashDrawerPin?: CashDrawerPin;
+  /** Drawer connector pin, as ESC/POS numbers it: 0 = pin 2, 1 = pin 5. */
+  cashDrawerDevice?: number;
 };
 
-// react-thermal-printer's '2pin'/'5pin' → chittie's pulse device (0 = connector pin 2, 1 = pin 5).
-const drawerDevice = (pin: CashDrawerPin = '2pin') => (pin === '5pin' ? 1 : 0);
+const DEFAULT_PROFILE: PrinterProfile = '80mm';
 
-// 32 cols → 58mm (384 dots), else 80mm (576 dots).
-const profileFor = (widthChars: number) =>
-  widthChars <= 32 ? PRINTER_PROFILES['58mm'] : PRINTER_PROFILES['80mm'];
+/** Vertical spacing in millimetres, converted to dots per the profile's DPI. */
+const SPACING_MM = {
+  beforeFooter: 3,
+  beforeCut: 5,
+} as const;
+
+const feedDots = (mm: number, dpi: number) => Math.round(mm * dotsPerMm(dpi));
+
+/** Font fallback chain handed to the rasterizer for non-Latin runs. */
+const FONT_FAMILIES = ['Noto Sans Sinhala', 'Noto Sans Tamil', 'sans-serif'];
 
 /**
  * Browser rasterizer — shapes Sinhala/Tamil/etc. via the OS fonts so non-Latin
- * receipts print correctly (the old UTF-8 path printed garbage on ESC/POS). Only
- * invoked for text a code page can't represent; Latin/English never touches it
- * (so Node tests / Latin previews need no canvas). Tight crop = clean line spacing.
+ * receipts print correctly (a code page can't represent them, and chittie throws
+ * rather than printing "?"). Only invoked for text a code page can't carry;
+ * Latin/English never touches it, so Node previews and tests need no canvas.
+ * Every measurement comes from chittie: it sizes `fontSize` in dots for the
+ * printer's DPI, so a glyph is the same physical size on 203 and 300 DPI.
  */
 export const browserRasterizer: TextRasterizer = {
-  rasterize(text, { fontSize = 24, maxWidth = 576, bold = false } = {}) {
+  rasterize(text, { fontSize = 24, maxWidth = 576, bold = false, fontFamilies } = {}) {
     if (typeof document === 'undefined') {
       throw new Error('thermalReceipt: non-Latin text needs a browser canvas (no document here)');
     }
-    const font = `${bold ? 'bold ' : ''}${fontSize}px "Noto Sans Sinhala","Noto Sans Tamil",sans-serif`;
+    const stack = (fontFamilies ?? FONT_FAMILIES).map((f) => `"${f}"`).join(',');
+    const font = `${bold ? 'bold ' : ''}${fontSize}px ${stack}`;
     const probe = document.createElement('canvas').getContext('2d')!;
     probe.font = font;
     const m = probe.measureText(text);
@@ -64,12 +75,12 @@ export const browserRasterizer: TextRasterizer = {
 };
 
 export function buildReceiptElement(params: RenderReceiptParams) {
-  const { columns } = profileFor(params.widthChars ?? 48);
+  const { columns, dpi } = PRINTER_PROFILES[params.profile ?? DEFAULT_PROFILE];
   const m = buildReceiptModel(params);
 
   return (
     <Printer width={columns}>
-      {params.openCashDrawer ? <Cashdraw device={drawerDevice(params.cashDrawerPin)} /> : null}
+      {params.openCashDrawer ? <Cashdraw device={params.cashDrawerDevice ?? 0} /> : null}
       <Text align="center" bold>
         {m.businessName}
       </Text>
@@ -117,7 +128,7 @@ export function buildReceiptElement(params: RenderReceiptParams) {
       {m.cardLabel ? <Row left="Card / Bank" right={m.cardLabel} /> : null}
       {m.bankName ? <Row left="Bank" right={m.bankName} /> : null}
 
-      <Br />
+      <Feed dots={feedDots(SPACING_MM.beforeFooter, dpi)} />
 
       {m.footer.map((line, i) => (
         <Text key={i} align="center" small>
@@ -125,35 +136,45 @@ export function buildReceiptElement(params: RenderReceiptParams) {
         </Text>
       ))}
 
+      <Feed dots={feedDots(SPACING_MM.beforeCut, dpi)} />
+
       <Cut />
     </Printer>
   );
 }
 
-const renderOpts = (widthChars: number) => ({
-  dotWidth: profileFor(widthChars).dotWidth,
-  rasterizer: browserRasterizer,
-  codepage: 'cp437' as const,
-});
+const renderOpts = (profile: PrinterProfile) => {
+  const { dotWidth, dpi } = PRINTER_PROFILES[profile];
+  return {
+    dotWidth,
+    dpi,
+    fontFamilies: FONT_FAMILIES,
+    rasterizer: browserRasterizer,
+    codepage: 'cp437' as const,
+  };
+};
 
 export async function renderReceiptBytes(params: RenderReceiptParams): Promise<Uint8Array> {
-  return render(buildReceiptElement(params), renderOpts(params.widthChars ?? 48));
+  return render(buildReceiptElement(params), renderOpts(params.profile ?? DEFAULT_PROFILE));
 }
 
 /** ESC/POS bytes that just kick the cash drawer (no print), for an on-demand open. */
-export async function renderCashDrawerBytes(pin: CashDrawerPin = '2pin'): Promise<Uint8Array> {
+export async function renderCashDrawerBytes(
+  device = 0,
+  profile: PrinterProfile = DEFAULT_PROFILE
+): Promise<Uint8Array> {
   return render(
-    <Printer width={48}>
-      <Cashdraw device={drawerDevice(pin)} />
+    <Printer width={PRINTER_PROFILES[profile].columns}>
+      <Cashdraw device={device} />
     </Printer>,
-    renderOpts(48)
+    renderOpts(profile)
   );
 }
 
 /** Minimal sample receipt used to verify printer alignment from settings. */
 export function renderTestReceiptBytes(
   activeBusiness: ReceiptModelInput['activeBusiness'],
-  widthChars = 48
+  profile: PrinterProfile = DEFAULT_PROFILE
 ): Promise<Uint8Array> {
   return renderReceiptBytes({
     order: {
@@ -174,6 +195,6 @@ export function renderTestReceiptBytes(
     ],
     activeBusiness,
     changeDue: 76.8,
-    widthChars,
+    profile,
   });
 }
