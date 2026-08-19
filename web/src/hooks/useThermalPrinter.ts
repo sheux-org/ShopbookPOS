@@ -14,7 +14,7 @@ import {
 } from '../services/printerTransport';
 import { useSettingsStore } from '../stores/settingsStore';
 
-type ReceiptParams = Omit<RenderReceiptParams, 'widthChars' | 'openCashDrawer' | 'cashDrawerPin'>;
+type ReceiptParams = Omit<RenderReceiptParams, 'profile' | 'openCashDrawer' | 'cashDrawerDevice'>;
 
 /**
  * Printing through the Chittie Companion (localhost:8930) — the single, battle-tested
@@ -22,10 +22,9 @@ type ReceiptParams = Omit<RenderReceiptParams, 'widthChars' | 'openCashDrawer' |
  * If the companion isn't reachable, callers fall back to the system print dialog.
  */
 export function useThermalPrinter() {
-  const paperWidth = useSettingsStore((s) => s.thermalPaperWidth);
-  const cashDrawerPin = useSettingsStore((s) => s.cashDrawerPin);
+  const profile = useSettingsStore((s) => s.printerProfile);
+  const cashDrawerDevice = useSettingsStore((s) => s.cashDrawerDevice);
   const openDrawerOnCashSale = useSettingsStore((s) => s.openDrawerOnCashSale);
-  const widthChars = paperWidth === 58 ? 32 : 48;
 
   const [ready, setReady] = useState(false); // Chittie Companion reachable
 
@@ -58,27 +57,27 @@ export function useThermalPrinter() {
       const openCashDrawer = openDrawerOnCashSale && params.order.paymentMethod === 'cash';
       const data = await renderReceiptBytes({
         ...params,
-        widthChars,
+        profile,
         openCashDrawer,
-        cashDrawerPin,
+        cashDrawerDevice,
       });
       await printViaBridge(data);
       setReady(true);
     },
-    [widthChars, cashDrawerPin, openDrawerOnCashSale]
+    [profile, cashDrawerDevice, openDrawerOnCashSale]
   );
 
   const openCashDrawer = useCallback(async () => {
-    await printViaBridge(await renderCashDrawerBytes(cashDrawerPin));
+    await printViaBridge(await renderCashDrawerBytes(cashDrawerDevice, profile));
     setReady(true);
-  }, [cashDrawerPin]);
+  }, [cashDrawerDevice, profile]);
 
   const printTestReceipt = useCallback(
     async (activeBusiness: ReceiptParams['activeBusiness']) => {
-      await printViaBridge(await renderTestReceiptBytes(activeBusiness, widthChars));
+      await printViaBridge(await renderTestReceiptBytes(activeBusiness, profile));
       setReady(true);
     },
-    [widthChars]
+    [profile]
   );
 
   const activeTransport: PrinterTransportId | null = ready ? 'bridge' : null;

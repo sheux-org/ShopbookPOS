@@ -70,9 +70,11 @@ Rewrite `buildThermalReceiptText()` as a chittie tree, mirroring `web/src/utils/
 import { Printer, Text, Row, Line, Br, Cut, render, PRINTER_PROFILES } from '@angadie/chittie';
 import type { BuildThermalReceiptOptions } from './thermalReceiptHtml';
 
-export function buildReceiptBytes(opts: BuildThermalReceiptOptions, widthChars = 32): Uint8Array {
-  const { columns, dotWidth } =
-    widthChars <= 32 ? PRINTER_PROFILES['58mm'] : PRINTER_PROFILES['80mm'];
+export function buildReceiptBytes(
+  opts: BuildThermalReceiptOptions,
+  profile: keyof typeof PRINTER_PROFILES = '58mm'
+): Uint8Array {
+  const { columns, dotWidth, dpi } = PRINTER_PROFILES[profile];
   return render(
     <Printer width={columns}>
       <Text align="center" bold size={{ width: 2, height: 2 }}>
@@ -193,7 +195,8 @@ published. Don't pull in Skia unless non-Latin is a hard launch requirement.
 - **Sunmi / iMin built-ins:** their Android service accepts only a _subset_ of ESC/POS via `sendRAWData`;
   use the device SDK for cut/QR/images. chittie generates standard ESC/POS — verify on the device.
 - Paper width: 58mm = 32 cols / 384 dots, 80mm = 48 / 576 (`PRINTER_PROFILES`). Mobile currently
-  hard-codes `width = 32`; make it a setting like web (`thermalPaperWidth`).
+  hard-codes `width = 32`; make it a setting like web (`printerProfile`). Take the **profile key**,
+  not a character count — one lookup then carries columns, dot width, and DPI together.
 
 ---
 
@@ -208,10 +211,13 @@ published. Don't pull in Skia unless non-Latin is a hard launch requirement.
 ## Files to touch
 
 - `mobile/utils/printThermalReceipt.ts` — `buildThermalReceiptText` → `buildReceiptBytes` (chittie);
-  `printReceipt` write path → base64. Delete `formatLine`.
+  `printReceipt` write path → base64. Delete `formatLine` — it truncates a wrapped product name at
+  `width - 2` and emits no gap when left + right exactly fill the line; chittie's `<Row>` wraps
+  instead of truncating. Delete the local money formatting too and use chittie's `formatMoney`
+  (`Number.toLocaleString` silently drops grouping under Hermes).
 - `mobile/app/(modules)/profile/bluetooth-printer.tsx` — unchanged (discovery/pairing stays); optionally
   add a paper-width toggle.
-- `mobile/stores/useSettingsStore.ts` — add `thermalPaperWidth` (58/80) like web.
+- `mobile/stores/useSettingsStore.ts` — add `printerProfile` ('58mm'/'80mm') like web.
 - `mobile/utils/thermalReceiptHtml.ts` + `expo-print` — keep as the system fallback.
 
 ## Out of scope / non-goals

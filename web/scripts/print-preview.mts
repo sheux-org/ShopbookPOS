@@ -1,30 +1,42 @@
 /**
- * Receipt preview / emulator harness.
+ * Receipt preview harness — hardware-free visual verification.
  *
- *   pnpm run print:preview
+ *   pnpm --filter web print:preview
  *
- * Emits, for several sale scenarios, the EXACT bytes the app would send to a
- * thermal printer (.bin) plus a savable HTML render (.html) into web/.preview/.
- * Then either:
- *   - open the .html files in a browser and "Save as PDF", or
- *   - feed the .bin to a local ESC/POS emulator to see a live render:
- *       npx escpos-emulator                         # preview at http://localhost:3000
- *       cat .preview/cash.bin | nc -w1 localhost 9100
+ * For each sale scenario, at BOTH printer profiles, this emits into web/.preview/:
+ *   - <scenario>-<profile>.png   the real ESC/POS bytes rendered to an image
+ *   - <scenario>-<profile>.bin   the exact bytes the app would send to the printer
+ *   - <scenario>.html            the system-print HTML render
+ *
+ * Run it at both profiles every time the receipt changes: a layout that looks
+ * right at 48 columns routinely breaks at 32. See docs/chittie-elements.md.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderReceiptBytes, renderCashDrawerBytes } from '../src/utils/thermalReceipt';
+import { renderReceipt } from '@angadie/chittie-preview';
+import { createCanvas, ImageData as NapiImageData } from '@napi-rs/canvas';
+import { PRINTER_PROFILES } from '@angadie/chittie';
+import {
+  renderReceiptBytes,
+  renderCashDrawerBytes,
+  type PrinterProfile,
+} from '../src/utils/thermalReceipt';
 import { buildReceiptModel } from '../src/utils/receiptModel';
 import { buildReceiptPrintHtml } from '../src/utils/receiptHtml';
+
+// chittie-preview trims raster padding with `new ImageData(...)`, a browser global.
+(globalThis as unknown as { ImageData: unknown }).ImageData ??= NapiImageData;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(__dirname, '../.preview');
 
+const PROFILES: PrinterProfile[] = ['58mm', '80mm'];
+
 const business = { name: 'Artisan Haus', address: 'Kotte, Colombo', phone: '0765662423' };
 const items = [
   { name: 'Flat White', price: 850, quantity: 2 },
-  { name: 'Almond Croissant', price: 650, quantity: 1 },
+  { name: 'Almond Croissant with salted caramel', price: 650, quantity: 1 },
 ];
 
 type Scenario = {
@@ -95,36 +107,54 @@ async function main() {
 
   for (const s of scenarios) {
     const base = { order: s.order, items, activeBusiness: business, changeDue: s.changeDue };
-    const bytes = await renderReceiptBytes({
-      ...base,
-      widthChars: 48,
-      openCashDrawer: s.openCashDrawer,
-      cashDrawerPin: '2pin',
-    });
-    const html = buildReceiptPrintHtml(buildReceiptModel(base));
-    writeFileSync(resolve(OUT, `${s.name}.bin`), bytes);
-    writeFileSync(resolve(OUT, `${s.name}.html`), html);
-    written.push(`${s.name}.bin (${bytes.length}b)  ${s.name}.html`);
+
+    for (const profile of PROFILES) {
+      const bytes = await renderReceiptBytes({
+        ...base,
+        profile,
+        openCashDrawer: s.openCashDrawer,
+      });
+      const canvas = renderReceipt(bytes, {
+        createCanvas,
+        columns: PRINTER_PROFILES[profile].columns,
+      });
+      writeFileSync(resolve(OUT, `${s.name}-${profile}.bin`), bytes);
+      writeFileSync(resolve(OUT, `${s.name}-${profile}.png`), canvas.toBuffer('image/png'));
+      written.push(
+        `${s.name}-${profile}.png  ${canvas.width}x${canvas.height}px  (${bytes.length}b)`
+      );
+    }
+
+    writeFileSync(resolve(OUT, `${s.name}.html`), buildReceiptPrintHtml(buildReceiptModel(base)));
+    written.push(`${s.name}.html`);
   }
 
-  const drawer = await renderCashDrawerBytes('2pin');
+  const drawer = await renderCashDrawerBytes();
   writeFileSync(resolve(OUT, 'drawer.bin'), drawer);
   written.push(`drawer.bin (${drawer.length}b)`);
 
-  const links = scenarios
-    .map((s) => `<li><a href="./${s.name}.html" target="_blank">${s.name}</a></li>`)
+  const cards = scenarios
+    .flatMap((s) =>
+      PROFILES.map(
+        (p) =>
+          `<figure><figcaption>${s.name} — ${p}</figcaption>` +
+          `<img src="./${s.name}-${p}.png" alt="${s.name} ${p}"></figure>`
+      )
+    )
     .join('');
   writeFileSync(
     resolve(OUT, 'index.html'),
     `<!doctype html><meta charset="utf-8"><title>Receipt previews</title>` +
-      `<h1>Receipt previews</h1><ul>${links}</ul>` +
-      `<p>Open one and use your browser's "Save as PDF". For a true ESC/POS render, run ` +
-      `<code>npx escpos-emulator</code> then <code>cat .preview/&lt;name&gt;.bin | nc -w1 localhost 9100</code>.</p>`
+      `<style>body{font:14px system-ui;background:#f4f4f5;padding:24px}` +
+      `figure{display:inline-block;margin:0 16px 24px 0;vertical-align:top}` +
+      `figcaption{margin-bottom:8px;font-weight:600}` +
+      `img{background:#fff;border:1px solid #d4d4d8;box-shadow:0 1px 3px #0002}</style>` +
+      `<h1>Receipt previews</h1>${cards}`
   );
 
   console.log(`Wrote ${written.length} artifacts to ${OUT}:`);
   written.forEach((w) => console.log('  - ' + w));
-  console.log('\nOpen .preview/index.html in a browser, or feed a .bin to npx escpos-emulator.');
+  console.log('\nOpen .preview/index.html to compare both profiles side by side.');
 }
 
 main().catch((err) => {

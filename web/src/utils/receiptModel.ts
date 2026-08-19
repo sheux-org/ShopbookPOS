@@ -2,6 +2,7 @@
 // (ReceiptPaper), the ESC/POS thermal output (thermalReceipt), and the
 // system-print HTML all derive their numbers/rows from buildReceiptModel so
 // they can never drift. Each renderer keeps its own styling.
+import { formatMoney as chittieMoney } from '@angadie/chittie';
 
 export interface ReceiptModelItem {
   name: string;
@@ -61,8 +62,10 @@ export function cleanInvoiceNumber(invoiceNumber: string): string {
   return invoiceNumber.split(' (Staff:')[0].trim();
 }
 
+// chittie's formatter, not Number.toLocaleString: it needs no Intl, so the same
+// receipt model formats identically under Hermes when mobile moves to chittie.
 export function formatMoney(n: number): string {
-  return `Rs. ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return chittieMoney(n, { currency: 'Rs.', decimals: 2 });
 }
 
 function toNumber(v: number | string | undefined): number {

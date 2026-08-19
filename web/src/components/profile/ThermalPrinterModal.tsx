@@ -23,10 +23,10 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
   activeBusiness,
 }) => {
   const { ready, refresh, printTestReceipt, openCashDrawer } = useThermalPrinter();
-  const paperWidth = useSettingsStore((s) => s.thermalPaperWidth);
-  const setPaperWidth = useSettingsStore((s) => s.setThermalPaperWidth);
-  const cashDrawerPin = useSettingsStore((s) => s.cashDrawerPin);
-  const setCashDrawerPin = useSettingsStore((s) => s.setCashDrawerPin);
+  const printerProfile = useSettingsStore((s) => s.printerProfile);
+  const setPrinterProfile = useSettingsStore((s) => s.setPrinterProfile);
+  const cashDrawerDevice = useSettingsStore((s) => s.cashDrawerDevice);
+  const setCashDrawerDevice = useSettingsStore((s) => s.setCashDrawerDevice);
 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -106,13 +106,13 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
           <div style={styles.fieldRow}>
             <label style={styles.fieldLabel}>Paper width</label>
             <div style={styles.segment}>
-              {([58, 80] as const).map((w) => (
+              {(['58mm', '80mm'] as const).map((p) => (
                 <button
-                  key={w}
-                  onClick={() => setPaperWidth(w)}
-                  style={paperWidth === w ? styles.segmentActive : styles.segmentBtn}
+                  key={p}
+                  onClick={() => setPrinterProfile(p)}
+                  style={printerProfile === p ? styles.segmentActive : styles.segmentBtn}
                 >
-                  {w}mm
+                  {p}
                 </button>
               ))}
             </div>
@@ -121,13 +121,13 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
           <div style={styles.fieldRow}>
             <label style={styles.fieldLabel}>Cash drawer pin</label>
             <div style={styles.segment}>
-              {(['2pin', '5pin'] as const).map((p) => (
+              {([0, 1] as const).map((d) => (
                 <button
-                  key={p}
-                  onClick={() => setCashDrawerPin(p)}
-                  style={cashDrawerPin === p ? styles.segmentActive : styles.segmentBtn}
+                  key={d}
+                  onClick={() => setCashDrawerDevice(d)}
+                  style={cashDrawerDevice === d ? styles.segmentActive : styles.segmentBtn}
                 >
-                  {p}
+                  {d === 0 ? 'Pin 2' : 'Pin 5'}
                 </button>
               ))}
             </div>
