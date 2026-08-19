@@ -231,8 +231,8 @@ importers:
   web:
     dependencies:
       '@angadie/chittie':
-        specifier: ^0.5.6
-        version: 0.5.6(react@19.1.0)
+        specifier: ^0.5.7
+        version: 0.5.7(react@19.1.0)
       '@angadie/chittie-companion':
         specifier: ^0.7.1
         version: 0.7.1
@@ -350,22 +350,22 @@ packages:
   '@angadie/chittie-companion@0.7.1':
     resolution: {integrity: sha512-T9cYZcpXsC8Eb5q071Lw6DLInl6mt0CUF0hisKKfn8J/OeGn5FNfWF6gKo/1unKM1A48PPZm6C5R5eeIw/wAFg==}
 
-  '@angadie/chittie-core@0.5.1':
-    resolution: {integrity: sha512-9Bi85tosQZ21Khwlind6y0Bg3Zq/KmXvsDTRO4IQAaprMg1w7tERfHU/B3SWQ9Cpg/uatca7BmQjTpr0xkRJbA==}
+  '@angadie/chittie-core@0.5.2':
+    resolution: {integrity: sha512-ZlXRJE14ZrnlYi7rErhAktVttzm0+ccZmI7NYyyooVNY/4UwzPm/q23/3vht1i11rVD1+Mnd8EOCTg0eKpd+Ig==}
 
   '@angadie/chittie-preview@0.7.1':
     resolution: {integrity: sha512-6YLZqo5gyzNkECHRSglJ8UZHN0PBePSgFlI9ZpV1k7p8mVSTs0ejGy7XwNvoJiZ5g2nVBAvcI4KSb3CsDs/tIA==}
 
-  '@angadie/chittie-react@0.10.1':
-    resolution: {integrity: sha512-6xucUd6U8sgPTs6R8zgZmgvI6y3wmof1Nkdn3ExqzZ39AgBv9Xqn43D5ulyl1xpd2sHAzjEvy3bb9CEpavyOnA==}
+  '@angadie/chittie-react@0.10.2':
+    resolution: {integrity: sha512-HmfBK+OODdR0Kx1XpaEZyGbefX771hVo1+RPsWrQ9t2Dx+CLtKF55lxF+Vh42ydhQj+996ZcPXLQIKMNZ7W9Gg==}
     peerDependencies:
       react: ^18 || ^19
 
   '@angadie/chittie-text@0.8.1':
     resolution: {integrity: sha512-J6hZ0mnN2cLbLdCsQy1+mLgxHAbFo28HR8FOvIFQbuqObveB941CJ+VsQn+1YSV3UHOmo/Iouc1gLSmfOvB12g==}
 
-  '@angadie/chittie@0.5.6':
-    resolution: {integrity: sha512-7rNMKLp2KESnVJXnkRjtq898LrVCkW5cjZhzD396QcAq/n3ZHPn76O++M8RrueZXSqe406z4lzXHGrAksve9Pg==}
+  '@angadie/chittie@0.5.7':
+    resolution: {integrity: sha512-fNGGItHsOG8XDAQb2YuQ2r59Y45DxgMtsYBRRr4CLCbPywmu9gVAaKfqpn7eW28jY/B5t2tY/+rMgLwoxmPmFQ==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -7239,7 +7239,7 @@ snapshots:
 
   '@angadie/chittie-companion@0.7.1': {}
 
-  '@angadie/chittie-core@0.5.1':
+  '@angadie/chittie-core@0.5.2':
     dependencies:
       '@angadie/chittie-codepage': 0.5.1
       '@canvas/image-data': 1.1.0
@@ -7249,9 +7249,9 @@ snapshots:
 
   '@angadie/chittie-preview@0.7.1': {}
 
-  '@angadie/chittie-react@0.10.1(react@19.1.0)':
+  '@angadie/chittie-react@0.10.2(react@19.1.0)':
     dependencies:
-      '@angadie/chittie-core': 0.5.1
+      '@angadie/chittie-core': 0.5.2
       '@angadie/chittie-text': 0.8.1
       react: 19.1.0
 
@@ -7259,10 +7259,10 @@ snapshots:
     dependencies:
       '@angadie/chittie-codepage': 0.5.1
 
-  '@angadie/chittie@0.5.6(react@19.1.0)':
+  '@angadie/chittie@0.5.7(react@19.1.0)':
     dependencies:
-      '@angadie/chittie-core': 0.5.1
-      '@angadie/chittie-react': 0.10.1(react@19.1.0)
+      '@angadie/chittie-core': 0.5.2
+      '@angadie/chittie-react': 0.10.2(react@19.1.0)
       react: 19.1.0
 
   '@apm-js-collab/code-transformer-bundler-plugins@0.5.0':

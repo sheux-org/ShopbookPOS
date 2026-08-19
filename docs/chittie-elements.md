@@ -1,13 +1,13 @@
 # chittie elements and props (API reference)
 
-Every element and prop exported by **`@angadie/chittie@0.5.6`** (which re-exports
-`chittie-core@0.5.1` + `chittie-react@0.10.1`), as pinned in `web/package.json`.
+Every element and prop exported by **`@angadie/chittie@0.5.7`** (which re-exports
+`chittie-core@0.5.2` + `chittie-react@0.10.2`), as pinned in `web/package.json`.
 
 > Architecture lives in [`web-printing.md`](./web-printing.md). Runbook lives in
 > [`printing-setup-and-test.md`](./printing-setup-and-test.md). The mobile port is planned in
 > [`mobile-chittie-migration.md`](./mobile-chittie-migration.md). **This page is the API.**
 
-Source of truth: the published `dist/index.d.mts` of `@angadie/chittie-react@0.10.1`. Re-check it
+Source of truth: the published `dist/index.d.mts` of `@angadie/chittie-react@0.10.2`. Re-check it
 after any version bump — this file is a copy, not a live contract.
 
 ## Mental model
@@ -229,7 +229,9 @@ From ordereka's `CHITTIE-UPGRADE.md`, learned on an ET PR-10:
 - **A layout built for 80mm wraps every price and rule on a 58mm printer.** 48 columns of content
   on a 32-column roll is the single most common visual defect. Match the profile to the actual roll.
 - **Non-Latin lines double-spaced** before `chittie-react@0.7.0`; `smartText` now reports whether it
-  rasterized so `<Text>` skips the redundant feed. We are on 0.10.1, so we have the fix.
+  rasterized so `<Text>` skips the redundant feed. We are on 0.10.2, so we have the fix.
+- **Centred fine print landed right of centre** before `chittie-core@0.5.2` — found on this
+  receipt's footer, via the PNG preview rather than a printer.
 - **DPI-aware rasterization** keeps non-Latin text the same physical size across 58/80mm and
   203/300 DPI. Pass `dpi` from the profile rather than guessing `fontSize`.
 
