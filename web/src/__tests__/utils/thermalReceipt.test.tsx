@@ -58,6 +58,52 @@ describe('thermalReceipt', () => {
     expect(Array.from(narrow)).not.toEqual(Array.from(wide));
   });
 
+  // The reported defect: on a 58mm roll '1x Raththi milk powder' (22 chars) plus
+  // 'Rs. 120.00' (10) filled the line exactly, so the price printed hard against
+  // the product name with nothing between them.
+  test('a product name never runs into its amount, at either width', async () => {
+    const decode = (data: Uint8Array) =>
+      Buffer.from(data)
+        .toString('latin1')
+        .replace(/\x1b./g, '')
+        .replace(/\x1d!./g, '')
+        .split('\n')
+        .map((l) => l.replace(/\r/g, ''));
+
+    for (const profile of ['58mm', '80mm'] as const) {
+      const data = await renderReceiptBytes({
+        order: {
+          invoiceNumber: 'INV-410485',
+          totalAmount: 660,
+          paymentMethod: 'cash',
+          discountValue: 0,
+          taxValue: 0,
+          taxRate: 0,
+          dateStr: '27/07/2026 17:11',
+          cashierName: 'Owner / Admin',
+          status: 'paid',
+          cashReceived: 1000,
+        },
+        items: [
+          { name: 'Raththi milk powder', price: 120, quantity: 1 },
+          { name: 'Kothmale fresh milk - 500 ml', price: 540, quantity: 1 },
+        ],
+        activeBusiness: {
+          name: 'Xustore',
+          address: 'Galle road, Nupe, Matara',
+          phone: '713750843',
+        },
+        changeDue: 340,
+        profile,
+      });
+
+      for (const line of decode(data)) {
+        // A non-space immediately followed by the amount means they collided.
+        expect(line, `${profile}: ${JSON.stringify(line)}`).not.toMatch(/\S(?=Rs\.)/);
+      }
+    }
+  });
+
   test('renderTestReceiptBytes produces data', async () => {
     const data = await renderTestReceiptBytes(business, '80mm');
     expect(data.length).toBeGreaterThan(0);

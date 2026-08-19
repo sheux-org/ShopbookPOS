@@ -1,13 +1,13 @@
 # chittie elements and props (API reference)
 
-Every element and prop exported by **`@angadie/chittie@0.5.7`** (which re-exports
-`chittie-core@0.5.2` + `chittie-react@0.10.2`), as pinned in `web/package.json`.
+Every element and prop exported by **`@angadie/chittie@0.5.8`** (which re-exports
+`chittie-core@0.5.3` + `chittie-react@0.11.0`), as pinned in `web/package.json`.
 
 > Architecture lives in [`web-printing.md`](./web-printing.md). Runbook lives in
 > [`printing-setup-and-test.md`](./printing-setup-and-test.md). The mobile port is planned in
 > [`mobile-chittie-migration.md`](./mobile-chittie-migration.md). **This page is the API.**
 
-Source of truth: the published `dist/index.d.mts` of `@angadie/chittie-react@0.10.2`. Re-check it
+Source of truth: the published `dist/index.d.mts` of `@angadie/chittie-react@0.11.0`. Re-check it
 after any version bump — this file is a copy, not a live contract.
 
 ## Mental model
@@ -20,7 +20,7 @@ Three rules follow from that, and they explain most surprises:
 1. **Layout is character-cell, not pixel.** Everything is measured in columns (32 or 48), not px.
 2. **`<Text>` and `<Row>` accept strings and numbers only.** Nesting a component inside them throws
    — its `print()` would never run. Put `<Row>`, `<Image>` etc. as _siblings_.
-3. **Leading whitespace is stripped.** You cannot indent a `<Row>`. Use a marker like `+ ` instead.
+3. **Leading whitespace is stripped.** You cannot indent a `<Row>` with spaces — use `<Box marginLeft>`.
 
 ## Elements
 
@@ -72,7 +72,10 @@ correct behaviour, not a bug, but it reads badly. Budget a gap when you choose l
 
 ### `<Line>` — horizontal rule
 
-No props. Emits a full-width rule at the current column count.
+| prop    | type                   | default          |
+| ------- | ---------------------- | ---------------- |
+| `style` | `'single' \| 'double'` | `'single'`       |
+| `width` | `number`               | full paper width |
 
 ### `<Br>` — blank lines
 
@@ -192,14 +195,10 @@ The techniques below are proven on real 58mm hardware.
 `settingsStore` persists the chittie profile key directly rather than a millimetre number that
 something else has to translate.
 
-**Wrap the label yourself when a `<Row>` would collide.** Because `<Row>` gives the right cell its
-natural width, a long free-text label runs into the figure. ordereka pre-wraps with
-`wrapToWidth(label, columns - right.length - 3)` and prints the continuation as plain `<Text>`.
-This is the general answer to "the price is touching the name".
-
-**`+ ` instead of indentation.** Leading whitespace is stripped from both `<Row>` and `<Text>`, so a
-subordinate row cannot be indented. ordereka marks add-on rows with `+ ` and lets continuation lines
-carry no marker, so the label reads as one unit.
+**Wrap the label yourself when a `<Row>` would collide.** ordereka pre-wraps with
+`wrapToWidth(label, columns - right.length - 3)`. That was the only option before `<Row gap>` and
+`<Columns>` existed; both now do it natively, and ordereka's own copy can be deleted once it takes
+`chittie-react` 0.11.
 
 **Suppress rows that repeat information.** `cashTenderedChange()` hides tendered/change when the
 payment was exact, because TOTAL already says it. Ours always prints both. Less ink, less noise.

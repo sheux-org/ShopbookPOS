@@ -3,6 +3,8 @@ import {
   Printer,
   Text,
   Row,
+  Columns,
+  Column,
   Line,
   Feed,
   Cut,
@@ -34,6 +36,11 @@ const SPACING_MM = {
 } as const;
 
 const feedDots = (mm: number, dpi: number) => Math.round(mm * dotsPerMm(dpi));
+
+/** Blank characters kept between a label and its amount, so they never touch. */
+const GAP = 1;
+/** Width of the quantity column on an item line ('12x'). */
+const QUANTITY_WIDTH = 3;
 
 /** Font fallback chain handed to the rasterizer for non-Latin runs. */
 const FONT_FAMILIES = ['Noto Sans Sinhala', 'Noto Sans Tamil', 'sans-serif'];
@@ -77,6 +84,12 @@ export const browserRasterizer: TextRasterizer = {
 export function buildReceiptElement(params: RenderReceiptParams) {
   const { columns, dpi } = PRINTER_PROFILES[params.profile ?? DEFAULT_PROFILE];
   const m = buildReceiptModel(params);
+  // Size the amount column to the widest amount actually on this receipt, so a
+  // narrow roll spends its characters on the product name instead of padding.
+  const amountWidth = Math.max(
+    ...m.items.map((it) => formatMoney(it.lineTotal).length),
+    formatMoney(m.total).length
+  );
 
   return (
     <Printer width={columns}>
@@ -89,44 +102,57 @@ export function buildReceiptElement(params: RenderReceiptParams) {
 
       <Line />
 
-      <Row left="Invoice" right={m.invoiceNumber} />
-      <Row left="Cashier" right={m.cashierName} />
-      <Row left="Date" right={m.date} />
-      {m.time ? <Row left="Time" right={m.time} /> : null}
-      <Row left="Status" right={m.status} />
+      <Row gap={GAP} left="Invoice" right={m.invoiceNumber} />
+      <Row gap={GAP} left="Cashier" right={m.cashierName} />
+      <Row gap={GAP} left="Date" right={m.date} />
+      {m.time ? <Row gap={GAP} left="Time" right={m.time} /> : null}
+      <Row gap={GAP} left="Status" right={m.status} />
 
       <Line />
 
+      {/* Quantity, name and amount each get their own column, so a long product
+          name wraps under the name rather than under the quantity, and never
+          runs into the amount. */}
       {m.items.map((it, i) => (
-        <Row key={i} left={`${it.quantity} x ${it.name}`} right={formatMoney(it.lineTotal)} />
+        <Columns key={i} gap={GAP}>
+          <Column width={QUANTITY_WIDTH}>
+            <Text>{`${it.quantity}x`}</Text>
+          </Column>
+          <Column>
+            <Text>{it.name}</Text>
+          </Column>
+          <Column width={amountWidth} align="right">
+            <Text>{formatMoney(it.lineTotal)}</Text>
+          </Column>
+        </Columns>
       ))}
 
       <Line />
 
-      <Row left="Subtotal" right={formatMoney(m.subtotal)} />
+      <Row gap={GAP} left="Subtotal" right={formatMoney(m.subtotal)} />
       {m.discount ? (
         <>
-          <Row left={m.discount.label} right={`- ${formatMoney(m.discount.amount)}`} />
-          <Row left="Net Subtotal" right={formatMoney(m.discount.netSubtotal)} />
+          <Row gap={GAP} left={m.discount.label} right={`- ${formatMoney(m.discount.amount)}`} />
+          <Row gap={GAP} left="Net Subtotal" right={formatMoney(m.discount.netSubtotal)} />
         </>
       ) : null}
-      {m.tax ? <Row left={m.tax.label} right={formatMoney(m.tax.amount)} /> : null}
+      {m.tax ? <Row gap={GAP} left={m.tax.label} right={formatMoney(m.tax.amount)} /> : null}
 
       <Line />
 
-      <Row left="TOTAL" right={formatMoney(m.total)} />
+      <Row gap={GAP} left="TOTAL" right={formatMoney(m.total)} />
 
       <Line />
 
-      <Row left="Payment" right={m.paymentMethod.toUpperCase()} />
+      <Row gap={GAP} left="Payment" right={m.paymentMethod.toUpperCase()} />
       {m.cashTendered !== null ? (
         <>
-          <Row left="Cash Tendered" right={formatMoney(m.cashTendered)} />
-          <Row left="Change Due" right={formatMoney(m.changeDue ?? 0)} />
+          <Row gap={GAP} left="Cash Tendered" right={formatMoney(m.cashTendered)} />
+          <Row gap={GAP} left="Change Due" right={formatMoney(m.changeDue ?? 0)} />
         </>
       ) : null}
-      {m.cardLabel ? <Row left="Card / Bank" right={m.cardLabel} /> : null}
-      {m.bankName ? <Row left="Bank" right={m.bankName} /> : null}
+      {m.cardLabel ? <Row gap={GAP} left="Card / Bank" right={m.cardLabel} /> : null}
+      {m.bankName ? <Row gap={GAP} left="Bank" right={m.bankName} /> : null}
 
       <Feed dots={feedDots(SPACING_MM.beforeFooter, dpi)} />
 
