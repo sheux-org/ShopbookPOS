@@ -1,13 +1,13 @@
 # chittie elements and props (API reference)
 
-Every element and prop exported by **`@angadie/chittie@0.5.8`** (which re-exports
-`chittie-core@0.5.3` + `chittie-react@0.11.0`), as pinned in `web/package.json`.
+Every element and prop exported by **`@angadie/chittie@0.5.9`** (which re-exports
+`chittie-core@0.5.3` + `chittie-react@0.12.0`), as pinned in `web/package.json`.
 
 > Architecture lives in [`web-printing.md`](./web-printing.md). Runbook lives in
 > [`printing-setup-and-test.md`](./printing-setup-and-test.md). The mobile port is planned in
 > [`mobile-chittie-migration.md`](./mobile-chittie-migration.md). **This page is the API.**
 
-Source of truth: the published `dist/index.d.mts` of `@angadie/chittie-react@0.11.0`. Re-check it
+Source of truth: the published `dist/index.d.mts` of `@angadie/chittie-react@0.12.0`. Re-check it
 after any version bump — this file is a copy, not a live contract.
 
 ## Mental model

@@ -3,8 +3,7 @@ import {
   Printer,
   Text,
   Row,
-  Columns,
-  Column,
+  Table,
   Line,
   Feed,
   Cut,
@@ -84,12 +83,6 @@ export const browserRasterizer: TextRasterizer = {
 export function buildReceiptElement(params: RenderReceiptParams) {
   const { columns, dpi } = PRINTER_PROFILES[params.profile ?? DEFAULT_PROFILE];
   const m = buildReceiptModel(params);
-  // Size the amount column to the widest amount actually on this receipt, so a
-  // narrow roll spends its characters on the product name instead of padding.
-  const amountWidth = Math.max(
-    ...m.items.map((it) => formatMoney(it.lineTotal).length),
-    formatMoney(m.total).length
-  );
 
   return (
     <Printer width={columns}>
@@ -112,20 +105,14 @@ export function buildReceiptElement(params: RenderReceiptParams) {
 
       {/* Quantity, name and amount each get their own column, so a long product
           name wraps under the name rather than under the quantity, and never
-          runs into the amount. */}
-      {m.items.map((it, i) => (
-        <Columns key={i} gap={GAP}>
-          <Column width={QUANTITY_WIDTH}>
-            <Text>{`${it.quantity}x`}</Text>
-          </Column>
-          <Column>
-            <Text>{it.name}</Text>
-          </Column>
-          <Column width={amountWidth} align="right">
-            <Text>{formatMoney(it.lineTotal)}</Text>
-          </Column>
-        </Columns>
-      ))}
+          runs into the amount. 'auto' sizes the amount column to the widest
+          amount on this receipt, so a narrow roll spends its characters on the
+          product name instead of on padding. */}
+      <Table
+        gap={GAP}
+        columns={[{ width: QUANTITY_WIDTH }, {}, { width: 'auto', align: 'right' }]}
+        rows={m.items.map((it) => [`${it.quantity}x`, it.name, formatMoney(it.lineTotal)])}
+      />
 
       <Line />
 

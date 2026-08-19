@@ -231,8 +231,8 @@ importers:
   web:
     dependencies:
       '@angadie/chittie':
-        specifier: ^0.5.8
-        version: 0.5.8(react@19.1.0)
+        specifier: ^0.5.9
+        version: 0.5.9(react@19.1.0)
       '@angadie/chittie-companion':
         specifier: ^0.7.1
         version: 0.7.1
@@ -356,16 +356,16 @@ packages:
   '@angadie/chittie-preview@0.7.1':
     resolution: {integrity: sha512-6YLZqo5gyzNkECHRSglJ8UZHN0PBePSgFlI9ZpV1k7p8mVSTs0ejGy7XwNvoJiZ5g2nVBAvcI4KSb3CsDs/tIA==}
 
-  '@angadie/chittie-react@0.11.0':
-    resolution: {integrity: sha512-G40RCPsVpCBSilYcggldzxUoqL9AZDjT7gBzwoF402IPqdOS8Gi+aLN9C5RYAJunH509WgEeqZVJ9xLRpr3SzQ==}
+  '@angadie/chittie-react@0.12.0':
+    resolution: {integrity: sha512-YsZEx7jojGpuKUBYg8bs6Oqb+CRzRuwtHoocGvga2GLKzR5DPnVA3+TI3ZQNWkQMKnS9YP5zQ1bvgh1BsV9i1A==}
     peerDependencies:
       react: ^18 || ^19
 
   '@angadie/chittie-text@0.9.0':
     resolution: {integrity: sha512-F6HsmGCmPTf7FE3wLtB7KGA/GfFLIL4jHlibmsI6+e8iCqVBx3N4+bYKwhaunaRFBZiShqtImr2ksQRyDSkxHw==}
 
-  '@angadie/chittie@0.5.8':
-    resolution: {integrity: sha512-hgRRY9yy8MCUZU6q4wTZTGF3vC+GAXlxy7Bf+EimOvQpk93EREjvwQEUGvSSmn3legTg2KCUQzam+H9Pajir5g==}
+  '@angadie/chittie@0.5.9':
+    resolution: {integrity: sha512-q1rE4dWmiT+ur/SYmXdDkH8oRFdCzYQf+aDUtuDK70YXCYWbG10O+/JKn9c95mHiqsmsnJbSNJtFtx0G0xupPw==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -7249,7 +7249,7 @@ snapshots:
 
   '@angadie/chittie-preview@0.7.1': {}
 
-  '@angadie/chittie-react@0.11.0(react@19.1.0)':
+  '@angadie/chittie-react@0.12.0(react@19.1.0)':
     dependencies:
       '@angadie/chittie-core': 0.5.3
       '@angadie/chittie-text': 0.9.0
@@ -7259,10 +7259,10 @@ snapshots:
     dependencies:
       '@angadie/chittie-codepage': 0.5.1
 
-  '@angadie/chittie@0.5.8(react@19.1.0)':
+  '@angadie/chittie@0.5.9(react@19.1.0)':
     dependencies:
       '@angadie/chittie-core': 0.5.3
-      '@angadie/chittie-react': 0.11.0(react@19.1.0)
+      '@angadie/chittie-react': 0.12.0(react@19.1.0)
       react: 19.1.0
 
   '@apm-js-collab/code-transformer-bundler-plugins@0.5.0':
