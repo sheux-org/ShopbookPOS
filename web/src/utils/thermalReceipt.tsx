@@ -130,8 +130,11 @@ export function buildReceiptElement(params: RenderReceiptParams) {
 
       <Feed dots={feedDots(SPACING_MM.beforeFooter, dpi)} />
 
+      {/* Font A, not `small`: chittie-react 0.10.1 sizes the centring pad in Font B
+          cells but emits it before the Font B select, so `align="center" small`
+          prints off-centre by a string-length-dependent amount. */}
       {m.footer.map((line, i) => (
-        <Text key={i} align="center" small>
+        <Text key={i} align="center">
           {line}
         </Text>
       ))}

@@ -46,7 +46,13 @@ Has no `print()` of its own; `render()` reads its props. Everything else must be
 | `inline`    | `boolean`                           | `false`  | Suppress the trailing newline.                     |
 
 `small` does **not** re-flow the layout. Column arithmetic still assumes Font A, so a `small` line
-holds more characters than `width` suggests. Use it for footers, not for tables.
+holds more characters than `width` suggests.
+
+**Do not combine `small` with `align="center"`** on chittie-react 0.10.1. The centring pad is sized
+in Font B cells but emitted _before_ the Font B select (`Text` calls `e.align()` then `e.font('B')`),
+so the spaces print at Font A width and the line lands right of centre by an amount that grows with
+the string length. At 32 columns a 22-character line gets 10 pad spaces where 5 would centre it in
+Font A. Verify with `pnpm --filter web print:preview` if a future release changes the ordering.
 
 ### `<Row>` — two-column line
 
