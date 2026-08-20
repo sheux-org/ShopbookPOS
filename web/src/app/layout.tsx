@@ -38,6 +38,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="description" content="premium web point of sale" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" href="/favicon.png" sizes="192x192" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="shortcut icon" href="/favicon.ico" />
         <meta name="keywords" content="shopbook, pos, point of sale, retail pos" />
         <meta name="author" content="Pasan Pahasara Dewapriya" />

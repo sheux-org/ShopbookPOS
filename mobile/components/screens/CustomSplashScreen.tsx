@@ -135,9 +135,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60, // Circular shape
+    width: 100,
+    height: 100,
+    borderRadius: 30, // Circular shape
     backgroundColor: '#FFFFFF', // Solid white background to make the logo pop on blue
     overflow: 'hidden',
     justifyContent: 'center',
@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
     boxShadow: '0px 6px 12px 0px rgba(0, 0, 0, 0.12)',
   },
   logo: {
-    width: '100%',
-    height: '100%',
+    width: '120%',
+    height: '120%',
   },
   textContainer: {
     alignItems: 'center',
