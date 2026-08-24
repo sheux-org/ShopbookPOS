@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
-import { X, Globe, Check } from 'lucide-react';
+import { Globe, Check } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { LanguageCode } from '../../stores/settingsStore';
+import { SideDrawer } from '../common/SideDrawer';
 
 interface LanguageModalProps {
   isOpen: boolean;
@@ -13,126 +14,106 @@ interface LanguageModalProps {
 export const LanguageModal: React.FC<LanguageModalProps> = ({ isOpen, onClose }) => {
   const { t, language, setLanguage, languages } = useTranslation();
 
-  if (!isOpen) return null;
-
   const handleSelect = (code: LanguageCode) => {
     setLanguage(code);
     onClose();
   };
 
+  const drawerFooter = (
+    <div style={{ display: 'flex', width: '100%', justifyContent: 'flex-end' }}>
+      <button
+        type="button"
+        onClick={onClose}
+        className="modal-submit-btn"
+        style={{ margin: 0, width: 'auto' }}
+      >
+        <span>{t('common.done')}</span>
+      </button>
+    </div>
+  );
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '480px' }}>
-        <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Globe size={18} className="profile-card-icon" style={{ color: '#2563eb' }} />
-            <h3>{t('profile.languageTitle')}</h3>
-          </div>
-          <button onClick={onClose} className="modal-close-btn" type="button">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div
-          className="modal-body"
-          style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
-        >
-          <p style={{ fontSize: '13px', color: 'var(--muted, #6b7280)', margin: '0 0 4px 0' }}>
-            {t('profile.languageSub')}
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {languages.map((lang) => {
-              const isSelected = lang.code === language;
-              return (
+    <SideDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('profile.languageTitle')}
+      subtitle={t('profile.languageSub')}
+      icon={<Globe size={20} />}
+      footer={drawerFooter}
+      maxWidth="500px"
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {languages.map((lang) => {
+          const isSelected = lang.code === language;
+          return (
+            <div
+              key={lang.code}
+              onClick={() => handleSelect(lang.code)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 16px',
+                borderRadius: '10px',
+                border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+                backgroundColor: isSelected ? '#eff6ff' : '#ffffff',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
-                  key={lang.code}
-                  onClick={() => handleSelect(lang.code)}
                   style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '8px',
+                    backgroundColor: isSelected ? '#dbeafe' : '#f1f5f9',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '14px 16px',
-                    borderRadius: '10px',
-                    border: isSelected ? '2px solid #2563eb' : '1px solid var(--border, #e5e7eb)',
-                    backgroundColor: isSelected ? '#eff6ff' : '#ffffff',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    justifyContent: 'center',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    color: isSelected ? 'var(--primary)' : '#475569',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '8px',
-                        backgroundColor: isSelected ? '#dbeafe' : '#f3f4f6',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: '700',
-                        fontSize: '13px',
-                        color: isSelected ? '#1d4ed8' : '#4b5563',
-                      }}
-                    >
-                      {lang.shortLabel}
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          fontWeight: '600',
-                          fontSize: '14px',
-                          color: isSelected ? '#1e3a8a' : '#111827',
-                        }}
-                      >
-                        {lang.nativeLabel}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{lang.label}</div>
-                    </div>
-                  </div>
-
-                  {isSelected && (
-                    <div
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        backgroundColor: '#2563eb',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#ffffff',
-                      }}
-                    >
-                      <Check size={14} />
-                    </div>
-                  )}
+                  {lang.shortLabel}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+                <div>
+                  <div
+                    style={{
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      color: isSelected ? 'var(--primary)' : 'var(--dark)',
+                    }}
+                  >
+                    {lang.nativeLabel}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '1px' }}>
+                    {lang.label}
+                  </div>
+                </div>
+              </div>
 
-        <div className="modal-footer" style={{ marginTop: '16px' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: '100%',
-              padding: '10px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
-              fontWeight: '600',
-              fontSize: '13px',
-              cursor: 'pointer',
-            }}
-          >
-            {t('common.done')}
-          </button>
-        </div>
+              {isSelected && (
+                <div
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                  }}
+                >
+                  <Check size={14} />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-    </div>
+    </SideDrawer>
   );
 };

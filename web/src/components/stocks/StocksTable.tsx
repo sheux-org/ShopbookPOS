@@ -27,6 +27,9 @@ interface StocksTableProps {
   onAdjustStock: (product: DBProduct) => void;
   onAddItem: () => void;
   activeTab: 'inventory' | 'audit';
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  fetchNextPage?: () => void;
 }
 
 export const StocksTable: React.FC<StocksTableProps> = ({
@@ -36,6 +39,9 @@ export const StocksTable: React.FC<StocksTableProps> = ({
   onAdjustStock,
   onAddItem,
   activeTab,
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage,
 }) => {
   const router = useRouter();
   const tableWrapperRef = useRef<HTMLDivElement>(null);
@@ -49,6 +55,21 @@ export const StocksTable: React.FC<StocksTableProps> = ({
 
   const virtualItems = rowVirtualizer.getVirtualItems();
   const totalSize = rowVirtualizer.getTotalSize();
+
+  // Seamless Infinite Scroll Trigger
+  React.useEffect(() => {
+    const lastItem = virtualItems[virtualItems.length - 1];
+    if (!lastItem) return;
+
+    if (
+      lastItem.index >= filteredProducts.length - 2 &&
+      hasNextPage &&
+      !isFetchingNextPage &&
+      fetchNextPage
+    ) {
+      fetchNextPage();
+    }
+  }, [virtualItems, filteredProducts.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
   const paddingBottom =
@@ -204,6 +225,15 @@ export const StocksTable: React.FC<StocksTableProps> = ({
                 </td>
               </tr>
             )}
+
+            {isFetchingNextPage && (
+              <tr style={styles.loadingRow}>
+                <td colSpan={9} style={styles.loadingTd}>
+                  <div style={styles.tableSpinner} />
+                  <span>Loading more inventory records...</span>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -324,5 +354,28 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
+  },
+  loadingRow: {
+    backgroundColor: '#f8fafc',
+  },
+  loadingTd: {
+    padding: '16px',
+    textAlign: 'center',
+    fontSize: '12px',
+    color: 'var(--muted)',
+    fontWeight: '500',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    width: '100%',
+  },
+  tableSpinner: {
+    width: '14px',
+    height: '14px',
+    border: '2px solid var(--border)',
+    borderTopColor: 'var(--primary)',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
   },
 };

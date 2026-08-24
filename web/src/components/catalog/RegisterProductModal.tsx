@@ -12,6 +12,7 @@ import {
 import { Scanner } from '../Scanner';
 import { useFindProduct } from '../../hooks/useProducts';
 import { useTranslation } from '../../hooks/useTranslation';
+import { SideDrawer } from '../common/SideDrawer';
 
 interface DBProduct {
   id: string;
@@ -107,8 +108,6 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
       setUploadingImage(false);
     }
   }, [isOpen, mode, product, config.defaultCategory, config.defaultUnitType]);
-
-  if (!isOpen) return null;
 
   const readAsBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -220,23 +219,49 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
     }
   };
 
-  return (
-    <div style={styles.modalOverlay}>
-      <div style={{ ...styles.modalContent, maxWidth: '580px' }}>
-        <div style={styles.modalHeader}>
-          <div>
-            <h3 style={styles.modalTitle}>
-              {mode === 'create' ? t('catalog.addProduct') : t('catalog.editProduct')}
-            </h3>
-            <p style={styles.modalSubtitle}>
-              {mode === 'create' ? t('catalog.addProductSub') : t('catalog.editProductSub')}
-            </p>
+  const drawerFooter = (
+    <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: 'flex-end' }}>
+      <button
+        type="button"
+        onClick={onClose}
+        style={styles.cancelBtn}
+        disabled={submitting}
+      >
+        {t('common.cancel')}
+      </button>
+      <button
+        type="submit"
+        form="register-product-form"
+        disabled={submitting || uploadingImage}
+        style={styles.modalSubmitBtn}
+      >
+        {submitting ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Loader2 size={16} className="animate-spin" />
+            <span>{t('common.loading')}</span>
           </div>
-          <button onClick={onClose} style={styles.modalCloseBtn} type="button">
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} style={styles.modalForm}>
+        ) : (
+          <span>
+            {mode === 'create'
+              ? t('catalog.saveProductToCatalog')
+              : t('catalog.editProduct')}
+          </span>
+        )}
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <SideDrawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title={mode === 'create' ? t('catalog.addProduct') : t('catalog.editProduct')}
+        subtitle={mode === 'create' ? t('catalog.addProductSub') : t('catalog.editProductSub')}
+        maxWidth="600px"
+        footer={drawerFooter}
+      >
+        <form id="register-product-form" onSubmit={handleSubmit} style={styles.modalForm}>
           <div style={styles.modalBody}>
             {/* Top Section: Name, Barcode, Quick Code on left; Image on right */}
             <div style={styles.topSection}>
@@ -306,9 +331,10 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                     <label style={styles.modalLabel}>{t('catalog.quickCode')}</label>
                     <input
                       type="text"
+                      maxLength={5}
                       placeholder="e.g. 2016"
                       value={quickCode}
-                      onChange={(e) => setQuickCode(e.target.value)}
+                      onChange={(e) => setQuickCode(e.target.value.slice(0, 5))}
                       style={styles.modalInput}
                     />
                   </div>
@@ -471,22 +497,8 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               </div>
             </div>
           </div>
-
-          <div style={styles.modalFooter}>
-            <button
-              type="submit"
-              disabled={submitting || uploadingImage}
-              style={styles.modalSubmitBtn}
-            >
-              {submitting
-                ? t('common.loading')
-                : mode === 'create'
-                  ? t('catalog.saveProductToCatalog')
-                  : t('catalog.editProduct')}
-            </button>
-          </div>
         </form>
-      </div>
+      </SideDrawer>
       {showScanner && (
         <Scanner
           onScan={(code) => {
@@ -496,7 +508,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
           onClose={() => setShowScanner(false)}
         />
       )}
-    </div>
+    </>
   );
 };
 
@@ -567,15 +579,14 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
   },
   modalBody: {
-    padding: '24px',
+    padding: '0',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
-    overflowY: 'auto',
+    gap: '12px',
     flex: 1,
   },
   modalFooter: {
-    padding: '16px 24px',
+    padding: '12px 0 0 0',
     borderTop: '1px solid var(--border)',
     backgroundColor: '#ffffff',
     flexShrink: 0,
@@ -583,7 +594,7 @@ const styles: Record<string, React.CSSProperties> = {
   modalInputGroup: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '4px',
   },
   modalLabel: {
     fontSize: '11px',
@@ -595,20 +606,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
   modalInput: {
     width: '100%',
-    padding: '10px 14px',
+    padding: '8px 12px',
     borderRadius: '8px',
     border: '1px solid var(--border)',
-    fontSize: '14px',
+    fontSize: '13px',
     outline: 'none',
     backgroundColor: '#ffffff',
     transition: 'border-color 0.2s, box-shadow 0.2s',
   },
   select: {
     width: '100%',
-    padding: '10px 14px',
+    padding: '8px 12px',
     borderRadius: '8px',
     border: '1px solid var(--border)',
-    fontSize: '14px',
+    fontSize: '13px',
     outline: 'none',
     backgroundColor: '#ffffff',
     cursor: 'pointer',
@@ -616,67 +627,67 @@ const styles: Record<string, React.CSSProperties> = {
   },
   gridTwo: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
   },
   divider: {
     height: '1px',
     backgroundColor: 'var(--border)',
-    margin: '8px 0 16px 0',
+    margin: '2px 0 6px 0',
     width: '100%',
   },
   modalSubmitBtn: {
     width: '100%',
-    padding: '12px',
+    padding: '10px 18px',
     borderRadius: '8px',
     backgroundColor: 'var(--primary)',
     color: '#ffffff',
     border: 'none',
     fontWeight: '700',
-    fontSize: '14px',
+    fontSize: '13px',
     cursor: 'pointer',
     transition: 'background-color 0.2s',
   },
   topSection: {
     display: 'flex',
-    gap: '24px',
+    gap: '14px',
     alignItems: 'flex-start',
   },
   topLeftCol: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '10px',
   },
   topRightCol: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '4px',
     flexShrink: 0,
   },
   topSubGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '16px',
+    gridTemplateColumns: '1.2fr 0.8fr',
+    gap: '10px',
   },
   compactUploadPlaceholder: {
-    width: '120px',
-    height: '120px',
+    width: '104px',
+    height: '104px',
     borderRadius: '8px',
     border: '1.5px dashed var(--border)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '6px',
+    gap: '4px',
     cursor: 'pointer',
     backgroundColor: '#fafafa',
     transition: 'all 0.2s ease',
     position: 'relative',
   },
   compactImagePreviewContainer: {
-    width: '120px',
-    height: '120px',
+    width: '104px',
+    height: '104px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -748,5 +759,16 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
     letterSpacing: '0.3px',
     transition: 'color 0.2s ease',
+  },
+  cancelBtn: {
+    padding: '10px 18px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: '#ffffff',
+    color: 'var(--dark)',
+    fontWeight: '600',
+    fontSize: '13px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
 };
