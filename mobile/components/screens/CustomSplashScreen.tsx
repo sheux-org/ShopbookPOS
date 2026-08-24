@@ -89,7 +89,7 @@ export function CustomSplashScreen({ isReady, onAnimationComplete }: CustomSplas
           {/* Circular Logo Container with solid white background */}
           <Animated.View style={[styles.logoContainer, animatedLogoStyle]}>
             <Image
-              source={require('../../assets/images/icon.png')}
+              source={require('../../assets/images/splash-icon.png')}
               style={styles.logo}
               contentFit="contain"
             />

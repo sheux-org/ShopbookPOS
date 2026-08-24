@@ -199,7 +199,7 @@ export default function NumberInputRoute() {
           <View style={styles.brandingWrapper}>
             <View style={styles.logoSquare}>
               <Image
-                source={require('../../../assets/images/icon.png')}
+                source={require('../../../assets/images/splash-icon.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
               />
