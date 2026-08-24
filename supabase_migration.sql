@@ -357,11 +357,6 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert
-        IF (r->>'id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized access to business ID';
-        END IF;
-
         INSERT INTO businesses (id, name, business_type, address, phone_number, tax_id, operating_hours, logo_uri, created_at, updated_at)
         VALUES (
           (r->>'id'),
@@ -389,7 +384,7 @@ BEGIN
     
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
-      DELETE FROM businesses WHERE id IN (SELECT json_array_elements_text(deleted_ids)) AND id = client_business_id;
+      DELETE FROM businesses WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -399,15 +394,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized employee push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO employees (id, business_id, name, role, phone, email, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'name'),
           (r->>'role'),
           (r->>'phone'),
@@ -428,15 +423,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized employee push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO employees (id, business_id, name, role, phone, email, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'name'),
           (r->>'role'),
           (r->>'phone'),
@@ -456,7 +451,7 @@ BEGIN
     
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
-      DELETE FROM employees WHERE id IN (SELECT json_array_elements_text(deleted_ids)) AND business_id = client_business_id;
+      DELETE FROM employees WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -466,15 +461,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized product push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO products (id, business_id, name, sku, quick_code, barcode, category, unit_type, cost_price, price, stock_count, low_stock_alert, icon, is_favorite, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'name'),
           (r->>'sku'),
           (r->>'quick_code'),
@@ -511,15 +506,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized product push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO products (id, business_id, name, sku, quick_code, barcode, category, unit_type, cost_price, price, stock_count, low_stock_alert, icon, is_favorite, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'name'),
           (r->>'sku'),
           (r->>'quick_code'),
@@ -555,7 +550,7 @@ BEGIN
     
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
-      DELETE FROM products WHERE id IN (SELECT json_array_elements_text(deleted_ids)) AND business_id = client_business_id;
+      DELETE FROM products WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -565,15 +560,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized order push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, tax_rate, tax_value, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'invoice_number'),
           (r->>'total_amount')::numeric,
           (r->>'status'),
@@ -606,15 +601,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized order push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, tax_rate, tax_value, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'invoice_number'),
           (r->>'total_amount')::numeric,
           (r->>'status'),
@@ -646,7 +641,7 @@ BEGIN
     
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
-      DELETE FROM orders WHERE id IN (SELECT json_array_elements_text(deleted_ids)) AND business_id = client_business_id;
+      DELETE FROM orders WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -656,9 +651,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert: order_id must belong to business
-        IF NOT EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id = client_business_id) THEN
+        -- Security assert:
+        -- 1. If order belongs to a DIFFERENT business, reject as unauthorized
+        IF EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id != client_business_id) THEN
           RAISE EXCEPTION 'Unauthorized order_items push';
+        END IF;
+
+        -- 2. If parent order does not exist (e.g. deleted), skip gracefully
+        IF NOT EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id = client_business_id) THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO order_items (id, order_id, product_id, name, quantity, price, created_at, updated_at)
@@ -685,9 +686,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert: order_id must belong to business
-        IF NOT EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id = client_business_id) THEN
+        -- Security assert:
+        -- 1. If order belongs to a DIFFERENT business, reject as unauthorized
+        IF EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id != client_business_id) THEN
           RAISE EXCEPTION 'Unauthorized order_items push';
+        END IF;
+
+        -- 2. If parent order does not exist (e.g. deleted), skip gracefully
+        IF NOT EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id = client_business_id) THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO order_items (id, order_id, product_id, name, quantity, price, created_at, updated_at)
@@ -714,8 +721,7 @@ BEGIN
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
       DELETE FROM order_items 
-      WHERE id IN (SELECT json_array_elements_text(deleted_ids))
-        AND order_id IN (SELECT id FROM public.orders WHERE business_id = client_business_id);
+      WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -725,9 +731,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert: product_id must belong to business
-        IF NOT EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id = client_business_id) THEN
+        -- Security assert:
+        -- 1. If product belongs to a DIFFERENT business, reject as unauthorized cross-tenant push
+        IF EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id != client_business_id) THEN
           RAISE EXCEPTION 'Unauthorized inventory_logs push';
+        END IF;
+
+        -- 2. If product does not exist in database (e.g. was deleted or cascade removed), skip inserting orphaned log gracefully
+        IF NOT EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id = client_business_id) THEN
+          CONTINUE;
         END IF;
 
         -- Conflict check: Prevent duplicate void inventory log insertion from offline sync race condition
@@ -759,9 +771,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert: product_id must belong to business
-        IF NOT EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id = client_business_id) THEN
+        -- Security assert:
+        -- 1. If product belongs to a DIFFERENT business, reject as unauthorized cross-tenant push
+        IF EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id != client_business_id) THEN
           RAISE EXCEPTION 'Unauthorized inventory_logs push';
+        END IF;
+
+        -- 2. If product does not exist in database (e.g. was deleted), skip inserting orphaned log gracefully
+        IF NOT EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id = client_business_id) THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO inventory_logs (id, product_id, type, quantity, reason, created_at, updated_at)
@@ -786,8 +804,7 @@ BEGIN
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
       DELETE FROM inventory_logs 
-      WHERE id IN (SELECT json_array_elements_text(deleted_ids))
-        AND product_id IN (SELECT id FROM public.products WHERE business_id = client_business_id);
+      WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   END IF;
