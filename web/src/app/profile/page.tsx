@@ -219,21 +219,27 @@ export default function ProfilePage() {
   const handleDeleteStaff = (id: string) => {
     const emp = employees.find((e) => e.id === id);
     if (!emp) return;
-    if (
-      confirm(
-        `Are you sure you want to permanently remove "${emp.name}"? This action cannot be undone.`
-      )
-    ) {
-      deleteStaffMutation.mutate(id, {
-        onSuccess: () => {
-          triggerToast('Staff member removed successfully! 🗑️');
-        },
-        onError: (err: any) => {
-          console.error(err);
-          triggerToast(err.message || 'Failed to remove staff member.');
-        },
-      });
+
+    const userInput = prompt(
+      `⚠️ Permanently Remove Staff Member\n\nThis will permanently delete "${emp.name}" and revoke their access.\n\nTo confirm, please type "${emp.name}" below:`
+    );
+
+    if (userInput === null) return; // Cancelled
+
+    if (userInput.trim().toLowerCase() !== emp.name.trim().toLowerCase()) {
+      alert(`The entered name did not match "${emp.name}". Deletion cancelled.`);
+      return;
     }
+
+    deleteStaffMutation.mutate(id, {
+      onSuccess: () => {
+        triggerToast('Staff member removed successfully! 🗑️');
+      },
+      onError: (err: any) => {
+        console.error(err);
+        triggerToast(err.message || 'Failed to remove staff member.');
+      },
+    });
   };
 
   const handleAddStaffSubmit = async (e: React.FormEvent) => {

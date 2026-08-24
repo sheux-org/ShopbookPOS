@@ -19,6 +19,7 @@ import { useBusinessStore } from '../../../stores/useBusinessStore';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useBusinessProductCount } from '../../../hooks/useProducts';
 import { hapticFeedback } from '@/utils/haptics';
+import { DeleteConfirmModal } from '../../../components/common/DeleteConfirmModal';
 
 const BUSINESS_TYPES = [
   { label: 'Cafe', icon: '☕' },
@@ -63,6 +64,8 @@ export default function ManageBusinessesRoute() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditDropdownOpen, setIsEditDropdownOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [deletingBusiness, setDeletingBusiness] = useState<Business | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const { data: editingBizProductCount = 0 } = useBusinessProductCount(editingBusiness?.id);
   const isEditingCategoryDisabled = editingBizProductCount > 0;
 
@@ -134,30 +137,27 @@ export default function ManageBusinessesRoute() {
     }
 
     hapticFeedback.notificationWarning();
-    Alert.alert(
-      'Delete Business Branch',
-      `Are you sure you want to permanently delete "${biz.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Branch',
-          style: 'destructive',
-          onPress: () => {
-            hapticFeedback.impactMedium();
-            deleteMutation.mutate(biz.id, {
-              onSuccess: () => {
-                triggerToast('Business branch deleted successfully! 🗑️');
-                hapticFeedback.notificationSuccess();
-              },
-              onError: () => {
-                triggerToast('Failed to delete business branch.');
-                hapticFeedback.notificationError();
-              },
-            });
-          },
-        },
-      ]
-    );
+    setDeletingBusiness(biz);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleExecuteDelete = () => {
+    if (!deletingBusiness) return;
+
+    deleteMutation.mutate(deletingBusiness.id, {
+      onSuccess: () => {
+        triggerToast('Business branch deleted successfully! 🗑️');
+        setIsDeleteModalOpen(false);
+        setDeletingBusiness(null);
+        hapticFeedback.notificationSuccess();
+      },
+      onError: (err: any) => {
+        triggerToast(err?.message || 'Failed to delete business branch.');
+        setIsDeleteModalOpen(false);
+        setDeletingBusiness(null);
+        hapticFeedback.notificationError();
+      },
+    });
   };
 
   const handleCreateBusiness = () => {
@@ -299,8 +299,10 @@ export default function ManageBusinessesRoute() {
             <TouchableOpacity
               key={biz.id}
               style={[styles.bizCard, isActive && styles.bizCardActive]}
-              activeOpacity={0.85}
+              activeOpacity={isActive ? 1.0 : 0.8}
               onPress={() => {
+                if (biz.id === activeBusiness.id) return;
+                hapticFeedback.impactMedium();
                 cartState.setActiveBusiness(biz.id);
                 triggerToast(`Active store changed to ${biz.name}`);
               }}
@@ -756,6 +758,26 @@ export default function ManageBusinessesRoute() {
           </View>
         </View>
       </BottomSheet>
+
+      {/* Type Name to Confirm Deletion Modal */}
+      {deletingBusiness && (
+        <DeleteConfirmModal
+          visible={isDeleteModalOpen}
+          title="Delete Business Branch"
+          itemName={deletingBusiness.name}
+          itemTypeLabel="business branch"
+          description={`This will permanently delete "${deletingBusiness.name}" and all its products, orders, inventory logs, and staff members from your device and Cloud database. This action CANNOT be undone.`}
+          confirmButtonText="Delete Branch"
+          isLoading={deleteMutation.isPending}
+          onConfirm={handleExecuteDelete}
+          onClose={() => {
+            if (!deleteMutation.isPending) {
+              setIsDeleteModalOpen(false);
+              setDeletingBusiness(null);
+            }
+          }}
+        />
+      )}
     </View>
   );
 }

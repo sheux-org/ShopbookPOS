@@ -212,7 +212,7 @@ export function useActiveDeviceTracker() {
           useAuthStore.getState().logout();
           return;
         }
-        console.warn('Active device tracker error:', err);
+        // Silent catch for network/timeout errors to avoid spamming terminal
       }
     };
 
