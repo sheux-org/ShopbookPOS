@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { ProductImage } from '../ProductImage';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface DBProduct {
   id: string;
@@ -31,6 +32,7 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const { t } = useTranslation();
   const [adjustType, setAdjustType] = useState<'in' | 'out'>('in');
   const [adjustQty, setAdjustQty] = useState('10');
   const [adjustReason, setAdjustReason] = useState('Restock Inventory');
@@ -68,8 +70,8 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
     <div style={styles.modalOverlay}>
       <div style={styles.modalContent}>
         <div style={styles.modalHeader}>
-          <h3>Inventory Audit Adjustment</h3>
-          <button onClick={onClose} style={styles.modalCloseBtn}>
+          <h3>{t('stocks.batchAdjust')}</h3>
+          <button onClick={onClose} style={styles.modalCloseBtn} type="button">
             <X size={16} />
           </button>
         </div>

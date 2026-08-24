@@ -17,8 +17,10 @@ import { Header } from '../components/layout/Header';
 import { WifiOff } from 'lucide-react';
 import { MobileBlocker } from '../components/layout/MobileBlocker';
 import { useActiveDeviceTracker } from '../hooks/useActiveDeviceTracker';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const language = useSettingsStore((s) => s.language) || 'en';
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -32,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   );
 
   return (
-    <html lang="en">
+    <html lang={language}>
       <head>
         <title>Shopbook POS Web</title>
         <meta name="description" content="premium web point of sale" />
@@ -63,6 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
   useActiveDeviceTracker();
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const posMode = useSettingsStore((s) => s.posMode);
   const setPosMode = useSettingsStore((s) => s.setPosMode);
@@ -121,32 +124,32 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const getHeaderInfo = () => {
     if (pathname.startsWith('/stocks')) {
       return {
-        title: 'Stocks & Inventory Log',
-        subtitle: 'Real-time stock alerts and audit tracking ledger',
+        title: t('layout.pageTitles.stocksTitle'),
+        subtitle: t('layout.pageTitles.stocksSubtitle'),
       };
     }
     switch (pathname) {
       case '/':
       case '/pos':
         return {
-          title: 'POS Billing Terminal',
-          subtitle: 'Active sales invoice billing settlement tender details',
+          title: t('layout.pageTitles.posTitle'),
+          subtitle: t('layout.pageTitles.posSubtitle'),
         };
 
       case '/history':
         return {
-          title: 'Invoice Sales Report',
-          subtitle: 'Audit history of past sales, print receipts, and void invoices',
+          title: t('layout.pageTitles.historyTitle'),
+          subtitle: t('layout.pageTitles.historySubtitle'),
         };
       case '/insights':
         return {
-          title: 'Business Analytics & Insights',
-          subtitle: 'Real-time revenue metrics, inventory performance, and transaction audits',
+          title: t('layout.pageTitles.insightsTitle'),
+          subtitle: t('layout.pageTitles.insightsSubtitle'),
         };
       case '/profile':
         return {
-          title: 'Profile Settings Dashboard',
-          subtitle: 'Configure branches, staff logs, synchronization and terminal details',
+          title: t('layout.pageTitles.profileTitle'),
+          subtitle: t('layout.pageTitles.profileSubtitle'),
         };
       default:
         return null;
@@ -187,7 +190,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
               letterSpacing: '0.5px',
             }}
           >
-            Initializing POS Terminal...
+            {t('layout.initializingPos')}
           </div>
         </div>
         <style>{`

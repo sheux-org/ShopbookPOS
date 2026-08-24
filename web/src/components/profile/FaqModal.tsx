@@ -2,45 +2,26 @@
 
 import React, { useState } from 'react';
 import { X, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface FaqModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const FAQS = [
-  {
-    q: 'Does Shopbook POS work without an internet connection?',
-    a: 'Yes! Shopbook POS saves all transactions to a secure local database. You can perform billing, scan barcodes, and manage inventory offline. Cloud backup and synchronization is a premium feature available in the Shopbook POS Pro version.',
-  },
-  {
-    q: "What is a 'Quick Code' and how do cashiers use it?",
-    a: "Quick Codes are short numeric shortcuts (e.g., '101' for Bread) assigned to products. Cashiers can type these in the Search bar to add items to the invoice instantly without using a scanner.",
-  },
-  {
-    q: 'How do I scan barcodes to add items in Shopbook POS?',
-    a: "Tap 'Scan' in the bottom navigation or tap the search icon in the header and click the camera icon. Line up the product barcode within the viewfinder to search and add it.",
-  },
-  {
-    q: 'How do I connect a Bluetooth thermal printer?',
-    a: 'Go to Profile Settings > Bluetooth Thermal Printer. Scan for nearby devices, select your printer, and pair it. Once connected, printing receipts via Bluetooth thermal printers is a premium feature available for Shopbook POS Pro users.',
-  },
-  {
-    q: 'What can Managers and Cashiers access in Shopbook POS?',
-    a: 'Cashiers can only perform sales and scan barcodes, while Managers can manage stock. Granting multi-user access for staff (Managers/Cashiers) is a premium feature included in the Shopbook POS Pro plan.',
-  },
-  {
-    q: 'Can I manage multiple store locations or branches?',
-    a: 'Yes! Creating and switching between multiple business branches is a premium feature in Shopbook POS Pro. Upgrading lets you manage separate staff, products, and order histories for each branch.',
-  },
-  {
-    q: 'How do Low Stock Alerts work in Shopbook POS?',
-    a: "When adding/editing a product, you can set a 'Low Stock Alert' threshold. When the item count drops below this, the stock text turns orange on the Home Screen to warn cashiers.",
-  },
-];
-
 export const FaqModal: React.FC<FaqModalProps> = ({ isOpen, onClose }) => {
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(null);
+  const { t } = useTranslation();
+
+  const faqs = [
+    { q: t('faq.q1'), a: t('faq.a1') },
+    { q: t('faq.q2'), a: t('faq.a2') },
+    { q: t('faq.q3'), a: t('faq.a3') },
+    { q: t('faq.q4'), a: t('faq.a4') },
+    { q: t('faq.q5'), a: t('faq.a5') },
+    { q: t('faq.q6'), a: t('faq.a6') },
+    { q: t('faq.q7'), a: t('faq.a7') },
+  ];
 
   if (!isOpen) return null;
 
@@ -50,9 +31,9 @@ export const FaqModal: React.FC<FaqModalProps> = ({ isOpen, onClose }) => {
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <HelpCircle size={18} className="profile-card-icon" />
-            <h3>Help & Support FAQs</h3>
+            <h3>{t('profile.faqTitle')}</h3>
           </div>
-          <button onClick={onClose} className="modal-close-btn">
+          <button onClick={onClose} className="modal-close-btn" type="button">
             <X size={16} />
           </button>
         </div>
@@ -61,7 +42,7 @@ export const FaqModal: React.FC<FaqModalProps> = ({ isOpen, onClose }) => {
           style={{ maxHeight: '480px', overflowY: 'auto', padding: '16px 20px' }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {FAQS.map((faq, index) => {
+            {faqs.map((faq, index) => {
               const isExpanded = expandedFaqIndex === index;
               return (
                 <div

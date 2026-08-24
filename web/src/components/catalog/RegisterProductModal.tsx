@@ -11,6 +11,7 @@ import {
 } from '../../utils/businessTypeConfig';
 import { Scanner } from '../Scanner';
 import { useFindProduct } from '../../hooks/useProducts';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface DBProduct {
   id: string;
@@ -53,6 +54,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const { t } = useTranslation();
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const { checkDuplicateCodes, generateUniqueBarcode } = useFindProduct();
   const config = getBusinessTypeConfig(activeBusiness?.category);
@@ -224,13 +226,13 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
         <div style={styles.modalHeader}>
           <div>
             <h3 style={styles.modalTitle}>
-              {mode === 'create' ? 'Register New Product' : 'Edit Catalog Product'}
+              {mode === 'create' ? t('catalog.addProduct') : t('catalog.editProduct')}
             </h3>
             <p style={styles.modalSubtitle}>
-              Manage item metadata, pricing, inventory alerts, and image representation.
+              {mode === 'create' ? t('catalog.addProductSub') : t('catalog.editProductSub')}
             </p>
           </div>
-          <button onClick={onClose} style={styles.modalCloseBtn}>
+          <button onClick={onClose} style={styles.modalCloseBtn} type="button">
             <X size={18} />
           </button>
         </div>
@@ -242,7 +244,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               <div style={styles.topLeftCol}>
                 {/* Row 1: Product Name */}
                 <div style={styles.modalInputGroup}>
-                  <label style={styles.modalLabel}>Product Name *</label>
+                  <label style={styles.modalLabel}>{t('catalog.productName')} *</label>
                   <input
                     type="text"
                     placeholder="e.g. Anchor Milk Powder 400g"
@@ -263,7 +265,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                         alignItems: 'center',
                       }}
                     >
-                      <label style={styles.modalLabel}>Barcode</label>
+                      <label style={styles.modalLabel}>{t('catalog.barcode')}</label>
                       <button
                         type="button"
                         onClick={async () => {
@@ -278,7 +280,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                         style={styles.labelActionBtn}
                         title="Auto-generate standard retail EAN-13 barcode"
                       >
-                        Generate Code
+                        {t('catalog.autoGen')}
                       </button>
                     </div>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -301,7 +303,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                   </div>
 
                   <div style={styles.modalInputGroup}>
-                    <label style={styles.modalLabel}>Quick Code</label>
+                    <label style={styles.modalLabel}>{t('catalog.quickCode')}</label>
                     <input
                       type="text"
                       placeholder="e.g. 2016"
@@ -315,7 +317,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
 
               {/* Right Column (Image) */}
               <div style={styles.topRightCol}>
-                <label style={styles.modalLabel}>Product Image</label>
+                <label style={styles.modalLabel}>{t('catalog.productImage')}</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -364,7 +366,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                         marginTop: '4px',
                       }}
                     >
-                      Upload Image
+                      {t('catalog.uploadImage')}
                     </span>
                     <span style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '2px' }}>
                       (Max 4MB)
@@ -385,7 +387,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
             {/* Grid 2 Columns - Category & Unit Type dropdowns */}
             <div style={styles.gridTwo}>
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Category</label>
+                <label style={styles.modalLabel}>{t('catalog.category')}</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -400,7 +402,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               </div>
 
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Unit Type</label>
+                <label style={styles.modalLabel}>{t('catalog.unitType')}</label>
                 <select
                   value={unitType}
                   onChange={(e) => setUnitType(e.target.value)}
@@ -418,7 +420,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
             {/* Grid 2 Columns Price */}
             <div style={styles.gridTwo}>
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Selling Price (Rs.) *</label>
+                <label style={styles.modalLabel}>{t('catalog.price')} (Rs.) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -431,7 +433,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               </div>
 
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Cost Price (Rs.)</label>
+                <label style={styles.modalLabel}>{t('catalog.costPrice')} (Rs.)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -446,7 +448,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
             {/* Grid 2 Columns Stock */}
             <div style={styles.gridTwo}>
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Stock Quantity *</label>
+                <label style={styles.modalLabel}>{t('catalog.stockQuantity')} *</label>
                 <input
                   type="number"
                   placeholder="e.g. 50"
@@ -458,7 +460,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               </div>
 
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Low Alert Level</label>
+                <label style={styles.modalLabel}>{t('catalog.lowStockAlert')}</label>
                 <input
                   type="number"
                   placeholder="e.g. 5"
@@ -477,10 +479,10 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               style={styles.modalSubmitBtn}
             >
               {submitting
-                ? 'Saving changes...'
+                ? t('common.loading')
                 : mode === 'create'
-                  ? 'Save Product to Catalog'
-                  : 'Update Catalog details'}
+                  ? t('catalog.saveProductToCatalog')
+                  : t('catalog.editProduct')}
             </button>
           </div>
         </form>

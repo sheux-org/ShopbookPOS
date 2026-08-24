@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, Phone, MessageCircle, Users, Globe, ExternalLink, Sparkles } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface HelpSupportModalProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ interface HelpSupportModalProps {
 }
 
 export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   const contactOptions = [
@@ -50,9 +53,9 @@ export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({ isOpen, onCl
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sparkles size={16} color="var(--yellow)" />
-            <h3>Shopbook Support Portal</h3>
+            <h3>{t('profile.helpTitle')}</h3>
           </div>
-          <button onClick={onClose} className="modal-close-btn">
+          <button onClick={onClose} className="modal-close-btn" type="button">
             <X size={16} />
           </button>
         </div>
@@ -61,13 +64,11 @@ export const HelpSupportModal: React.FC<HelpSupportModalProps> = ({ isOpen, onCl
             style={{
               fontSize: '13px',
               color: 'var(--muted)',
-              lineHeight: '1.6',
-              margin: '0 0 20px 0',
-              textAlign: 'center',
+              marginBottom: '20px',
+              lineHeight: '1.5',
             }}
           >
-            Need assistance with your Shopbook POS terminal? Get priority 24/7 support from our
-            customer success engineers.
+            {t('profile.helpSub')}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

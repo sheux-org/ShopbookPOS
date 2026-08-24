@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, PlusCircle, Lock } from 'lucide-react';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface BranchModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({
   triggerToast,
 }) => {
   const { canPerform } = useUserPermissions();
+  const { t } = useTranslation();
 
   if (!isOpen) return null;
 
@@ -43,8 +45,8 @@ export const BranchModal: React.FC<BranchModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content" style={{ maxWidth: '680px' }}>
         <div className="modal-header">
-          <h3>Multi-Business & Branches Portal</h3>
-          <button onClick={onClose} className="modal-close-btn">
+          <h3>{t('businessMgmt.headerTitle')}</h3>
+          <button onClick={onClose} className="modal-close-btn" type="button">
             <X size={16} />
           </button>
         </div>
@@ -54,10 +56,10 @@ export const BranchModal: React.FC<BranchModalProps> = ({
               onSubmit={onSubmit}
               style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}
             >
-              <h4 className="form-title">Onboard New Business / Branch</h4>
+              <h4 className="form-title">{t('businessMgmt.createNew')}</h4>
 
               <div className="modal-input-group">
-                <label className="modal-label">Branch Name</label>
+                <label className="modal-label">{t('businessMgmt.bizNameLabel')}</label>
                 <input
                   type="text"
                   placeholder="e.g. Shopbook Kandy Branch"

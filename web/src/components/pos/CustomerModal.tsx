@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface CustomerRecord {
   name: string;
@@ -28,6 +29,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   posMode,
   scanInputRef,
 }) => {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<'search' | 'create'>('search');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -78,7 +80,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     <div style={styles.modalOverlay}>
       <div style={styles.modalContent}>
         <div style={styles.modalHeader}>
-          <h3>Attach Customer Profile</h3>
+          <h3>{t('customerMgmt.headerTitle')}</h3>
           <button
             onClick={() => {
               onClose();
@@ -87,6 +89,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               }
             }}
             style={styles.modalCloseBtn}
+            type="button"
           >
             <X size={16} />
           </button>
@@ -95,6 +98,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
         {/* Tab selector */}
         <div style={styles.tabContainer}>
           <button
+            type="button"
             onClick={() => {
               setTab('search');
               setTimeout(() => searchInputRef.current?.focus(), 50);
@@ -105,9 +109,10 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               color: tab === 'search' ? 'var(--primary)' : 'var(--muted)',
             }}
           >
-            Search Existing [Tab]
+            {t('customerMgmt.searchCustomer')} [Tab]
           </button>
           <button
+            type="button"
             onClick={() => {
               setTab('create');
               setTimeout(() => nameInputRef.current?.focus(), 50);
@@ -118,7 +123,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               color: tab === 'create' ? 'var(--primary)' : 'var(--muted)',
             }}
           >
-            Register New [Tab]
+            {t('customerMgmt.addNewCustomer')} [Tab]
           </button>
         </div>
 

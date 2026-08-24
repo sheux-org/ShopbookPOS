@@ -10,6 +10,8 @@ interface PrinterDevice {
 type PrinterProfile = '58mm' | '80mm';
 type CashDrawerDevice = 0 | 1; // 0 = connector pin 2, 1 = pin 5
 
+export type LanguageCode = 'en' | 'si' | 'ta';
+
 interface SettingsState {
   isBackupEnabled: boolean;
   pairedPrinter: PrinterDevice | null;
@@ -17,6 +19,7 @@ interface SettingsState {
   isPremium: boolean;
   posMode: 'tablet' | 'normal';
   sidebarVisible: boolean;
+  language: LanguageCode;
   // Thermal printer preferences (printed via the Chittie Companion)
   printerProfile: PrinterProfile;
   // Cash drawer (kicked via the printer's drawer port over ESC/POS)
@@ -29,6 +32,7 @@ interface SettingsState {
   setPremium: (premium: boolean) => void;
   setPosMode: (mode: 'tablet' | 'normal') => void;
   setSidebarVisible: (visible: boolean) => void;
+  setLanguage: (lang: LanguageCode) => void;
   setPrinterProfile: (profile: PrinterProfile) => void;
   setCashDrawerDevice: (device: CashDrawerDevice) => void;
   setOpenDrawerOnCashSale: (enabled: boolean) => void;
@@ -43,6 +47,7 @@ export const useSettingsStore = create<SettingsState>()(
       isPremium: true, // Exclusively premium web client!
       posMode: 'tablet', // Default to Tablet POS Mode
       sidebarVisible: true, // Default to true (sidebar ON)
+      language: 'en',
       printerProfile: '80mm', // 80mm rolls are the common desktop POS size
       cashDrawerDevice: 0, // most drawers use the pin-2 kick
       openDrawerOnCashSale: true,
@@ -53,6 +58,12 @@ export const useSettingsStore = create<SettingsState>()(
       setPremium: (premium) => set({ isPremium: premium }),
       setPosMode: (mode) => set({ posMode: mode }),
       setSidebarVisible: (visible) => set({ sidebarVisible: visible }),
+      setLanguage: (lang) => {
+        if (typeof document !== 'undefined') {
+          document.documentElement.lang = lang;
+        }
+        set({ language: lang });
+      },
       setPrinterProfile: (profile) => set({ printerProfile: profile }),
       setCashDrawerDevice: (device) => set({ cashDrawerDevice: device }),
       setOpenDrawerOnCashSale: (enabled) => set({ openDrawerOnCashSale: enabled }),

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, Printer, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useThermalPrinter } from '../../hooks/useThermalPrinter';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ThermalPrinterModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
   activeBusiness,
 }) => {
   const { ready, refresh, printTestReceipt, openCashDrawer } = useThermalPrinter();
+  const { t } = useTranslation();
   const printerProfile = useSettingsStore((s) => s.printerProfile);
   const setPrinterProfile = useSettingsStore((s) => s.setPrinterProfile);
   const cashDrawerDevice = useSettingsStore((s) => s.cashDrawerDevice);
@@ -58,22 +60,22 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
       notify('Cash drawer opened.');
     } catch (err) {
       console.error('Open drawer failed:', err);
-      notify('Could not open the drawer. Is it wired to the printer?');
+      notify('Could not kick drawer. Check companion connection.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div style={styles.overlay}>
-      <div style={styles.content}>
-        <div style={styles.header}>
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '640px' }}>
+        <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Printer size={18} color="var(--primary)" />
-            <h3 style={styles.title}>Thermal Printer (Chittie Companion)</h3>
+            <Printer size={18} className="profile-card-icon" />
+            <h3>{t('printer.headerTitle')}</h3>
           </div>
-          <button onClick={onClose} style={styles.closeBtn}>
-            <X size={18} />
+          <button onClick={onClose} className="modal-close-btn" type="button">
+            <X size={16} />
           </button>
         </div>
 

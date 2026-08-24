@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, UserPlus, Pencil, Trash2 } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface DBEmployee {
   id: string;
@@ -44,14 +45,16 @@ export const StaffModal: React.FC<StaffModalProps> = ({
   onDelete,
   onCancelEdit,
 }) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
       <div className="modal-content" style={{ maxWidth: '680px' }}>
         <div className="modal-header">
-          <h3>Staff Management Portal</h3>
-          <button onClick={onClose} className="modal-close-btn">
+          <h3>{t('staff.headerTitle')}</h3>
+          <button onClick={onClose} className="modal-close-btn" type="button">
             <X size={16} />
           </button>
         </div>

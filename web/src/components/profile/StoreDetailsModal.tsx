@@ -3,6 +3,7 @@
 import React from 'react';
 import { X, Save, Lock, Store, Camera, Trash2 } from 'lucide-react';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface StoreDetailsModalProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
   hasItems = false,
 }) => {
   const { canPerform } = useUserPermissions();
+  const { t } = useTranslation();
   const canUpdate = canPerform('update', 'settings');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -62,8 +64,8 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <h3>Update Store details</h3>
-          <button onClick={onClose} className="modal-close-btn">
+          <h3>{t('businessDetails.title')}</h3>
+          <button onClick={onClose} className="modal-close-btn" type="button">
             <X size={16} />
           </button>
         </div>

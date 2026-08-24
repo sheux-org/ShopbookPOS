@@ -23,6 +23,7 @@ import {
   subscribePresenceObserver,
   type ActiveDeviceView,
 } from '../../services/devicePresence';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ActiveDevicesModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
   onClose,
   activeBusinessId,
 }) => {
+  const { t } = useTranslation();
   const [onlineDevices, setOnlineDevices] = useState<ActiveDeviceView[]>([]);
   const [offlineDevices, setOfflineDevices] = useState<ActiveDeviceView[]>([]);
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
@@ -59,13 +61,12 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
   }, [activeBusinessId]);
 
   useEffect(() => {
-    if (!isOpen || !activeBusinessId || activeBusinessId === '0') return;
+    if (!isOpen) return;
 
     if (typeof window !== 'undefined') {
       setCurrentDeviceId(localStorage.getItem(DEVICE_ID_KEY));
     }
 
-    setLoading(true);
     refreshOnlineDevices();
     void loadOfflineDevices();
 
@@ -77,7 +78,9 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
       },
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, [isOpen, activeBusinessId, refreshOnlineDevices, loadOfflineDevices]);
 
   const handleTerminateSession = async (targetDeviceId: string, name: string) => {
@@ -109,7 +112,7 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
   };
 
   const getRoleBadgeClass = (role: string) => {
-    switch (role.toLowerCase()) {
+    switch (role?.toLowerCase()) {
       case 'admin':
         return 'role-admin';
       case 'manager':
@@ -168,21 +171,25 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
 
           <div className="device-meta-row">
             <span className="device-meta-item">
-              <span className={`device-status-indicator ${isOnline ? 'online' : 'offline'}`} />
-              {isOnline ? 'Online' : 'Offline'}
+              <span className={`status-indicator-dot ${isOnline ? 'online' : 'offline'}`} />
+              {isOnline
+                ? 'Active online'
+                : `Last active ${formatLastActive(device.last_active_at)}`}
             </span>
-
-            {isOnline && device.battery_level !== null && device.battery_level >= 0 && (
+            {device.battery_level !== undefined &&
+              device.battery_level !== null &&
+              device.battery_level >= 0 && (
+                <span className="device-meta-item">
+                  <Battery size={11} style={{ marginRight: '2px' }} />
+                  {device.battery_level}%
+                </span>
+              )}
+            {!isOnline && (
               <span className="device-meta-item">
-                <Battery size={12} style={{ marginRight: '2px' }} />
-                {device.battery_level}%
+                <Clock size={12} style={{ marginRight: '2px' }} />
+                {formatLastActive(device.last_active_at)}
               </span>
             )}
-
-            <span className="device-meta-item">
-              <Clock size={12} style={{ marginRight: '2px' }} />
-              {formatLastActive(device.last_active_at)}
-            </span>
           </div>
 
           {device.location_name && (
@@ -244,7 +251,7 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
       <div className="modal-content" style={{ maxWidth: '600px', width: '90%' }}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h3>Active Devices & Sessions</h3>
+            <h3>{t('profile.devicesTitle')}</h3>
             <button
               onClick={() => {
                 setLoading(true);
