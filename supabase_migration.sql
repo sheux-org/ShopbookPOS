@@ -293,7 +293,9 @@ DROP FUNCTION IF EXISTS push_watermelondb_changes(json);
 
 CREATE OR REPLACE FUNCTION push_watermelondb_changes(changes json, client_business_id text)
 RETURNS void
+LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   table_name text;
@@ -809,7 +811,7 @@ BEGIN
 
   END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- 5. GRANT PERMISSIONS ON RPC FUNCTIONS TO ANON & AUTHENTICATED
 GRANT EXECUTE ON FUNCTION public.pull_watermelondb_changes(bigint, text) TO anon, authenticated;

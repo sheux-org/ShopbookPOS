@@ -5,7 +5,11 @@ CREATE OR REPLACE FUNCTION public.push_watermelondb_changes(
   changes json,
   client_business_id text
 )
-RETURNS void AS $$
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   table_name text;
   table_changes json;
@@ -509,6 +513,6 @@ BEGIN
     END IF;
   END LOOP;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 GRANT EXECUTE ON FUNCTION public.push_watermelondb_changes(json, text) TO anon, authenticated;
