@@ -3,9 +3,12 @@ import { useBusinessStore } from '../../stores/businessStore';
 import { useAuthStore } from '../../stores/authStore';
 import databaseMock, { mockCreate } from '../../db/__mocks__/database';
 
-// Mock syncDatabase
+// Mock syncDatabase and supabase client
 vi.mock('../../services/sync', () => ({
   syncDatabase: vi.fn().mockResolvedValue(true),
+  supabase: {
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+  },
 }));
 
 vi.mock('../../db/database');
@@ -197,19 +200,21 @@ describe('businessStore', () => {
 
     useAuthStore.setState({ isLoggedIn: true, userPhone: '0771112222' });
 
-    // businesses query returns the bakery (for loadBusinessesFromDb reload)
+    // businesses query returns empty for pre-check, then the bakery for loadBusinessesFromDb reload
     const bizCollection = databaseMock.get('businesses');
-    bizCollection.query.mockReturnValue({
-      fetch: vi.fn().mockResolvedValue([
-        {
-          id: 'new-biz-id',
-          name: 'My Bakery',
-          businessType: 'Bakery',
-          address: 'Galle',
-          phoneNumber: '0771112222',
-        },
-      ]),
-    });
+    bizCollection.query
+      .mockReturnValueOnce({ fetch: vi.fn().mockResolvedValue([]) })
+      .mockReturnValue({
+        fetch: vi.fn().mockResolvedValue([
+          {
+            id: 'new-biz-id',
+            name: 'My Bakery',
+            businessType: 'Bakery',
+            address: 'Galle',
+            phoneNumber: '0771112222',
+          },
+        ]),
+      });
 
     const newId = await useBusinessStore
       .getState()

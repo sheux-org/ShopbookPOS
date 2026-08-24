@@ -5,6 +5,7 @@ import database from '../db/database';
 import { SEEDING_PRODUCTS } from '../utils/seedProducts';
 import { useAuthStore } from './authStore';
 import { syncDatabase, supabase } from '../services/sync';
+import { checkPhoneAvailability, normalizePhone } from '../utils/phoneUtils';
 
 export interface Business {
   id: string;
@@ -240,13 +241,26 @@ export const useBusinessStore = create<BusinessState>()(
       },
       registerBusiness: async (name, address, phone, category = 'General Retail', logoUri = '') => {
         try {
+          const cleanPhone = normalizePhone(phone);
+          if (cleanPhone && cleanPhone.length >= 9) {
+            const phoneCheck = await checkPhoneAvailability({
+              phone: cleanPhone,
+              database,
+              supabase,
+            });
+            if (phoneCheck.isRegistered) {
+              console.warn('Cannot register business: Phone number is already registered.');
+              throw new Error('This phone number is already registered.');
+            }
+          }
+
           let newBusinessRecord: any;
           await database.write(async () => {
             newBusinessRecord = await database.get('businesses').create((biz: any) => {
               biz.name = name;
               biz.businessType = category;
               biz.address = address;
-              biz.phoneNumber = phone;
+              biz.phoneNumber = cleanPhone || phone;
               biz.logoUri = logoUri;
             });
 
@@ -254,7 +268,7 @@ export const useBusinessStore = create<BusinessState>()(
               emp.business.set(newBusinessRecord);
               emp.name = 'Owner / Admin';
               emp.role = 'admin';
-              emp.phone = phone;
+              emp.phone = cleanPhone || phone;
             });
           });
 
@@ -296,6 +310,7 @@ export const useBusinessStore = create<BusinessState>()(
       },
       updateActiveBusinessDetails: async (details) => {
         const activeBiz = get().activeBusiness;
+        const cleanPhone = normalizePhone(details.phone);
         try {
           const businesses = await database
             .get('businesses')
@@ -308,7 +323,7 @@ export const useBusinessStore = create<BusinessState>()(
                 b.name = details.name;
                 b.businessType = details.category;
                 b.address = details.address;
-                b.phoneNumber = details.phone;
+                b.phoneNumber = cleanPhone || details.phone;
                 if (details.logoUri !== undefined) {
                   b.logoUri = details.logoUri;
                 }
@@ -322,6 +337,7 @@ export const useBusinessStore = create<BusinessState>()(
         }
       },
       updateBusinessDetails: async (id, details) => {
+        const cleanPhone = normalizePhone(details.phone);
         try {
           const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
           if (businesses.length > 0) {
@@ -331,7 +347,7 @@ export const useBusinessStore = create<BusinessState>()(
                 b.name = details.name;
                 b.businessType = details.category;
                 b.address = details.address;
-                b.phoneNumber = details.phone;
+                b.phoneNumber = cleanPhone || details.phone;
                 if (details.logoUri !== undefined) {
                   b.logoUri = details.logoUri;
                 }
@@ -353,17 +369,84 @@ export const useBusinessStore = create<BusinessState>()(
           const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
           if (businesses.length > 0) {
             const targetBiz = businesses[0];
+
+            // Cascade delete child items belonging to this business
+            const [emps, prods, orders] = await Promise.all([
+              database
+                .get('employees')
+                .query(Q.where('business_id', id))
+                .fetch()
+                .catch(() => []),
+              database
+                .get('products')
+                .query(Q.where('business_id', id))
+                .fetch()
+                .catch(() => []),
+              database
+                .get('orders')
+                .query(Q.where('business_id', id))
+                .fetch()
+                .catch(() => []),
+            ]);
+
+            const prodIds = prods.map((p: any) => p.id);
+            const orderIds = orders.map((o: any) => o.id);
+
+            const [orderItems, invLogs] = await Promise.all([
+              orderIds.length > 0
+                ? database
+                    .get('order_items')
+                    .query(Q.where('order_id', Q.oneOf(orderIds)))
+                    .fetch()
+                    .catch(() => [])
+                : Promise.resolve([]),
+              prodIds.length > 0
+                ? database
+                    .get('inventory_logs')
+                    .query(Q.where('product_id', Q.oneOf(prodIds)))
+                    .fetch()
+                    .catch(() => [])
+                : Promise.resolve([]),
+            ]);
+
             await database.write(async () => {
-              await targetBiz.destroyPermanently();
+              for (const item of orderItems) {
+                if ((item as any).markAsDeleted) await (item as any).markAsDeleted();
+                else if ((item as any).destroyPermanently) await (item as any).destroyPermanently();
+              }
+              for (const log of invLogs) {
+                if ((log as any).markAsDeleted) await (log as any).markAsDeleted();
+                else if ((log as any).destroyPermanently) await (log as any).destroyPermanently();
+              }
+              for (const order of orders) {
+                if ((order as any).markAsDeleted) await (order as any).markAsDeleted();
+                else if ((order as any).destroyPermanently)
+                  await (order as any).destroyPermanently();
+              }
+              for (const prod of prods) {
+                if ((prod as any).markAsDeleted) await (prod as any).markAsDeleted();
+                else if ((prod as any).destroyPermanently) await (prod as any).destroyPermanently();
+              }
+              for (const emp of emps) {
+                if ((emp as any).markAsDeleted) await (emp as any).markAsDeleted();
+                else if ((emp as any).destroyPermanently) await (emp as any).destroyPermanently();
+              }
+              if ((targetBiz as any).markAsDeleted) {
+                await (targetBiz as any).markAsDeleted();
+              } else if ((targetBiz as any).destroyPermanently) {
+                await (targetBiz as any).destroyPermanently();
+              }
             });
           }
           await get().loadBusinessesFromDb();
           syncDatabase(); // Trigger real-time background replication
 
           if (get().activeBusiness.id === id) {
-            const remaining = get().businesses;
+            const remaining = get().businesses.filter((b) => b.id !== id);
             if (remaining.length > 0) {
               set({ activeBusiness: remaining[0] });
+            } else {
+              set({ activeBusiness: PLACEHOLDER_BUSINESS });
             }
           }
         } catch (err) {

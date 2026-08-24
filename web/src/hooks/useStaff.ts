@@ -1,7 +1,8 @@
 import { Q } from '@nozbe/watermelondb';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import database from '../db/database';
-import { syncDatabase } from '../services/sync';
+import { supabase, syncDatabase } from '../services/sync';
+import { checkPhoneAvailability, normalizePhone } from '../utils/phoneUtils';
 
 export interface StaffMember {
   id: string;
@@ -45,6 +46,23 @@ export function useCreateStaff(businessId: string) {
       email?: string;
     }) => {
       const { name, role, phone, email } = params;
+      const cleanPhone = normalizePhone(phone);
+
+      if (!cleanPhone || cleanPhone.length < 9) {
+        throw new Error('Please enter a valid phone number.');
+      }
+
+      // Check phone uniqueness locally and in Cloud
+      const phoneCheck = await checkPhoneAvailability({
+        phone: cleanPhone,
+        database,
+        supabase,
+      });
+
+      if (phoneCheck.isRegistered) {
+        throw new Error('This phone number is already registered.');
+      }
+
       const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
       const dbBiz = businesses[0];
 
@@ -54,28 +72,21 @@ export function useCreateStaff(businessId: string) {
 
       const dbRole = role === 'Admin' ? 'admin' : role === 'Manager' ? 'manager' : 'cashier';
 
-      const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, '');
-        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-        return cleaned;
-      };
-
-      const cleanPhone = normalizePhone(phone);
-
       await database.write(async () => {
         await database.get('employees').create((emp: any) => {
           emp.business.set(dbBiz);
-          emp.name = name;
+          emp.name = name.trim();
           emp.role = dbRole;
           emp.phone = cleanPhone;
-          emp.email = email || '';
+          emp.email = (email || '').trim();
         });
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff', businessId] });
-      syncDatabase(); // Trigger real-time background replication
+      syncDatabase().catch((err) => {
+        console.error('Failed to sync staff addition to cloud:', err);
+      });
     },
   });
 }
@@ -98,15 +109,24 @@ export function useUpdateStaff(businessId: string) {
       }
 
       const targetEmp = employees[0] as any;
-
-      const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, '');
-        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-        return cleaned;
-      };
-
       const cleanPhone = normalizePhone(phone);
+
+      if (!cleanPhone || cleanPhone.length < 9) {
+        throw new Error('Please enter a valid phone number.');
+      }
+
+      // Check phone uniqueness excluding current employee
+      const phoneCheck = await checkPhoneAvailability({
+        phone: cleanPhone,
+        excludeEmployeeId: id,
+        database,
+        supabase,
+      });
+
+      if (phoneCheck.isRegistered) {
+        throw new Error('This phone number is already registered.');
+      }
+
       const dbRole = role === 'Admin' ? 'admin' : role === 'Manager' ? 'manager' : 'cashier';
       const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
       const dbBiz = businesses[0] as any;
@@ -131,7 +151,9 @@ export function useUpdateStaff(businessId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff', businessId] });
-      syncDatabase(); // Trigger real-time background replication
+      syncDatabase().catch((err) => {
+        console.error('Failed to sync staff update to cloud:', err);
+      });
     },
   });
 }
@@ -149,12 +171,6 @@ export function useDeleteStaff(businessId: string) {
       const targetEmp = employees[0] as any;
       const businesses = await database.get('businesses').query(Q.where('id', businessId)).fetch();
       const dbBiz = businesses[0] as any;
-      const normalizePhone = (phoneStr: string): string => {
-        let cleaned = (phoneStr || '').replace(/\D/g, '');
-        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-        return cleaned;
-      };
       const ownerPhone = dbBiz?.phoneNumber ? normalizePhone(dbBiz.phoneNumber) : '';
 
       const isOwner =
@@ -166,12 +182,14 @@ export function useDeleteStaff(businessId: string) {
       }
 
       await database.write(async () => {
-        await targetEmp.destroyPermanently();
+        await targetEmp.markAsDeleted();
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff', businessId] });
-      syncDatabase(); // Trigger real-time background replication
+      syncDatabase().catch((err) => {
+        console.error('Failed to sync staff deletion to cloud:', err);
+      });
     },
   });
 }

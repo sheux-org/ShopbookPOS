@@ -279,9 +279,9 @@ export default function ProfilePage() {
             setNewStaffPhone('');
             setNewStaffRole('cashier');
           },
-          onError: (err) => {
+          onError: (err: any) => {
             console.error('Failed to register staff:', err);
-            triggerToast('Failed to onboard staff member.');
+            triggerToast(err.message || 'Failed to onboard staff member.');
           },
         }
       );

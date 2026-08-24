@@ -19,10 +19,12 @@ import {
   removeProductImage,
 } from '../services/uploadQueue';
 import { generateEAN13 } from '../utils/barcodeGenerator';
+import { syncDatabase } from '../services/sync';
 
 function invalidateProductQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['products'] });
   queryClient.invalidateQueries({ queryKey: ['category-product-counts'] });
+  syncDatabase().catch((err) => console.error('Product auto-sync failed:', err));
 }
 
 export interface DBProduct {
@@ -428,8 +430,14 @@ export function useDeleteProduct() {
         }
       }
 
+      // Fetch related inventory logs
+      const invLogs = await database.get('inventory_logs').query(Q.where('product_id', id)).fetch();
+
       await database.write(async () => {
-        await product.destroyPermanently();
+        for (const log of invLogs) {
+          await (log as any).markAsDeleted();
+        }
+        await product.markAsDeleted();
       });
     },
     onSuccess: () => {

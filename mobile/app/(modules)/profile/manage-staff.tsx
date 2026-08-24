@@ -87,8 +87,8 @@ export default function ManageStaffRoute() {
           setEditingStaff(null);
           hapticFeedback.notificationSuccess();
         },
-        onError: () => {
-          triggerToast('Failed to update staff details.');
+        onError: (err: any) => {
+          triggerToast(err?.message || 'Failed to update staff details.');
           hapticFeedback.notificationError();
         },
       }
@@ -112,8 +112,8 @@ export default function ManageStaffRoute() {
                 triggerToast('Staff member removed successfully! 🗑️');
                 hapticFeedback.notificationSuccess();
               },
-              onError: () => {
-                triggerToast('Failed to delete staff member.');
+              onError: (err: any) => {
+                triggerToast(err?.message || 'Failed to delete staff member.');
                 hapticFeedback.notificationError();
               },
             });
@@ -155,8 +155,8 @@ export default function ManageStaffRoute() {
           setNewPhone('');
           hapticFeedback.notificationSuccess();
         },
-        onError: () => {
-          triggerToast('Failed to add staff member.');
+        onError: (err: any) => {
+          triggerToast(err?.message || 'Failed to add staff member.');
           hapticFeedback.notificationError();
         },
       }

@@ -5,6 +5,7 @@ import { supabase, syncDatabase } from '../services/sync';
 import { useAuthStore } from '../stores/useAuthStore';
 import { Business, useBusinessStore } from '../stores/useBusinessStore';
 import { SEEDING_PRODUCTS } from '../utils/seedProducts';
+import { checkPhoneAvailability, normalizePhone } from '../utils/phoneUtils';
 
 // Onboarding placeholder when no business is registered yet
 const PLACEHOLDER_BUSINESS: Business = {
@@ -26,13 +27,6 @@ export function useBusinesses() {
       if (!isLoggedIn || !loggedInPhone) {
         return [PLACEHOLDER_BUSINESS];
       }
-
-      const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, '');
-        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-        return cleaned;
-      };
 
       const cleanLoggedInPhone = normalizePhone(loggedInPhone);
       const matchedBusinessesMap = new Map<string, any>();
@@ -105,20 +99,37 @@ export function useRegisterBusiness() {
       category?: string;
     }) => {
       const { name, address, phone, category = 'General Retail' } = params;
+      const cleanPhone = normalizePhone(phone);
+
+      if (!cleanPhone || cleanPhone.length < 9) {
+        throw new Error('Please enter a valid phone number.');
+      }
+
+      // Check phone uniqueness locally and in Cloud
+      const phoneCheck = await checkPhoneAvailability({
+        phone: cleanPhone,
+        database,
+        supabase,
+      });
+
+      if (phoneCheck.isRegistered) {
+        throw new Error('This phone number is already registered.');
+      }
+
       let newBusinessRecord: any;
       await database.write(async () => {
         newBusinessRecord = await database.get('businesses').create((biz: any) => {
           biz.name = name;
           biz.businessType = category;
           biz.address = address;
-          biz.phoneNumber = phone;
+          biz.phoneNumber = cleanPhone;
         });
 
         await database.get('employees').create((emp: any) => {
           emp.business.set(newBusinessRecord);
           emp.name = 'Owner / Admin';
           emp.role = 'admin';
-          emp.phone = phone;
+          emp.phone = cleanPhone;
         });
       });
 
@@ -148,7 +159,7 @@ export function useRegisterBusiness() {
         name,
         category,
         address,
-        phone,
+        phone: cleanPhone,
         logoUri: '',
       };
     },
@@ -185,6 +196,20 @@ export function useUpdateActiveBusiness() {
       logoUri?: string;
     }) => {
       const activeBiz = useBusinessStore.getState().activeBusiness;
+      const cleanPhone = normalizePhone(details.phone);
+
+      if (cleanPhone) {
+        const phoneCheck = await checkPhoneAvailability({
+          phone: cleanPhone,
+          excludeBusinessId: activeBiz.id,
+          database,
+          supabase,
+        });
+
+        if (phoneCheck.isRegistered) {
+          throw new Error('This phone number is already registered.');
+        }
+      }
 
       const businesses = await database
         .get('businesses')
@@ -197,7 +222,7 @@ export function useUpdateActiveBusiness() {
             b.name = details.name;
             b.businessType = details.category;
             b.address = details.address;
-            b.phoneNumber = details.phone;
+            b.phoneNumber = cleanPhone || details.phone;
             if (details.logoUri !== undefined) {
               b.logoUri = details.logoUri;
             }
@@ -209,7 +234,7 @@ export function useUpdateActiveBusiness() {
             b.name = details.name;
             b.businessType = details.category;
             b.address = details.address;
-            b.phoneNumber = details.phone;
+            b.phoneNumber = cleanPhone || details.phone;
             b.logoUri = details.logoUri || '';
           });
         });
@@ -262,6 +287,20 @@ export function useUpdateBusiness() {
       };
     }) => {
       const { id, details } = params;
+      const cleanPhone = normalizePhone(details.phone);
+
+      if (cleanPhone) {
+        const phoneCheck = await checkPhoneAvailability({
+          phone: cleanPhone,
+          excludeBusinessId: id,
+          database,
+          supabase,
+        });
+
+        if (phoneCheck.isRegistered) {
+          throw new Error('This phone number is already registered.');
+        }
+      }
 
       const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
       if (businesses.length > 0) {
@@ -271,7 +310,7 @@ export function useUpdateBusiness() {
             b.name = details.name;
             b.businessType = details.category;
             b.address = details.address;
-            b.phoneNumber = details.phone;
+            b.phoneNumber = cleanPhone || details.phone;
             if (details.logoUri !== undefined) {
               b.logoUri = details.logoUri;
             }
@@ -322,8 +361,39 @@ export function useDeleteBusiness() {
       const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
       if (businesses.length > 0) {
         const targetBiz = businesses[0];
+
+        // Cascade delete all child items belonging to this business
+        const [emps, prods, orders] = await Promise.all([
+          database.get('employees').query(Q.where('business_id', id)).fetch(),
+          database.get('products').query(Q.where('business_id', id)).fetch(),
+          database.get('orders').query(Q.where('business_id', id)).fetch(),
+        ]);
+
+        const prodIds = prods.map((p) => p.id);
+        const orderIds = orders.map((o) => o.id);
+
+        const [orderItems, invLogs] = await Promise.all([
+          orderIds.length > 0
+            ? database
+                .get('order_items')
+                .query(Q.where('order_id', Q.oneOf(orderIds)))
+                .fetch()
+            : Promise.resolve([]),
+          prodIds.length > 0
+            ? database
+                .get('inventory_logs')
+                .query(Q.where('product_id', Q.oneOf(prodIds)))
+                .fetch()
+            : Promise.resolve([]),
+        ]);
+
         await database.write(async () => {
-          await targetBiz.destroyPermanently();
+          for (const item of orderItems) await (item as any).markAsDeleted();
+          for (const log of invLogs) await (log as any).markAsDeleted();
+          for (const order of orders) await (order as any).markAsDeleted();
+          for (const prod of prods) await (prod as any).markAsDeleted();
+          for (const emp of emps) await (emp as any).markAsDeleted();
+          await targetBiz.markAsDeleted();
         });
       }
       return id;
