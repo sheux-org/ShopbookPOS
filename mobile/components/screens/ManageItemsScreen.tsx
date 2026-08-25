@@ -278,7 +278,7 @@ export const ManageItemsScreen: React.FC = () => {
   };
 
   const handleUpdateProduct = async () => {
-    if (!editName || !editSalesPrice || !editStockCount) {
+    if (!editName.trim() || !editSalesPrice || !editStockCount) {
       Alert.alert(
         'Required Fields Missing',
         'Please enter product name, selling price, and stock quantity.'
@@ -286,10 +286,10 @@ export const ManageItemsScreen: React.FC = () => {
       return;
     }
 
-    if (!editQuickCode && !editBarcode) {
+    if (!editQuickCode.trim() && !editBarcode.trim()) {
       Alert.alert(
-        'Identification Required',
-        'Please enter at least either a Quick Code or a Barcode.'
+        'Code Required',
+        'Please provide either a Quick Code or a Barcode for the product.'
       );
       return;
     }
@@ -741,11 +741,11 @@ export const ManageItemsScreen: React.FC = () => {
                   <Text style={styles.fieldLabel}>{t('catalog.quickCode')}</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholder="e.g. 101"
+                    placeholder="e.g. 2016"
                     value={editQuickCode}
-                    onChangeText={setEditQuickCode}
+                    onChangeText={(text) => setEditQuickCode(text.slice(0, 5))}
                     keyboardType="numeric"
-                    maxLength={6}
+                    maxLength={5}
                     placeholderTextColor="#A0AEC0"
                   />
                 </View>

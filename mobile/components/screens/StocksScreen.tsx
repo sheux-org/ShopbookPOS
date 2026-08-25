@@ -98,7 +98,7 @@ export const StocksScreen: React.FC = () => {
   const [formImage, setFormImage] = useState('');
   const [isScanning, setIsScanning] = useState(false);
 
-  const { generateUniqueBarcode } = useFindProduct();
+  const { generateUniqueBarcode, checkDuplicateCodes } = useFindProduct();
 
   const handleAutoGenerateBarcode = async () => {
     try {
@@ -132,7 +132,7 @@ export const StocksScreen: React.FC = () => {
   };
 
   const handlePickImage = async (source: 'camera' | 'gallery') => {
-    // Small delay to let the sheet close before opening picker
+    setImgSheetVisible(false);
     await new Promise((r) => setTimeout(r, 200));
 
     let localUri: string | null = null;
@@ -205,14 +205,14 @@ export const StocksScreen: React.FC = () => {
     setFormImage('');
   };
 
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!canPerform('create', 'products')) {
       hapticFeedback.notificationError();
       Alert.alert('Access Denied', 'Your profile role is not authorized to add new catalog items.');
       return;
     }
 
-    if (!formName || !formSalesPrice || !formStockIn) {
+    if (!formName.trim() || !formSalesPrice || !formStockIn) {
       hapticFeedback.notificationWarning();
       Alert.alert(
         'Required Fields Missing',
@@ -221,11 +221,11 @@ export const StocksScreen: React.FC = () => {
       return;
     }
 
-    if (!formQuickCode && !formBarcode) {
+    if (!formQuickCode.trim() && !formBarcode.trim()) {
       hapticFeedback.notificationWarning();
       Alert.alert(
-        'Identification Required',
-        'Please enter at least either a Quick Code or a Barcode to identify this product.'
+        'Code Required',
+        'Please provide either a Quick Code or a Barcode for the product.'
       );
       return;
     }
@@ -241,9 +241,32 @@ export const StocksScreen: React.FC = () => {
       return;
     }
 
+    // Validate duplicate codes across products
+    const dupResult = await checkDuplicateCodes({
+      barcode: formBarcode.trim() || undefined,
+      quickCode: formQuickCode.trim() || undefined,
+    });
+
+    if (dupResult?.barcodeDuplicate) {
+      hapticFeedback.notificationError();
+      Alert.alert(
+        'Duplicate Barcode Error',
+        `The barcode "${formBarcode}" is already in use by product "${dupResult.barcodeDuplicate.name}". Barcodes must be unique!`
+      );
+      return;
+    }
+    if (dupResult?.quickCodeDuplicate) {
+      hapticFeedback.notificationError();
+      Alert.alert(
+        'Duplicate Quick Code Error',
+        `The quick code "${formQuickCode}" is already in use by product "${dupResult.quickCodeDuplicate.name}". Quick codes must be unique!`
+      );
+      return;
+    }
+
     // Save product dynamically using React Query mutation hook
     addProductMutation.mutate({
-      name: formName,
+      name: formName.trim(),
       price: priceNum,
       category: formCategory,
       // icon is the real uploaded photo URL, or empty string if no photo was set
@@ -251,8 +274,8 @@ export const StocksScreen: React.FC = () => {
       stockCount: stockCount,
       unitType: formUnitType,
       costPrice: costNum,
-      quickCode: formQuickCode || undefined,
-      barcode: formBarcode || undefined,
+      quickCode: formQuickCode.trim() || undefined,
+      barcode: formBarcode.trim() || undefined,
       lowStockAlert: lowStockThreshold,
     });
 
@@ -353,10 +376,11 @@ export const StocksScreen: React.FC = () => {
                   <Text style={styles.fieldLabel}>{t('catalog.quickCode')}</Text>
                   <TextInput
                     style={styles.formInput}
-                    placeholder="e.g. QC-302"
+                    placeholder="e.g. 2016"
                     placeholderTextColor="#9CA3AF"
+                    maxLength={5}
                     value={formQuickCode}
-                    onChangeText={setFormQuickCode}
+                    onChangeText={(text) => setFormQuickCode(text.slice(0, 5))}
                   />
                 </View>
 
@@ -512,7 +536,7 @@ export const StocksScreen: React.FC = () => {
 
               {/* ────── Product Image / Icon field ────── */}
               <View style={styles.fieldRow}>
-                <Text style={styles.fieldLabel}>{t('catalog.productImage')} *</Text>
+                <Text style={styles.fieldLabel}>{t('catalog.productImage')}</Text>
                 <Text style={styles.fieldHelpText}>{t('catalog.uploadImageHint')}</Text>
 
                 <View style={styles.imgPickerPanel}>
