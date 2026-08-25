@@ -199,18 +199,10 @@ export default function StocksPage() {
             }}
             onAddItem={() => setShowAddModal(true)}
             activeTab={activeTab}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
           />
-          {activeTab === 'inventory' && hasNextPage && (
-            <div style={styles.loadMoreContainer}>
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                style={styles.loadMoreBtn}
-              >
-                {isFetchingNextPage ? 'Loading more...' : 'Load More Products ⬇️'}
-              </button>
-            </div>
-          )}
         </div>
 
         <AuditLogScroller logs={logs} activeTab={activeTab} />
@@ -275,22 +267,5 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     height: '100%',
     minWidth: 0,
-  },
-  loadMoreContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    margin: '8px 0 16px 0',
-  },
-  loadMoreBtn: {
-    padding: '8px 20px',
-    borderRadius: '20px',
-    border: '1px solid var(--border)',
-    backgroundColor: '#ffffff',
-    color: 'var(--primary)',
-    fontWeight: 'bold',
-    fontSize: '12px',
-    cursor: 'pointer',
-    boxShadow: 'var(--shadow)',
-    transition: 'background-color 0.2s',
   },
 };

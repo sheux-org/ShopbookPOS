@@ -11,6 +11,8 @@ import {
 } from '../../utils/businessTypeConfig';
 import { Scanner } from '../Scanner';
 import { useFindProduct } from '../../hooks/useProducts';
+import { useTranslation } from '../../hooks/useTranslation';
+import { SideDrawer } from '../common/SideDrawer';
 
 interface DBProduct {
   id: string;
@@ -53,6 +55,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const { t } = useTranslation();
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const { checkDuplicateCodes, generateUniqueBarcode } = useFindProduct();
   const config = getBusinessTypeConfig(activeBusiness?.category);
@@ -105,8 +108,6 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
       setUploadingImage(false);
     }
   }, [isOpen, mode, product, config.defaultCategory, config.defaultUnitType]);
-
-  if (!isOpen) return null;
 
   const readAsBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -218,23 +219,49 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
     }
   };
 
-  return (
-    <div style={styles.modalOverlay}>
-      <div style={{ ...styles.modalContent, maxWidth: '580px' }}>
-        <div style={styles.modalHeader}>
-          <div>
-            <h3 style={styles.modalTitle}>
-              {mode === 'create' ? 'Register New Product' : 'Edit Catalog Product'}
-            </h3>
-            <p style={styles.modalSubtitle}>
-              Manage item metadata, pricing, inventory alerts, and image representation.
-            </p>
+  const drawerFooter = (
+    <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: 'flex-end' }}>
+      <button
+        type="button"
+        onClick={onClose}
+        style={styles.cancelBtn}
+        disabled={submitting}
+      >
+        {t('common.cancel')}
+      </button>
+      <button
+        type="submit"
+        form="register-product-form"
+        disabled={submitting || uploadingImage}
+        style={styles.modalSubmitBtn}
+      >
+        {submitting ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Loader2 size={16} className="animate-spin" />
+            <span>{t('common.loading')}</span>
           </div>
-          <button onClick={onClose} style={styles.modalCloseBtn}>
-            <X size={18} />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} style={styles.modalForm}>
+        ) : (
+          <span>
+            {mode === 'create'
+              ? t('catalog.saveProductToCatalog')
+              : t('catalog.editProduct')}
+          </span>
+        )}
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <SideDrawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title={mode === 'create' ? t('catalog.addProduct') : t('catalog.editProduct')}
+        subtitle={mode === 'create' ? t('catalog.addProductSub') : t('catalog.editProductSub')}
+        maxWidth="600px"
+        footer={drawerFooter}
+      >
+        <form id="register-product-form" onSubmit={handleSubmit} style={styles.modalForm}>
           <div style={styles.modalBody}>
             {/* Top Section: Name, Barcode, Quick Code on left; Image on right */}
             <div style={styles.topSection}>
@@ -242,7 +269,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               <div style={styles.topLeftCol}>
                 {/* Row 1: Product Name */}
                 <div style={styles.modalInputGroup}>
-                  <label style={styles.modalLabel}>Product Name *</label>
+                  <label style={styles.modalLabel}>{t('catalog.productName')} *</label>
                   <input
                     type="text"
                     placeholder="e.g. Anchor Milk Powder 400g"
@@ -263,7 +290,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                         alignItems: 'center',
                       }}
                     >
-                      <label style={styles.modalLabel}>Barcode</label>
+                      <label style={styles.modalLabel}>{t('catalog.barcode')}</label>
                       <button
                         type="button"
                         onClick={async () => {
@@ -278,7 +305,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                         style={styles.labelActionBtn}
                         title="Auto-generate standard retail EAN-13 barcode"
                       >
-                        Generate Code
+                        {t('catalog.autoGen')}
                       </button>
                     </div>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -301,12 +328,13 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                   </div>
 
                   <div style={styles.modalInputGroup}>
-                    <label style={styles.modalLabel}>Quick Code</label>
+                    <label style={styles.modalLabel}>{t('catalog.quickCode')}</label>
                     <input
                       type="text"
+                      maxLength={5}
                       placeholder="e.g. 2016"
                       value={quickCode}
-                      onChange={(e) => setQuickCode(e.target.value)}
+                      onChange={(e) => setQuickCode(e.target.value.slice(0, 5))}
                       style={styles.modalInput}
                     />
                   </div>
@@ -315,7 +343,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
 
               {/* Right Column (Image) */}
               <div style={styles.topRightCol}>
-                <label style={styles.modalLabel}>Product Image</label>
+                <label style={styles.modalLabel}>{t('catalog.productImage')}</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -364,7 +392,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
                         marginTop: '4px',
                       }}
                     >
-                      Upload Image
+                      {t('catalog.uploadImage')}
                     </span>
                     <span style={{ fontSize: '9px', color: 'var(--muted)', marginTop: '2px' }}>
                       (Max 4MB)
@@ -385,7 +413,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
             {/* Grid 2 Columns - Category & Unit Type dropdowns */}
             <div style={styles.gridTwo}>
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Category</label>
+                <label style={styles.modalLabel}>{t('catalog.category')}</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -400,7 +428,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               </div>
 
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Unit Type</label>
+                <label style={styles.modalLabel}>{t('catalog.unitType')}</label>
                 <select
                   value={unitType}
                   onChange={(e) => setUnitType(e.target.value)}
@@ -418,7 +446,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
             {/* Grid 2 Columns Price */}
             <div style={styles.gridTwo}>
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Selling Price (Rs.) *</label>
+                <label style={styles.modalLabel}>{t('catalog.price')} (Rs.) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -431,7 +459,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               </div>
 
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Cost Price (Rs.)</label>
+                <label style={styles.modalLabel}>{t('catalog.costPrice')} (Rs.)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -446,7 +474,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
             {/* Grid 2 Columns Stock */}
             <div style={styles.gridTwo}>
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Stock Quantity *</label>
+                <label style={styles.modalLabel}>{t('catalog.stockQuantity')} *</label>
                 <input
                   type="number"
                   placeholder="e.g. 50"
@@ -458,7 +486,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               </div>
 
               <div style={styles.modalInputGroup}>
-                <label style={styles.modalLabel}>Low Alert Level</label>
+                <label style={styles.modalLabel}>{t('catalog.lowStockAlert')}</label>
                 <input
                   type="number"
                   placeholder="e.g. 5"
@@ -469,22 +497,8 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
               </div>
             </div>
           </div>
-
-          <div style={styles.modalFooter}>
-            <button
-              type="submit"
-              disabled={submitting || uploadingImage}
-              style={styles.modalSubmitBtn}
-            >
-              {submitting
-                ? 'Saving changes...'
-                : mode === 'create'
-                  ? 'Save Product to Catalog'
-                  : 'Update Catalog details'}
-            </button>
-          </div>
         </form>
-      </div>
+      </SideDrawer>
       {showScanner && (
         <Scanner
           onScan={(code) => {
@@ -494,7 +508,7 @@ export const RegisterProductModal: React.FC<RegisterProductModalProps> = ({
           onClose={() => setShowScanner(false)}
         />
       )}
-    </div>
+    </>
   );
 };
 
@@ -565,15 +579,14 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
   },
   modalBody: {
-    padding: '24px',
+    padding: '0',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
-    overflowY: 'auto',
+    gap: '12px',
     flex: 1,
   },
   modalFooter: {
-    padding: '16px 24px',
+    padding: '12px 0 0 0',
     borderTop: '1px solid var(--border)',
     backgroundColor: '#ffffff',
     flexShrink: 0,
@@ -581,7 +594,7 @@ const styles: Record<string, React.CSSProperties> = {
   modalInputGroup: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '4px',
   },
   modalLabel: {
     fontSize: '11px',
@@ -593,20 +606,20 @@ const styles: Record<string, React.CSSProperties> = {
   },
   modalInput: {
     width: '100%',
-    padding: '10px 14px',
+    padding: '8px 12px',
     borderRadius: '8px',
     border: '1px solid var(--border)',
-    fontSize: '14px',
+    fontSize: '13px',
     outline: 'none',
     backgroundColor: '#ffffff',
     transition: 'border-color 0.2s, box-shadow 0.2s',
   },
   select: {
     width: '100%',
-    padding: '10px 14px',
+    padding: '8px 12px',
     borderRadius: '8px',
     border: '1px solid var(--border)',
-    fontSize: '14px',
+    fontSize: '13px',
     outline: 'none',
     backgroundColor: '#ffffff',
     cursor: 'pointer',
@@ -614,67 +627,67 @@ const styles: Record<string, React.CSSProperties> = {
   },
   gridTwo: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
   },
   divider: {
     height: '1px',
     backgroundColor: 'var(--border)',
-    margin: '8px 0 16px 0',
+    margin: '2px 0 6px 0',
     width: '100%',
   },
   modalSubmitBtn: {
     width: '100%',
-    padding: '12px',
+    padding: '10px 18px',
     borderRadius: '8px',
     backgroundColor: 'var(--primary)',
     color: '#ffffff',
     border: 'none',
     fontWeight: '700',
-    fontSize: '14px',
+    fontSize: '13px',
     cursor: 'pointer',
     transition: 'background-color 0.2s',
   },
   topSection: {
     display: 'flex',
-    gap: '24px',
+    gap: '14px',
     alignItems: 'flex-start',
   },
   topLeftCol: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '10px',
   },
   topRightCol: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '4px',
     flexShrink: 0,
   },
   topSubGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '16px',
+    gridTemplateColumns: '1.2fr 0.8fr',
+    gap: '10px',
   },
   compactUploadPlaceholder: {
-    width: '120px',
-    height: '120px',
+    width: '104px',
+    height: '104px',
     borderRadius: '8px',
     border: '1.5px dashed var(--border)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '6px',
+    gap: '4px',
     cursor: 'pointer',
     backgroundColor: '#fafafa',
     transition: 'all 0.2s ease',
     position: 'relative',
   },
   compactImagePreviewContainer: {
-    width: '120px',
-    height: '120px',
+    width: '104px',
+    height: '104px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -746,5 +759,16 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
     letterSpacing: '0.3px',
     transition: 'color 0.2s ease',
+  },
+  cancelBtn: {
+    padding: '10px 18px',
+    borderRadius: 'var(--radius)',
+    border: '1px solid var(--border)',
+    backgroundColor: '#ffffff',
+    color: 'var(--dark)',
+    fontWeight: '600',
+    fontSize: '13px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
 };

@@ -437,6 +437,7 @@ export default {
     removeConfirmMsg:
       'ඔබට "{name}" නමැති සේවකයා ස්ථිරවම ඉවත් කිරීමට අවශ්‍යද? මෙම ක්‍රියාව ආපසු හැරවිය නොහැක.',
     removeBtn: 'සේවකයා ඉවත් කරන්න',
+    phoneAlreadyRegistered: 'මෙම දුරකථන අංකය දැනටමත් ලියාපදිංචි කර ඇත.',
   },
   premium: {
     headerTitle: 'Shopbook POS Pro',

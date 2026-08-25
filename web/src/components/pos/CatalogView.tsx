@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Search, ShoppingBag, Plus } from 'lucide-react';
 import { ProductImage } from '../ProductImage';
 import { useBusinessStore } from '../../stores/businessStore';
 import { getCategoryEmoji } from '../../utils/businessTypeConfig';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface DBProduct {
   id: string;
@@ -51,7 +52,27 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
   fetchNextPage,
   isFetchingNextPage,
 }) => {
+  const { t } = useTranslation();
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasNextPage || !fetchNextPage || isFetchingNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: '250px' }
+    );
+    const target = sentinelRef.current;
+    if (target) observer.observe(target);
+    return () => {
+      if (target) observer.unobserve(target);
+      observer.disconnect();
+    };
+  }, [hasNextPage, fetchNextPage, isFetchingNextPage, filteredProducts.length]);
   return (
     <div style={styles.catalogPane}>
       {/* Header query search panel */}
@@ -183,18 +204,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                 <p>Try searching another item or add a new product to the catalog.</p>
               </div>
             )}
+
+            {/* Infinite Scroll Sentinel & Micro Loading Indicator */}
+            {hasNextPage && <div ref={sentinelRef} style={{ height: '24px', width: '100%', gridColumn: '1 / -1', pointerEvents: 'none' }} />}
+            {isFetchingNextPage && (
+              <div style={styles.inlineLoaderContainer}>
+                <div style={styles.inlineSpinner} />
+                <span style={styles.inlineLoaderText}>{t('common.loading')}</span>
+              </div>
+            )}
           </div>
-          {hasNextPage && fetchNextPage && (
-            <div style={styles.loadMoreContainer}>
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                style={styles.loadMoreBtn}
-              >
-                {isFetchingNextPage ? 'Loading...' : 'Load More Products ⬇️'}
-              </button>
-            </div>
-          )}
         </>
       ) : (
         /* POS Sidebar + Catalog list layout */
@@ -248,24 +267,17 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                         size={120}
                         style={{ width: '100%', height: '100%', borderRadius: 0, border: 'none' }}
                       />
+                      {isOut && <span style={styles.stockBadgeOut}>Out of Stock</span>}
+                      {isLow && !isOut && (
+                        <span style={styles.stockBadgeLow}>Low: {p.stockCount} left</span>
+                      )}
                     </div>
                     <div style={styles.catalogCardDetails}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div>
                         <h4 style={styles.productName} title={p.name}>
                           {p.name}
                         </h4>
-                        <span style={styles.productPrice}>Rs. {p.price}</span>
-                        {isOut ? (
-                          <span style={{ ...styles.productStock, ...styles.productStockOut }}>
-                            Out of Stock
-                          </span>
-                        ) : isLow ? (
-                          <span style={{ ...styles.productStock, ...styles.productStockLow }}>
-                            Low Stock ({p.stockCount})
-                          </span>
-                        ) : (
-                          <span style={styles.productStock}>Stock: {p.stockCount}</span>
-                        )}
+                        <div style={styles.productPrice}>Rs. {p.price.toLocaleString()}</div>
                       </div>
                       <button
                         disabled={isOut}
@@ -281,18 +293,16 @@ export const CatalogView: React.FC<CatalogViewProps> = ({
                   </div>
                 );
               })}
+
+              {/* Infinite Scroll Sentinel & Micro Loading Indicator */}
+              {hasNextPage && <div ref={sentinelRef} style={{ height: '24px', width: '100%', gridColumn: '1 / -1', pointerEvents: 'none' }} />}
+              {isFetchingNextPage && (
+                <div style={styles.inlineLoaderContainer}>
+                  <div style={styles.inlineSpinner} />
+                  <span style={styles.inlineLoaderText}>{t('common.loading')}</span>
+                </div>
+              )}
             </div>
-            {hasNextPage && fetchNextPage && (
-              <div style={styles.loadMoreContainer}>
-                <button
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                  style={styles.loadMoreBtn}
-                >
-                  {isFetchingNextPage ? 'Loading...' : 'Load More Products ⬇️'}
-                </button>
-              </div>
-            )}
 
             {filteredProducts.length === 0 && (
               <div style={styles.emptyGridState}>
@@ -608,23 +618,26 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#94a3b8',
     cursor: 'not-allowed',
   },
-  loadMoreContainer: {
+  inlineLoaderContainer: {
     display: 'flex',
+    alignItems: 'center',
     justifyContent: 'center',
-    margin: '12px 0 24px 0',
-    flexShrink: 0,
+    gap: '8px',
+    padding: '16px 0 24px 0',
     width: '100%',
+    gridColumn: '1 / -1',
   },
-  loadMoreBtn: {
-    padding: '8px 20px',
-    borderRadius: '20px',
-    border: '1px solid var(--border)',
-    backgroundColor: '#ffffff',
-    color: 'var(--primary)',
-    fontWeight: 'bold',
+  inlineSpinner: {
+    width: '16px',
+    height: '16px',
+    border: '2px solid var(--border)',
+    borderTopColor: 'var(--primary)',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+  },
+  inlineLoaderText: {
     fontSize: '12px',
-    cursor: 'pointer',
-    boxShadow: 'var(--shadow)',
-    transition: 'background-color 0.2s',
+    color: 'var(--muted)',
+    fontWeight: '500',
   },
 };

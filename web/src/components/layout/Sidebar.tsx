@@ -19,6 +19,7 @@ import { useBusinessStore } from '../../stores/businessStore';
 import { useCart } from '../../stores/cartStore';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface SidebarProps {
   sidebarCollapsed: boolean;
@@ -41,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const employeeName = useAuthStore((s) => s.employeeName);
   const userRole = useAuthStore((s) => s.userRole);
@@ -52,11 +54,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { canPerform, role } = useUserPermissions();
 
   const navItems = [
-    { name: 'POS Terminal', path: '/', icon: ShoppingCart },
-    { name: 'Sales History', path: '/history', icon: History },
-    { name: 'Insights', path: '/insights', icon: BarChart3 },
-    { name: 'Stocks', path: '/stocks', icon: Package },
-    { name: 'Profile', path: '/profile', icon: User },
+    { name: t('navigation.pos'), path: '/', icon: ShoppingCart },
+    { name: t('navigation.history'), path: '/history', icon: History },
+    { name: t('navigation.insights'), path: '/insights', icon: BarChart3 },
+    { name: t('navigation.stocks'), path: '/stocks', icon: Package },
+    { name: t('navigation.profile'), path: '/profile', icon: User },
   ].filter((item) => {
     if (item.path === '/stocks' && !canPerform('update', 'products')) {
       return false;
@@ -140,7 +142,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={handleSync}
             disabled={syncing}
             className="sidebar-sync-btn"
-            title={sidebarCollapsed ? (syncing ? 'Syncing...' : 'Sync to Cloud') : undefined}
+            title={
+              sidebarCollapsed
+                ? syncing
+                  ? t('insights.syncingBtn')
+                  : t('insights.btnSyncDatabase')
+                : undefined
+            }
           >
             <span className="btn-icon">
               <RefreshCw
@@ -153,12 +161,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
             <span className="btn-label">
               {syncing
-                ? 'Syncing...'
+                ? t('insights.syncingBtn')
                 : syncSuccess === true
-                  ? 'Sync Complete!'
+                  ? t('insights.syncSuccessTitle')
                   : syncSuccess === false
-                    ? 'Sync Failed'
-                    : 'Sync to Cloud'}
+                    ? t('insights.syncFailedTitle')
+                    : t('insights.btnSyncDatabase')}
             </span>
           </button>
         )}
@@ -176,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Log out */}
         <button
           onClick={() => {
-            if (confirm('Are you sure you want to sign out?')) {
+            if (confirm(t('profile.disconnectConfirmMsg'))) {
               deleteCurrentDeviceSession().then(() => {
                 logout();
                 router.push('/auth');
@@ -184,12 +192,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }
           }}
           className="sidebar-logout-btn"
-          title={sidebarCollapsed ? 'Sign Out' : undefined}
+          title={sidebarCollapsed ? t('profile.signOutTitle') : undefined}
         >
           <span className="btn-icon">
             <LogOut size={16} />
           </span>
-          <span className="btn-label">Sign Out</span>
+          <span className="btn-label">{t('profile.signOutTitle')}</span>
         </button>
 
         {/* Powered by Shopbook */}

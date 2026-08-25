@@ -32,6 +32,9 @@ Welcome to the **Shopbook POS Web Terminal** documentation. This directory conta
    - Guided walkthroughs for cashiers and store managers.
    - Tablet Touch Mode vs Keyboard-optimized Normal Mode steps.
    - Keyboard Shortcuts cheat sheet, Customer registrations, and Inventory updates.
+8. **[Security, Multi-Role & Tenant Isolation Architecture](../../mobile/doc/SECURITY_AND_MULTI_ROLE_ARCHITECTURE.md)**
+   - Multi-tenant data boundaries, cross-business staff protections, and phone uniqueness verification.
+   - Multi-outlet owner switching and QA test scenarios with acceptance criteria.
 
 ---
 

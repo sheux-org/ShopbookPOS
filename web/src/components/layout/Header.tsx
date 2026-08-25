@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Eye, EyeOff, HelpCircle } from 'lucide-react';
+import { LanguageSelector } from './LanguageSelector';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface HeaderProps {
   headerInfo: { title: string; subtitle: string } | null;
@@ -20,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   posMode,
   setPosMode,
 }) => {
+  const { t } = useTranslation();
   if (!headerInfo) return null;
 
   return (
@@ -29,12 +32,88 @@ export const Header: React.FC<HeaderProps> = ({
         <p className="common-header-subtitle">{headerInfo.subtitle}</p>
       </div>
 
-      {(pathname === '/' || pathname === '/pos') && (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {/* Sidebar Toggle Button */}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        {(pathname === '/' || pathname === '/pos') && (
+          <>
+            {/* Sidebar Toggle Button */}
+            <button
+              onClick={() => setSidebarVisible(!sidebarVisible)}
+              className="hide-mobile"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 12px',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                backgroundColor: '#ffffff',
+                color: sidebarVisible ? 'var(--primary)' : 'var(--muted)',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                transition: 'all 0.2s ease',
+              }}
+              title={sidebarVisible ? t('layout.hideSidebar') : t('layout.showSidebar')}
+            >
+              {sidebarVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+              <span>{sidebarVisible ? t('layout.hideSidebar') : t('layout.showSidebar')}</span>
+            </button>
+
+            {/* View Mode Toggle Group */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '4px',
+                border: '1px solid var(--border)',
+                padding: '4px',
+                borderRadius: '8px',
+                backgroundColor: '#f3f4f6',
+                alignItems: 'center',
+              }}
+            >
+              <button
+                onClick={() => setPosMode('tablet')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  backgroundColor: posMode === 'tablet' ? '#ffffff' : 'transparent',
+                  color: posMode === 'tablet' ? 'var(--primary)' : 'var(--muted)',
+                  boxShadow: posMode === 'tablet' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {t('layout.tabletView')}
+              </button>
+              <button
+                onClick={() => setPosMode('normal')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  backgroundColor: posMode === 'normal' ? '#ffffff' : 'transparent',
+                  color: posMode === 'normal' ? 'var(--primary)' : 'var(--muted)',
+                  boxShadow: posMode === 'normal' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {t('layout.normalView')}
+              </button>
+            </div>
+          </>
+        )}
+
+        {pathname === '/profile' && (
           <button
-            onClick={() => setSidebarVisible(!sidebarVisible)}
-            className="hide-mobile"
+            onClick={() => window.dispatchEvent(new Event('open-help-modal'))}
+            className="common-header-btn"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -43,94 +122,23 @@ export const Header: React.FC<HeaderProps> = ({
               borderRadius: '8px',
               border: '1px solid var(--border)',
               backgroundColor: '#ffffff',
-              color: sidebarVisible ? 'var(--primary)' : 'var(--muted)',
+              color: 'var(--primary)',
               fontSize: '12px',
               fontWeight: 'bold',
               cursor: 'pointer',
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
               transition: 'all 0.2s ease',
             }}
-            title={sidebarVisible ? 'Hide Sidebar Menu' : 'Show Sidebar Menu'}
+            title="Help & Contact Support"
           >
-            {sidebarVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-            <span>{sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}</span>
+            <HelpCircle size={16} />
+            <span>{t('profile.helpTitle')}</span>
           </button>
+        )}
 
-          {/* View Mode Toggle Group */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '4px',
-              border: '1px solid var(--border)',
-              padding: '4px',
-              borderRadius: '8px',
-              backgroundColor: '#f3f4f6',
-              alignItems: 'center',
-            }}
-          >
-            <button
-              onClick={() => setPosMode('tablet')}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                backgroundColor: posMode === 'tablet' ? '#ffffff' : 'transparent',
-                color: posMode === 'tablet' ? 'var(--primary)' : 'var(--muted)',
-                boxShadow: posMode === 'tablet' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              Tablet View
-            </button>
-            <button
-              onClick={() => setPosMode('normal')}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                backgroundColor: posMode === 'normal' ? '#ffffff' : 'transparent',
-                color: posMode === 'normal' ? 'var(--primary)' : 'var(--muted)',
-                boxShadow: posMode === 'normal' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              Normal View
-            </button>
-          </div>
-        </div>
-      )}
-
-      {pathname === '/profile' && (
-        <button
-          onClick={() => window.dispatchEvent(new Event('open-help-modal'))}
-          className="common-header-btn"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '7px 12px',
-            borderRadius: '8px',
-            border: '1px solid var(--border)',
-            backgroundColor: '#ffffff',
-            color: 'var(--primary)',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-            transition: 'all 0.2s ease',
-          }}
-          title="Help & Contact Support"
-        >
-          <HelpCircle size={16} />
-          <span>Support Help</span>
-        </button>
-      )}
+        {/* Global Quick Language Selector */}
+        <LanguageSelector />
+      </div>
     </header>
   );
 };

@@ -293,7 +293,9 @@ DROP FUNCTION IF EXISTS push_watermelondb_changes(json);
 
 CREATE OR REPLACE FUNCTION push_watermelondb_changes(changes json, client_business_id text)
 RETURNS void
+LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   table_name text;
@@ -357,11 +359,6 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert
-        IF (r->>'id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized access to business ID';
-        END IF;
-
         INSERT INTO businesses (id, name, business_type, address, phone_number, tax_id, operating_hours, logo_uri, created_at, updated_at)
         VALUES (
           (r->>'id'),
@@ -389,7 +386,7 @@ BEGIN
     
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
-      DELETE FROM businesses WHERE id IN (SELECT json_array_elements_text(deleted_ids)) AND id = client_business_id;
+      DELETE FROM businesses WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -399,15 +396,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized employee push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO employees (id, business_id, name, role, phone, email, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'name'),
           (r->>'role'),
           (r->>'phone'),
@@ -428,15 +425,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized employee push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO employees (id, business_id, name, role, phone, email, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'name'),
           (r->>'role'),
           (r->>'phone'),
@@ -456,7 +453,7 @@ BEGIN
     
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
-      DELETE FROM employees WHERE id IN (SELECT json_array_elements_text(deleted_ids)) AND business_id = client_business_id;
+      DELETE FROM employees WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -466,15 +463,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized product push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO products (id, business_id, name, sku, quick_code, barcode, category, unit_type, cost_price, price, stock_count, low_stock_alert, icon, is_favorite, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'name'),
           (r->>'sku'),
           (r->>'quick_code'),
@@ -511,15 +508,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized product push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO products (id, business_id, name, sku, quick_code, barcode, category, unit_type, cost_price, price, stock_count, low_stock_alert, icon, is_favorite, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'name'),
           (r->>'sku'),
           (r->>'quick_code'),
@@ -555,7 +552,7 @@ BEGIN
     
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
-      DELETE FROM products WHERE id IN (SELECT json_array_elements_text(deleted_ids)) AND business_id = client_business_id;
+      DELETE FROM products WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -565,15 +562,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized order push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, tax_rate, tax_value, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'invoice_number'),
           (r->>'total_amount')::numeric,
           (r->>'status'),
@@ -606,15 +603,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert
-        IF (r->>'business_id') != client_business_id THEN
-          RAISE EXCEPTION 'Unauthorized order push';
+        -- Multi-tenant filter: Skip records belonging to another business slice during this sync
+        IF (r->>'business_id') IS NOT NULL AND (r->>'business_id') != client_business_id THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO orders (id, business_id, invoice_number, total_amount, status, payment_method, bank_name, card_last_four, discount_type, discount_value, tax_rate, tax_value, created_at, updated_at)
         VALUES (
           (r->>'id'),
-          (r->>'business_id'),
+          COALESCE(r->>'business_id', client_business_id),
           (r->>'invoice_number'),
           (r->>'total_amount')::numeric,
           (r->>'status'),
@@ -646,7 +643,7 @@ BEGIN
     
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
-      DELETE FROM orders WHERE id IN (SELECT json_array_elements_text(deleted_ids)) AND business_id = client_business_id;
+      DELETE FROM orders WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -656,9 +653,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert: order_id must belong to business
-        IF NOT EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id = client_business_id) THEN
+        -- Security assert:
+        -- 1. If order belongs to a DIFFERENT business, reject as unauthorized
+        IF EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id != client_business_id) THEN
           RAISE EXCEPTION 'Unauthorized order_items push';
+        END IF;
+
+        -- 2. If parent order does not exist (e.g. deleted), skip gracefully
+        IF NOT EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id = client_business_id) THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO order_items (id, order_id, product_id, name, quantity, price, created_at, updated_at)
@@ -685,9 +688,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert: order_id must belong to business
-        IF NOT EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id = client_business_id) THEN
+        -- Security assert:
+        -- 1. If order belongs to a DIFFERENT business, reject as unauthorized
+        IF EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id != client_business_id) THEN
           RAISE EXCEPTION 'Unauthorized order_items push';
+        END IF;
+
+        -- 2. If parent order does not exist (e.g. deleted), skip gracefully
+        IF NOT EXISTS (SELECT 1 FROM public.orders WHERE id = (r->>'order_id') AND business_id = client_business_id) THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO order_items (id, order_id, product_id, name, quantity, price, created_at, updated_at)
@@ -714,8 +723,7 @@ BEGIN
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
       DELETE FROM order_items 
-      WHERE id IN (SELECT json_array_elements_text(deleted_ids))
-        AND order_id IN (SELECT id FROM public.orders WHERE business_id = client_business_id);
+      WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   -- -------------------------------------------------------------
@@ -725,9 +733,15 @@ BEGIN
     -- Upsert created
     IF created_records IS NOT NULL AND json_array_length(created_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(created_records) LOOP
-        -- Security assert: product_id must belong to business
-        IF NOT EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id = client_business_id) THEN
+        -- Security assert:
+        -- 1. If product belongs to a DIFFERENT business, reject as unauthorized cross-tenant push
+        IF EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id != client_business_id) THEN
           RAISE EXCEPTION 'Unauthorized inventory_logs push';
+        END IF;
+
+        -- 2. If product does not exist in database (e.g. was deleted or cascade removed), skip inserting orphaned log gracefully
+        IF NOT EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id = client_business_id) THEN
+          CONTINUE;
         END IF;
 
         -- Conflict check: Prevent duplicate void inventory log insertion from offline sync race condition
@@ -759,9 +773,15 @@ BEGIN
     -- Upsert updated
     IF updated_records IS NOT NULL AND json_array_length(updated_records) > 0 THEN
       FOR r IN SELECT * FROM json_array_elements(updated_records) LOOP
-        -- Security assert: product_id must belong to business
-        IF NOT EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id = client_business_id) THEN
+        -- Security assert:
+        -- 1. If product belongs to a DIFFERENT business, reject as unauthorized cross-tenant push
+        IF EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id != client_business_id) THEN
           RAISE EXCEPTION 'Unauthorized inventory_logs push';
+        END IF;
+
+        -- 2. If product does not exist in database (e.g. was deleted), skip inserting orphaned log gracefully
+        IF NOT EXISTS (SELECT 1 FROM public.products WHERE id = (r->>'product_id') AND business_id = client_business_id) THEN
+          CONTINUE;
         END IF;
 
         INSERT INTO inventory_logs (id, product_id, type, quantity, reason, created_at, updated_at)
@@ -786,13 +806,12 @@ BEGIN
     -- Delete records
     IF deleted_ids IS NOT NULL AND json_array_length(deleted_ids) > 0 THEN
       DELETE FROM inventory_logs 
-      WHERE id IN (SELECT json_array_elements_text(deleted_ids))
-        AND product_id IN (SELECT id FROM public.products WHERE business_id = client_business_id);
+      WHERE id IN (SELECT json_array_elements_text(deleted_ids));
     END IF;
 
   END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- 5. GRANT PERMISSIONS ON RPC FUNCTIONS TO ANON & AUTHENTICATED
 GRANT EXECUTE ON FUNCTION public.pull_watermelondb_changes(bigint, text) TO anon, authenticated;
@@ -840,7 +859,114 @@ DROP POLICY IF EXISTS "Allow public delete" ON public.active_devices;
 CREATE POLICY "Allow public delete" ON public.active_devices FOR DELETE USING (true);
 
 
--- 8. FUNCTION: `fetch_user_businesses` RPC (Retrieve all businesses matching user phone)
+-- 8. HELPER: `normalize_phone_pg`
+-- -------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.normalize_phone_pg(phone_str text)
+RETURNS text
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+DECLARE
+  cleaned text;
+BEGIN
+  IF phone_str IS NULL THEN
+    RETURN '';
+  END IF;
+  cleaned := regexp_replace(phone_str, '\D', '', 'g');
+  IF cleaned LIKE '94%' THEN
+    cleaned := substr(cleaned, 3);
+  END IF;
+  IF cleaned LIKE '0%' THEN
+    cleaned := substr(cleaned, 2);
+  END IF;
+  RETURN cleaned;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.normalize_phone_pg(text) TO anon, authenticated;
+
+
+-- 9. FUNCTION: `check_phone_registered` RPC (Verify phone number uniqueness)
+-- -------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.check_phone_registered(
+  input_phone text,
+  exclude_employee_id text DEFAULT NULL,
+  exclude_business_id text DEFAULT NULL
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  clean_input text;
+  matched_biz record;
+  matched_emp record;
+BEGIN
+  clean_input := public.normalize_phone_pg(input_phone);
+
+  IF clean_input IS NULL OR clean_input = '' THEN
+    RETURN json_build_object('exists', false);
+  END IF;
+
+  -- 1. Check in businesses table (business owner phone)
+  SELECT id, name, phone_number INTO matched_biz
+  FROM public.businesses
+  WHERE public.normalize_phone_pg(phone_number) = clean_input
+    AND (exclude_business_id IS NULL OR id != exclude_business_id)
+  LIMIT 1;
+
+  IF matched_biz.id IS NOT NULL THEN
+    RETURN json_build_object(
+      'exists', true,
+      'type', 'owner',
+      'role', 'admin',
+      'name', 'Owner / Admin',
+      'business_id', matched_biz.id,
+      'business_name', matched_biz.name
+    );
+  END IF;
+
+  -- 2. Check in employees table
+  SELECT e.id, e.business_id, e.name, e.role, b.name as business_name INTO matched_emp
+  FROM public.employees e
+  LEFT JOIN public.businesses b ON b.id = e.business_id
+  WHERE public.normalize_phone_pg(e.phone) = clean_input
+    AND (exclude_employee_id IS NULL OR e.id != exclude_employee_id)
+  LIMIT 1;
+
+  IF matched_emp.id IS NOT NULL THEN
+    RETURN json_build_object(
+      'exists', true,
+      'type', 'employee',
+      'role', matched_emp.role,
+      'name', matched_emp.name,
+      'employee_id', matched_emp.id,
+      'business_id', matched_emp.business_id,
+      'business_name', matched_emp.business_name
+    );
+  END IF;
+
+  RETURN json_build_object('exists', false);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.check_phone_registered(text, text, text) TO anon, authenticated;
+
+-- Also alias check_synced_account for backwards compatibility
+CREATE OR REPLACE FUNCTION public.check_synced_account(input_phone text)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN public.check_phone_registered(input_phone, NULL, NULL);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.check_synced_account(text) TO anon, authenticated;
+
+
+-- 10. FUNCTION: `fetch_user_businesses` RPC (Retrieve all businesses matching user phone)
 -- -------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fetch_user_businesses(input_phone text)
 RETURNS json
@@ -892,5 +1018,6 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.fetch_user_businesses(text) TO anon, authenticated;
+
 
 

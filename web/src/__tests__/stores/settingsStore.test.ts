@@ -10,6 +10,7 @@ describe('settingsStore', () => {
       isPremium: true,
       posMode: 'tablet',
       sidebarVisible: true,
+      language: 'en',
     });
   });
 
@@ -21,6 +22,15 @@ describe('settingsStore', () => {
     expect(state.isPremium).toBe(true);
     expect(state.posMode).toBe('tablet');
     expect(state.sidebarVisible).toBe(true);
+    expect(state.language).toBe('en');
+  });
+
+  test('should change language correctly', () => {
+    useSettingsStore.getState().setLanguage('si');
+    expect(useSettingsStore.getState().language).toBe('si');
+
+    useSettingsStore.getState().setLanguage('ta');
+    expect(useSettingsStore.getState().language).toBe('ta');
   });
 
   test('should toggle backup state', () => {

@@ -447,6 +447,7 @@ export default {
     removeConfirmMsg:
       '"{name}" ஊழியரை நிரந்தரமாக நீக்க விரும்புகிறீர்களா? இந்தச் செயலை மாற்ற முடியாது.',
     removeBtn: 'ஊழியரை நீக்கு',
+    phoneAlreadyRegistered: 'இந்த தொலைபேசி எண் ஏற்கனவே பதிவு செய்யப்பட்டுள்ளது.',
   },
   premium: {
     headerTitle: 'Shopbook POS Pro',

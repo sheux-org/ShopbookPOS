@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Printer, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { X, Printer, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useThermalPrinter } from '../../hooks/useThermalPrinter';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useTranslation } from '../../hooks/useTranslation';
+import { SideDrawer } from '../common/SideDrawer';
 
 interface ThermalPrinterModalProps {
   isOpen: boolean;
@@ -23,6 +25,7 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
   activeBusiness,
 }) => {
   const { ready, refresh, printTestReceipt, openCashDrawer } = useThermalPrinter();
+  const { t } = useTranslation();
   const printerProfile = useSettingsStore((s) => s.printerProfile);
   const setPrinterProfile = useSettingsStore((s) => s.setPrinterProfile);
   const cashDrawerDevice = useSettingsStore((s) => s.cashDrawerDevice);
@@ -30,8 +33,6 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   const notify = (msg: string) => {
     setMessage(msg);
@@ -58,26 +59,48 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
       notify('Cash drawer opened.');
     } catch (err) {
       console.error('Open drawer failed:', err);
-      notify('Could not open the drawer. Is it wired to the printer?');
+      notify('Could not kick drawer. Check companion connection.');
     } finally {
       setBusy(false);
     }
   };
 
-  return (
-    <div style={styles.overlay}>
-      <div style={styles.content}>
-        <div style={styles.header}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Printer size={18} color="var(--primary)" />
-            <h3 style={styles.title}>Thermal Printer (Chittie Companion)</h3>
-          </div>
-          <button onClick={onClose} style={styles.closeBtn}>
-            <X size={18} />
-          </button>
-        </div>
+  const drawerFooter = (
+    <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+      <button
+        type="button"
+        onClick={() => {
+          refresh();
+          notify('Refreshed printer status.');
+        }}
+        className="action-btn-secondary"
+        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+      >
+        <RefreshCw size={14} />
+        <span>Re-check status</span>
+      </button>
+      <button
+        type="button"
+        onClick={onClose}
+        className="modal-submit-btn"
+        style={{ margin: 0, width: 'auto' }}
+      >
+        <span>Done</span>
+      </button>
+    </div>
+  );
 
-        <div style={styles.body}>
+  return (
+    <SideDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('printer.headerTitle')}
+      subtitle="Configure hardware receipt printer, paper width, and cash drawer triggers"
+      icon={<Printer size={20} />}
+      footer={drawerFooter}
+      maxWidth="560px"
+    >
+      <div style={styles.body}>
           <div style={ready ? styles.statusConnected : styles.statusIdle}>
             {ready ? <CheckCircle2 size={18} /> : <Printer size={18} />}
             <span>{ready ? 'Chittie Companion connected & ready' : 'Companion not running'}</span>
@@ -155,8 +178,7 @@ export const ThermalPrinterModal: React.FC<ThermalPrinterModalProps> = ({
 
           {message && <div style={styles.toast}>{message}</div>}
         </div>
-      </div>
-    </div>
+    </SideDrawer>
   );
 };
 
@@ -198,45 +220,54 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '6px',
     display: 'flex',
   },
-  body: { padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' },
+  body: { padding: 0, display: 'flex', flexDirection: 'column', gap: '12px' },
   warningBox: {
     display: 'flex',
-    gap: '12px',
-    padding: '14px',
+    gap: '10px',
+    padding: '12px 14px',
     borderRadius: '10px',
     backgroundColor: '#fffbeb',
     border: '1px solid #fde68a',
   },
-  warningTitle: { fontSize: '13px', fontWeight: 700, color: '#92400e', margin: '0 0 4px 0' },
-  warningSub: { fontSize: '12px', color: '#b45309', margin: 0, lineHeight: 1.5 },
+  warningTitle: { fontSize: '13px', fontWeight: 700, color: '#92400e', margin: '0 0 2px 0' },
+  warningSub: { fontSize: '12px', color: '#b45309', margin: 0, lineHeight: 1.4 },
   statusConnected: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    padding: '12px',
+    padding: '10px 14px',
     borderRadius: '10px',
     backgroundColor: '#ecfdf5',
     color: '#047857',
-    fontSize: '13px',
+    fontSize: '12.5px',
     fontWeight: 700,
   },
   statusIdle: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    padding: '12px',
+    padding: '10px 14px',
     borderRadius: '10px',
     backgroundColor: '#f8fafc',
     color: 'var(--muted)',
-    fontSize: '13px',
+    fontSize: '12.5px',
     fontWeight: 700,
   },
-  fieldRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' },
-  fieldLabel: { fontSize: '13px', fontWeight: 600, color: '#334155' },
+  fieldRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    padding: '10px 14px',
+    borderRadius: '10px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid var(--border)',
+  },
+  fieldLabel: { fontSize: '12.5px', fontWeight: 600, color: '#334155' },
   segment: { display: 'flex', gap: '6px' },
   segmentBtn: {
-    padding: '8px 14px',
-    borderRadius: '8px',
+    padding: '6px 12px',
+    borderRadius: '6px',
     border: '1px solid var(--border)',
     backgroundColor: '#ffffff',
     color: '#334155',
@@ -245,8 +276,8 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   segmentActive: {
-    padding: '8px 14px',
-    borderRadius: '8px',
+    padding: '6px 12px',
+    borderRadius: '6px',
     border: '1px solid var(--primary)',
     backgroundColor: 'var(--primary)',
     color: '#ffffff',
@@ -255,14 +286,14 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   select: {
-    padding: '8px 12px',
-    borderRadius: '8px',
+    padding: '6px 10px',
+    borderRadius: '6px',
     border: '1px solid var(--border)',
     backgroundColor: '#ffffff',
-    fontSize: '13px',
+    fontSize: '12px',
     color: '#0f172a',
   },
-  buttonCol: { display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' },
+  buttonCol: { display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '2px' },
   primaryBtn: {
     display: 'flex',
     alignItems: 'center',

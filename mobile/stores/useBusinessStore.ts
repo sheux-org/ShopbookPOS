@@ -5,7 +5,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import database from '../components/data/db';
 import { SEEDING_PRODUCTS } from '../utils/seedProducts';
 import { useAuthStore } from './useAuthStore';
-import { supabase } from '../services/sync';
+import { supabase, syncDatabase } from '../services/sync';
+import { checkPhoneAvailability, normalizePhone } from '../utils/phoneUtils';
 
 export interface Business {
   id: string;
@@ -368,27 +369,58 @@ export const useBusinessStore = create<BusinessState>()(
         }
       },
       deleteBusiness: async (id) => {
-        if (id === get().activeBusiness.id) {
-          console.warn('Cannot delete the active business.');
-          return;
-        }
         try {
           const businesses = await database.get('businesses').query(Q.where('id', id)).fetch();
           if (businesses.length > 0) {
             const targetBiz = businesses[0];
+
+            // Cascade delete all child items belonging to this business
+            const [emps, prods, orders] = await Promise.all([
+              database.get('employees').query(Q.where('business_id', id)).fetch(),
+              database.get('products').query(Q.where('business_id', id)).fetch(),
+              database.get('orders').query(Q.where('business_id', id)).fetch(),
+            ]);
+
+            const prodIds = prods.map((p) => p.id);
+            const orderIds = orders.map((o) => o.id);
+
+            const [orderItems, invLogs] = await Promise.all([
+              orderIds.length > 0
+                ? database
+                    .get('order_items')
+                    .query(Q.where('order_id', Q.oneOf(orderIds)))
+                    .fetch()
+                : Promise.resolve([]),
+              prodIds.length > 0
+                ? database
+                    .get('inventory_logs')
+                    .query(Q.where('product_id', Q.oneOf(prodIds)))
+                    .fetch()
+                : Promise.resolve([]),
+            ]);
+
             await database.write(async () => {
-              await targetBiz.destroyPermanently();
+              for (const item of orderItems) await (item as any).markAsDeleted();
+              for (const log of invLogs) await (log as any).markAsDeleted();
+              for (const order of orders) await (order as any).markAsDeleted();
+              for (const prod of prods) await (prod as any).markAsDeleted();
+              for (const emp of emps) await (emp as any).markAsDeleted();
+              await targetBiz.markAsDeleted();
             });
-            console.log('Successfully deleted business record');
+            console.log('Successfully marked business and all child records as deleted');
+
+            // Trigger sync so deletion pushes to Supabase Cloud
+            syncDatabase().catch((err) => console.error('Failed to sync business deletion:', err));
           }
           await get().loadBusinessesFromDb();
 
           if (get().activeBusiness.id === id) {
-            const remaining = get().businesses;
+            const remaining = get().businesses.filter((b) => b.id !== id);
             if (remaining.length > 0) {
               set({ activeBusiness: remaining[0] });
               useAuthStore.getState().setActiveBusinessId(remaining[0].id);
             } else {
+              set({ activeBusiness: PLACEHOLDER_BUSINESS });
               useAuthStore.getState().setActiveBusinessId(null);
             }
           }

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Banknote, CreditCard, Wallet, AlertTriangle, CheckCircle, Printer } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface SettlementCardProps {
   paymentMethod: 'cash' | 'card' | 'bank';
@@ -97,15 +98,18 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
   bankNameRef,
   settleBtnRef,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <>
-      <div style={styles.paymentSectionCard}>
-        {/* Payment Method Selector */}
-        <div>
+      {/* Dense Settlement Payment Box */}
+      <div style={styles.densePayBox}>
+        {/* Payment selector tabs */}
+        <div style={styles.payMethodGroup}>
           <label style={styles.denseFieldLabel}>
-            Payment Mode {posMode === 'normal' ? '[F4]' : ''}
+            {t('payment.paymentMethod')} {posMode === 'normal' ? '[F4]' : ''}
           </label>
-          <div style={styles.payOptionRow}>
+          <div style={styles.payMethodGrid}>
             <button
               onClick={() => handlePaymentMethodChange('cash')}
               style={{
@@ -114,7 +118,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
               }}
             >
               <Banknote size={16} />
-              <span>Cash</span>
+              <span>{t('payment.cash')}</span>
             </button>
             <button
               onClick={() => handlePaymentMethodChange('card')}
@@ -124,7 +128,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
               }}
             >
               <CreditCard size={16} />
-              <span>Card</span>
+              <span>{t('payment.card')}</span>
             </button>
             <button
               onClick={() => handlePaymentMethodChange('bank')}
@@ -134,7 +138,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
               }}
             >
               <Wallet size={16} />
-              <span>Bank</span>
+              <span>{t('payment.digital')}</span>
             </button>
           </div>
         </div>
@@ -144,7 +148,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
           {paymentMethod === 'cash' && (
             <div>
               <label style={styles.denseFieldLabel}>
-                Cash Tendered (Rs.) {posMode === 'normal' ? '[F8]' : ''}
+                {t('payment.amountTendered')} (Rs.) {posMode === 'normal' ? '[F8]' : ''}
               </label>
               <input
                 ref={cashReceivedRef}
@@ -317,7 +321,7 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
         cashReceived !== '' &&
         parseFloat(cashReceived) >= totalAmount && (
           <div style={styles.largeBalanceCard}>
-            <span style={styles.largeBalanceLabel}>Change / Balance to Return</span>
+            <span style={styles.largeBalanceLabel}>{t('payment.changeDue')}</span>
             <span style={styles.largeBalanceValue}>Rs. {changeDue.toLocaleString()}</span>
           </div>
         )}
@@ -333,7 +337,9 @@ export const SettlementCard: React.FC<SettlementCardProps> = ({
         }}
       >
         <Printer size={16} />
-        <span>Confirm & Print Receipt {posMode === 'normal' ? '[F10]' : ''}</span>
+        <span>
+          {t('payment.processTransaction')} {posMode === 'normal' ? '[F10]' : ''}
+        </span>
       </button>
     </>
   );

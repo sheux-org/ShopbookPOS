@@ -323,15 +323,29 @@ export function useDeleteProduct() {
         }
       }
 
+      // Fetch related inventory logs
+      const invLogs = await database.get('inventory_logs').query(Q.where('product_id', id)).fetch();
+
       await database.write(async () => {
-        await product.destroyPermanently();
+        for (const log of invLogs) {
+          if ((log as any).markAsDeleted) {
+            await (log as any).markAsDeleted();
+          } else if ((log as any).destroyPermanently) {
+            await (log as any).destroyPermanently();
+          }
+        }
+        if ((product as any).markAsDeleted) {
+          await (product as any).markAsDeleted();
+        } else if ((product as any).destroyPermanently) {
+          await (product as any).destroyPermanently();
+        }
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['uploaded-images'] });
       queryClient.invalidateQueries({ queryKey: ['global-stock-history'] });
-      syncDatabase(); // Trigger real-time background replication
+      syncDatabase().catch((err) => console.error('Product auto-sync failed:', err));
     },
   });
 }

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Printer, Ban } from 'lucide-react';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { ReceiptPaper, printThermalReceipt } from '../pos/ReceiptPaper';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface OrderRecord {
   id: string;
@@ -49,6 +50,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   onClose,
   onVoid,
 }) => {
+  const { t } = useTranslation();
   const [voiding, setVoiding] = useState(false);
   const { canPerform } = useUserPermissions();
 
@@ -82,25 +84,30 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
         {/* Receipt actions footer */}
         <div style={styles.receiptActions}>
           <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-            <button onClick={handlePrint} style={styles.printBtn}>
+            <button onClick={handlePrint} style={styles.printBtn} type="button">
               <Printer size={15} />
-              <span>Print Receipt</span>
+              <span>{t('history.printReceipt')}</span>
             </button>
             {order.status !== 'voided' && canPerform('delete', 'transactions') ? (
-              <button onClick={handleVoidClick} disabled={voiding} style={styles.voidBtn}>
+              <button
+                onClick={handleVoidClick}
+                disabled={voiding}
+                style={styles.voidBtn}
+                type="button"
+              >
                 <Ban size={15} />
-                <span>{voiding ? 'Voiding...' : 'Void Invoice'}</span>
+                <span>{voiding ? t('common.loading') : t('history.refundButton')}</span>
               </button>
             ) : order.status === 'voided' ? (
-              <button disabled style={styles.voidedBtn}>
+              <button disabled style={styles.voidedBtn} type="button">
                 <Ban size={15} />
                 <span>Invoice Voided</span>
               </button>
             ) : null}
           </div>
 
-          <button onClick={onClose} style={styles.receiptDoneBtn}>
-            Close Audit Inspection
+          <button onClick={onClose} style={styles.receiptDoneBtn} type="button">
+            {t('common.close')}
           </button>
         </div>
       </div>

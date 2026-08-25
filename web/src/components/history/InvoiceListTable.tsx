@@ -9,6 +9,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface OrderRecord {
   id: string;
@@ -49,6 +50,7 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
   totalCount,
   totalPages,
 }) => {
+  const { t } = useTranslation();
   const tableWrapperRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -57,7 +59,7 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
         <div style={styles.emptyContainer}>
           <div style={styles.spinner} />
           <p style={{ marginTop: '12px', fontSize: '13px', color: '#6B7280' }}>
-            Loading historical sales logs...
+            {t('common.loading')}
           </p>
         </div>
       ) : (
@@ -65,13 +67,15 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
           <table style={styles.table}>
             <thead>
               <tr style={styles.trHead}>
-                <th style={{ ...styles.th, width: '280px' }}>Invoice Number</th>
-                <th style={{ ...styles.th, width: '160px' }}>Date & Time</th>
-                <th style={{ ...styles.th, width: '140px' }}>Cashier</th>
-                <th style={{ ...styles.th, width: '190px' }}>Payment Method</th>
-                <th style={{ ...styles.th, width: '100px' }}>Status</th>
-                <th style={{ ...styles.th, width: '140px' }}>Total Value</th>
-                <th style={{ ...styles.th, width: '140px', textAlign: 'right' }}>Audit</th>
+                <th style={{ ...styles.th, width: '280px' }}>{t('history.tableInvoice')}</th>
+                <th style={{ ...styles.th, width: '160px' }}>{t('history.tableDate')}</th>
+                <th style={{ ...styles.th, width: '140px' }}>{t('history.tableCashier')}</th>
+                <th style={{ ...styles.th, width: '190px' }}>{t('history.tablePayment')}</th>
+                <th style={{ ...styles.th, width: '100px' }}>{t('common.status')}</th>
+                <th style={{ ...styles.th, width: '140px' }}>{t('history.tableTotal')}</th>
+                <th style={{ ...styles.th, width: '140px', textAlign: 'right' }}>
+                  {t('history.tableActions')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -121,9 +125,13 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
                     </strong>
                   </td>
                   <td style={{ ...styles.td, textAlign: 'right' }}>
-                    <button onClick={() => onViewReceipt(o)} style={styles.viewReceiptBtn}>
+                    <button
+                      onClick={() => onViewReceipt(o)}
+                      style={styles.viewReceiptBtn}
+                      type="button"
+                    >
                       <Eye size={14} />
-                      <span>Inspect</span>
+                      <span>{t('history.printReceipt')}</span>
                     </button>
                   </td>
                 </tr>
@@ -135,11 +143,9 @@ export const InvoiceListTable: React.FC<InvoiceListTableProps> = ({
                     <div style={styles.emptyContainer}>
                       <FileText size={36} color="var(--muted)" style={{ marginBottom: '8px' }} />
                       <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600' }}>
-                        No matching transactions found
+                        {t('history.noOrdersTitle')}
                       </h4>
-                      <p style={{ margin: 0, fontSize: '13px' }}>
-                        Invoiced completed records will populate inside this list.
-                      </p>
+                      <p style={{ margin: 0, fontSize: '13px' }}>{t('history.noOrdersSub')}</p>
                     </div>
                   </td>
                 </tr>

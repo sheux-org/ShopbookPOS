@@ -111,9 +111,42 @@ vi.mock('@tanstack/react-query', () => {
     useQueryClient: () => ({
       invalidateQueries: vi.fn(),
     }),
-    useMutation: vi.fn().mockImplementation(() => ({
-      mutateAsync: vi.fn().mockResolvedValue({ invoiceNumber: 'INV-1001' }),
-    })),
+    useQuery: (options: any) => ({
+      data: undefined,
+      isLoading: false,
+      refetch: async () => {
+        if (options?.queryFn) {
+          const data = await options.queryFn();
+          return { data };
+        }
+        return { data: undefined };
+      },
+    }),
+    useMutation: (options: any) => ({
+      mutate: (variables: any, callbacks?: any) => {
+        if (options?.mutationFn) {
+          return Promise.resolve(options.mutationFn(variables))
+            .then((data) => {
+              callbacks?.onSuccess?.(data, variables);
+              options?.onSuccess?.(data, variables);
+              return data;
+            })
+            .catch((err) => {
+              callbacks?.onError?.(err, variables);
+              options?.onError?.(err, variables);
+              throw err;
+            });
+        }
+      },
+      mutateAsync: async (variables: any) => {
+        if (options?.mutationFn) {
+          const data = await options.mutationFn(variables);
+          options?.onSuccess?.(data, variables);
+          return data;
+        }
+        return { invoiceNumber: 'INV-1001' };
+      },
+    }),
   };
 });
 

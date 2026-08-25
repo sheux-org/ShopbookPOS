@@ -64,14 +64,18 @@ async function ensureChannelSubscribed(activeChannel: RealtimeChannel): Promise<
   if (isChannelJoined(activeChannel)) return;
 
   if (subscribePromise) {
-    await subscribePromise;
+    try {
+      await subscribePromise;
+    } catch {
+      // Ignore previous attempt error and re-try
+    }
     if (isChannelJoined(activeChannel)) return;
   }
 
   subscribePromise = new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
       resetSubscribePromise();
-      reject(new Error('Presence subscribe timeout'));
+      resolve(); // Gracefully resolve to allow offline/degraded operation
     }, SUBSCRIBE_TIMEOUT_MS);
 
     activeChannel.subscribe((status) => {
@@ -85,7 +89,7 @@ async function ensureChannelSubscribed(activeChannel: RealtimeChannel): Promise<
       if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
         clearTimeout(timeout);
         resetSubscribePromise();
-        reject(new Error(`Presence channel ${status}`));
+        resolve(); // Gracefully resolve to allow offline operation
       }
     });
   });
@@ -388,7 +392,14 @@ export async function startDevicePresenceTracking(
   await trackPresenceState(state);
 }
 
-export async function trackPresenceState(state: DevicePresenceState): Promise<void> {
+let lastTrackTime = 0;
+const MIN_TRACK_INTERVAL_MS = 10000;
+let pendingTrackTimeout: ReturnType<typeof setTimeout> | null = null;
+
+export async function trackPresenceState(
+  state: DevicePresenceState,
+  force = false
+): Promise<void> {
   if (!channel) return;
 
   lastTrackedState = {
@@ -396,21 +407,50 @@ export async function trackPresenceState(state: DevicePresenceState): Promise<vo
     online_at: new Date().toISOString(),
   };
 
-  const status = await channel.track(lastTrackedState);
-  if (status !== 'ok') {
-    console.warn('Failed to track device presence:', status);
-  } else {
-    isTracking = true;
+  const now = Date.now();
+  if (!force && now - lastTrackTime < MIN_TRACK_INTERVAL_MS) {
+    if (!pendingTrackTimeout) {
+      pendingTrackTimeout = setTimeout(() => {
+        pendingTrackTimeout = null;
+        if (lastTrackedState) {
+          void trackPresenceState(lastTrackedState, true);
+        }
+      }, MIN_TRACK_INTERVAL_MS - (now - lastTrackTime));
+    }
+    return;
+  }
+
+  if (pendingTrackTimeout) {
+    clearTimeout(pendingTrackTimeout);
+    pendingTrackTimeout = null;
+  }
+
+  lastTrackTime = now;
+
+  try {
+    const status = await channel.track(lastTrackedState);
+    if (status !== 'ok') {
+      isTracking = false;
+    } else {
+      isTracking = true;
+    }
+  } catch {
+    isTracking = false;
   }
 }
 
 export async function untrackDevicePresence(): Promise<void> {
+  if (pendingTrackTimeout) {
+    clearTimeout(pendingTrackTimeout);
+    pendingTrackTimeout = null;
+  }
+
   if (!channel || !isTracking) return;
 
   try {
     await channel.untrack();
-  } catch (err) {
-    console.warn('Failed to untrack device presence:', err);
+  } catch {
+    // Silent catch
   } finally {
     isTracking = false;
   }

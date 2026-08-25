@@ -23,6 +23,8 @@ import {
   subscribePresenceObserver,
   type ActiveDeviceView,
 } from '../../services/devicePresence';
+import { useTranslation } from '../../hooks/useTranslation';
+import { SideDrawer } from '../common/SideDrawer';
 
 interface ActiveDevicesModalProps {
   isOpen: boolean;
@@ -35,6 +37,7 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
   onClose,
   activeBusinessId,
 }) => {
+  const { t } = useTranslation();
   const [onlineDevices, setOnlineDevices] = useState<ActiveDeviceView[]>([]);
   const [offlineDevices, setOfflineDevices] = useState<ActiveDeviceView[]>([]);
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
@@ -59,13 +62,12 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
   }, [activeBusinessId]);
 
   useEffect(() => {
-    if (!isOpen || !activeBusinessId || activeBusinessId === '0') return;
+    if (!isOpen) return;
 
     if (typeof window !== 'undefined') {
       setCurrentDeviceId(localStorage.getItem(DEVICE_ID_KEY));
     }
 
-    setLoading(true);
     refreshOnlineDevices();
     void loadOfflineDevices();
 
@@ -77,7 +79,9 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
       },
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+    };
   }, [isOpen, activeBusinessId, refreshOnlineDevices, loadOfflineDevices]);
 
   const handleTerminateSession = async (targetDeviceId: string, name: string) => {
@@ -109,7 +113,7 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
   };
 
   const getRoleBadgeClass = (role: string) => {
-    switch (role.toLowerCase()) {
+    switch (role?.toLowerCase()) {
       case 'admin':
         return 'role-admin';
       case 'manager':
@@ -168,21 +172,25 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
 
           <div className="device-meta-row">
             <span className="device-meta-item">
-              <span className={`device-status-indicator ${isOnline ? 'online' : 'offline'}`} />
-              {isOnline ? 'Online' : 'Offline'}
+              <span className={`status-indicator-dot ${isOnline ? 'online' : 'offline'}`} />
+              {isOnline
+                ? 'Active online'
+                : `Last active ${formatLastActive(device.last_active_at)}`}
             </span>
-
-            {isOnline && device.battery_level !== null && device.battery_level >= 0 && (
+            {device.battery_level !== undefined &&
+              device.battery_level !== null &&
+              device.battery_level >= 0 && (
+                <span className="device-meta-item">
+                  <Battery size={11} style={{ marginRight: '2px' }} />
+                  {device.battery_level}%
+                </span>
+              )}
+            {!isOnline && (
               <span className="device-meta-item">
-                <Battery size={12} style={{ marginRight: '2px' }} />
-                {device.battery_level}%
+                <Clock size={12} style={{ marginRight: '2px' }} />
+                {formatLastActive(device.last_active_at)}
               </span>
             )}
-
-            <span className="device-meta-item">
-              <Clock size={12} style={{ marginRight: '2px' }} />
-              {formatLastActive(device.last_active_at)}
-            </span>
           </div>
 
           {device.location_name && (
@@ -235,146 +243,155 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
     );
   };
 
-  if (!isOpen) return null;
-
   const hasDevices = onlineDevices.length > 0 || offlineDevices.length > 0;
 
+  const drawerFooter = (
+    <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+      <button
+        type="button"
+        onClick={() => {
+          refreshOnlineDevices();
+          void loadOfflineDevices();
+          triggerToast('Device sessions refreshed 🔄');
+        }}
+        className="action-btn-secondary"
+        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+      >
+        <RefreshCw size={14} />
+        <span>Refresh</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={onClose}
+        className="modal-submit-btn"
+        style={{ margin: 0, width: 'auto' }}
+      >
+        <span>Done</span>
+      </button>
+    </div>
+  );
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '600px', width: '90%' }}>
-        <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h3>Active Devices & Sessions</h3>
-            <button
-              onClick={() => {
-                setLoading(true);
-                refreshOnlineDevices();
-                void loadOfflineDevices();
-              }}
-              className="refresh-btn-devices"
-              title="Refresh list"
-            >
-              <RefreshCw size={12} className={loading ? 'spin-anim' : ''} />
-            </button>
-          </div>
-          <button onClick={onClose} className="modal-close-btn">
-            <X size={16} />
-          </button>
+    <SideDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Active Terminal Sessions"
+      subtitle="Monitor live POS devices, cashier logins, and active browser sessions"
+      icon={<Smartphone size={20} />}
+      footer={drawerFooter}
+      maxWidth="580px"
+    >
+      {toastMsg && (
+        <div
+          className="profile-toast"
+          style={{ position: 'sticky', top: 0, zIndex: 100, marginBottom: '12px' }}
+        >
+          <CheckCircle size={16} color="#FFFFFF" />
+          <span>{toastMsg}</span>
         </div>
+      )}
 
-        {toastMsg && (
+      <div className="devices-info-banner" style={{ margin: 0 }}>
+        Monitor all active terminals logged into your business. You can remotely revoke access
+        to force logout a device instantly.
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {loading ? (
           <div
-            className="profile-toast"
-            style={{ position: 'absolute', top: '70px', zIndex: 10000 }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '200px',
+              gap: '12px',
+            }}
           >
-            <CheckCircle size={16} color="#FFFFFF" />
-            <span>{toastMsg}</span>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                border: '3px solid #ede9fe',
+                borderTopColor: '#7c3aed',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }}
+            />
+            <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 500 }}>
+              Loading active terminals...
+            </span>
           </div>
-        )}
-
-        <div className="modal-body" style={{ padding: '24px' }}>
-          <div className="devices-info-banner" style={{ margin: 0 }}>
-            Monitor all active terminals logged into your business. You can remotely revoke access
-            to force logout a device instantly.
+        ) : !hasDevices ? (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '240px',
+              color: 'var(--muted)',
+              textAlign: 'center',
+              padding: '24px',
+            }}
+          >
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                backgroundColor: '#f5f3ff',
+                color: '#7c3aed',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '16px',
+                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.08)',
+              }}
+            >
+              <Smartphone size={28} />
+            </div>
+            <h4
+              style={{
+                margin: '0 0 6px 0',
+                fontSize: '15px',
+                fontWeight: 700,
+                color: 'var(--dark)',
+              }}
+            >
+              No Active Sessions
+            </h4>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '12.5px',
+                color: 'var(--muted)',
+                maxWidth: '280px',
+                lineHeight: '1.5',
+              }}
+            >
+              There are no active devices or browser terminals logged into this business
+              account.
+            </p>
           </div>
-
-          <div className="devices-scroller">
-            {loading ? (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '200px',
-                  gap: '12px',
-                }}
-              >
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    border: '3px solid #ede9fe',
-                    borderTopColor: '#7c3aed',
-                    borderRadius: '50%',
-                    animation: 'spin 0.8s linear infinite',
-                  }}
-                />
-                <span style={{ fontSize: '13px', color: 'var(--muted)', fontWeight: 500 }}>
-                  Loading active terminals...
-                </span>
-              </div>
-            ) : !hasDevices ? (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '240px',
-                  color: 'var(--muted)',
-                  textAlign: 'center',
-                  padding: '24px',
-                }}
-              >
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '50%',
-                    backgroundColor: '#f5f3ff',
-                    color: '#7c3aed',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: '16px',
-                    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.08)',
-                  }}
-                >
-                  <Smartphone size={28} />
-                </div>
-                <h4
-                  style={{
-                    margin: '0 0 6px 0',
-                    fontSize: '15px',
-                    fontWeight: 700,
-                    color: 'var(--dark)',
-                  }}
-                >
-                  No Active Sessions
-                </h4>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: '12.5px',
-                    color: 'var(--muted)',
-                    maxWidth: '280px',
-                    lineHeight: '1.5',
-                  }}
-                >
-                  There are no active devices or browser terminals logged into this business
-                  account.
-                </p>
-              </div>
-            ) : (
-              <div className="devices-list-wrapper">
-                {onlineDevices.length > 0 && (
-                  <>
-                    <p className="devices-section-label">Online Now</p>
-                    {onlineDevices.map((device) => renderDeviceCard(device, true))}
-                  </>
-                )}
-                {offlineDevices.length > 0 && (
-                  <>
-                    <p className="devices-section-label">Recently Offline (24h)</p>
-                    {offlineDevices.map((device) => renderDeviceCard(device, false))}
-                  </>
-                )}
-              </div>
+        ) : (
+          <div className="devices-list-wrapper">
+            {onlineDevices.length > 0 && (
+              <>
+                <p className="devices-section-label">Online Now ({onlineDevices.length})</p>
+                {onlineDevices.map((device) => renderDeviceCard(device, true))}
+              </>
+            )}
+            {offlineDevices.length > 0 && (
+              <>
+                <p className="devices-section-label">Recently Offline ({offlineDevices.length})</p>
+                {offlineDevices.map((device) => renderDeviceCard(device, false))}
+              </>
             )}
           </div>
-        </div>
+        )}
       </div>
-    </div>
+    </SideDrawer>
   );
 };

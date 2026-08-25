@@ -3,6 +3,8 @@
 import React from 'react';
 import { Menu, CloudUpload, CheckCircle2 } from 'lucide-react';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { LanguageSelector } from './LanguageSelector';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface MobileNavbarProps {
   sidebarOpen: boolean;
@@ -18,6 +20,7 @@ export const MobileNavbar: React.FC<MobileNavbarProps> = ({
   handleSync,
 }) => {
   const { canPerform } = useUserPermissions();
+  const { t } = useTranslation();
 
   return (
     <header className="mobile-navbar">
@@ -42,22 +45,28 @@ export const MobileNavbar: React.FC<MobileNavbarProps> = ({
         </div>
       </div>
 
-      {/* Sync Button */}
-      {canPerform('read', 'sync') && (
-        <button
-          className={`mobile-sync-btn ${syncing ? 'syncing' : ''}`}
-          onClick={handleSync}
-          title={syncing ? 'Syncing to cloud...' : 'Tap to sync now'}
-          aria-label="Cloud sync"
-        >
-          {syncing ? (
-            <CloudUpload size={17} className="sync-icon-spin" />
-          ) : (
-            <CheckCircle2 size={17} />
-          )}
-          <span className="mobile-sync-label">{syncing ? 'Syncing...' : 'Synced'}</span>
-        </button>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
+        <LanguageSelector compact />
+
+        {/* Sync Button */}
+        {canPerform('read', 'sync') && (
+          <button
+            className={`mobile-sync-btn ${syncing ? 'syncing' : ''}`}
+            onClick={handleSync}
+            title={syncing ? t('insights.syncingBtn') : t('insights.btnSyncDatabase')}
+            aria-label="Cloud sync"
+          >
+            {syncing ? (
+              <CloudUpload size={17} className="sync-icon-spin" />
+            ) : (
+              <CheckCircle2 size={17} />
+            )}
+            <span className="mobile-sync-label">
+              {syncing ? t('insights.syncingBtn') : t('insights.syncSuccessTitle')}
+            </span>
+          </button>
+        )}
+      </div>
     </header>
   );
 };

@@ -10,6 +10,7 @@ import './auth.css';
 
 import { PhoneStep } from '../../components/auth/PhoneStep';
 import { OtpStep } from '../../components/auth/OtpStep';
+import { LanguageSelector } from '../../components/layout/LanguageSelector';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -127,6 +128,10 @@ export default function AuthPage() {
 
   return (
     <div className="auth-container">
+      <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 100 }}>
+        <LanguageSelector />
+      </div>
+
       {/* Toast popup */}
       {toastMessage && (
         <div className="auth-toast">

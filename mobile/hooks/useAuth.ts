@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useBusinessStore } from '../stores/useBusinessStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { SEEDING_PRODUCTS } from '../utils/seedProducts';
+import { checkPhoneAvailability, normalizePhone } from '../utils/phoneUtils';
 
 export function useVerifyOtp() {
   const queryClient = useQueryClient();
@@ -12,14 +13,6 @@ export function useVerifyOtp() {
   return useMutation({
     mutationFn: async (params: { phone: string; otp: string; token: string }) => {
       const { phone, otp, token } = params;
-
-      const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, '');
-        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-        return cleaned;
-      };
-
       const cleanPhone = normalizePhone(phone);
 
       // Call real verification API
@@ -97,7 +90,7 @@ export function useVerifyOtp() {
       // If not found locally, check if there is a synced account in the Supabase database
       try {
         const { data: remoteData, error: remoteError } = await supabase.rpc(
-          'check_synced_account',
+          'check_phone_registered',
           {
             input_phone: cleanPhone,
           }
@@ -105,26 +98,24 @@ export function useVerifyOtp() {
 
         if (remoteError) {
           console.error('Failed to query remote synced account from Supabase:', remoteError);
-        } else if (remoteData) {
-          if (remoteData.exists) {
-            // Set backup/sync as enabled in settings store
-            useSettingsStore.getState().setBackupEnabled(true);
+        } else if (remoteData && remoteData.exists) {
+          // Set backup/sync as enabled in settings store
+          useSettingsStore.getState().setBackupEnabled(true);
 
-            // Force sync to pull all tables (businesses, employees, products, orders, etc.) from Supabase
-            console.log('Found synced account on Supabase. Triggering database sync...');
-            const syncSuccess = await syncDatabase();
-            console.log('Database sync finished with success status:', syncSuccess);
+          // Force sync to pull all tables (businesses, employees, products, orders, etc.) from Supabase
+          console.log('Found synced account on Supabase. Triggering database sync...');
+          const syncSuccess = await syncDatabase();
+          console.log('Database sync finished with success status:', syncSuccess);
 
-            return {
-              status: 'success' as const,
-              type: remoteData.type as 'employee' | 'owner',
-              phone: cleanPhone,
-              role: remoteData.role,
-              name: remoteData.name,
-              businessId: remoteData.business_id,
-              employeeId: remoteData.employee_id,
-            };
-          }
+          return {
+            status: 'success' as const,
+            type: remoteData.type as 'employee' | 'owner',
+            phone: cleanPhone,
+            role: remoteData.role,
+            name: remoteData.name,
+            businessId: remoteData.business_id,
+            employeeId: remoteData.employee_id || 'owner',
+          };
         }
       } catch (supabaseErr) {
         console.error('Error checking remote synced account on Supabase:', supabaseErr);
@@ -168,14 +159,22 @@ export function useRegisterUser() {
       address: string;
     }) => {
       const { phone, businessName, category, address } = params;
-      const normalizePhone = (phoneStr: string): string => {
-        let cleaned = phoneStr.replace(/\D/g, '');
-        if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
-        if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-        return cleaned;
-      };
-
       const cleanPhone = normalizePhone(phone);
+
+      if (!cleanPhone || cleanPhone.length < 9) {
+        throw new Error('Please enter a valid phone number.');
+      }
+
+      // Check phone uniqueness locally and in Cloud
+      const phoneCheck = await checkPhoneAvailability({
+        phone: cleanPhone,
+        database,
+        supabase,
+      });
+
+      if (phoneCheck.isRegistered) {
+        throw new Error('This phone number is already registered.');
+      }
 
       let newBizRecord: any;
       let newEmpRecord: any;
@@ -232,6 +231,11 @@ export function useRegisterUser() {
 
       // Invalidate businesses query cache!
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
+
+      // Automatically trigger sync to cloud
+      syncDatabase().catch((err) => {
+        console.error('Auto sync after registration failed:', err);
+      });
     },
   });
 }

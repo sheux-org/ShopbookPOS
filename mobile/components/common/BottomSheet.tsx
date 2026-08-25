@@ -46,6 +46,7 @@ const CustomBackdrop = memo((props: BottomSheetBackdropProps) => (
     pressBehavior="close"
   />
 ));
+CustomBackdrop.displayName = 'CustomBackdrop';
 
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   visible,

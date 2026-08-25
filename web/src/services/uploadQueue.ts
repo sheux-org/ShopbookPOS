@@ -1,7 +1,6 @@
 import { Q } from '@nozbe/watermelondb';
 import database from '../db/database';
-import { uploadFiles } from '../utils/uploadthing';
-import { syncDatabase } from './sync';
+import { supabase, syncDatabase } from './sync';
 
 let isProcessing = false;
 
@@ -11,16 +10,26 @@ function extractFileKey(url: string): string | null {
 }
 
 export async function deleteUploadThingFile(remoteUrl: string): Promise<boolean> {
-  const fileKey = extractFileKey(remoteUrl);
-  if (!fileKey) return false;
-
+  if (!remoteUrl) return true;
   try {
-    const res = await fetch('/api/uploadthing', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileKey }),
-    });
-    return res.ok;
+    if (remoteUrl.includes('business-logos/')) {
+      const parts = remoteUrl.split('business-logos/');
+      if (parts[1]) {
+        const filePath = decodeURIComponent(parts[1].split('?')[0]);
+        await supabase.storage.from('business-logos').remove([filePath]);
+        return true;
+      }
+    }
+    const fileKey = extractFileKey(remoteUrl);
+    if (fileKey) {
+      const res = await fetch('/api/uploadthing', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileKey }),
+      });
+      return res.ok;
+    }
+    return true;
   } catch (err) {
     console.error('[UploadQueue] Delete error:', err);
     return false;
@@ -30,11 +39,12 @@ export async function deleteUploadThingFile(remoteUrl: string): Promise<boolean>
 export async function uploadToUploadThing(localUri: string): Promise<string | null> {
   try {
     let blob: Blob;
-    let filename = `product-${Date.now()}.jpg`;
+    let contentType = 'image/jpeg';
+    let fileExt = 'jpg';
 
     if (localUri.startsWith('data:')) {
       const parts = localUri.split(';base64,');
-      const contentType = parts[0].split(':')[1];
+      contentType = parts[0].split(':')[1] || 'image/jpeg';
       const raw = window.atob(parts[1]);
       const rawLength = raw.length;
       const uInt8Array = new Uint8Array(rawLength);
@@ -42,21 +52,36 @@ export async function uploadToUploadThing(localUri: string): Promise<string | nu
         uInt8Array[i] = raw.charCodeAt(i);
       }
       blob = new Blob([uInt8Array], { type: contentType });
-
-      if (contentType.includes('png')) filename = `product-${Date.now()}.png`;
-      else if (contentType.includes('webp')) filename = `product-${Date.now()}.webp`;
-      else if (contentType.includes('gif')) filename = `product-${Date.now()}.gif`;
+      if (contentType.includes('png')) fileExt = 'png';
+      else if (contentType.includes('webp')) fileExt = 'webp';
+      else if (contentType.includes('gif')) fileExt = 'gif';
     } else if (localUri.startsWith('blob:')) {
       const response = await fetch(localUri);
       blob = await response.blob();
+      contentType = blob.type || 'image/jpeg';
+      if (contentType.includes('png')) fileExt = 'png';
+      else if (contentType.includes('webp')) fileExt = 'webp';
+      else if (contentType.includes('gif')) fileExt = 'gif';
     } else {
       return null;
     }
 
-    const file = new File([blob], filename, { type: blob.type });
+    const fileName = `products/prod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+    const { error } = await supabase.storage.from('business-logos').upload(fileName, blob, {
+      contentType,
+      upsert: true,
+    });
 
-    const result = await uploadFiles('productImageUploader', { files: [file] });
-    return result?.[0]?.ufsUrl || result?.[0]?.url || null;
+    if (error) {
+      console.error('[UploadQueue] Supabase storage upload error:', error);
+      return null;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('business-logos').getPublicUrl(fileName);
+
+    return publicUrl;
   } catch (err) {
     console.error('[UploadQueue] uploadToUploadThing error:', err);
     return null;
@@ -69,10 +94,15 @@ export async function processUploadQueue(): Promise<void> {
   isProcessing = true;
 
   try {
-    const pendingProducts = await database
-      .get('products')
-      .query(Q.where('icon_pending_upload', true))
-      .fetch();
+    const allProducts = await database.get('products').query().fetch();
+    const pendingProducts = allProducts.filter((product: any) => {
+      const icon = product.icon ?? '';
+      return (
+        product.iconPendingUpload === true ||
+        icon.startsWith('data:') ||
+        icon.startsWith('blob:')
+      );
+    });
     if (pendingProducts.length === 0) {
       isProcessing = false;
       return;
@@ -92,7 +122,7 @@ export async function processUploadQueue(): Promise<void> {
         continue;
       }
 
-      console.log(`[UploadQueue] Uploading to UploadThing: ${(product as any).name}`);
+      console.log(`[UploadQueue] Uploading product image: ${(product as any).name}`);
       const remoteUrl = await uploadToUploadThing(localUri);
 
       if (remoteUrl) {

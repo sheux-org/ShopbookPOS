@@ -27,6 +27,7 @@ import {
   Camera,
   Smartphone,
   Printer,
+  Globe,
 } from 'lucide-react';
 import './profile.css';
 import { TerminalDiagnostics } from '../../components/TerminalDiagnostics';
@@ -38,9 +39,11 @@ import { FaqModal } from '../../components/profile/FaqModal';
 import { HelpSupportModal } from '../../components/profile/HelpSupportModal';
 import { ActiveDevicesModal } from '../../components/profile/ActiveDevicesModal';
 import { ThermalPrinterModal } from '../../components/profile/ThermalPrinterModal';
+import { LanguageModal } from '../../components/profile/LanguageModal';
 import { useStaff, useCreateStaff, useUpdateStaff, useDeleteStaff } from '../../hooks/useStaff';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
 import { deleteCurrentDeviceSession } from '../../hooks/useActiveDeviceTracker';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface DBEmployee {
   id: string;
@@ -52,6 +55,7 @@ interface DBEmployee {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const employeeName = useAuthStore((s) => s.employeeName);
   const userRole = useAuthStore((s) => s.userRole);
@@ -73,7 +77,7 @@ export default function ProfilePage() {
 
   // Modals state
   const [activeModal, setActiveModal] = useState<
-    'details' | 'staff' | 'branches' | 'faq' | 'devices' | 'printer' | null
+    'details' | 'staff' | 'branches' | 'faq' | 'devices' | 'printer' | 'language' | null
   >(null);
 
   // Form states - Store details
@@ -219,21 +223,27 @@ export default function ProfilePage() {
   const handleDeleteStaff = (id: string) => {
     const emp = employees.find((e) => e.id === id);
     if (!emp) return;
-    if (
-      confirm(
-        `Are you sure you want to permanently remove "${emp.name}"? This action cannot be undone.`
-      )
-    ) {
-      deleteStaffMutation.mutate(id, {
-        onSuccess: () => {
-          triggerToast('Staff member removed successfully! 🗑️');
-        },
-        onError: (err: any) => {
-          console.error(err);
-          triggerToast(err.message || 'Failed to remove staff member.');
-        },
-      });
+
+    const userInput = prompt(
+      `⚠️ Permanently Remove Staff Member\n\nThis will permanently delete "${emp.name}" and revoke their access.\n\nTo confirm, please type "${emp.name}" below:`
+    );
+
+    if (userInput === null) return; // Cancelled
+
+    if (userInput.trim().toLowerCase() !== emp.name.trim().toLowerCase()) {
+      alert(`The entered name did not match "${emp.name}". Deletion cancelled.`);
+      return;
     }
+
+    deleteStaffMutation.mutate(id, {
+      onSuccess: () => {
+        triggerToast('Staff member removed successfully! 🗑️');
+      },
+      onError: (err: any) => {
+        console.error(err);
+        triggerToast(err.message || 'Failed to remove staff member.');
+      },
+    });
   };
 
   const handleAddStaffSubmit = async (e: React.FormEvent) => {
@@ -279,9 +289,9 @@ export default function ProfilePage() {
             setNewStaffPhone('');
             setNewStaffRole('cashier');
           },
-          onError: (err) => {
+          onError: (err: any) => {
             console.error('Failed to register staff:', err);
-            triggerToast('Failed to onboard staff member.');
+            triggerToast(err.message || 'Failed to onboard staff member.');
           },
         }
       );
@@ -391,7 +401,7 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="profile-hero-meta">
-              <span className="profile-hero-badge">Active Terminal</span>
+              <span className="profile-hero-badge">{t('profile.activeTerminal')}</span>
               <h2 className="profile-hero-title">{activeBusiness?.name || 'Partner Store'}</h2>
               <div className="profile-hero-tags">
                 <span className="profile-hero-tag">
@@ -415,7 +425,7 @@ export default function ProfilePage() {
             <div className="profile-card session-card">
               <div className="profile-card-header">
                 <Activity size={16} className="profile-card-icon" />
-                <h4 className="profile-card-title">Active Operator Session</h4>
+                <h4 className="profile-card-title">{t('profile.operatorSession')}</h4>
               </div>
 
               <div className="profile-session-user">
@@ -427,15 +437,16 @@ export default function ProfilePage() {
                   <span className={`profile-role-badge role-${userRole}`}>
                     {userRole === 'admin' ? (
                       <>
-                        <Shield size={10} style={{ marginRight: '4px' }} /> Admin
+                        <Shield size={10} style={{ marginRight: '4px' }} /> {t('staff.roleAdmin')}
                       </>
                     ) : userRole === 'manager' ? (
                       <>
-                        <Settings size={10} style={{ marginRight: '4px' }} /> Manager
+                        <Settings size={10} style={{ marginRight: '4px' }} />{' '}
+                        {t('staff.roleManager')}
                       </>
                     ) : (
                       <>
-                        <User size={10} style={{ marginRight: '4px' }} /> Cashier
+                        <User size={10} style={{ marginRight: '4px' }} /> {t('staff.roleCashier')}
                       </>
                     )}
                   </span>
@@ -444,7 +455,7 @@ export default function ProfilePage() {
 
               <div className="profile-session-details">
                 <div className="session-detail-row">
-                  <span className="detail-label">Phone Creds</span>
+                  <span className="detail-label">{t('staff.phoneLabel')}</span>
                   <span className="detail-val">{userPhone || 'Not Configured'}</span>
                 </div>
                 <div className="session-detail-row">
@@ -460,7 +471,7 @@ export default function ProfilePage() {
             <div className="profile-card status-card">
               <div className="profile-card-header">
                 <HardDrive size={16} className="profile-card-icon" />
-                <h4 className="profile-card-title">Terminal Diagnostics</h4>
+                <h4 className="profile-card-title">{t('profile.terminalDiagnostics')}</h4>
               </div>
 
               <TerminalDiagnostics />
@@ -470,11 +481,8 @@ export default function ProfilePage() {
           {/* Right Column: SaaS Profile Options list */}
           <div className="profile-right-column">
             <div className="profile-section-title-wrap">
-              <h3 className="profile-section-header">Terminal Operations Settings</h3>
-              <p className="profile-section-subtitle">
-                Configure receipt layout templates, onboard cashier employees, switch locations, and
-                force replication logs.
-              </p>
+              <h3 className="profile-section-header">{t('profile.settingsTitle')}</h3>
+              <p className="profile-section-subtitle">{t('profile.settingsSub')}</p>
             </div>
 
             <div className="profile-options-grid">
@@ -485,11 +493,8 @@ export default function ProfilePage() {
                     <Store size={20} />
                   </div>
                   <div className="profile-option-details">
-                    <h4 className="profile-option-title">Store Profile Details</h4>
-                    <p className="profile-option-sub">
-                      Manage receipt layouts, active address, business contact credentials, and
-                      categories.
-                    </p>
+                    <h4 className="profile-option-title">{t('profile.storeDetailsTitle')}</h4>
+                    <p className="profile-option-sub">{t('profile.storeDetailsSub')}</p>
                   </div>
                   <ChevronRight size={18} className="profile-chevron-arrow" />
                 </div>
@@ -501,11 +506,8 @@ export default function ProfilePage() {
                   <MapPin size={20} />
                 </div>
                 <div className="profile-option-details">
-                  <h4 className="profile-option-title">Multi-Business & Branches</h4>
-                  <p className="profile-option-sub">
-                    Manage and swap active contexts between different registered businesses, branch
-                    locations, and checkout terminals.
-                  </p>
+                  <h4 className="profile-option-title">{t('profile.branchTitle')}</h4>
+                  <p className="profile-option-sub">{t('profile.branchSub')}</p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
@@ -517,11 +519,8 @@ export default function ProfilePage() {
                     <Users size={20} />
                   </div>
                   <div className="profile-option-details">
-                    <h4 className="profile-option-title">Staff Accounts Management</h4>
-                    <p className="profile-option-sub">
-                      Onboard and manage cashmere cashiers, store managers, and administration
-                      access ranks.
-                    </p>
+                    <h4 className="profile-option-title">{t('profile.staffTitle')}</h4>
+                    <p className="profile-option-sub">{t('profile.staffSub')}</p>
                   </div>
                   <ChevronRight size={18} className="profile-chevron-arrow" />
                 </div>
@@ -534,11 +533,8 @@ export default function ProfilePage() {
                     <RefreshCw size={20} className={syncing ? 'spin-anim' : ''} />
                   </div>
                   <div className="profile-option-details">
-                    <h4 className="profile-option-title">Sync to Cloud</h4>
-                    <p className="profile-option-sub">
-                      Manually push latest offline transaction queues and adjust stock registers
-                      with cloud tables.
-                    </p>
+                    <h4 className="profile-option-title">{t('profile.syncTitle')}</h4>
+                    <p className="profile-option-sub">{t('profile.syncSub')}</p>
                   </div>
                   <ChevronRight size={18} className="profile-chevron-arrow" />
                 </div>
@@ -553,11 +549,8 @@ export default function ProfilePage() {
                   <Smartphone size={20} />
                 </div>
                 <div className="profile-option-details">
-                  <h4 className="profile-option-title">Active Devices & Sessions</h4>
-                  <p className="profile-option-sub">
-                    Monitor, inspect, and remotely log out active terminal sessions on Android, iOS,
-                    or web client instances.
-                  </p>
+                  <h4 className="profile-option-title">{t('profile.devicesTitle')}</h4>
+                  <p className="profile-option-sub">{t('profile.devicesSub')}</p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
@@ -568,11 +561,23 @@ export default function ProfilePage() {
                   <Printer size={20} />
                 </div>
                 <div className="profile-option-details">
-                  <h4 className="profile-option-title">Thermal Printer Setup</h4>
-                  <p className="profile-option-sub">
-                    Connect a USB/serial ESC/POS thermal printer for direct one-tap receipt printing
-                    without the system dialog.
-                  </p>
+                  <h4 className="profile-option-title">{t('profile.printerTitle')}</h4>
+                  <p className="profile-option-sub">{t('profile.printerSubScan')}</p>
+                </div>
+                <ChevronRight size={18} className="profile-chevron-arrow" />
+              </div>
+
+              {/* Option: Language Selection */}
+              <div className="profile-option-card" onClick={() => setActiveModal('language')}>
+                <div
+                  className="profile-icon-box"
+                  style={{ backgroundColor: '#eff6ff', color: '#2563eb' }}
+                >
+                  <Globe size={20} />
+                </div>
+                <div className="profile-option-details">
+                  <h4 className="profile-option-title">{t('profile.languageTitle')}</h4>
+                  <p className="profile-option-sub">{t('profile.languageSub')}</p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
@@ -583,11 +588,8 @@ export default function ProfilePage() {
                   <HelpCircle size={20} />
                 </div>
                 <div className="profile-option-details">
-                  <h4 className="profile-option-title">Help FAQ & Printing Manual</h4>
-                  <p className="profile-option-sub">
-                    Tax audit guidelines, hardware print configurations, and local offline database
-                    setup.
-                  </p>
+                  <h4 className="profile-option-title">{t('profile.faqTitle')}</h4>
+                  <p className="profile-option-sub">{t('profile.faqSub')}</p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
@@ -596,7 +598,7 @@ export default function ProfilePage() {
               <div
                 className="profile-option-card logout-card"
                 onClick={() => {
-                  if (confirm('Disconnect POS terminal session?')) {
+                  if (confirm(t('profile.logoutPrompt') || 'Disconnect POS terminal session?')) {
                     deleteCurrentDeviceSession().then(() => {
                       logout();
                       router.push('/auth');
@@ -608,11 +610,8 @@ export default function ProfilePage() {
                   <LogOut size={20} />
                 </div>
                 <div className="profile-option-details">
-                  <h4 className="profile-option-title">Sign Out Session</h4>
-                  <p className="profile-option-sub">
-                    Safely commit offline cache states and disconnect this POS device terminal
-                    authorization.
-                  </p>
+                  <h4 className="profile-option-title">{t('profile.logoutTitle')}</h4>
+                  <p className="profile-option-sub">{t('profile.logoutSub')}</p>
                 </div>
                 <ChevronRight size={18} className="profile-chevron-arrow" />
               </div>
@@ -702,6 +701,8 @@ export default function ProfilePage() {
         onClose={() => setActiveModal(null)}
         activeBusiness={activeBusiness}
       />
+
+      <LanguageModal isOpen={activeModal === 'language'} onClose={() => setActiveModal(null)} />
 
       <HelpSupportModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
     </div>

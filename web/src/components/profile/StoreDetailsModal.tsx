@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
-import { X, Save, Lock, Store, Camera, Trash2 } from 'lucide-react';
+import { Save, Lock, Store, Camera, Trash2 } from 'lucide-react';
 import { useUserPermissions } from '../../hooks/useUserPermissions';
+import { useTranslation } from '../../hooks/useTranslation';
+import { SideDrawer } from '../common/SideDrawer';
 
 interface StoreDetailsModalProps {
   isOpen: boolean;
@@ -40,6 +42,7 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
   hasItems = false,
 }) => {
   const { canPerform } = useUserPermissions();
+  const { t } = useTranslation();
   const canUpdate = canPerform('update', 'settings');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -56,162 +59,160 @@ export const StoreDetailsModal: React.FC<StoreDetailsModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  const drawerFooter = (
+    <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: 'flex-end' }}>
+      <button
+        type="button"
+        onClick={onClose}
+        className="action-btn-secondary"
+      >
+        {t('common.cancel')}
+      </button>
+      {canUpdate && (
+        <button type="submit" form="store-details-form" className="modal-submit-btn" style={{ margin: 0, width: 'auto' }}>
+          <Save size={16} />
+          <span>{t('common.save')}</span>
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3>Update Store details</h3>
-          <button onClick={onClose} className="modal-close-btn">
-            <X size={16} />
-          </button>
-        </div>
-        <form onSubmit={onSubmit} className="modal-body">
-          {!canUpdate && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 14px',
-                backgroundColor: '#fffbeb',
-                border: '1px solid #fef3c7',
-                borderRadius: '8px',
-                color: '#d97706',
-                fontSize: '11px',
-                fontWeight: '500',
-                marginBottom: '14px',
-              }}
-            >
-              <Lock size={14} />
-              <span>Viewing Mode: Only administrators can update store configuration details.</span>
-            </div>
-          )}
+    <SideDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('businessDetails.title')}
+      subtitle="Manage your business identity, contact details, and brand logo"
+      icon={<Store size={20} />}
+      footer={drawerFooter}
+    >
+      <form id="store-details-form" onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {!canUpdate && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              backgroundColor: '#fffbeb',
+              border: '1px solid #fef3c7',
+              borderRadius: '8px',
+              color: '#d97706',
+              fontSize: '11px',
+              fontWeight: '500',
+            }}
+          >
+            <Lock size={14} />
+            <span>Viewing Mode: Only administrators can update store configuration details.</span>
+          </div>
+        )}
 
-          {/* Logo Section */}
-          <div className="modal-logo-section">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleFileChange}
-            />
-            <div
-              className={`modal-logo-container ${canUpdate ? 'clickable' : ''}`}
-              onClick={handleLogoClick}
-              title={canUpdate ? 'Click to change store logo' : undefined}
-            >
-              {editLogoUri ? (
-                <img src={editLogoUri} alt="Store Logo" className="modal-logo-preview" />
-              ) : (
-                <div className="modal-logo-placeholder">
-                  <Store size={24} />
-                  <span>Upload Logo</span>
-                </div>
-              )}
-              {canUpdate && (
-                <div className="modal-logo-camera-overlay">
-                  <Camera size={14} />
-                </div>
-              )}
-            </div>
-            {editLogoUri && canUpdate && (
-              <button
-                type="button"
-                onClick={() => setEditLogoUri('')}
-                className="modal-remove-logo-btn"
-              >
-                <Trash2 size={12} />
-                <span>Remove logo</span>
-              </button>
+        {/* Logo Section */}
+        <div className="modal-logo-section">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <div
+            className={`modal-logo-container ${canUpdate ? 'clickable' : ''}`}
+            onClick={handleLogoClick}
+            title={canUpdate ? 'Click to change store logo' : undefined}
+          >
+            {editLogoUri ? (
+              <img src={editLogoUri} alt="Store Logo" className="modal-logo-preview" />
+            ) : (
+              <div className="modal-logo-placeholder">
+                <Store size={24} />
+                <span>Upload Logo</span>
+              </div>
             )}
-            <div style={{ textAlign: 'center', marginTop: '12px' }}>
-              <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-                {editName}
-              </h4>
-              <p
-                style={{
-                  margin: '4px 0 0 0',
-                  fontSize: '13px',
-                  color: '#6b7280',
-                  fontWeight: '500',
-                }}
-              >
-                📞 {editPhone}
-              </p>
-            </div>
-          </div>
-
-          <div className="modal-input-group">
-            <label className="modal-label">Business Brand Name</label>
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              required
-              disabled={!canUpdate}
-              className="modal-input"
-            />
-          </div>
-
-          <div className="modal-input-group">
-            <label className="modal-label">Business Type</label>
-            <select
-              value={editCategory}
-              onChange={(e) => setEditCategory(e.target.value)}
-              required
-              disabled={!canUpdate || hasItems}
-              className="modal-select"
-            >
-              <option value="Cafe">Cafe</option>
-              <option value="Restaurant">Restaurant</option>
-              <option value="Boutique">Boutique</option>
-              <option value="Salon">Salon</option>
-              <option value="Supermarket">Supermarket</option>
-              <option value="Grocery Shop">Grocery Shop</option>
-              <option value="Pharmacy">Pharmacy</option>
-              <option value="Hardware">Hardware</option>
-              <option value="Other">Other</option>
-            </select>
-            {hasItems && (
-              <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
-                Business type cannot be changed because items have already been created in the
-                catalog.
-              </p>
+            {canUpdate && (
+              <div className="modal-logo-camera-overlay">
+                <Camera size={14} />
+              </div>
             )}
           </div>
-
-          <div className="modal-input-group">
-            <label className="modal-label">Billing Address</label>
-            <input
-              type="text"
-              value={editAddress}
-              onChange={(e) => setEditAddress(e.target.value)}
-              required
-              disabled={!canUpdate}
-              className="modal-input"
-            />
-          </div>
-
-          {canUpdate ? (
-            <button type="submit" className="modal-submit-btn">
-              <Save size={16} />
-              <span>Save store details</span>
-            </button>
-          ) : (
+          {editLogoUri && canUpdate && (
             <button
               type="button"
-              onClick={onClose}
-              className="modal-submit-btn"
-              style={{ backgroundColor: 'var(--dark)' }}
+              onClick={() => setEditLogoUri('')}
+              className="modal-remove-logo-btn"
             >
-              <span>Close View</span>
+              <Trash2 size={12} />
+              <span>Remove logo</span>
             </button>
           )}
-        </form>
-      </div>
-    </div>
+          <div style={{ textAlign: 'center', marginTop: '12px' }}>
+            <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+              {editName}
+            </h4>
+            <p
+              style={{
+                margin: '4px 0 0 0',
+                fontSize: '13px',
+                color: '#6b7280',
+                fontWeight: '500',
+              }}
+            >
+              📞 {editPhone}
+            </p>
+          </div>
+        </div>
+
+        <div className="modal-input-group">
+          <label className="modal-label">Business Brand Name</label>
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            required
+            disabled={!canUpdate}
+            className="modal-input"
+          />
+        </div>
+
+        <div className="modal-input-group">
+          <label className="modal-label">Business Type</label>
+          <select
+            value={editCategory}
+            onChange={(e) => setEditCategory(e.target.value)}
+            required
+            disabled={!canUpdate || hasItems}
+            className="modal-select"
+          >
+            <option value="Cafe">Cafe</option>
+            <option value="Restaurant">Restaurant</option>
+            <option value="Boutique">Boutique</option>
+            <option value="Salon">Salon</option>
+            <option value="Supermarket">Supermarket</option>
+            <option value="Grocery Shop">Grocery Shop</option>
+            <option value="Pharmacy">Pharmacy</option>
+            <option value="Hardware">Hardware</option>
+            <option value="Other">Other</option>
+          </select>
+          {hasItems && (
+            <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+              Business type cannot be changed because items have already been created in the
+              catalog.
+            </p>
+          )}
+        </div>
+
+        <div className="modal-input-group">
+          <label className="modal-label">Billing Address</label>
+          <input
+            type="text"
+            value={editAddress}
+            onChange={(e) => setEditAddress(e.target.value)}
+            required
+            disabled={!canUpdate}
+            className="modal-input"
+          />
+        </div>
+      </form>
+    </SideDrawer>
   );
 };

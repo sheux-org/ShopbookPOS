@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheet, BottomSheetTextInput } from '../../../components/common/BottomSheet';
 import { TOKENS } from '../../../constants/tokens';
@@ -17,6 +17,7 @@ import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
 import { hapticFeedback } from '@/utils/haptics';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { DeleteConfirmModal } from '../../../components/common/DeleteConfirmModal';
 
 export default function ManageStaffRoute() {
   const insets = useSafeAreaInsets();
@@ -46,6 +47,8 @@ export default function ManageStaffRoute() {
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deletingStaff, setDeletingStaff] = useState<StaffMember | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -56,8 +59,8 @@ export default function ManageStaffRoute() {
     setEditEmail(member.email);
     setEditPhone(member.phone);
     setIsEditModalOpen(true);
+    hapticFeedback.impactLight();
   };
-  hapticFeedback.impactLight();
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -87,8 +90,8 @@ export default function ManageStaffRoute() {
           setEditingStaff(null);
           hapticFeedback.notificationSuccess();
         },
-        onError: () => {
-          triggerToast('Failed to update staff details.');
+        onError: (err: any) => {
+          triggerToast(err?.message || 'Failed to update staff details.');
           hapticFeedback.notificationError();
         },
       }
@@ -97,30 +100,27 @@ export default function ManageStaffRoute() {
 
   const handleConfirmDeleteStaff = (staff: StaffMember) => {
     hapticFeedback.notificationWarning();
-    Alert.alert(
-      'Remove Staff Member',
-      `Are you sure you want to permanently remove "${staff.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove Staff',
-          style: 'destructive',
-          onPress: () => {
-            hapticFeedback.impactMedium();
-            deleteMutation.mutate(staff.id, {
-              onSuccess: () => {
-                triggerToast('Staff member removed successfully! 🗑️');
-                hapticFeedback.notificationSuccess();
-              },
-              onError: () => {
-                triggerToast('Failed to delete staff member.');
-                hapticFeedback.notificationError();
-              },
-            });
-          },
-        },
-      ]
-    );
+    setDeletingStaff(staff);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleExecuteDeleteStaff = () => {
+    if (!deletingStaff) return;
+
+    deleteMutation.mutate(deletingStaff.id, {
+      onSuccess: () => {
+        triggerToast('Staff member removed successfully! 🗑️');
+        setIsDeleteModalOpen(false);
+        setDeletingStaff(null);
+        hapticFeedback.notificationSuccess();
+      },
+      onError: (err: any) => {
+        triggerToast(err?.message || 'Failed to delete staff member.');
+        setIsDeleteModalOpen(false);
+        setDeletingStaff(null);
+        hapticFeedback.notificationError();
+      },
+    });
   };
 
   const handleAddStaff = () => {
@@ -155,8 +155,8 @@ export default function ManageStaffRoute() {
           setNewPhone('');
           hapticFeedback.notificationSuccess();
         },
-        onError: () => {
-          triggerToast('Failed to add staff member.');
+        onError: (err: any) => {
+          triggerToast(err?.message || 'Failed to add staff member.');
           hapticFeedback.notificationError();
         },
       }
@@ -479,6 +479,26 @@ export default function ManageStaffRoute() {
           </View>
         </View>
       </BottomSheet>
+
+      {/* Type Name to Confirm Staff Deletion Modal */}
+      {deletingStaff && (
+        <DeleteConfirmModal
+          visible={isDeleteModalOpen}
+          title="Remove Staff Member"
+          itemName={deletingStaff.name}
+          itemTypeLabel="staff member"
+          description={`This will permanently remove "${deletingStaff.name}" and revoke their access from this store branch. This action cannot be undone.`}
+          confirmButtonText="Remove Staff"
+          isLoading={deleteMutation.isPending}
+          onConfirm={handleExecuteDeleteStaff}
+          onClose={() => {
+            if (!deleteMutation.isPending) {
+              setIsDeleteModalOpen(false);
+              setDeletingStaff(null);
+            }
+          }}
+        />
+      )}
     </View>
   );
 }

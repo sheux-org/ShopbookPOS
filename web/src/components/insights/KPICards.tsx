@@ -1,5 +1,6 @@
 import React from 'react';
 import { Wallet, ShoppingCart, TrendingUp, AlertTriangle } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface KPICardsProps {
   grossRevenue: number;
@@ -16,6 +17,8 @@ export default function KPICards({
   lowStockCount,
   outOfStockCount,
 }: KPICardsProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="kpi-grid">
       {/* Gross Revenue Card */}
@@ -28,7 +31,7 @@ export default function KPICards({
             <Wallet size={20} />
           </div>
           <div>
-            <h4 className="kpi-label">Gross Revenue</h4>
+            <h4 className="kpi-label">{t('insights.totalSales')}</h4>
             <p className="kpi-val">Rs. {grossRevenue.toLocaleString()}</p>
           </div>
         </div>
@@ -44,7 +47,7 @@ export default function KPICards({
             <ShoppingCart size={20} />
           </div>
           <div>
-            <h4 className="kpi-label">Invoices Completed</h4>
+            <h4 className="kpi-label">{t('insights.totalOrders')}</h4>
             <p className="kpi-val">{ordersCount}</p>
           </div>
         </div>
@@ -60,8 +63,8 @@ export default function KPICards({
             <TrendingUp size={20} />
           </div>
           <div>
-            <h4 className="kpi-label">Average Basket</h4>
-            <p className="kpi-val">Rs. {Math.round(avgTicket).toLocaleString()}</p>
+            <h4 className="kpi-label">{t('insights.averageOrderValue')}</h4>
+            <p className="kpi-val">Rs. {avgTicket.toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -76,7 +79,7 @@ export default function KPICards({
             <AlertTriangle size={20} />
           </div>
           <div>
-            <h4 className="kpi-label">Stock Alerts</h4>
+            <h4 className="kpi-label">{t('insights.inventoryWarnings')}</h4>
             <p
               className="kpi-val"
               style={{
@@ -84,9 +87,11 @@ export default function KPICards({
                 fontSize: '18px',
               }}
             >
-              {outOfStockCount} Out of Stock
+              {outOfStockCount} {t('pos.outOfStock')}
             </p>
-            <p className="kpi-sub-label">{lowStockCount} Low Stock Items</p>
+            <p className="kpi-sub-label">
+              {lowStockCount} {t('stocks.filterLowStock')}
+            </p>
           </div>
         </div>
       </div>

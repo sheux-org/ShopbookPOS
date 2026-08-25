@@ -86,3 +86,15 @@ pnpm dev
 | `npx expo run:android`   | Prebuild & launch local Android native development build |
 | `npx -y expo-doctor`     | Validate dependency and project environment health       |
 | `npx expo install --fix` | Automatically fix out-of-sync Expo dependencies          |
+
+---
+
+## 📚 Technical Documentation
+
+- [Security, Multi-Role & Tenant Isolation Architecture](doc/SECURITY_AND_MULTI_ROLE_ARCHITECTURE.md)
+- [Role-Based Access Control (RBAC) Guide](doc/ROLE_MANAGEMENT.md)
+- [Active Device Session Management](doc/ACTIVE_DEVICES.md)
+- [Firebase Push Notifications Architecture](doc/FIREBASE_PUSH_NOTIFICATIONS.md)
+- [Force Update & Config Protocol](doc/FORCE_UPDATE.md)
+- [Premium Plans & Licensing](doc/PREMIUM_PLANS.md)
+

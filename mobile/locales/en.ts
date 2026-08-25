@@ -442,6 +442,7 @@ export default {
     removeConfirmMsg:
       'Are you sure you want to permanently remove "{name}"? This action cannot be undone.',
     removeBtn: 'Remove Staff',
+    phoneAlreadyRegistered: 'This phone number is already registered.',
   },
   premium: {
     headerTitle: 'Shopbook POS Pro',
