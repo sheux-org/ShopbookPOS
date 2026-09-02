@@ -131,11 +131,14 @@ grant execute on function public.get_entitlement(text) to anon, authenticated;
 
 ## 4. Webhook (Supabase Edge Function)
 
-`supabase/functions/revenuecat-webhook/index.ts` — Deno, deployed with `--no-verify-jwt` (RevenueCat doesn't send a Supabase JWT). Secrets: `RC_WEBHOOK_AUTH` (shared header value), `RC_SECRET_API_KEY` (v1 secret key), `SUPABASE_SERVICE_ROLE_KEY`.
+`supabase/functions/revenuecat-webhook/index.ts` — Deno, deployed with `--no-verify-jwt` (RevenueCat doesn't send a Supabase JWT). Secrets: `RC_WEBHOOK_SIGNING_SECRET` (HMAC signing secret, preferred), `RC_WEBHOOK_AUTH` (shared header value, fallback), `RC_SECRET_API_KEY` (**v1** secret key — the subscriber re-fetch in step 5 is a v1 endpoint), `SUPABASE_SERVICE_ROLE_KEY`.
 
 Algorithm (deliberately event-type-agnostic):
 
-1. `401` unless `Authorization` header equals `RC_WEBHOOK_AUTH`. (RevenueCat also sends `X-RevenueCat-Webhook-Signature: t=…,v1=<hmac-sha256>` signed with the integration's signing secret — verifying it over the raw body is the stronger check; the shared header is the minimum.)
+1. Authenticate, or `401`. Read the body **once as text** — the signature covers raw bytes, and re-serialising parsed JSON changes them.
+   - **Preferred:** verify `X-RevenueCat-Webhook-Signature: t=<unix>,v1=<hmac-sha256>`. Compute HMAC-SHA256 over `"{timestamp}.{raw body}"` with `RC_WEBHOOK_SIGNING_SECRET`, compare in constant time, and reject timestamps outside ±5 minutes (replay window).
+   - **Fallback:** when no signing secret is configured, compare the `Authorization` header against `RC_WEBHOOK_AUTH`, also in constant time.
+   - Both paths are implemented; the signature is used whenever the secret is set.
 2. Parse `{ event }`. `type === 'TEST'` → `200`.
 3. Collect app user ids: `[event.app_user_id, event.original_app_user_id, ...event.transferred_to ?? [], ...event.transferred_from ?? []]`, keep only those that parse as UUID (ignores `$RCAnonymousID:` aliases).
 4. Insert `subscription_events` (`on conflict (id) do nothing`); if the row already existed → `200` (retry of a processed event).
@@ -239,7 +242,20 @@ Unchanged except: the "Upgrade Now" button label becomes "See Pro plans" for sta
 
 1. Customer pays by bank transfer and sends proof on WhatsApp (channel lives on the website, not in the apps).
 2. Ops looks up the owner: Supabase → `owners` by normalized phone → copy `id`.
-3. RevenueCat dashboard → Customers → search `id` (create if it doesn't exist yet: the owner has to have logged in once on the app after this ships; otherwise use API v1 `POST /subscribers/{id}/entitlements/pro/promotional` with `duration: monthly|three_month|yearly`).
+3. RevenueCat dashboard → Customers → search `id`. The customer exists once the owner has logged in on a build containing this change.
+
+   If the customer does not exist yet, grant via the **v2** API — note this is a _different key_ from the webhook's v1 one, and v1 keys do **not** work on v2 endpoints:
+
+   ```
+   POST https://api.revenuecat.com/v2/projects/{project_id}/customers/{customer_id}/actions/grant_entitlement
+   Authorization: Bearer <v2 secret key>   # needs customer_information:customers:read_write
+   Content-Type: application/json
+
+   { "entitlement_id": "pro", "expires_at": <ms since epoch> }
+   ```
+
+   `expires_at` is an absolute millisecond timestamp, not a duration — compute it from the plan bought (now + 1 / 3 / 12 months).
+
 4. _Grant promotional entitlement_ → `pro`, duration = plan bought.
 5. Webhook fires → `subscriptions` updated → owner's and staff's devices unlock on next foreground/refresh (≤ 5 min on web).
 6. To revoke: RevenueCat → customer → _Revoke_ promotional entitlement.

@@ -14,19 +14,19 @@ Compiled `dev` @ `f23870f`, 2026-09-01. Analysis lives in [`architecture.md`](./
 | [SYNC-1](#sync-1)   | High     | Concurrent stock decrements silently lost                 | fix-specified                  |
 | [SEC-1](#sec-1)     | High     | Hardcoded OTP `11111` grants an admin session             | open                           |
 | [SEC-2](#sec-2)     | High     | Tenant isolation is a client-supplied parameter           | open                           |
-| [RC-1](#rc-1)       | High     | Promotional-grant endpoint documented as v1; is v2        | fix-specified                  |
+| [RC-1](#rc-1)       | High     | Promotional-grant endpoint documented as v1; is v2        | done                           |
 | [SEC-3](#sec-3)     | Medium   | RBAC is advisory — client-side only                       | open                           |
 | [SYNC-2](#sync-2)   | Medium   | `lastPulledAt` discarded on push                          | fix-specified                  |
 | [CFG-1](#cfg-1)     | Medium   | `app_config` store URLs are wrong                         | done (android; ios pending id) |
 | [PRICE-1](#price-1) | Medium   | "Save 25%" is arithmetically 14.3%                        | decision-needed                |
 | [PRICE-2](#price-2) | Medium   | Fabricated strike-through prices in the paywall           | done                           |
-| [RC-2](#rc-2)       | Medium   | Webhook auth under-specified (signature vs shared header) | done (implemented)             |
+| [RC-2](#rc-2)       | Medium   | Webhook auth under-specified (signature vs shared header) | done                           |
 | [ENT-2](#ent-2)     | Medium   | Entitlement code has no automated test coverage           | open                           |
 | [BUILD-1](#build-1) | Medium   | Pre-commit hook fails for everyone (Expo version drift)   | fix-specified                  |
 | [SYNC-3](#sync-3)   | Low      | No periodic sync — foreground or sale only                | open                           |
 | [SYNC-4](#sync-4)   | Low      | Peer broadcast fires only after a push                    | open                           |
 | [MAINT-1](#maint-1) | Low      | Push RPC: 12 duplicated blocks, row-by-row loops          | open                           |
-| [DOC-1](#doc-1)     | Low      | Broken reference link in config doc                       | fix-specified                  |
+| [DOC-1](#doc-1)     | Low      | Broken reference link in config doc                       | done                           |
 
 ---
 
@@ -127,9 +127,9 @@ Every comparable open-source implementation derives the tenant from `auth.uid()`
 
 ## RC-1 — Promotional-grant endpoint documented as v1; current API is v2 {#rc-1}
 
-**Severity:** High · **Status:** fix-specified
+**Severity:** High · **Status:** done
 
-**Where:** `docs/revenuecat/02-build-plan.md:223` (ops runbook step 3), and the single-key assumption in `docs/revenuecat/03-store-and-revenuecat-configuration.md` §4
+**Where:** `docs/revenuecat/02-build-plan.md` §7 step 3 (ops runbook step 3), and the single-key assumption in `docs/revenuecat/03-store-and-revenuecat-configuration.md` §4
 
 **Symptom:** Following the runbook as written fails. This is the bank-transfer activation path — i.e. the entire non-store revenue channel.
 
@@ -143,7 +143,7 @@ Authorization: Bearer <v2 secret key>
 
 Requires permission `customer_information:customers:read_write`. **v1 keys are incompatible with v2** — verified against RevenueCat's API v2 reference via context7.
 
-**Fix:** update the runbook step, and split `RC_SECRET_API_KEY` into a v1 key (webhook subscriber re-fetch) and a v2 key (ops grants) — or move the webhook to v2 as well and keep one. Config doc §4's "create a v1 secret API key" step needs the same change.
+**Fixed.** The runbook now carries the v2 request verbatim, including that `expires_at` is an absolute ms timestamp rather than a duration. Config doc §4 now provisions two keys — v1 for the webhook re-fetch, v2 with `customer_information:customers:read_write` for ops grants — and states that v1 keys are rejected by v2 endpoints.
 
 ## SEC-3 — RBAC is advisory {#sec-3}
 
@@ -209,7 +209,7 @@ ios_url      https://apps.apple.com/app/id6470000000
 
 ## RC-2 — Webhook auth under-specified {#rc-2}
 
-**Severity:** Medium · **Status:** fix-specified
+**Severity:** Medium · **Status:** done
 
 **Where:** `docs/revenuecat/02-build-plan.md` §4, step 1
 
@@ -217,7 +217,7 @@ ios_url      https://apps.apple.com/app/id6470000000
 
 **Cause / correct spec:** RevenueCat sends `X-RevenueCat-Webhook-Signature: t=<unix>,v1=<hmac-sha256>`. Verification is HMAC-SHA256 over `"{timestamp}.{raw_body}"` with the integration signing secret, constant-time compared, ±5 min tolerance, **computed over raw bytes before JSON parsing**.
 
-**Fixed in code.** `supabase/functions/revenuecat-webhook/index.ts` verifies the HMAC when `RC_WEBHOOK_SIGNING_SECRET` is set and falls back to the shared header otherwise, both through a timing-safe compare. The build-plan doc still describes the old approach.
+**Fixed in code and doc.** `supabase/functions/revenuecat-webhook/index.ts` verifies the HMAC when `RC_WEBHOOK_SIGNING_SECRET` is set and falls back to the shared header otherwise, both through a timing-safe compare. Build plan §4 step 1 now specifies signature-first with the raw-body and ±5 min replay constraints; config doc §4 provisions the signing secret.
 
 ## ENT-2 — Entitlement code has no automated test coverage {#ent-2}
 
@@ -308,11 +308,11 @@ typecheck, and the Next.js build — all passed before `expo-doctor` failed.
 
 ## DOC-1 — Broken reference link {#doc-1}
 
-**Severity:** Low · **Status:** fix-specified
+**Severity:** Low · **Status:** done
 
-**Where:** `docs/revenuecat/03-store-and-revenuecat-configuration.md:115`
+**Where:** `docs/revenuecat/03-store-and-revenuecat-configuration.md` (Sources)
 
-`admbtlr/reams` default branch is `master`, not `main` — the `/blob/main/` URL 404s. The other three cited reference implementations resolve (verified 200). `feeddeck/feeddeck` is worth adding as a fourth: it is the most mature Supabase+RevenueCat webhook found on GitHub.
+**Fixed.** `admbtlr/reams` uses `master`, not `main`; the link is corrected and `feeddeck/feeddeck` added as a fifth reference. All five now verified 200.
 
 ---
 
