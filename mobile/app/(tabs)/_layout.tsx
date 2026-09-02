@@ -8,11 +8,13 @@ import { useBusinessSwitchSync } from '../../hooks/useBusinessSwitchSync';
 import { useWatermelonSync } from '../../hooks/useWatermelonSync';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { syncDatabase, supabase, getClientId } from '../../services/sync';
+import { useEntitlementSync } from '../../hooks/useEntitlement';
 
 export default function TabLayout() {
   useActiveDeviceTracker();
   useBusinessSwitchSync();
   useWatermelonSync(); // Enable periodic background database sync
+  useEntitlementSync(); // Keep server-backed Pro entitlement fresh
 
   const { tabBarVisible } = useTabBarVisible();
   const translateY = useSharedValue(0);

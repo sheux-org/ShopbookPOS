@@ -19,8 +19,8 @@ import { HeaderCartButton } from '../common/HeaderCartButton';
 import { useProducts } from '../../hooks/useProducts';
 import { SearchProductRow } from '../product/SearchProductRow';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
+import { useIsPro } from '../../hooks/useEntitlement';
 
 export const SearchScreen: React.FC = () => {
   const router = useRouter();
@@ -32,7 +32,7 @@ export const SearchScreen: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const {

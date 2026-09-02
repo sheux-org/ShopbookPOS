@@ -1,115 +1,133 @@
-# Mini POS Pro Plan & Payment Architecture Documentation
+# Shopbook POS Pro — Entitlement & Purchase Architecture
 
-This document describes the design, features, state management, upgrade flow, and developer instructions for the **Mini POS Pro** subscription plan in the Shopbook Mini POS application.
+How the Pro tier is sold, granted, and enforced. Replaces the previous version of
+this document, which described a mock checkout as if it were real.
 
----
+Related: [`docs/architecture.md`](../../docs/architecture.md),
+[`docs/revenuecat/`](../../docs/revenuecat/) (audit, build plan, store setup).
 
-## 1. Plan Overview & Capabilities
+## 1. Where entitlement comes from
 
-The **Mini POS Pro** tier (branded as _Mini POS Pro_, powered by _Shopbook Pro_) unlocks high-performance enterprise features that scale the POS from a single-device offline database to a multi-branch cloud-synchronized terminal.
-
-### Premium Features & Restriction Hooks
-
-When `isPremium` is `false` (Free tier), the client intercepts premium features and prompts the user with the `PremiumUpgradeModal`. When `isPremium` is `true`, these features are unlocked:
-
-1. **In-App Camera Barcode Searching & Scanning**:
-   - **Where**: [SearchScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/SearchScreen.tsx#L52-L60) and [StocksScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/StocksScreen.tsx#L117-L125).
-   - **Behavior**: Grants camera permissions and triggers the animated `BarcodeScannerModal` overlay.
-2. **Auto Cloud Backup & Sync**:
-   - **Where**: [InsightsScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/InsightsScreen.tsx#L166-L195).
-   - **Behavior**: Synchronizes local WatermelonDB operations with remote PostgreSQL storage.
-3. **Multi-Branch Store Swapping**:
-   - **Where**: [HomeScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/HomeScreen.tsx#L479-L489).
-   - **Behavior**: Allows swapping between active outlets/branches within the bottom sheet selection.
-4. **Bluetooth Thermal Receipt Printing**:
-   - **Where**: [PaymentTenderScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/PaymentTenderScreen.tsx#L170-L211).
-   - **Behavior**: Spools formatted HTML to bluetooth or airprint printers.
-5. **PDF & CSV Financial Reports Export**:
-   - **Where**: [InsightsScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/InsightsScreen.tsx#L199-L211).
-   - **Behavior**: Compiles store gross sales distribution and shares statement documents via native sharing sheets.
-6. **Ultimate Staff Accounts & Permissions**:
-   - **Where**: [ProfileScreen.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/screens/ProfileScreen.tsx#L224-L239) and the staff routing view [manage-staff.tsx](<file:///Users/shenux/Desktop/Shopbook/shopbook-pos/app/(modules)/profile/manage-staff.tsx>).
-   - **Behavior**: Unlocks multi-user support, allowing owners to create and configure unlimited employee profiles (Admins, Managers, Cashiers) with strict Role-Based Access Control (RBAC). Free tier accounts are restricted to the single owner/admin session. (For comprehensive detail, refer to the [Role & Staff Management Documentation](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/doc/ROLE_MANAGEMENT.md)).
-7. **Web Browser Access (Live POS from any device)**:
-   - **Where**: Standard web-browser interface synchronized with Supabase data storage.
-   - **Behavior**: Allows store owners and administrators to open the POS checkout terminal directly in any desktop/laptop web browser, ensuring instant data parity and real-time operations across mobile register terminals and back-office portals.
-
----
-
-## 2. Upgrade & Checkout Flows
-
-The upgrade path is designed as a secure, premium light-themed experience split across two routing views:
-
-### Step 1: Subscription Tier Selection
-
-- **Route**: `/profile/premium-plans` ([premium-plans.tsx](<file:///Users/shenux/Desktop/Shopbook/shopbook-pos/app/(modules)/profile/premium-plans.tsx>))
-- **Flow**:
-  - Displays pricing plans under three tabs: **1 Month Pro** (Rs. 3,500), **3 Months Pro** (Rs. 10,000, marked popular), and **1 Year Pro** (Rs. 36,000).
-  - Tapping "Choose Plan" passes selection metadata as query parameters (`planId`, `planTitle`, `price`, `billing`) to the payment route.
-
-### Step 2: Payment Processing
-
-- **Route**: `/profile/payment-select` ([payment-select.tsx](<file:///Users/shenux/Desktop/Shopbook/shopbook-pos/app/(modules)/profile/payment-select.tsx>))
-- **Channels**:
-  1. **Credit / Debit Card (RevenueCat Mock)**:
-     - Prompts a secure activation modal. Clicking "Pay & Activate" sets `isPremium = true` and updates state instantly.
-  2. **Bank Transfer / Deposit**:
-     - Lists **Seylan Bank** details (Account: `008013639890001`, Name: `SHOPBOOK TECHNOLOGIES (PVT) LTD`, Branch: `Kollupitiya`).
-     - Includes native clipboard overlays to copy credentials.
-     - The primary action button **"Share Receipt via WhatsApp"** triggers a direct WhatsApp redirect to **+94 78 247 0168** with prefilled text `"Hey Mini POS Bill"` for manual backend invoice activation.
-
----
-
-## 3. Developer Guide: How to Enable / Disable Pro State
-
-The application uses **Zustand** with persistent **AsyncStorage** middleware to track premium membership status locally on the device.
-
-### State Store API
-
-The active settings state is defined in [useSettingsStore.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/stores/useSettingsStore.ts):
-
-- **State Property**: `isPremium: boolean` (defaults to `false`)
-- **State Action**: `setPremium: (premium: boolean) => void`
-
-### Reading Premium Status in Code
-
-To check if the user is Pro in any React Native component:
-
-```tsx
-import { useSettingsStore } from '../../../stores/useSettingsStore';
-
-export default function MyFeature() {
-  const isPremium = useSettingsStore((s) => s.isPremium);
-
-  return <Text>{isPremium ? 'Pro Activated ✨' : 'Free Plan'}</Text>;
-}
+```
+App Store / Google Play  ──►  RevenueCat  ──►  revenuecat-webhook (Supabase Edge Function)
+                                                        │ service role
+                                                        ▼
+                                          owners · subscriptions · subscription_events
+                                                        │
+                                   get_entitlement(business_id)  ◄── mobile & web
 ```
 
-### Mutating Pro State (Enable/Disable)
+`subscriptions.expires_at` on the server is the source of truth. The RevenueCat
+SDK on the **owner's** device is a fast path used only to unlock immediately
+after a purchase, before the webhook lands.
 
-To manually enable or disable the premium flag (e.g., inside configuration settings, test hooks, or payment callbacks):
+Three rules follow:
 
-```tsx
-import { useSettingsStore } from '../../../stores/useSettingsStore';
+1. **Entitlement is per owner, not per device.** It is resolved through
+   `businesses.phone_number → owners.phone`, so every staff terminal and the web
+   client of a paying owner unlock from one row. Cashiers never buy anything.
+2. **`is_pro` is computed at read time** from `expires_at`, so an expiry takes
+   effect even if the `EXPIRATION` webhook is late or lost.
+3. **Only the owner's device talks to the RevenueCat SDK.** Staff and web read
+   the RPC and never call `Purchases.configure`.
 
-// Get setter action
-const setPremium = useSettingsStore((s) => s.setPremium);
+## 2. Free trial
 
-// 1. Enable Pro subscription
-setPremium(true);
+14 days, derived from `owners.created_at` in `get_entitlement`. No trial table,
+no store introductory offer, nothing for the client to track. An owner's first
+login after this shipped creates the `owners` row and starts the clock.
 
-// 2. Disable / Revoke license
-setPremium(false);
+## 3. Client API
+
+```ts
+import { useIsPro, useIsBusinessOwner } from '@/hooks/useEntitlement';
+
+const isPro = useIsPro();          // the gate every premium feature reads
+const isOwner = useIsBusinessOwner();  // may this session purchase?
 ```
 
----
+`useIsBusinessOwner()` compares the session phone against the business's phone.
+It is **not** `activeEmployeeId === 'owner'` — registration also creates an
+`employees` row with the owner's phone, and `useVerifyOtp` matches employees
+first, so an owner logs in identified as staff.
 
-## 4. Technical File Reference
+Non-hook read, for services and event handlers:
 
-The subscription and checkout architecture spans across the following files:
+```ts
+import { getIsPro } from '@/stores/useEntitlementStore';
+```
 
-1. **State Store Definition**: [useSettingsStore.ts](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/stores/useSettingsStore.ts)
-2. **Plans Listing UI**: [premium-plans.tsx](<file:///Users/shenux/Desktop/Shopbook/shopbook-pos/app/(modules)/profile/premium-plans.tsx>)
-3. **Checkout Selector UI**: [payment-select.tsx](<file:///Users/shenux/Desktop/Shopbook/shopbook-pos/app/(modules)/profile/payment-select.tsx>)
-4. **Common Powered By Footer**: [PoweredBy.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/common/PoweredBy.tsx)
-5. **Restricted Modal Trigger**: [PremiumUpgradeModal.tsx](file:///Users/shenux/Desktop/Shopbook/shopbook-pos/components/common/PremiumUpgradeModal.tsx)
+There is no `setPremium`. Entitlement cannot be set from the client — that was
+the point of the change.
+
+## 4. Offline behaviour
+
+`useEntitlementStore` persists `{ isPro, expiresAt, trialEndsAt, ... }` to
+AsyncStorage. On rehydration the cached expiry is re-evaluated, so a device that
+has been offline past the subscription end date locks correctly rather than
+staying Pro forever. Billing-issue grace is expressed **server-side** by the
+webhook extending `expires_at`; the client adds no grace of its own.
+
+## 5. Purchase flow
+
+One screen: `/profile/premium-plans`.
+
+1. `getProPackages()` returns the current RevenueCat offering.
+   `$rc_monthly` / `$rc_three_month` / `$rc_annual` map to the three period tabs.
+2. Prices come from `pkg.product.priceString` — store-localised. iOS bills the
+   Sri Lanka storefront in **USD**, Play bills in **LKR**; hard-coding either is
+   wrong on the other platform.
+3. Savings are computed from the real monthly price
+   (`1 − perMonth / monthlyPerMonth`). There are no strike-through anchor prices.
+4. `purchasePackage()` → the native store sheet → on success `setFromSdk()`
+   unlocks instantly, a server re-check runs 5 s later, and the screen returns
+   to whatever feature the user was trying to reach.
+
+There is **no in-app bank transfer**. Apple 3.1.1 and Google Play's Payments
+policy both require store billing for digital unlocks, and Play's alternative
+billing programme does not cover Sri Lanka. Bank-transfer customers are sold to
+outside the app and activated with a RevenueCat promotional entitlement — the
+app code has no knowledge of them. Runbook: `docs/revenuecat/02-build-plan.md` §7.
+
+## 6. States the paywall must handle
+
+| Condition | UI |
+|---|---|
+| Subscribed | Manage card: renews/expires date, *Manage subscription*, *Restore* |
+| On trial | Trial banner + plans |
+| Staff session | No purchase CTA — "ask the owner of {business}" |
+| `iap_enabled = false`, or no packages | Feature list + "coming soon". Never a dead button. |
+| Purchase cancelled | Nothing — `userCancelled` is not an error |
+
+Every state also renders the store-mandated footer: auto-renew disclosure,
+**Restore purchases**, **Terms of Use**, **Privacy Policy**. Apple 3.1.2 rejects
+subscription paywalls missing any of these. The legal URLs come from
+`app_config.terms_url` / `privacy_url` so they can change without a release.
+
+## 7. Kill switch
+
+`app_config.iap_enabled` defaults to **false**. The integration ships dark; flip
+the column to `true` once both stores have approved the subscription products.
+No app release required.
+
+## 8. File reference
+
+| Concern | File |
+|---|---|
+| SDK wrapper | `mobile/services/purchases.ts` |
+| Entitlement cache | `mobile/stores/useEntitlementStore.ts` |
+| Hooks (`useIsPro`, sync, owner test) | `mobile/hooks/useEntitlement.ts` |
+| Post-login bootstrap | `mobile/services/entitlement.ts` |
+| Paywall | `mobile/app/(modules)/profile/premium-plans.tsx` |
+| Locked-feature interstitial | `mobile/components/common/PremiumUpgradeModal.tsx` |
+| Schema + RPCs | `supabase/migrations/20260901000000_revenuecat_entitlements.sql` |
+| Webhook | `supabase/functions/revenuecat-webhook/index.ts` |
+| Web read path | `web/src/hooks/useEntitlement.ts` |
+| Web gate | `web/src/components/layout/ProBlocker.tsx` |
+
+## 9. Gated features
+
+Eleven call sites read `useIsPro()`: camera barcode scanning (POS, Home, Search,
+Stocks, Manage Items), branch switching, thermal printing (tender, order
+history), printer pairing, cloud sync + PDF/CSV exports, and staff management.
+Web access is itself a Pro feature, gated by `ProBlocker`.

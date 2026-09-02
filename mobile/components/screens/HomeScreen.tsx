@@ -27,9 +27,9 @@ import { cartState } from '../data/cartState';
 import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { useBusinessStore } from '../../stores/useBusinessStore';
 import { hapticFeedback } from '../../utils/haptics';
-import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useIsPro } from '../../hooks/useEntitlement';
 
 export const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -43,7 +43,7 @@ export const HomeScreen: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const {

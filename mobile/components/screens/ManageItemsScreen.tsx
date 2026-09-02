@@ -20,7 +20,6 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TOKENS } from '../../constants/tokens';
 import { usePermission } from '../../hooks/usePermissionHandler';
-import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 import {
   useDeleteProduct,
@@ -37,13 +36,14 @@ import { useActiveBusiness } from '../../hooks/useActiveBusiness';
 import { getBusinessTypeConfig, getCategoryLabel } from '../../utils/businessTypeConfig';
 import { hapticFeedback } from '@/utils/haptics';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useIsPro } from '../../hooks/useEntitlement';
 
 export const ManageItemsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { requestCameraAccess } = usePermission();
   const { t } = useTranslation();
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const activeBiz = useActiveBusiness();

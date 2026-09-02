@@ -32,9 +32,9 @@ import { buildThermalReceiptHtml } from '../../utils/thermalReceiptHtml';
 import { printReceipt } from '../../utils/printThermalReceipt';
 import { BottomSheet } from '../common/BottomSheet';
 import { useActiveBusiness } from '../../hooks/useActiveBusiness';
-import { useSettingsStore } from '../../stores/useSettingsStore';
 import { useSyncRefreshStore } from '../../stores/useSyncRefreshStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
+import { useIsPro } from '../../hooks/useEntitlement';
 
 const CARD_GAP = 12;
 const INNER_TEXT_GAP = 4;
@@ -54,7 +54,7 @@ export const OrderHistoryScreen: React.FC<{ isTab?: boolean }> = ({ isTab = fals
   const { height: windowHeight } = useWindowDimensions();
   const router = useRouter();
 
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const activeBiz = useActiveBusiness();

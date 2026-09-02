@@ -20,10 +20,10 @@ import { ScreenWrapper } from '../common/ScreenWrapper';
 import { HeaderCartButton } from '../common/HeaderCartButton';
 import { cartState } from '../data/cartState';
 import { InvoiceItemCard } from '../common/InvoiceItemCard';
-import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useIsPro } from '../../hooks/useEntitlement';
 
 interface InvoiceItem {
   id: string;
@@ -73,7 +73,7 @@ export const PosScreen: React.FC = () => {
   const [quickCode, setQuickCode] = useState('');
   const [cursorVisible, setCursorVisible] = useState(true);
 
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const findProductByCode = useFindProductByCode();

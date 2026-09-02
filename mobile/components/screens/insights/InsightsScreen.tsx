@@ -21,7 +21,6 @@ import { syncDatabase } from '../../../services/sync';
 import { BottomSheet } from '../../common/BottomSheet';
 import { ScreenWrapper } from '../../common/ScreenWrapper';
 import { useActiveBusiness } from '../../../hooks/useActiveBusiness';
-import { useSettingsStore } from '../../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../../common/PremiumUpgradeModal';
 import * as Print from 'expo-print';
 import { buildReportHtml, buildReportCsv, ReportType } from '../../../utils/reportTemplates';
@@ -33,6 +32,7 @@ import { LowStockBottomSheet } from './components/LowStockBottomSheet';
 import { ReportsBottomSheet } from './components/ReportsBottomSheet';
 import { hapticFeedback } from '../../../utils/haptics';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useIsPro } from '../../../hooks/useEntitlement';
 
 export const InsightsScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -41,7 +41,7 @@ export const InsightsScreen: React.FC = () => {
   const activeBiz = useActiveBusiness();
   const { t } = useTranslation();
 
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
   const [premiumFeatureName, setPremiumFeatureName] = useState('This feature');
 

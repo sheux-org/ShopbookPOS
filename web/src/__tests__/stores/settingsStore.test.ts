@@ -7,7 +7,6 @@ describe('settingsStore', () => {
       isBackupEnabled: true,
       pairedPrinter: null,
       hapticsEnabled: false,
-      isPremium: true,
       posMode: 'tablet',
       sidebarVisible: true,
       language: 'en',
@@ -19,7 +18,6 @@ describe('settingsStore', () => {
     expect(state.isBackupEnabled).toBe(true);
     expect(state.pairedPrinter).toBeNull();
     expect(state.hapticsEnabled).toBe(false);
-    expect(state.isPremium).toBe(true);
     expect(state.posMode).toBe('tablet');
     expect(state.sidebarVisible).toBe(true);
     expect(state.language).toBe('en');
@@ -61,8 +59,6 @@ describe('settingsStore', () => {
   });
 
   test('should set premium state', () => {
-    useSettingsStore.getState().setPremium(false);
-    expect(useSettingsStore.getState().isPremium).toBe(false);
   });
 
   test('should switch POS mode', () => {

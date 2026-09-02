@@ -29,6 +29,7 @@ import { printReceipt } from '../../utils/printThermalReceipt';
 import { getInvoiceLabel } from '../../utils/orderInvoice';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useIsPro } from '../../hooks/useEntitlement';
 
 type TenderMethod = 'cash' | 'card';
 
@@ -75,7 +76,7 @@ export const PaymentTenderScreen: React.FC = () => {
   const [showBankSheet, setShowBankSheet] = useState(false);
   const [createdInvoiceNumber, setCreatedInvoiceNumber] = useState('');
 
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
