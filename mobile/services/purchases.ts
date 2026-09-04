@@ -12,6 +12,7 @@
 
 import { Linking, Platform } from 'react-native';
 import Purchases, {
+  INTRO_ELIGIBILITY_STATUS,
   LOG_LEVEL,
   type CustomerInfo,
   type PurchasesPackage,
@@ -105,6 +106,28 @@ export async function manageSubscription(managementUrl?: string | null): Promise
     return;
   }
   await Linking.openURL(managementUrl ?? PLAY_SUBSCRIPTIONS_URL);
+}
+
+/**
+ * Whether the store will apply the introductory free trial to this customer.
+ *
+ * Android ALWAYS reports UNKNOWN — the Play SDK cannot answer this — so the
+ * default of true is not merely defensive, it is the only usable behaviour
+ * there. Both stores apply the offer automatically to eligible customers and
+ * charge everyone else, so a false negative would hide the trial from people
+ * entitled to it, while a false positive only overstates the button copy and
+ * the store's own sheet states the real terms before anything is charged.
+ */
+export async function isTrialEligible(productId: string): Promise<boolean> {
+  if (!configured) return true;
+  try {
+    const result = await Purchases.checkTrialOrIntroductoryPriceEligibility([productId]);
+    const status = result[productId]?.status;
+    if (status === undefined) return true;
+    return status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
+  } catch {
+    return true;
+  }
 }
 
 export function hasProEntitlement(info: CustomerInfo): boolean {
