@@ -26,7 +26,7 @@ const RC_SECRET_API_KEY = Deno.env.get('RC_SECRET_API_KEY') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-const ENTITLEMENT_ID = 'pro';
+const ENTITLEMENT_ID = 'shopbook_pos_pro';
 const SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

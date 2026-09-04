@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS public.owners (
 -- -------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.subscriptions (
   owner_id uuid PRIMARY KEY REFERENCES public.owners(id) ON DELETE CASCADE,
-  entitlement text NOT NULL DEFAULT 'pro',
+  entitlement text NOT NULL DEFAULT 'shopbook_pos_pro',
   is_active boolean NOT NULL DEFAULT false,
   expires_at timestamptz,              -- null = lifetime / non-expiring grant
   will_renew boolean NOT NULL DEFAULT false,

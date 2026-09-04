@@ -92,6 +92,26 @@ const formatDate = (iso: string | null) =>
 const maskPhone = (phone?: string | null) =>
   phone && phone.length >= 4 ? `••••${phone.slice(-4)}` : '';
 
+/**
+ * Apple bills the Sri Lanka storefront in USD; Google Play bills in LKR. Shop
+ * owners think in rupees and a dollar figure reads as foreign here, so a
+ * non-LKR store price is shown converted. The billing line still names USD:
+ * the App Store payment sheet shows dollars, so the screen before it must not
+ * imply otherwise.
+ *
+ * Rate drifts: 1 USD = 328 LKR on 2026-09-04. Update when it moves materially.
+ */
+const USD_TO_LKR = 328;
+
+/** Rounded to the nearest 500 so the figure matches the price on the website. */
+const displayPrice = (pkg?: PurchasesPackage) => {
+  if (!pkg) return { main: '—', charged: null };
+  const { price, priceString, currencyCode } = pkg.product;
+  if (currencyCode === 'LKR') return { main: priceString, charged: null };
+  const rupees = Math.round((price * USD_TO_LKR) / 500) * 500;
+  return { main: `Rs ${rupees.toLocaleString('en-US')}`, charged: priceString };
+};
+
 export default function PremiumPlansRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -141,24 +161,13 @@ export default function PremiumPlansRoute() {
     };
   }, []);
 
-  /** Package for each period, plus a saving derived from the real monthly price. */
   const plans = useMemo(() => {
     const byId = new Map(packages.map((p) => [p.identifier, p]));
-    const monthlyPkg = byId.get('$rc_monthly');
-    const monthlyPerMonth = monthlyPkg?.product.price ?? 0;
-
-    return PERIODS.map((period) => {
-      const pkg = byId.get(period.packageId);
-      const perMonth = pkg ? pkg.product.price / period.months : 0;
-      const savingPct =
-        monthlyPerMonth > 0 && perMonth > 0 && period.months > 1
-          ? Math.round((1 - perMonth / monthlyPerMonth) * 100)
-          : 0;
-      return { ...period, pkg, savingPct };
-    });
+    return PERIODS.map((period) => ({ ...period, pkg: byId.get(period.packageId) }));
   }, [packages]);
 
   const selected = plans.find((p) => p.packageId === selectedId) ?? plans[1];
+  const price = displayPrice(selected?.pkg);
   const canPurchase = isOwner && iapEnabled && !!selected?.pkg && !isPro;
 
   const handlePurchase = useCallback(async () => {
@@ -393,17 +402,13 @@ export default function PremiumPlansRoute() {
 
                 <View style={styles.priceRowContainer}>
                   <View style={styles.priceLeftCol}>
-                    <Text style={styles.priceText}>{selected?.pkg?.product.priceString ?? '—'}</Text>
-                    <Text style={styles.billingText}>{selected?.billing}</Text>
-                  </View>
-                  <View style={styles.priceRightCol}>
-                    {!!selected?.savingPct && selected.savingPct > 0 && (
-                      <View style={styles.savingBadge}>
-                        <Text style={styles.savingBadgeText}>
-                          {t('premium.save')} {selected.savingPct}%
-                        </Text>
-                      </View>
-                    )}
+                    <Text style={styles.priceText}>
+                      {price.charged ? `≈ ${price.main}` : price.main}
+                    </Text>
+                    <Text style={styles.billingText}>
+                      {selected?.billing}
+                      {price.charged ? ' in USD' : ''}
+                    </Text>
                   </View>
                 </View>
 
@@ -448,7 +453,7 @@ export default function PremiumPlansRoute() {
                         ]}
                       >
                         {isOwner
-                          ? `${t('premium.subscribe')} · ${selected?.pkg?.product.priceString ?? ''}`
+                          ? `${t('premium.subscribe')} · ${price.main}`
                           : t('premium.ownerOnly')}
                       </Text>
                       {canPurchase && (
@@ -738,21 +743,6 @@ const styles = StyleSheet.create({
   billingText: {
     fontSize: 12,
     color: TOKENS.muted,
-  },
-  priceRightCol: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  savingBadge: {
-    backgroundColor: '#D1FAE5',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  savingBadgeText: {
-    color: '#065F46',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   cardDivider: {
     height: 1,

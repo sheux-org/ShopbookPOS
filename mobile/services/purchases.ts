@@ -17,7 +17,7 @@ import Purchases, {
   type PurchasesPackage,
 } from 'react-native-purchases';
 
-export const ENTITLEMENT_ID = 'pro';
+export const ENTITLEMENT_ID = 'shopbook_pos_pro';
 
 const PLAY_SUBSCRIPTIONS_URL = 'https://play.google.com/store/account/subscriptions';
 
@@ -35,11 +35,11 @@ export function isPurchasesConfigured(): boolean {
 export function configurePurchases(): boolean {
   if (configured) return true;
 
-  const apiKey = Platform.select({
-    ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY,
-    android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY,
-    default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY,
-  });
+  const apiKey =
+    Platform.select({
+      ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY,
+      android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY,
+    }) || process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY;
 
   if (!apiKey) return false;
 
