@@ -75,15 +75,23 @@ ALTER TABLE public.subscription_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_config
   ADD COLUMN IF NOT EXISTS iap_enabled boolean NOT NULL DEFAULT false;
 ALTER TABLE public.app_config
-  ADD COLUMN IF NOT EXISTS terms_url text NOT NULL DEFAULT 'https://shopbook-pos-website.vercel.app/terms';
+  ADD COLUMN IF NOT EXISTS terms_url text NOT NULL DEFAULT 'https://pos.shopbook.lk/terms';
 ALTER TABLE public.app_config
-  ADD COLUMN IF NOT EXISTS privacy_url text NOT NULL DEFAULT 'https://shopbook-pos-website.vercel.app/privacy';
+  ADD COLUMN IF NOT EXISTS privacy_url text NOT NULL DEFAULT 'https://pos.shopbook.lk/privacy';
 
 -- Force-update deep links pointed at a package that does not exist (known-issues CFG-1).
 UPDATE public.app_config
 SET android_url = 'https://play.google.com/store/apps/details?id=lk.shopbook.pos'
 WHERE id = 1
   AND android_url = 'https://play.google.com/store/apps/details?id=com.pasanpahasara.shopbookpos';
+
+-- Update terms and privacy URLs to production domain
+UPDATE public.app_config
+SET terms_url = 'https://pos.shopbook.lk/terms',
+    privacy_url = 'https://pos.shopbook.lk/privacy'
+WHERE id = 1
+  AND (terms_url = 'https://shopbook-pos-website.vercel.app/terms'
+    OR privacy_url = 'https://shopbook-pos-website.vercel.app/privacy');
 
 -- -------------------------------------------------------------------------
 -- 6. get_or_create_owner — called on owner login to mint the App User ID.

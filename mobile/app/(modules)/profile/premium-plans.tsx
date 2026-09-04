@@ -151,8 +151,8 @@ export default function PremiumPlansRoute() {
       setPackages(pkgs);
       setIapEnabled(!!config?.iap_enabled);
       setLegal({
-        terms: config?.terms_url ?? 'https://shopbook-pos-website.vercel.app/terms',
-        privacy: config?.privacy_url ?? 'https://shopbook-pos-website.vercel.app/privacy',
+        terms: config?.terms_url ?? 'https://pos.shopbook.lk/terms',
+        privacy: config?.privacy_url ?? 'https://pos.shopbook.lk/privacy',
       });
       setLoading(false);
     })();
@@ -316,7 +316,11 @@ export default function PremiumPlansRoute() {
         {/* ---------- Manage (already subscribed) ---------- */}
         {isPro && !isTrial && isOwner && (
           <View style={styles.manageCard}>
-            <TouchableOpacity style={styles.manageButton} onPress={handleManage} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={styles.manageButton}
+              onPress={handleManage}
+              activeOpacity={0.85}
+            >
               <Feather name="external-link" size={16} color={TOKENS.primary} />
               <Text style={styles.manageButtonText}>{t('premium.manage')}</Text>
             </TouchableOpacity>

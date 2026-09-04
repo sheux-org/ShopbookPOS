@@ -14,7 +14,7 @@ Identifiers used throughout (change here → change everywhere):
 | Android subscription product                                              | `pro` with base plans `monthly`, `quarterly`, `annual` (RevenueCat ids `pro:monthly`, `pro:quarterly`, `pro:annual`) |
 | Packages                                                                  | `$rc_monthly`, `$rc_three_month`, `$rc_annual`                                                                       |
 | Prices (LKR, final — [website](https://shopbook-pos-website.vercel.app/)) | 3,500 / 10,000 / 36,000 per period                                                                                   |
-| Terms / Privacy                                                           | `https://shopbook-pos-website.vercel.app/terms`, `https://shopbook-pos-website.vercel.app/privacy`                   |
+| Terms / Privacy                                                           | `https://pos.shopbook.lk/terms`, `https://pos.shopbook.lk/privacy`                                                   |
 | Trial                                                                     | 14 days, app-level (no store offer needed)                                                                           |
 
 Price note: Google Play bills Sri Lankan buyers in **LKR** — enter those numbers directly. Apple's Sri Lanka storefront bills in **USD**; pick the nearest Apple price points to the LKR targets at the rate on the day you set them (at ~LKR 300/USD that is roughly $11.99 / $34.99 / $119.99 — **verify the rate before entering**). Apple will derive the other storefronts automatically from the base price.
@@ -24,7 +24,7 @@ Price note: Google Play bills Sri Lankan buyers in **LKR** — enter those numbe
 ## 1. Legal & finance prerequisites (blocking everything)
 
 - [ ] **Business entity**: SHOPBOOK TECHNOLOGIES (PVT) LTD is the seller on both stores (must match bank account name).
-- [ ] **Terms of Service** and **Privacy Policy** exist at `https://shopbook-pos-website.vercel.app/terms` and `/privacy`. Both stores require them for auto-renewable subscriptions and the paywall links to them. Confirm the Terms page covers auto-renewal, cancellation and refunds-via-store wording (Apple reviewers read it). When the custom domain goes live, update `app_config.terms_url/privacy_url` — no app release needed.
+- [ ] **Terms of Service** and **Privacy Policy** exist at `https://pos.shopbook.lk/terms` and `https://pos.shopbook.lk/privacy`. Both stores require them for auto-renewable subscriptions and the paywall links to them. Confirm the Terms page covers auto-renewal, cancellation and refunds-via-store wording (Apple reviewers read it). Both URLs live in `app_config.terms_url/privacy_url` — no app release needed.
 - [ ] **Resolve the "Save 25%" claim** (audit P1-8) before entering store prices: either keep Rs 3,500 monthly and change the site/app copy to "Save 14%", or set monthly to Rs 4,000. Store listings, website and paywall must agree.
 - [ ] Decide **VAT / tax treatment** with the accountant. Apple and Google act as merchant of record for the buyer, collect any applicable buyer-side taxes, and pay out net of commission (Apple 30% → **15% if enrolled in the App Store Small Business Program**; Google 15% for subscriptions). Enrolment in Apple's Small Business Program is a separate form in App Store Connect — do it before the first sale.
 - [ ] Bank account able to receive USD (Apple pays in the currency of the bank account's country if supported; otherwise USD) and Google payouts (Google Payments profile in LKR/USD).
@@ -90,7 +90,7 @@ Price note: Google Play bills Sri Lankan buyers in **LKR** — enter those numbe
 ## 5. Supabase
 
 - [ ] Apply migration from build plan §3 (`owners`, `subscriptions`, `subscription_events`, RPCs, `app_config.iap_enabled`).
-- [ ] Add columns `app_config.terms_url`, `app_config.privacy_url` (text) seeded with `https://shopbook-pos-website.vercel.app/terms` and `/privacy` — the paywall reads them so legal links can change without a release.
+- [ ] Add columns `app_config.terms_url`, `app_config.privacy_url` (text) seeded with `https://pos.shopbook.lk/terms` and `https://pos.shopbook.lk/privacy` — the paywall reads them so legal links can change without a release.
 - [ ] Deploy Edge Function: `supabase functions deploy revenuecat-webhook --no-verify-jwt`.
 - [ ] Secrets: `supabase secrets set RC_WEBHOOK_SIGNING_SECRET=… RC_WEBHOOK_AUTH=… RC_SECRET_API_KEY=…` (`SUPABASE_SERVICE_ROLE_KEY`/`SUPABASE_URL` are injected automatically).
 - [ ] Verify with RevenueCat _Send test event_ → `subscription_events` gets a `TEST` row (or the function returns 200 without writing — either is acceptable, but decide and assert it in the QA matrix).

@@ -162,4 +162,4 @@ Shopbook's tab-per-period selector (1M / 3M / 1Y) with one detail card is a vali
 7. **Kill switch:** `app_config.iap_enabled` — paywall hides purchase CTAs when false, so the release can ship before the store products are approved.
 8. **Trial:** app-level, 14 days from `owners.created_at`, computed in `get_entitlement`. No payment method required. Store intro offers optional later.
 9. **Prices (final, from the website):** Rs 3,500 / 10,000 / 36,000. Savings copy must be computed (14% annual, 5% quarterly) unless pricing is changed to make 25% true.
-10. **Legal URLs:** `https://shopbook-pos-website.vercel.app/terms` and `/privacy` (swap to the custom domain when it exists; both live in `app_config` so no release is needed).
+10. **Legal URLs:** `https://pos.shopbook.lk/terms` and `https://pos.shopbook.lk/privacy` (both live in `app_config` so no release is needed).
