@@ -123,7 +123,6 @@ export default function PremiumPlansRoute() {
 
   const isPro = useEntitlementStore((s) => s.isPro);
   const isTrial = useEntitlementStore((s) => s.isTrial);
-  const trialEndsAt = useEntitlementStore((s) => s.trialEndsAt);
   const expiresAt = useEntitlementStore((s) => s.expiresAt);
   const willRenew = useEntitlementStore((s) => s.willRenew);
   const managementUrl = useEntitlementStore((s) => s.managementUrl);
@@ -283,7 +282,7 @@ export default function PremiumPlansRoute() {
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.warningCardTitle}>{t('premium.trialTitle')}</Text>
               <Text style={styles.alertDesc}>
-                {t('premium.trialEnds')} {formatDate(trialEndsAt)}
+                {t('premium.trialEnds')} {formatDate(expiresAt)}
               </Text>
             </View>
           </View>
