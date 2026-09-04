@@ -16,6 +16,7 @@ import { ForceUpdateScreen } from '../components/screens/ForceUpdateScreen';
 import { CustomSplashScreen } from '../components/screens/CustomSplashScreen';
 import { useAuthStore } from '../stores/useAuthStore';
 import * as SplashScreen from 'expo-splash-screen';
+import { configurePurchases } from '../services/purchases';
 
 // Prevent native splash screen from hiding automatically on app startup
 SplashScreen.preventAutoHideAsync().catch((err) => {
@@ -88,13 +89,16 @@ function MainAppContent() {
       <Stack.Screen name="(modules)/profile/manage-staff" />
       <Stack.Screen name="(modules)/profile/active-devices" />
       <Stack.Screen name="(modules)/profile/premium-plans" />
-      <Stack.Screen name="(modules)/profile/payment-select" />
     </Stack>
   );
 }
 
 export default function RootLayout() {
   useEffect(() => {
+    // Configure RevenueCat. Returns false until the SDK keys are provisioned,
+    // which is the expected state before the stores approve the products.
+    configurePurchases();
+
     // Start the NetInfo connectivity monitor for the offline upload queue
     startUploadQueueMonitor();
 

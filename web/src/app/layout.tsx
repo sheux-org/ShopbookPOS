@@ -9,6 +9,8 @@ import { useLocalDataCheck } from '../hooks/useLocalDataCheck';
 import { useAppAuthGuard } from '../hooks/useAppAuthGuard';
 import { useAppSync } from '../hooks/useAppSync';
 import SyncBlocker from '../components/layout/SyncBlocker';
+import ProBlocker from '../components/layout/ProBlocker';
+import { useEntitlement } from '../hooks/useEntitlement';
 import './globals.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Sidebar } from '../components/layout/Sidebar';
@@ -64,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
   useActiveDeviceTracker();
+  const { isPro, isResolved } = useEntitlement();
   const pathname = usePathname();
   const { t } = useTranslation();
 
@@ -228,6 +231,12 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
   if (pathname === '/auth') {
     return <div style={{ backgroundColor: '#f9fafb', height: '100vh' }} />;
+  }
+
+  // Web access is itself a Pro feature. Only block once the server has actually
+  // answered — a failed RPC must never lock out a shop that has paid.
+  if (isResolved && !isPro) {
+    return <ProBlocker businessName={activeBusiness?.name} />;
   }
 
   const headerInfo = getHeaderInfo();

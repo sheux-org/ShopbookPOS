@@ -17,12 +17,13 @@ import { HelpSupportModal } from '../common/HelpSupportModal';
 import { LanguageSwitcherModal } from '../common/LanguageSwitcherModal';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useIsPro } from '../../hooks/useEntitlement';
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
 
   const { t, language } = useTranslation();
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);

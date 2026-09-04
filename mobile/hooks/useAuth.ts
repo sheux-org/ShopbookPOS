@@ -6,6 +6,7 @@ import { useBusinessStore } from '../stores/useBusinessStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { SEEDING_PRODUCTS } from '../utils/seedProducts';
 import { checkPhoneAvailability, normalizePhone } from '../utils/phoneUtils';
+import { bootstrapEntitlement } from '../services/entitlement';
 
 export function useVerifyOtp() {
   const queryClient = useQueryClient();
@@ -143,6 +144,13 @@ export function useVerifyOtp() {
 
         // Invalidate businesses query cache so it reloads immediately!
         queryClient.invalidateQueries({ queryKey: ['businesses'] });
+
+        // Identify the owner to RevenueCat (owners only) and load entitlement.
+        void bootstrapEntitlement({
+          phone: data.phone!,
+          businessId: data.businessId!,
+          businessPhone: useBusinessStore.getState().activeBusiness?.phone,
+        });
       }
     },
   });
@@ -231,6 +239,13 @@ export function useRegisterUser() {
 
       // Invalidate businesses query cache!
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
+
+      // A freshly registered user is by definition the owner.
+      void bootstrapEntitlement({
+        phone: data.phone,
+        businessId: data.businessId,
+        businessPhone: data.phone,
+      });
 
       // Automatically trigger sync to cloud
       syncDatabase().catch((err) => {

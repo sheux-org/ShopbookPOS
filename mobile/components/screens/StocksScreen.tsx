@@ -34,10 +34,10 @@ import {
 import { deleteUploadThingFile, uploadToUploadThing } from '../../services/uploadQueue';
 import { ProductImage } from '../common/ProductImage';
 import { hapticFeedback } from '../../utils/haptics';
-import { useSettingsStore } from '../../stores/useSettingsStore';
 import { PremiumUpgradeModal } from '../common/PremiumUpgradeModal';
 import { getBusinessTypeConfig } from '../../utils/businessTypeConfig';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useIsPro } from '../../hooks/useEntitlement';
 
 function getRelativeTimeAgo(timestamp?: number): string {
   if (!timestamp) return 'Just now';
@@ -90,7 +90,7 @@ export const StocksScreen: React.FC = () => {
   const [formLowStock, setFormLowStock] = useState('');
   const { requestCameraAccess } = usePermission();
   const { canPerform } = useUserPermissions();
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
   const [premiumModalVisible, setPremiumModalVisible] = useState(false);
 
   const [formQuickCode, setFormQuickCode] = useState('');

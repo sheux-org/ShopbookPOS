@@ -23,6 +23,7 @@ import RNBluetoothClassic, { BluetoothDevice } from 'react-native-bluetooth-clas
 import Barcode from 'react-native-barcode-svg';
 import { hapticFeedback } from '@/utils/haptics';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useIsPro } from '../../../hooks/useEntitlement';
 
 export default function BluetoothPrinterRoute() {
   const insets = useSafeAreaInsets();
@@ -31,7 +32,7 @@ export default function BluetoothPrinterRoute() {
 
   const pairedPrinter = useSettingsStore((s) => s.pairedPrinter);
   const setPairedPrinter = useSettingsStore((s) => s.setPairedPrinter);
-  const isPremium = useSettingsStore((s) => s.isPremium);
+  const isPremium = useIsPro();
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
 
   const [isScanning, setIsScanning] = useState(false);

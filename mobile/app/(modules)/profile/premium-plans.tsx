@@ -1,61 +1,73 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  ScrollView,
-  Alert,
-  Platform,
+  View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { PurchasesPackage } from 'react-native-purchases';
 import { ScreenWrapper } from '../../../components/common/ScreenWrapper';
 import { TOKENS } from '../../../constants/tokens';
-import { useSettingsStore } from '../../../stores/useSettingsStore';
 import { hapticFeedback } from '../../../utils/haptics';
 import { PoweredBy } from '../../../components/common/PoweredBy';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useIsBusinessOwner } from '../../../hooks/useEntitlement';
+import { useEntitlementStore } from '../../../stores/useEntitlementStore';
+import { useAuthStore } from '../../../stores/useAuthStore';
+import { useBusinessStore } from '../../../stores/useBusinessStore';
+import { fetchAppConfig } from '../../../services/appConfig';
+import {
+  getProPackages,
+  purchasePackage,
+  restorePurchases,
+  manageSubscription,
+  hasProEntitlement,
+} from '../../../services/purchases';
 
-const PLANS = [
+/**
+ * Period metadata. Prices are NOT here — they come from the store via
+ * RevenueCat, localised, so iOS (USD on the Sri Lanka storefront) and Android
+ * (LKR) each show what the customer will actually be charged.
+ */
+const PERIODS = [
   {
-    id: '1_month',
+    packageId: '$rc_monthly',
     tabLabel: '1 Month',
     title: '1 Month Pro',
     duration: '1 Month Access',
-    price: 'Rs. 3,500',
-    originalPrice: 'Rs. 5,000',
-    billing: 'Billed monthly',
-    saving: 'Save Rs. 1,500',
     badge: '1 MONTH PRO',
+    billing: 'Billed monthly',
+    months: 1,
     popular: false,
   },
   {
-    id: '3_months',
+    packageId: '$rc_three_month',
     tabLabel: '3 Months',
     title: '3 Months Pro',
     duration: '3 Months Access',
-    price: 'Rs. 10,000',
-    originalPrice: 'Rs. 12,000',
-    billing: 'Billed quarterly',
-    saving: 'Save Rs. 2,000',
     badge: '3 MONTHS PRO',
+    billing: 'Billed quarterly',
+    months: 3,
     popular: true,
   },
   {
-    id: '1_year',
+    packageId: '$rc_annual',
     tabLabel: '1 Year',
     title: '1 Year Pro',
     duration: '12 Months Access',
-    price: 'Rs. 36,000',
-    originalPrice: 'Rs. 48,000',
-    billing: 'Billed annually',
-    saving: 'Save Rs. 12,000 (25%)',
     badge: '1 YEAR PRO',
+    billing: 'Billed annually',
+    months: 12,
     popular: false,
   },
-];
+] as const;
 
 const PRO_FEATURES = [
   'Unlimited Store Outlets / Branches',
@@ -68,60 +80,152 @@ const PRO_FEATURES = [
   'Priority 24/7 Helpline & Support',
 ];
 
+const formatDate = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : '';
+
+const maskPhone = (phone?: string | null) =>
+  phone && phone.length >= 4 ? `••••${phone.slice(-4)}` : '';
+
+/**
+ * Apple bills the Sri Lanka storefront in USD; Google Play bills in LKR. Shop
+ * owners think in rupees and a dollar figure reads as foreign here, so a
+ * non-LKR store price is shown converted. The billing line still names USD:
+ * the App Store payment sheet shows dollars, so the screen before it must not
+ * imply otherwise.
+ *
+ * Rate drifts: 1 USD = 328 LKR on 2026-09-04. Update when it moves materially.
+ */
+const USD_TO_LKR = 328;
+
+/** Rounded to the nearest 500 so the figure matches the price on the website. */
+const displayPrice = (pkg?: PurchasesPackage) => {
+  if (!pkg) return { main: '—', charged: null };
+  const { price, priceString, currencyCode } = pkg.product;
+  if (currencyCode === 'LKR') return { main: priceString, charged: null };
+  const rupees = Math.round((price * USD_TO_LKR) / 500) * 500;
+  return { main: `Rs ${rupees.toLocaleString('en-US')}`, charged: priceString };
+};
+
 export default function PremiumPlansRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useTranslation();
 
-  const isPremium = useSettingsStore((s) => s.isPremium);
-  const setPremium = useSettingsStore((s) => s.setPremium);
+  const isOwner = useIsBusinessOwner();
+  const activeBusiness = useBusinessStore((s) => s.activeBusiness);
+  const activeBusinessId = useAuthStore((s) => s.activeBusinessId);
 
+  const isPro = useEntitlementStore((s) => s.isPro);
+  const isTrial = useEntitlementStore((s) => s.isTrial);
+  const trialEndsAt = useEntitlementStore((s) => s.trialEndsAt);
+  const expiresAt = useEntitlementStore((s) => s.expiresAt);
+  const willRenew = useEntitlementStore((s) => s.willRenew);
+  const managementUrl = useEntitlementStore((s) => s.managementUrl);
+  const refreshEntitlement = useEntitlementStore((s) => s.refresh);
+  const setFromSdk = useEntitlementStore((s) => s.setFromSdk);
+
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [iapEnabled, setIapEnabled] = useState(false);
+  const [legal, setLegal] = useState<{ terms: string; privacy: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('3_months');
+  const [selectedId, setSelectedId] = useState<string>('$rc_three_month');
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2000);
+    setTimeout(() => setToastMessage(null), 2200);
   };
 
-  const selectedPlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[1];
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [pkgs, config] = await Promise.all([getProPackages(), fetchAppConfig()]);
+      if (cancelled) return;
+      setPackages(pkgs);
+      setIapEnabled(!!config?.iap_enabled);
+      setLegal({
+        terms: config?.terms_url ?? 'https://shopbook-pos-website.vercel.app/terms',
+        privacy: config?.privacy_url ?? 'https://shopbook-pos-website.vercel.app/privacy',
+      });
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const handleSelectPlan = () => {
+  const plans = useMemo(() => {
+    const byId = new Map(packages.map((p) => [p.identifier, p]));
+    return PERIODS.map((period) => ({ ...period, pkg: byId.get(period.packageId) }));
+  }, [packages]);
+
+  const selected = plans.find((p) => p.packageId === selectedId) ?? plans[1];
+  const price = displayPrice(selected?.pkg);
+  const canPurchase = isOwner && iapEnabled && !!selected?.pkg && !isPro;
+
+  const handlePurchase = useCallback(async () => {
+    if (!selected?.pkg || busy) return;
     hapticFeedback.impactMedium();
-    router.push({
-      pathname: '/profile/payment-select',
-      params: {
-        planId: selectedPlan.id,
-        planTitle: selectedPlan.title,
-        price: selectedPlan.price,
-        billing: selectedPlan.billing,
-      },
-    });
-  };
+    setBusy(true);
+    try {
+      const info = await purchasePackage(selected.pkg);
+      if (hasProEntitlement(info)) {
+        setFromSdk(info);
+        hapticFeedback.notificationSuccess();
+        triggerToast(t('premium.purchaseSuccess'));
+        // The webhook is normally seconds behind; re-read the server so the
+        // cache ends up authoritative rather than SDK-sourced.
+        setTimeout(() => void refreshEntitlement(activeBusinessId), 5000);
+        setTimeout(() => router.back(), 1200);
+      }
+    } catch (err: any) {
+      // Backing out of the store sheet is not an error worth surfacing.
+      if (!err?.userCancelled) {
+        Alert.alert(t('premium.purchaseFailedTitle'), err?.message ?? String(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [selected, busy, setFromSdk, refreshEntitlement, activeBusinessId, router, t]);
 
-  const handleDowngrade = () => {
-    hapticFeedback.impactMedium();
-    Alert.alert(
-      'Downgrade to Free',
-      'Are you sure you want to cancel your Shopbook POS Pro license? This will restrict access to premium features.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Downgrade',
-          style: 'destructive',
-          onPress: () => {
-            setPremium(false);
-            hapticFeedback.notificationWarning();
-            triggerToast('Reverted to Free tier');
-          },
-        },
-      ]
-    );
-  };
+  const handleRestore = useCallback(async () => {
+    if (busy) return;
+    hapticFeedback.impactLight();
+    setBusy(true);
+    try {
+      const info = await restorePurchases();
+      if (hasProEntitlement(info)) {
+        setFromSdk(info);
+        triggerToast(t('premium.restoreSuccess'));
+        void refreshEntitlement(activeBusinessId);
+      } else {
+        triggerToast(t('premium.restoreNothing'));
+      }
+    } catch (err: any) {
+      Alert.alert(t('premium.restoreFailedTitle'), err?.message ?? String(err));
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, setFromSdk, refreshEntitlement, activeBusinessId, t]);
+
+  const handleManage = useCallback(async () => {
+    hapticFeedback.impactLight();
+    try {
+      await manageSubscription(managementUrl);
+    } catch (err: any) {
+      Alert.alert(t('premium.manageFailedTitle'), err?.message ?? String(err));
+    }
+  }, [managementUrl, t]);
 
   return (
     <ScreenWrapper noPaddingBottom style={styles.container}>
-      {/* Toast popup */}
       {toastMessage && (
         <View style={styles.toastContainer}>
           <Feather name="check-circle" size={16} color={TOKENS.card} />
@@ -129,7 +233,6 @@ export default function PremiumPlansRoute() {
         </View>
       )}
 
-      {/* Header */}
       <View style={[styles.header, { paddingTop: 12 }]}>
         <TouchableOpacity
           style={styles.backButton}
@@ -149,32 +252,42 @@ export default function PremiumPlansRoute() {
         <View style={styles.placeholderWidth} />
       </View>
 
-      {/* SCROLLABLE content */}
       <ScrollView
         style={styles.scrollWrapper}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Active Status Pass/Warning Card inside ScrollView */}
-        {isPremium ? (
-          /* Premium VIP Pass Card - Light Theme version of gold/diamond pass */
+        {/* ---------- Status card ---------- */}
+        {isPro && !isTrial ? (
           <View style={styles.proPassCard}>
             <View style={styles.proPassLeft}>
               <View style={styles.vipBadge}>
                 <Text style={styles.vipBadgeText}>{t('premium.activeMember')}</Text>
               </View>
               <Text style={styles.proPassTitle}>{t('premium.licenseTitle')}</Text>
-              <Text style={styles.proPassSubtitle}>{t('premium.subActiveNotice')}</Text>
+              <Text style={styles.proPassSubtitle}>
+                {expiresAt
+                  ? `${willRenew ? t('premium.renewsOn') : t('premium.expiresOn')} ${formatDate(expiresAt)}`
+                  : t('premium.subActiveNotice')}
+              </Text>
             </View>
             <View style={styles.proPassRight}>
               <Ionicons name="diamond" size={28} color="#D97706" />
-              <TouchableOpacity style={styles.downgradeLink} onPress={handleDowngrade}>
-                <Text style={styles.downgradeLinkText}>{t('premium.downgrade')}</Text>
-              </TouchableOpacity>
+            </View>
+          </View>
+        ) : isTrial ? (
+          <View style={styles.featureBlockWarning}>
+            <View style={styles.glowCircleHeader}>
+              <Ionicons name="time-outline" size={18} color="#D97706" />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.warningCardTitle}>{t('premium.trialTitle')}</Text>
+              <Text style={styles.alertDesc}>
+                {t('premium.trialEnds')} {formatDate(trialEndsAt)}
+              </Text>
             </View>
           </View>
         ) : (
-          /* Warning/Free Card - Matches warning layout in soft amber */
           <View style={styles.featureBlockWarning}>
             <View style={styles.glowCircleHeader}>
               <Ionicons name="diamond" size={18} color="#D97706" />
@@ -189,132 +302,198 @@ export default function PremiumPlansRoute() {
           </View>
         )}
 
-        {/* Tab Selection Bar */}
-        <View style={styles.tabSection}>
-          <Text style={styles.tabSectionHeader}>{t('premium.selectPeriod')}</Text>
-          <View style={styles.tabBarContainer}>
-            {PLANS.map((plan) => {
-              const isTabSelected = selectedPlanId === plan.id;
-              return (
-                <TouchableOpacity
-                  key={plan.id}
-                  activeOpacity={0.8}
-                  style={[styles.tabButton, isTabSelected && styles.tabButtonActive]}
-                  onPress={() => {
-                    hapticFeedback.impactLight();
-                    setSelectedPlanId(plan.id);
-                  }}
-                >
-                  <Text style={[styles.tabButtonText, isTabSelected && styles.tabButtonTextActive]}>
-                    {plan.tabLabel}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Subscription Plan Detail Card */}
-        <View
-          style={[
-            styles.planDetailCard,
-            selectedPlan.popular ? styles.planDetailCardActive : styles.planDetailCardDefault,
-          ]}
-        >
-          {/* Badge Tag */}
-          <View
-            style={[
-              styles.badgeTag,
-              selectedPlan.popular ? styles.badgeTagActive : styles.badgeTagDefault,
-            ]}
-          >
-            <Text
-              style={[
-                styles.badgeTagText,
-                selectedPlan.popular ? { color: '#D97706' } : { color: TOKENS.muted },
-              ]}
-            >
-              {selectedPlan.badge}
+        {/* ---------- Staff: cannot purchase ---------- */}
+        {!isOwner && (
+          <View style={styles.infoBox}>
+            <Feather name="info" size={16} color={TOKENS.primary} />
+            <Text style={styles.infoBoxText}>
+              {t('premium.askOwner')} {activeBusiness?.name}
+              {activeBusiness?.phone ? ` (${maskPhone(activeBusiness.phone)})` : ''}
             </Text>
           </View>
+        )}
 
-          {/* Card Title Row */}
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.planTitleText}>{selectedPlan.title}</Text>
-            <Text style={styles.planDurationText}>{selectedPlan.duration}</Text>
+        {/* ---------- Manage (already subscribed) ---------- */}
+        {isPro && !isTrial && isOwner && (
+          <View style={styles.manageCard}>
+            <TouchableOpacity style={styles.manageButton} onPress={handleManage} activeOpacity={0.85}>
+              <Feather name="external-link" size={16} color={TOKENS.primary} />
+              <Text style={styles.manageButtonText}>{t('premium.manage')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryLink} onPress={handleRestore} disabled={busy}>
+              <Text style={styles.secondaryLinkText}>{t('premium.restore')}</Text>
+            </TouchableOpacity>
           </View>
+        )}
 
-          {/* Pricing Row */}
-          <View style={styles.priceRowContainer}>
-            <View style={styles.priceLeftCol}>
-              <Text style={styles.priceText}>{selectedPlan.price}</Text>
-              <Text style={styles.billingText}>{selectedPlan.billing}</Text>
+        {/* ---------- Plans ---------- */}
+        {!isPro || isTrial ? (
+          loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={TOKENS.primary} />
             </View>
-            <View style={styles.priceRightCol}>
-              {selectedPlan.originalPrice && (
-                <Text style={styles.originalPriceText}>{selectedPlan.originalPrice}</Text>
-              )}
-              {selectedPlan.saving && (
-                <View style={styles.savingBadge}>
-                  <Text style={styles.savingBadgeText}>{selectedPlan.saving}</Text>
+          ) : !iapEnabled || plans.every((p) => !p.pkg) ? (
+            <View style={styles.infoBox}>
+              <Feather name="clock" size={16} color={TOKENS.primary} />
+              <Text style={styles.infoBoxText}>{t('premium.comingSoon')}</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.tabSection}>
+                <Text style={styles.tabSectionHeader}>{t('premium.selectPeriod')}</Text>
+                <View style={styles.tabBarContainer}>
+                  {plans.map((plan) => {
+                    const isTabSelected = selectedId === plan.packageId;
+                    return (
+                      <TouchableOpacity
+                        key={plan.packageId}
+                        activeOpacity={0.8}
+                        disabled={!plan.pkg}
+                        style={[
+                          styles.tabButton,
+                          isTabSelected && styles.tabButtonActive,
+                          !plan.pkg && styles.tabButtonDisabled,
+                        ]}
+                        onPress={() => {
+                          hapticFeedback.impactLight();
+                          setSelectedId(plan.packageId);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.tabButtonText,
+                            isTabSelected && styles.tabButtonTextActive,
+                          ]}
+                        >
+                          {plan.tabLabel}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-              )}
-            </View>
-          </View>
-
-          {/* Divider */}
-          <View style={styles.cardDivider} />
-
-          {/* Features List Header */}
-          <Text style={styles.featuresListHeader}>✨ Unlocks all Pro capabilities:</Text>
-
-          {/* Features List with Orange/Gold Ticks */}
-          <View style={styles.featuresListContainer}>
-            {PRO_FEATURES.map((feature, index) => (
-              <View key={index} style={styles.featureItemRow}>
-                <Ionicons name="checkmark-circle" size={18} color="#D97706" />
-                <Text style={styles.featureItemText}>{feature}</Text>
               </View>
-            ))}
-          </View>
 
-          {/* Select Button Action */}
-          <TouchableOpacity
-            activeOpacity={isPremium ? 1 : 0.85}
-            disabled={isPremium}
-            onPress={handleSelectPlan}
-            style={[
-              styles.actionButton,
-              isPremium
-                ? styles.actionButtonDisabled
-                : selectedPlan.popular
-                  ? styles.actionButtonActive
-                  : styles.actionButtonDefault,
-            ]}
-          >
-            <Text
-              style={[
-                styles.actionButtonText,
-                isPremium
-                  ? styles.actionButtonTextDisabled
-                  : selectedPlan.popular
-                    ? { color: '#FFFFFF' }
-                    : { color: TOKENS.primary },
-              ]}
-            >
-              {isPremium ? 'Active & Unlocked' : 'Choose Plan'}
-            </Text>
-            {!isPremium && (
-              <Feather
-                name="arrow-right"
-                size={16}
-                color={selectedPlan.popular ? '#FFFFFF' : TOKENS.primary}
-              />
+              <View
+                style={[
+                  styles.planDetailCard,
+                  selected?.popular ? styles.planDetailCardActive : styles.planDetailCardDefault,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.badgeTag,
+                    selected?.popular ? styles.badgeTagActive : styles.badgeTagDefault,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.badgeTagText,
+                      selected?.popular ? { color: '#D97706' } : { color: TOKENS.muted },
+                    ]}
+                  >
+                    {selected?.badge}
+                  </Text>
+                </View>
+
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.planTitleText}>{selected?.title}</Text>
+                  <Text style={styles.planDurationText}>{selected?.duration}</Text>
+                </View>
+
+                <View style={styles.priceRowContainer}>
+                  <View style={styles.priceLeftCol}>
+                    <Text style={styles.priceText}>
+                      {price.charged ? `≈ ${price.main}` : price.main}
+                    </Text>
+                    <Text style={styles.billingText}>
+                      {selected?.billing}
+                      {price.charged ? ' in USD' : ''}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.cardDivider} />
+
+                <Text style={styles.featuresListHeader}>✨ Unlocks all Pro capabilities:</Text>
+
+                <View style={styles.featuresListContainer}>
+                  {PRO_FEATURES.map((feature, index) => (
+                    <View key={index} style={styles.featureItemRow}>
+                      <Ionicons name="checkmark-circle" size={18} color="#D97706" />
+                      <Text style={styles.featureItemText}>{feature}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  activeOpacity={canPurchase ? 0.85 : 1}
+                  disabled={!canPurchase || busy}
+                  onPress={handlePurchase}
+                  style={[
+                    styles.actionButton,
+                    !canPurchase
+                      ? styles.actionButtonDisabled
+                      : selected?.popular
+                        ? styles.actionButtonActive
+                        : styles.actionButtonDefault,
+                  ]}
+                >
+                  {busy ? (
+                    <ActivityIndicator color={selected?.popular ? '#FFFFFF' : TOKENS.primary} />
+                  ) : (
+                    <>
+                      <Text
+                        style={[
+                          styles.actionButtonText,
+                          !canPurchase
+                            ? styles.actionButtonTextDisabled
+                            : selected?.popular
+                              ? { color: '#FFFFFF' }
+                              : { color: TOKENS.primary },
+                        ]}
+                      >
+                        {isOwner
+                          ? `${t('premium.subscribe')} · ${price.main}`
+                          : t('premium.ownerOnly')}
+                      </Text>
+                      {canPurchase && (
+                        <Feather
+                          name="arrow-right"
+                          size={16}
+                          color={selected?.popular ? '#FFFFFF' : TOKENS.primary}
+                        />
+                      )}
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          )
+        ) : null}
+
+        {/* ---------- Store-mandated disclosure. Apple 3.1.2 rejects paywalls
+                      without auto-renew terms, Restore, Terms and Privacy. ---------- */}
+        <View style={styles.legalBlock}>
+          <Text style={styles.autoRenewNotice}>{t('premium.autoRenewNotice')}</Text>
+          <View style={styles.legalLinksRow}>
+            {isOwner && !isPro && (
+              <>
+                <TouchableOpacity onPress={handleRestore} disabled={busy}>
+                  <Text style={styles.legalLink}>{t('premium.restore')}</Text>
+                </TouchableOpacity>
+                <Text style={styles.legalDot}>·</Text>
+              </>
             )}
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => legal && Linking.openURL(legal.terms)}>
+              <Text style={styles.legalLink}>{t('premium.terms')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalDot}>·</Text>
+            <TouchableOpacity onPress={() => legal && Linking.openURL(legal.privacy)}>
+              <Text style={styles.legalLink}>{t('premium.privacy')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Internet Connection Notice Box */}
         <View style={styles.wifiNoticeBox}>
           <View style={styles.wifiIconCircle}>
             <Feather name="wifi" size={16} color={TOKENS.primary} />
@@ -328,7 +507,6 @@ export default function PremiumPlansRoute() {
           </View>
         </View>
 
-        {/* Powered by Shopbook */}
         <PoweredBy />
       </ScrollView>
     </ScreenWrapper>
@@ -461,15 +639,6 @@ const styles = StyleSheet.create({
     color: '#B45309',
     fontWeight: '500',
   },
-  downgradeLink: {
-    alignSelf: 'center',
-  },
-  downgradeLinkText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: TOKENS.error,
-    textDecorationLine: 'underline',
-  },
   scrollWrapper: {
     flex: 1,
   },
@@ -574,27 +743,6 @@ const styles = StyleSheet.create({
   billingText: {
     fontSize: 12,
     color: TOKENS.muted,
-  },
-  priceRightCol: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  originalPriceText: {
-    fontSize: 13,
-    color: TOKENS.muted,
-    textDecorationLine: 'line-through',
-    fontWeight: '500',
-  },
-  savingBadge: {
-    backgroundColor: '#D1FAE5',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  savingBadgeText: {
-    color: '#065F46',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   cardDivider: {
     height: 1,
@@ -711,5 +859,95 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: TOKENS.muted,
     opacity: 0.7,
+  },
+
+  tabButtonDisabled: {
+    opacity: 0.4,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    padding: 14,
+    marginBottom: 16,
+  },
+  infoBoxText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
+    color: TOKENS.dark,
+  },
+  manageCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 16,
+  },
+  manageButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: TOKENS.primary,
+    backgroundColor: TOKENS.card,
+  },
+  manageButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: TOKENS.primary,
+  },
+  secondaryLink: {
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+  },
+  secondaryLinkText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: TOKENS.muted,
+    textDecorationLine: 'underline',
+  },
+  loadingBox: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  legalBlock: {
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  autoRenewNotice: {
+    fontSize: 11,
+    lineHeight: 16,
+    color: TOKENS.muted,
+    textAlign: 'center',
+  },
+  legalLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  legalLink: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: TOKENS.primary,
+    textDecorationLine: 'underline',
+  },
+  legalDot: {
+    fontSize: 12,
+    color: TOKENS.muted,
   },
 });

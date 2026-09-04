@@ -68,7 +68,7 @@ The native mobile application is optimized for tablet layouts and hand-held term
 - **Offline Image upload Queue**: Saves product images locally immediately. When connection states monitor online through NetInfo, uploads them via `@uploadthing/expo` in a background queue.
 - **Device Telemetry Logs**: Automatically logs battery percentage, network state, device model, GPS coordinates, and push tokens. Allows managers to terminate devices remotely.
 - **Mandatory Force Updates**: Synchronizes client versions with remote `app_config` variables and blocks outmoded clients.
-- **Licensing & Payments**: Pro features license checks connected to subscription plan modals (RevenueCat checkout or bank slip WhatsApp submission).
+- **Licensing & Payments**: Server-backed Pro entitlement via RevenueCat in-app subscriptions (App Store / Google Play), resolved per business owner and shared across staff devices and the web terminal. See [Pro entitlement architecture](mobile/doc/PREMIUM_PLANS.md).
 
 ### 📦 Mobile Package Management Rules
 

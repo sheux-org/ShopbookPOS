@@ -5,6 +5,10 @@ export interface AppConfig {
   min_version: string;
   android_url: string;
   ios_url: string;
+  /** Kill switch: hides purchase CTAs until the stores approve the products. */
+  iap_enabled: boolean;
+  terms_url: string;
+  privacy_url: string;
 }
 
 /**
@@ -15,7 +19,7 @@ export async function fetchAppConfig(): Promise<AppConfig | null> {
   try {
     const { data, error } = await supabase
       .from('app_config')
-      .select('force_update, min_version, android_url, ios_url')
+      .select('force_update, min_version, android_url, ios_url, iap_enabled, terms_url, privacy_url')
       .eq('id', 1)
       .single();
 
