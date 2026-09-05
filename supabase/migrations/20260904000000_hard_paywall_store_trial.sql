@@ -166,9 +166,20 @@ SELECT
   e.received_at
 FROM public.subscription_events e;
 
+-- -------------------------------------------------------------------------
+-- 5. The App Store record now exists, so the force-update deep link can point
+--    at it. Guarded on the placeholder so a corrected value is never clobbered.
+--    (known-issues CFG-1, iOS half.)
+-- -------------------------------------------------------------------------
+UPDATE public.app_config
+SET ios_url = 'https://apps.apple.com/app/id6794647713'
+WHERE id = 1
+  AND ios_url = 'https://apps.apple.com/app/id6470000000';
+
 -- =========================================================================
 -- VERIFY (read-only)
 -- =========================================================================
+SELECT ios_url, android_url, iap_enabled FROM public.app_config WHERE id = 1;
 SELECT public.get_entitlement('does-not-exist')  AS should_be_not_pro;
 SELECT to_regclass('public.paywall_events')      AS paywall_events,
        to_regclass('public.v_subscription_events') AS funnel_view;
