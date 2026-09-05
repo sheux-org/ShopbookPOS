@@ -10,7 +10,8 @@ Compiled `dev` @ `f23870f`, 2026-09-01. Analysis lives in [`architecture.md`](./
 
 | ID                  | Severity | Issue                                                     | Status                         |
 | ------------------- | -------- | --------------------------------------------------------- | ------------------------------ |
-| [ENT-1](#ent-1)     | High     | Existing shops lose Pro on release day                    | decision-needed                |
+| [TRIAL-1](#trial-1) | Medium   | Free-trial offer expires silently if given an end date    | done                           |
+| [ENT-1](#ent-1)     | High     | Existing shops lose Pro on release day                    | not applicable                 |
 | [SYNC-1](#sync-1)   | High     | Concurrent stock decrements silently lost                 | fix-specified                  |
 | [SEC-1](#sec-1)     | High     | Hardcoded OTP `11111` grants an admin session             | open                           |
 | [SEC-2](#sec-2)     | High     | Tenant isolation is a client-supplied parameter           | open                           |
@@ -30,9 +31,41 @@ Compiled `dev` @ `f23870f`, 2026-09-01. Analysis lives in [`architecture.md`](./
 
 ---
 
+## TRIAL-1 — The free-trial offer expires, and nothing will tell you {#trial-1}
+
+**Severity:** Medium · **Status:** done
+
+**Where:** App Store Connect → each of the three subscriptions → Introductory Offers
+
+**Fixed 2026-09-05.** All three offers were recreated with **No End Date**, so
+they do not lapse. Kept in the register because the failure mode below is
+invisible and anyone editing these offers later can reintroduce it in one click.
+
+**Symptom:** On **4 May 2027** the introductory offer lapses. From that morning
+the paywall still reads "Start 14-day free trial" — the copy is driven by
+`isTrialEligible()`, which asks the store — but the store has no offer to
+apply, so `checkTrialOrIntroductoryPriceEligibility` returns ineligible and the
+button quietly becomes "Subscribe". Anyone who taps it is charged immediately.
+
+**Cause:** the offer form takes an end date, and the **No End Date** option is
+easy to miss — the first attempt here was created with an eight-month window.
+
+**Fix:** set **No End Date** when creating the offer, on **all three**
+subscriptions. Apple grants one introductory offer per subscription group per
+customer, so whichever plan is tapped first consumes it; a trial on only one
+plan means the others charge immediately.
+
+**Why this is worth a register entry:** it fails silently and correctly. No
+error, no crash, no alert — the button simply stops promising a trial, and the
+first signal is a customer asking why they were charged. Diarise it.
+
 ## ENT-1 — Existing shops lose Pro on release day {#ent-1}
 
-**Severity:** High · **Status:** decision-needed
+**Severity:** High · **Status:** ~~decision-needed~~ **not applicable**
+
+> Closed 2026-09-05. The product is pre-launch with no existing users, so there
+> is nobody to grandfather and no backfill to run. Reopen only if a build ships
+> to real shops before the hard paywall does.
 
 **Where:** `supabase/migrations/20260901000000_revenuecat_entitlements.sql`
 
