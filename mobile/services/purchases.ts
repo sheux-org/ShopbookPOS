@@ -123,8 +123,14 @@ export async function isTrialEligible(productId: string): Promise<boolean> {
   try {
     const result = await Purchases.checkTrialOrIntroductoryPriceEligibility([productId]);
     const status = result[productId]?.status;
-    if (status === undefined) return true;
-    return status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
+    // Only an explicit no counts as a no. UNKNOWN means the platform could not
+    // answer — always the case on Android, and on iOS without a sandbox
+    // account — and treating that as ineligible would hide the trial from
+    // everyone on Play.
+    return (
+      status !== INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_INELIGIBLE &&
+      status !== INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_NO_INTRO_OFFER_EXISTS
+    );
   } catch {
     return true;
   }
