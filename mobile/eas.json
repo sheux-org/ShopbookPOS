@@ -35,6 +35,14 @@
         "buildType": "app-bundle"
       },
       "ios": {}
+    },
+    "shopbook-pos-prod": {
+      "channel": "shopbook-pos-ios-dev",
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {}
     }
   },
   "submit": {
