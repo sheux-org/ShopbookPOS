@@ -50,8 +50,8 @@ export const styles = StyleSheet.create({
     boxShadow: `0px 6px 8px 0px ${TOKENS.primary}4D`,
   },
   logoImage: {
-    width: 90,
-    height: 90,
+    width: 60,
+    height: 60,
     borderRadius: 18,
   },
   appName: {

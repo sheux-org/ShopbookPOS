@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
     boxShadow: '0px 6px 12px 0px rgba(0, 0, 0, 0.12)',
   },
   logo: {
-    width: '120%',
-    height: '120%',
+    width: '80%',
+    height: '80%',
   },
   textContainer: {
     alignItems: 'center',
