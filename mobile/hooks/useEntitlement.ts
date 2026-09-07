@@ -65,3 +65,35 @@ export function useEntitlementSync() {
 export function useIsPro(): boolean {
   return useEntitlementStore((s) => s.isPro);
 }
+
+/**
+ * Which plan a store product id represents.
+ *
+ * Matched loosely because the three stores name the same plan differently:
+ * `lk.shopbook.pos.pro.annual` on the App Store, `pro:annual-1y` on Play,
+ * `yearly` on the Test Store. Order matters — "three_month" contains "month",
+ * so the longer periods are tested first.
+ */
+export function planNameFromProductId(productId: string | null): string | null {
+  if (!productId) return null;
+  const id = productId.toLowerCase();
+  if (id.includes('annual') || id.includes('year')) return '1 Year';
+  if (id.includes('quarter') || id.includes('three') || id.includes('3m')) return '3 Months';
+  if (id.includes('month')) return '1 Month';
+  return null;
+}
+
+/**
+ * Everything a screen needs to describe the current subscription in one read.
+ * Used by the manage screen and by the Profile row that links to it, so the
+ * two can never disagree about what the customer is paying for.
+ */
+export function useSubscriptionSummary() {
+  const isPro = useEntitlementStore((s) => s.isPro);
+  const isTrial = useEntitlementStore((s) => s.isTrial);
+  const expiresAt = useEntitlementStore((s) => s.expiresAt);
+  const willRenew = useEntitlementStore((s) => s.willRenew);
+  const productId = useEntitlementStore((s) => s.productId);
+
+  return { isPro, isTrial, expiresAt, willRenew, planName: planNameFromProductId(productId) };
+}
