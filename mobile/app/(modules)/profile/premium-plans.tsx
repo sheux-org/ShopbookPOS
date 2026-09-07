@@ -493,7 +493,9 @@ export default function PremiumPlansRoute() {
         {/* ---------- Store-mandated disclosure. Apple 3.1.2 rejects paywalls
                       without auto-renew terms, Restore, Terms and Privacy. ---------- */}
         <View style={styles.legalBlock}>
-          <Text style={styles.autoRenewNotice}>{t('premium.autoRenewNotice')}</Text>
+          {(!isPro || isTrial) && (
+            <Text style={styles.autoRenewNotice}>{t('premium.autoRenewNotice')}</Text>
+          )}
           <View style={styles.legalLinksRow}>
             {isOwner && !isPro && (
               <>
@@ -513,18 +515,20 @@ export default function PremiumPlansRoute() {
           </View>
         </View>
 
-        <View style={styles.wifiNoticeBox}>
-          <View style={styles.wifiIconCircle}>
-            <Feather name="wifi" size={16} color={TOKENS.primary} />
+        {(!isPro || isTrial) && (
+          <View style={styles.wifiNoticeBox}>
+            <View style={styles.wifiIconCircle}>
+              <Feather name="wifi" size={16} color={TOKENS.primary} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.wifiNoticeTitle}>Internet Connection Required</Text>
+              <Text style={styles.wifiNoticeText}>
+                Please ensure your device is connected to the internet to complete your upgrade
+                transaction.
+              </Text>
+            </View>
           </View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.wifiNoticeTitle}>Internet Connection Required</Text>
-            <Text style={styles.wifiNoticeText}>
-              Please ensure your device is connected to the internet to complete your upgrade
-              transaction.
-            </Text>
-          </View>
-        </View>
+        )}
 
         <PoweredBy />
       </ScrollView>
@@ -886,8 +890,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: TOKENS.muted,
     lineHeight: 17,
-    textAlign: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   manageCard: {
     gap: 10,
@@ -910,6 +913,7 @@ const styles = StyleSheet.create({
     color: TOKENS.primary,
   },
   secondaryLink: {
+    alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 14,
   },
