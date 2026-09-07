@@ -890,14 +890,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   manageCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
     marginBottom: 16,
   },
   manageButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
