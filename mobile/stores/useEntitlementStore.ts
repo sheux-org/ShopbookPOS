@@ -25,7 +25,6 @@ type Source = 'rpc' | 'sdk' | 'none';
 interface EntitlementState {
   isPro: boolean;
   isTrial: boolean;
-  trialEndsAt: string | null;
   expiresAt: string | null;
   willRenew: boolean;
   productId: string | null;
@@ -44,7 +43,6 @@ interface EntitlementState {
 const EMPTY = {
   isPro: false,
   isTrial: false,
-  trialEndsAt: null,
   expiresAt: null,
   willRenew: false,
   productId: null,
@@ -92,7 +90,6 @@ export const useEntitlementStore = create<EntitlementState>()(
           set({
             isPro: !!row.is_pro,
             isTrial: !!row.is_trial,
-            trialEndsAt: (row.trial_ends_at as string) ?? null,
             expiresAt: (row.expires_at as string) ?? null,
             willRenew: !!row.will_renew,
             productId: (row.product_id as string) ?? null,
@@ -138,7 +135,6 @@ export const useEntitlementStore = create<EntitlementState>()(
       partialize: (s) => ({
         isPro: s.isPro,
         isTrial: s.isTrial,
-        trialEndsAt: s.trialEndsAt,
         expiresAt: s.expiresAt,
         willRenew: s.willRenew,
         productId: s.productId,
@@ -153,7 +149,8 @@ export const useEntitlementStore = create<EntitlementState>()(
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (!stillValid(state.expiresAt, state.isPro)) {
-          state.isPro = state.isTrial && stillValid(state.trialEndsAt, true);
+          state.isPro = false;
+          state.isTrial = false;
         }
       },
     }

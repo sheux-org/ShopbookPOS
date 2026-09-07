@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import React, { useEffect } from 'react';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { BottomTabBar } from '../../components/common/BottomTabBar';
@@ -9,12 +9,19 @@ import { useWatermelonSync } from '../../hooks/useWatermelonSync';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { syncDatabase, supabase, getClientId } from '../../services/sync';
 import { useEntitlementSync } from '../../hooks/useEntitlement';
+import { useEntitlementStore } from '../../stores/useEntitlementStore';
 
 export default function TabLayout() {
   useActiveDeviceTracker();
   useBusinessSwitchSync();
   useWatermelonSync(); // Enable periodic background database sync
   useEntitlementSync(); // Keep server-backed Pro entitlement fresh
+
+  // Closes the gate behind them: a subscription that lapses mid-session, or
+  // is revoked server-side, bounces back to the paywall on the next refresh
+  // rather than leaving the till open until the app is restarted.
+  const isPro = useEntitlementStore((s) => s.isPro);
+  const checkedAt = useEntitlementStore((s) => s.checkedAt);
 
   const { tabBarVisible } = useTabBarVisible();
   const translateY = useSharedValue(0);
@@ -61,6 +68,10 @@ export default function TabLayout() {
     if (routeName === 'index') return 'home';
     return routeName;
   };
+
+  if (checkedAt !== null && !isPro) {
+    return <Redirect href="/paywall" />;
+  }
 
   return (
     <Tabs

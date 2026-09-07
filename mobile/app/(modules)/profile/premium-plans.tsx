@@ -18,7 +18,7 @@ import { TOKENS } from '../../../constants/tokens';
 import { hapticFeedback } from '../../../utils/haptics';
 import { PoweredBy } from '../../../components/common/PoweredBy';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { useIsBusinessOwner } from '../../../hooks/useEntitlement';
+import { useIsBusinessOwner, planNameFromProductId } from '../../../hooks/useEntitlement';
 import { useEntitlementStore } from '../../../stores/useEntitlementStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useBusinessStore } from '../../../stores/useBusinessStore';
@@ -123,10 +123,11 @@ export default function PremiumPlansRoute() {
 
   const isPro = useEntitlementStore((s) => s.isPro);
   const isTrial = useEntitlementStore((s) => s.isTrial);
-  const trialEndsAt = useEntitlementStore((s) => s.trialEndsAt);
   const expiresAt = useEntitlementStore((s) => s.expiresAt);
   const willRenew = useEntitlementStore((s) => s.willRenew);
   const managementUrl = useEntitlementStore((s) => s.managementUrl);
+  const store = useEntitlementStore((s) => s.store);
+  const planName = planNameFromProductId(useEntitlementStore((s) => s.productId));
   const refreshEntitlement = useEntitlementStore((s) => s.refresh);
   const setFromSdk = useEntitlementStore((s) => s.setFromSdk);
 
@@ -259,20 +260,26 @@ export default function PremiumPlansRoute() {
       >
         {/* ---------- Status card ---------- */}
         {isPro && !isTrial ? (
-          <View style={styles.proPassCard}>
-            <View style={styles.proPassLeft}>
-              <View style={styles.vipBadge}>
-                <Text style={styles.vipBadgeText}>{t('premium.activeMember')}</Text>
-              </View>
-              <Text style={styles.proPassTitle}>{t('premium.licenseTitle')}</Text>
-              <Text style={styles.proPassSubtitle}>
-                {expiresAt
-                  ? `${willRenew ? t('premium.renewsOn') : t('premium.expiresOn')} ${formatDate(expiresAt)}`
-                  : t('premium.subActiveNotice')}
-              </Text>
+          <View style={styles.subCard}>
+            <Text style={styles.subCardHeading}>{t('premium.activeHeading')}</Text>
+
+            <View style={styles.subRow}>
+              <Text style={styles.subRowLabel}>{t('premium.rowPlan')}</Text>
+              <Text style={styles.subRowValue}>{planName ?? t('premium.planUnknown')}</Text>
             </View>
-            <View style={styles.proPassRight}>
-              <Ionicons name="diamond" size={28} color="#D97706" />
+
+            <View style={styles.subRow}>
+              <Text style={styles.subRowLabel}>
+                {willRenew ? t('premium.rowRenews') : t('premium.rowEnds')}
+              </Text>
+              <Text style={styles.subRowValue}>{expiresAt ? formatDate(expiresAt) : '—'}</Text>
+            </View>
+
+            <View style={[styles.subRow, styles.subRowLast]}>
+              <Text style={styles.subRowLabel}>{t('premium.rowBilledVia')}</Text>
+              <Text style={styles.subRowValue}>
+                {store === 'PLAY_STORE' ? 'Google Play' : 'App Store'}
+              </Text>
             </View>
           </View>
         ) : isTrial ? (
@@ -283,7 +290,7 @@ export default function PremiumPlansRoute() {
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.warningCardTitle}>{t('premium.trialTitle')}</Text>
               <Text style={styles.alertDesc}>
-                {t('premium.trialEnds')} {formatDate(trialEndsAt)}
+                {t('premium.trialEnds')} {formatDate(expiresAt)}
               </Text>
             </View>
           </View>
@@ -313,7 +320,7 @@ export default function PremiumPlansRoute() {
           </View>
         )}
 
-        {/* ---------- Manage (already subscribed) ---------- */}
+        {/* ---------- Manage / cancel (already subscribed) ---------- */}
         {isPro && !isTrial && isOwner && (
           <View style={styles.manageCard}>
             <TouchableOpacity
@@ -322,8 +329,16 @@ export default function PremiumPlansRoute() {
               activeOpacity={0.85}
             >
               <Feather name="external-link" size={16} color={TOKENS.primary} />
-              <Text style={styles.manageButtonText}>{t('premium.manage')}</Text>
+              <Text style={styles.manageButtonText}>{t('premium.manageOrCancel')}</Text>
             </TouchableOpacity>
+
+            <Text style={styles.manageNote}>
+              {willRenew && expiresAt
+                ? `${t('premium.cancelKeepsAccess')} ${formatDate(expiresAt)}.`
+                : t('premium.alreadyCancelled')}
+            </Text>
+            <Text style={styles.manageNote}>{t('premium.storeManagesBilling')}</Text>
+
             <TouchableOpacity style={styles.secondaryLink} onPress={handleRestore} disabled={busy}>
               <Text style={styles.secondaryLinkText}>{t('premium.restore')}</Text>
             </TouchableOpacity>
@@ -478,7 +493,9 @@ export default function PremiumPlansRoute() {
         {/* ---------- Store-mandated disclosure. Apple 3.1.2 rejects paywalls
                       without auto-renew terms, Restore, Terms and Privacy. ---------- */}
         <View style={styles.legalBlock}>
-          <Text style={styles.autoRenewNotice}>{t('premium.autoRenewNotice')}</Text>
+          {(!isPro || isTrial) && (
+            <Text style={styles.autoRenewNotice}>{t('premium.autoRenewNotice')}</Text>
+          )}
           <View style={styles.legalLinksRow}>
             {isOwner && !isPro && (
               <>
@@ -498,18 +515,20 @@ export default function PremiumPlansRoute() {
           </View>
         </View>
 
-        <View style={styles.wifiNoticeBox}>
-          <View style={styles.wifiIconCircle}>
-            <Feather name="wifi" size={16} color={TOKENS.primary} />
+        {(!isPro || isTrial) && (
+          <View style={styles.wifiNoticeBox}>
+            <View style={styles.wifiIconCircle}>
+              <Feather name="wifi" size={16} color={TOKENS.primary} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.wifiNoticeTitle}>Internet Connection Required</Text>
+              <Text style={styles.wifiNoticeText}>
+                Please ensure your device is connected to the internet to complete your upgrade
+                transaction.
+              </Text>
+            </View>
           </View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.wifiNoticeTitle}>Internet Connection Required</Text>
-            <Text style={styles.wifiNoticeText}>
-              Please ensure your device is connected to the internet to complete your upgrade
-              transaction.
-            </Text>
-          </View>
-        </View>
+        )}
 
         <PoweredBy />
       </ScrollView>
@@ -597,50 +616,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#B45309',
     lineHeight: 16,
-    fontWeight: '500',
-  },
-  proPassCard: {
-    flexDirection: 'row',
-    borderRadius: 16,
-    backgroundColor: '#FFFDF5',
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1.5,
-    borderColor: '#D97706',
-    boxShadow: '0px 4px 8px 0px rgba(217, 119, 6, 0.08)',
-    marginBottom: 8,
-  },
-  proPassLeft: {
-    flex: 1,
-    gap: 6,
-  },
-  proPassRight: {
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 12,
-  },
-  vipBadge: {
-    backgroundColor: '#D97706',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    alignSelf: 'flex-start',
-  },
-  vipBadgeText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  proPassTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#78350F',
-  },
-  proPassSubtitle: {
-    fontSize: 11,
-    color: '#B45309',
     fontWeight: '500',
   },
   scrollWrapper: {
@@ -885,15 +860,43 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: TOKENS.dark,
   },
-  manageCard: {
+  subCard: {
+    backgroundColor: TOKENS.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: TOKENS.border,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+  },
+  subCardHeading: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 0.6,
+    color: TOKENS.muted,
+    marginBottom: 6,
+  },
+  subRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: TOKENS.border,
+  },
+  subRowLast: { borderBottomWidth: 0 },
+  subRowLabel: { fontSize: 13, color: TOKENS.muted },
+  subRowValue: { fontSize: 14, fontWeight: 'bold', color: TOKENS.dark },
+  manageNote: {
+    fontSize: 12,
+    color: TOKENS.muted,
+    lineHeight: 17,
+    paddingHorizontal: 2,
+  },
+  manageCard: {
+    gap: 10,
     marginBottom: 16,
   },
   manageButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -910,6 +913,7 @@ const styles = StyleSheet.create({
     color: TOKENS.primary,
   },
   secondaryLink: {
+    alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 14,
   },

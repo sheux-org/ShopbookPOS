@@ -17,7 +17,7 @@ import { HelpSupportModal } from '../common/HelpSupportModal';
 import { LanguageSwitcherModal } from '../common/LanguageSwitcherModal';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTranslation } from '../../hooks/useTranslation';
-import { useIsPro } from '../../hooks/useEntitlement';
+import { useIsPro, useSubscriptionSummary } from '../../hooks/useEntitlement';
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -26,6 +26,24 @@ export const ProfileScreen: React.FC = () => {
   const isPremium = useIsPro();
 
   const { t, language } = useTranslation();
+  const subscription = useSubscriptionSummary();
+
+  // Shown under "Premium Plans" so the current plan and its renewal date are
+  // visible from Profile, rather than only after opening the screen.
+  const subscriptionLine = !subscription.isPro
+    ? t('profile.premiumSub')
+    : [
+        subscription.planName ? `${subscription.planName} plan` : 'Subscribed',
+        subscription.isTrial ? 'free trial' : null,
+        subscription.expiresAt
+          ? `${subscription.willRenew ? 'renews' : 'ends'} ${new Date(
+              subscription.expiresAt
+            ).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -254,7 +272,7 @@ export const ProfileScreen: React.FC = () => {
               </View>
               <View style={styles.optionTextWrapper}>
                 <Text style={styles.optionTitle}>{t('profile.premiumTitle')}</Text>
-                <Text style={styles.optionSubtitle}>{t('profile.premiumSub')}</Text>
+                <Text style={styles.optionSubtitle}>{subscriptionLine}</Text>
               </View>
               <Feather name="chevron-right" size={16} color={TOKENS.muted} />
             </TouchableOpacity>
