@@ -117,8 +117,8 @@ export default function PaywallRoute() {
   const [iapEnabled, setIapEnabled] = useState(false);
   const [trialEligible, setTrialEligible] = useState(true);
   const [legal, setLegal] = useState({
-    terms: 'https://shopbook-pos-website.vercel.app/terms',
-    privacy: 'https://shopbook-pos-website.vercel.app/privacy',
+    terms: 'https://pos.shopbook.lk/terms',
+    privacy: 'https://pos.shopbook.lk/privacy',
   });
   const [selectedId, setSelectedId] = useState<string>('$rc_annual');
 
