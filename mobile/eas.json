@@ -37,7 +37,7 @@
       "ios": {}
     },
     "shopbook-pos-prod": {
-      "channel": "shopbook-pos-ios-dev",
+      "channel": "shopbook-pos-prod",
       "distribution": "store",
       "android": {
         "buildType": "app-bundle"
