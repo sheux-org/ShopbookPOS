@@ -11,6 +11,7 @@ export default function SessionGateRoute() {
   const [hasHydrated, setHasHydrated] = useState(false);
   const isPro = useEntitlementStore((s) => s.isPro);
   const checkedAt = useEntitlementStore((s) => s.checkedAt);
+  const [entitlementTimedOut, setEntitlementTimedOut] = useState(false);
 
   useEffect(() => {
     const checkHydration = () => {
@@ -36,6 +37,17 @@ export default function SessionGateRoute() {
       unsubBridge();
     };
   }, []);
+
+  // A session that has never resolved an entitlement waits for the first
+  // refresh, but not forever: with no connectivity that check never returns,
+  // and an unbounded wait leaves a till showing a spinner with no way out.
+  // After the deadline we route on what we have, which sends an unverified
+  // session to the paywall — where Restore and Log out are both reachable.
+  useEffect(() => {
+    if (checkedAt !== null) return;
+    const timer = setTimeout(() => setEntitlementTimedOut(true), 8000);
+    return () => clearTimeout(timer);
+  }, [checkedAt]);
 
   useEffect(() => {
     if (hasHydrated && isLoggedIn) {
@@ -68,7 +80,7 @@ export default function SessionGateRoute() {
   // refresh above corrects it in the background. Only a session that has
   // never resolved an entitlement waits, which avoids showing the paywall to
   // a subscriber for a frame on every cold start.
-  if (checkedAt === null) {
+  if (checkedAt === null && !entitlementTimedOut) {
     return (
       <View
         style={{
