@@ -124,6 +124,8 @@ export default function PaywallRoute() {
 
   useEffect(() => {
     let cancelled = false;
+    // A stale answer here strands an owner on "Owner account required".
+    void refreshEntitlement(activeBusinessId);
     (async () => {
       const [pkgs, config] = await Promise.all([getProPackages(), fetchAppConfig()]);
       if (cancelled) return;
@@ -146,7 +148,7 @@ export default function PaywallRoute() {
     return () => {
       cancelled = true;
     };
-  }, [activeBusinessId, isOwner]);
+  }, [activeBusinessId, isOwner, refreshEntitlement]);
 
   const plans = useMemo(() => {
     const byId = new Map(packages.map((p) => [p.identifier, p]));
