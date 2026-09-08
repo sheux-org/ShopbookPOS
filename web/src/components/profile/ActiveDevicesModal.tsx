@@ -208,26 +208,6 @@ export const ActiveDevicesModal: React.FC<ActiveDevicesModalProps> = ({
             </div>
           )}
 
-          {device.push_token && (
-            <div className="device-token-row">
-              <Bell size={11} style={{ marginRight: '2px', flexShrink: 0 }} />
-              <span className="device-token-text">{device.push_token}</span>
-              <button
-                className="device-copy-token-btn"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(device.push_token || '');
-                    triggerToast('Push token copied! 📋');
-                  } catch {
-                    // fallback
-                  }
-                }}
-                title="Copy Push Token"
-              >
-                <Copy size={10} />
-              </button>
-            </div>
-          )}
         </div>
 
         {!isCurrent && (

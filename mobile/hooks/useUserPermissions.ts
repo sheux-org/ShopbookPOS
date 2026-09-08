@@ -30,8 +30,11 @@ const PERMISSION_MATRIX: Record<UserRole, Record<PermissionResource, PermissionA
 };
 
 export const useUserPermissions = () => {
-  // Retrieve the currently active session role from the AuthStore
-  const userRoleRaw = useAuthStore((s: any) => s.userRole) || 'admin';
+  // Retrieve the currently active session role from the AuthStore.
+  // Absent role falls back to the LEAST privilege: the previous 'admin'
+  // default meant a session with no role became an administrator, while an
+  // unrecognised role correctly fell through to cashier below.
+  const userRoleRaw = useAuthStore((s: any) => s.userRole) || 'cashier';
 
   // Normalise role string to match matrix keys
   const role: UserRole =

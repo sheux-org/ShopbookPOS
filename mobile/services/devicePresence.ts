@@ -30,7 +30,6 @@ export interface ActiveDeviceView {
   latitude: number | null;
   longitude: number | null;
   location_name: string | null;
-  push_token: string | null;
   last_active_at: string;
   platform: 'mobile' | 'web';
 }
@@ -134,7 +133,6 @@ export function parsePresenceState(
         latitude: state.latitude ?? null,
         longitude: state.longitude ?? null,
         location_name: state.location_name ?? null,
-        push_token: state.push_token ?? null,
         last_active_at: lastActiveAt,
         platform: state.platform === 'web' ? 'web' : 'mobile',
       };
@@ -202,12 +200,10 @@ function ensureChannel(businessId: string, deviceId: string): RealtimeChannel {
 }
 
 export async function checkDeviceRevoked(businessId: string, deviceId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('device_session_revocations')
-    .select('device_id')
-    .eq('business_id', businessId)
-    .eq('device_id', deviceId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('is_device_revoked', {
+    input_business_id: businessId,
+    input_device_id: deviceId,
+  });
 
   if (error) {
     console.warn('Failed to check device revocation:', error);
@@ -218,35 +214,31 @@ export async function checkDeviceRevoked(businessId: string, deviceId: string): 
 }
 
 export async function writeOfflineSnapshot(snapshot: OfflineDeviceSnapshot): Promise<void> {
-  const payload = {
-    id: snapshot.record_id,
-    business_id: snapshot.business_id,
-    employee_id: snapshot.employee_id,
-    employee_name: snapshot.employee_name,
-    role: snapshot.role,
-    device_id: snapshot.device_id,
-    device_model: snapshot.device_model,
-    battery_level: snapshot.battery_level,
-    is_online: false,
-    latitude: snapshot.latitude,
-    longitude: snapshot.longitude,
-    location_name: snapshot.location_name,
-    push_token: snapshot.push_token,
-    last_active_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabase.from('active_devices').upsert(payload);
+  const { error } = await supabase.rpc('upsert_device_presence', {
+    input_record_id: snapshot.record_id,
+    input_business_id: snapshot.business_id,
+    input_device_id: snapshot.device_id,
+    input_employee_id: snapshot.employee_id,
+    input_employee_name: snapshot.employee_name,
+    input_role: snapshot.role,
+    input_device_model: snapshot.device_model,
+    input_battery_level: snapshot.battery_level,
+    input_is_online: false,
+    input_latitude: snapshot.latitude,
+    input_longitude: snapshot.longitude,
+    input_location_name: snapshot.location_name,
+    input_push_token: snapshot.push_token,
+  });
   if (error) {
     console.warn('Failed to write offline device snapshot:', error);
   }
 }
 
 export async function deleteOfflineSnapshot(businessId: string, deviceId: string): Promise<void> {
-  const { error } = await supabase
-    .from('active_devices')
-    .delete()
-    .eq('business_id', businessId)
-    .eq('device_id', deviceId);
+  const { error } = await supabase.rpc('delete_device_presence', {
+    input_business_id: businessId,
+    input_device_id: deviceId,
+  });
 
   if (error) {
     console.warn('Failed to delete offline device snapshot:', error);
@@ -283,11 +275,10 @@ export async function revokeDeviceSession(params: {
     });
   }
 
-  const { error: revokeError } = await supabase.from('device_session_revocations').upsert({
-    business_id: businessId,
-    device_id: targetDeviceId,
-    revoked_at: new Date().toISOString(),
-    revoked_by_device_id: revokedByDeviceId,
+  const { error: revokeError } = await supabase.rpc('revoke_device_session', {
+    input_business_id: businessId,
+    input_device_id: targetDeviceId,
+    input_revoked_by_device_id: revokedByDeviceId,
   });
 
   if (revokeError) {
@@ -489,22 +480,17 @@ export async function fetchRecentlyOfflineDevices(
   businessId: string,
   hours = 24
 ): Promise<ActiveDeviceView[]> {
-  const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
-
-  const { data, error } = await supabase
-    .from('active_devices')
-    .select('*')
-    .eq('business_id', businessId)
-    .eq('is_online', false)
-    .gte('last_active_at', since)
-    .order('last_active_at', { ascending: false });
+  const { data, error } = await supabase.rpc('list_offline_devices', {
+    input_business_id: businessId,
+    input_hours: hours,
+  });
 
   if (error) {
     console.warn('Failed to fetch recently offline devices:', error);
     return [];
   }
 
-  return (data || []).map((row) => ({
+  return (data || []).map((row: ActiveDeviceView) => ({
     id: row.id,
     business_id: row.business_id,
     employee_id: row.employee_id,
@@ -517,7 +503,6 @@ export async function fetchRecentlyOfflineDevices(
     latitude: row.latitude,
     longitude: row.longitude,
     location_name: row.location_name,
-    push_token: row.push_token,
     last_active_at: row.last_active_at,
     platform: row.device_model?.toLowerCase().includes('web') ? 'web' : 'mobile',
   }));
