@@ -25,6 +25,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PurchasesPackage } from 'react-native-purchases';
@@ -88,16 +89,18 @@ const PLANS = [
 ] as const;
 
 /** Outcomes, not feature names — what the shop owner gets, in their words. */
-const COMPARISON = [
-  { label: 'Billing & receipts on this phone', free: true },
-  { label: 'Your data backed up to the cloud', free: false },
-  { label: 'Print receipts on a thermal printer', free: false },
-  { label: 'Scan barcodes with the camera', free: false },
-  { label: 'Staff accounts with their own PINs', free: false },
-  { label: 'More than one shop or branch', free: false },
-  { label: 'Open your shop on a computer', free: false },
-  { label: 'Profit & sales reports as PDF or Excel', free: false },
+const BENEFITS = [
+  'Every sale backed up to the cloud, automatically',
+  'Print receipts on a thermal printer, scan barcodes',
+  'Staff log in with their own PIN; you see every sale',
+  'Open the shop on a computer, export sales & profit reports',
 ];
+
+/** Honest badge: the saving over paying month by month, from the rounded prices shown. */
+const savingsOver = (monthly: PurchasesPackage | undefined, pkg: PurchasesPackage, months: number) =>
+  monthly && months > 1
+    ? Math.round((1 - rupeeAmount(pkg) / months / rupeeAmount(monthly)) * 100)
+    : 0;
 
 export default function PaywallRoute() {
   const insets = useSafeAreaInsets();
@@ -251,77 +254,83 @@ export default function PaywallRoute() {
 
   const price = selected?.pkg ? priceOf(selected.pkg) : '—';
   const perMonth = selected?.pkg ? perMonthOf(selected.pkg, selected.months) : null;
+  const monthlyPkg = plans.find((p) => p.packageId === '$rc_monthly')?.pkg;
+  const storeOpen = iapEnabled && plans.some((p) => p.pkg);
 
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + 24, paddingBottom: 24 },
-        ]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8 }]}
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <View style={styles.hero}>
-          <View style={styles.heroBadge}>
-            <Ionicons name="diamond" size={22} color="#D97706" />
+        <LinearGradient
+          colors={['#2563EB', '#1E3A8A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.banner}
+        >
+          <View style={[styles.bannerOrb, styles.bannerOrbLarge]} />
+          <View style={[styles.bannerOrb, styles.bannerOrbSmall]} />
+          <TouchableOpacity onPress={confirmLogout} hitSlop={12} style={styles.bannerLogout}>
+            <Text style={styles.bannerLogoutText}>Log out</Text>
+          </TouchableOpacity>
+          <View style={styles.bannerTile}>
+            <Image
+              source={require('../../assets/images/logo.png')}
+              style={styles.bannerLogo}
+              resizeMode="contain"
+            />
           </View>
-          <Text style={styles.heroTitle}>Everything your shop needs, in one place</Text>
-          <Text style={styles.heroSub}>
-            Shopbook POS Pro keeps your sales safe in the cloud, prints receipts, and lets your
-            staff work while you watch the numbers from anywhere.
-          </Text>
-        </View>
-
-        <View style={styles.compareCard}>
-          <View style={styles.compareHead}>
-            <Text style={styles.compareHeadLabel}>What you get</Text>
-            <View style={styles.compareHeadCols}>
-              <Text style={styles.compareColFree}>Free</Text>
-              <Text style={styles.compareColPro}>Pro</Text>
+          <View style={styles.bannerCopy}>
+            <View style={styles.proPill}>
+              <Ionicons name="diamond" size={11} color="#FDE68A" />
+              <Text style={styles.proPillText}>SHOPBOOK POS PRO</Text>
             </View>
+            <Text style={styles.heroTitle}>Your shop, backed up and open anywhere</Text>
           </View>
+        </LinearGradient>
 
-          {COMPARISON.map((row) => (
-            <View key={row.label} style={styles.compareRow}>
-              <Text style={styles.compareLabel}>{row.label}</Text>
-              <View style={styles.compareHeadCols}>
-                <View style={styles.compareCell}>
-                  {row.free ? (
-                    <Ionicons name="checkmark" size={16} color={TOKENS.muted} />
-                  ) : (
-                    <Text style={styles.compareDash}>—</Text>
-                  )}
-                </View>
-                <View style={styles.compareCell}>
-                  <Ionicons name="checkmark-circle" size={18} color="#D97706" />
-                </View>
-              </View>
+        <View style={styles.benefits}>
+          {BENEFITS.map((line) => (
+            <View key={line} style={styles.benefitRow}>
+              <Ionicons name="checkmark-circle" size={18} color="#D97706" />
+              <Text style={styles.benefitText}>{line}</Text>
             </View>
           ))}
         </View>
 
         {!isOwner && (
-          <View style={styles.staffBox}>
+          <View style={styles.notice}>
             <Feather name="info" size={16} color={TOKENS.primary} />
-            <Text style={styles.staffText}>
-              Only the shop owner can subscribe. Please ask the owner of{' '}
-              {activeBusiness?.name ?? 'your shop'} to activate Shopbook POS Pro.
+            <Text style={styles.noticeText}>
+              Only the shop owner can subscribe. Ask the owner of{' '}
+              {activeBusiness?.name ?? 'your shop'} to activate Pro.
             </Text>
           </View>
         )}
 
-        {!iapEnabled || plans.every((p) => !p.pkg) ? (
-          <View style={styles.staffBox}>
+        {!storeOpen ? (
+          <View style={styles.notice}>
             <Feather name="clock" size={16} color={TOKENS.primary} />
-            <Text style={styles.staffText}>
+            <Text style={styles.noticeText}>
               Subscriptions are opening soon. Please check back shortly.
             </Text>
           </View>
         ) : (
           <View style={styles.plans}>
             {plans.map((plan) => {
-              const active = plan.packageId === selectedId;
               if (!plan.pkg) return null;
+              const active = plan.packageId === selectedId;
+              const saving = savingsOver(monthlyPkg, plan.pkg, plan.months);
+              const badge =
+                plan.packageId === '$rc_annual'
+                  ? saving > 0
+                    ? `Best value · Save ${saving}%`
+                    : 'Best value'
+                  : saving > 0
+                    ? `Save ${saving}%`
+                    : null;
               return (
                 <TouchableOpacity
                   key={plan.packageId}
@@ -329,6 +338,13 @@ export default function PaywallRoute() {
                   onPress={() => selectPlan(plan.packageId, plan.pkg)}
                   style={[styles.planCard, active && styles.planCardActive]}
                 >
+                  {badge && (
+                    <View style={[styles.badge, active && styles.badgeActive]}>
+                      <Text style={[styles.badgeText, active && styles.badgeTextActive]}>
+                        {badge}
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.planRadio}>
                     {active ? (
                       <Ionicons name="checkmark-circle" size={22} color={TOKENS.primary} />
@@ -336,14 +352,14 @@ export default function PaywallRoute() {
                       <View style={styles.planRadioEmpty} />
                     )}
                   </View>
-
                   <View style={styles.planBody}>
                     <Text style={styles.planLabel}>{plan.label}</Text>
                     <Text style={styles.planBilling}>
-                      {priceOf(plan.pkg)} {plan.billing}
+                      {plan.packageId === '$rc_annual' && trialEligible
+                        ? `${TRIAL_DAYS} days free, then ${priceOf(plan.pkg)} ${plan.billing}`
+                        : `${priceOf(plan.pkg)} ${plan.billing}`}
                     </Text>
                   </View>
-
                   <View style={styles.planRight}>
                     <Text style={styles.planPerMonth}>{perMonthOf(plan.pkg, plan.months)}</Text>
                     <Text style={styles.planPerMonthUnit}>per month</Text>
@@ -355,7 +371,7 @@ export default function PaywallRoute() {
         )}
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
         <TouchableOpacity
           activeOpacity={canPurchase ? 0.85 : 1}
           disabled={!canPurchase || busy}
@@ -368,7 +384,7 @@ export default function PaywallRoute() {
             <Text style={[styles.ctaText, !canPurchase && styles.ctaTextDisabled]}>
               {!isOwner
                 ? 'Owner account required'
-                : trialEligible
+                : trialEligible && selected?.packageId === '$rc_annual'
                   ? `Start ${TRIAL_DAYS}-day free trial`
                   : `Subscribe · ${price}`}
             </Text>
@@ -377,11 +393,11 @@ export default function PaywallRoute() {
 
         {canPurchase && (
           <Text style={styles.finePrint}>
-            {trialEligible
+            {trialEligible && selected?.packageId === '$rc_annual'
               ? `Free for ${TRIAL_DAYS} days, then ${price} ${selected?.billing}`
               : `${price} ${selected?.billing}`}
-            {perMonth ? ` · about ${perMonth} a month` : ''}. Cancel any time in your store
-            account; renews automatically until you do.
+            {perMonth ? ` · about ${perMonth} a month` : ''}. Renews automatically; cancel any
+            time in your store account.
           </Text>
         )}
 
@@ -401,10 +417,6 @@ export default function PaywallRoute() {
           <TouchableOpacity onPress={() => Linking.openURL(legal.privacy)}>
             <Text style={styles.footerLink}>Privacy</Text>
           </TouchableOpacity>
-          <Text style={styles.footerDot}>·</Text>
-          <TouchableOpacity onPress={confirmLogout}>
-            <Text style={styles.footerLink}>Log out</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -419,63 +431,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scroll: { paddingHorizontal: 20, gap: 20 },
+  scroll: { paddingHorizontal: 20, paddingBottom: 16, gap: 18 },
 
-  hero: { alignItems: 'center', gap: 10 },
-  heroBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#FEF3C7',
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: 18,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    overflow: 'hidden',
+  },
+  bannerOrb: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.10)' },
+  bannerOrbLarge: { width: 220, height: 220, right: -70, top: -110 },
+  bannerOrbSmall: { width: 120, height: 120, left: -40, bottom: -70 },
+  bannerLogout: { position: 'absolute', top: 12, right: 14 },
+  bannerLogoutText: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
+  bannerTile: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bannerLogo: { width: 36, height: 40 },
+  bannerCopy: { flex: 1, gap: 6, paddingTop: 10 },
+  proPill: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  proPillText: { fontSize: 11, fontWeight: 'bold', color: '#FDE68A', letterSpacing: 1 },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: 'bold',
-    color: TOKENS.dark,
-    textAlign: 'center',
-    lineHeight: 30,
-  },
-  heroSub: {
-    fontSize: 14,
-    color: TOKENS.muted,
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 4,
+    color: '#FFFFFF',
+    lineHeight: 27,
   },
 
-  compareCard: {
-    backgroundColor: TOKENS.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: TOKENS.border,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-  },
-  compareHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: TOKENS.border,
-  },
-  compareHeadLabel: { flex: 1, fontSize: 11, fontWeight: 'bold', color: TOKENS.muted },
-  compareHeadCols: { flexDirection: 'row', width: 96 },
-  compareColFree: { flex: 1, fontSize: 11, fontWeight: 'bold', color: TOKENS.muted, textAlign: 'center' },
-  compareColPro: { flex: 1, fontSize: 11, fontWeight: 'bold', color: '#D97706', textAlign: 'center' },
-  compareRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 11,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  compareLabel: { flex: 1, fontSize: 13, color: TOKENS.dark, paddingRight: 10 },
-  compareCell: { flex: 1, alignItems: 'center' },
-  compareDash: { color: TOKENS.border, fontSize: 14, fontWeight: 'bold' },
+  benefits: { gap: 10 },
+  benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  benefitText: { flex: 1, fontSize: 14, color: TOKENS.dark, lineHeight: 20 },
 
-  plans: { gap: 10 },
+  plans: { gap: 10, paddingTop: 6 },
   planCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -483,10 +478,23 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: TOKENS.border,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     gap: 12,
   },
   planCardActive: { borderColor: TOKENS.primary, backgroundColor: TOKENS.lightBlue },
+  badge: {
+    position: 'absolute',
+    top: -10,
+    right: 12,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeActive: { backgroundColor: TOKENS.primary },
+  badgeText: { fontSize: 10, fontWeight: 'bold', color: '#B45309' },
+  badgeTextActive: { color: '#FFFFFF' },
   planRadio: { width: 22, alignItems: 'center' },
   planRadioEmpty: {
     width: 18,
@@ -502,20 +510,20 @@ const styles = StyleSheet.create({
   planPerMonth: { fontSize: 17, fontWeight: 'bold', color: TOKENS.dark },
   planPerMonthUnit: { fontSize: 11, color: TOKENS.muted },
 
-  staffBox: {
+  notice: {
     flexDirection: 'row',
     gap: 10,
     alignItems: 'flex-start',
     backgroundColor: TOKENS.lightBlue,
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
   },
-  staffText: { flex: 1, fontSize: 13, color: TOKENS.dark, lineHeight: 19 },
+  noticeText: { flex: 1, fontSize: 13, color: TOKENS.dark, lineHeight: 19 },
 
   footer: {
     paddingHorizontal: 20,
-    paddingTop: 14,
-    gap: 10,
+    paddingTop: 12,
+    gap: 8,
     backgroundColor: TOKENS.card,
     borderTopWidth: 1,
     borderTopColor: TOKENS.border,
