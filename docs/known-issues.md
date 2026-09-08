@@ -13,7 +13,7 @@ Compiled `dev` @ `f23870f`, 2026-09-01. Analysis lives in [`architecture.md`](./
 | [TRIAL-1](#trial-1) | Medium   | Free-trial offer expires silently if given an end date    | done                           |
 | [ENT-1](#ent-1)     | High     | Existing shops lose Pro on release day                    | not applicable                 |
 | [SYNC-1](#sync-1)   | High     | Concurrent stock decrements silently lost                 | fix-specified                  |
-| [SEC-1](#sec-1)     | High     | Hardcoded OTP `11111` grants an admin session             | open                           |
+| [SEC-1](#sec-1)     | High     | Hardcoded OTP `11111` grants an admin session             | done                           |
 | [SEC-2](#sec-2)     | High     | Tenant isolation is a client-supplied parameter           | open                           |
 | [RC-1](#rc-1)       | High     | Promotional-grant endpoint documented as v1; is v2        | done                           |
 | [SEC-3](#sec-3)     | Medium   | RBAC is advisory — client-side only                       | open                           |
@@ -138,11 +138,11 @@ Also triggers with a single device: offline, sell, sync late → stale absolute 
 
 **Symptom:** `login(phone, '11111')` returns `isLoggedIn: true` with `userRole: 'admin'` for any phone number, with no network call.
 
-**Notes:** Known and deliberate as a test escape hatch. It grants **admin**, not merely access. The production login path is `useVerifyOtp`, which does call the OTP service; no UI call site was found for the mobile bypass (reachable via the `cartState` facade at `mobile/components/data/cartState.ts:91`). Web's auth page prints the code in an error hint.
+**Notes:** Known and deliberate as a test escape hatch. It grants **admin**, not merely access. The production login path is `useVerifyOtp`, which does call the OTP service; no UI call site was found for the bypass in either app (reachable via the `cartState` facade at `mobile/components/data/cartState.ts:91`). Both auth screens printed the code in an error hint.
 
-**Fix (not applied):** gate on `__DEV__` / `NODE_ENV !== 'production'`, or delete and move the test fixture into the test suite (`web/src/__tests__/stores/authStore.test.ts` currently asserts the bypass works, so that test changes with it). Remove the hint string regardless.
+**Fixed:** `login()` deleted from both stores along with the `cartState.login` facade that exposed it, and both hint strings now read `Invalid OTP code!`. `web/src/__tests__/stores/authStore.test.ts` no longer asserts the bypass; it asserts the store exposes no `login` at all, so a reintroduction fails the suite.
 
-**Do before store submission.** It ships in the bundle and is trivially discoverable by a reviewer.
+Nothing else called it — the real login path was always `useVerifyOtp` against the OTP service, which is unchanged. Note this removed the **client-side** bypass only: if the OTP service itself still accepts `11111`, that is server-side and lives outside this repo.
 
 ## SEC-2 — Tenant isolation is a client-supplied parameter {#sec-2}
 

@@ -28,7 +28,6 @@ interface AuthState {
     employeeId: string,
     token?: string
   ) => void;
-  login: (phone: string, otp: string) => boolean;
   logout: () => void;
 }
 
@@ -62,19 +61,6 @@ export const useAuthStore = create<AuthState>()(
             console.error('Failed to store token in SecureStore:', err);
           });
         }
-      },
-      login: (phone, otp) => {
-        const cleanPhone = phone.replace(/\s+/g, '');
-        if (otp === '11111') {
-          set({
-            isLoggedIn: true,
-            userPhone: cleanPhone,
-            userRole: 'admin',
-            employeeName: 'Owner / Admin',
-          });
-          return true;
-        }
-        return false;
       },
       logout: () => {
         set({

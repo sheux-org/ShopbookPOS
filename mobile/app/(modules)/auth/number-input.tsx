@@ -126,7 +126,7 @@ export default function NumberInputRoute() {
         onError: (err: any) => {
           setIsLoading(false);
           setOtpError(true);
-          triggerToast(err.message || 'Invalid OTP. Hint: Use 11111');
+          triggerToast(err.message || 'Invalid OTP code!');
           setOtp('');
         },
       }
