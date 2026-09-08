@@ -27,7 +27,12 @@ import {
  * prevents the app from leaving.
  */
 export function useIsBusinessOwner(): boolean {
-  return useEntitlementStore((s) => s.isOwner);
+  const isOwner = useEntitlementStore((s) => s.isOwner);
+  const userRole = useAuthStore((s) => s.userRole);
+  // Trust explicit server entitlement if true; otherwise fallback to local session role.
+  // In offline mode or initial registration, an 'admin' role in auth store is the business owner.
+  // Cashiers and managers ('cashier' | 'manager') will never match 'admin'.
+  return isOwner || userRole === 'admin';
 }
 
 export function useEntitlementSync() {

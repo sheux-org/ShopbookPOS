@@ -170,6 +170,7 @@ export const useEntitlementStore = create<EntitlementState>()(
       partialize: (s) => ({
         isPro: s.isPro,
         isTrial: s.isTrial,
+        isOwner: s.isOwner,
         expiresAt: s.expiresAt,
         willRenew: s.willRenew,
         productId: s.productId,
