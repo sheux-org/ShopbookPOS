@@ -17,28 +17,8 @@ describe('authStore', () => {
     expect(state.employeeName).toBe('Owner / Admin');
   });
 
-  test('should login successfully with test OTP 11111', () => {
-    const success = useAuthStore.getState().login('0771234567', '11111');
-    expect(success).toBe(true);
-
-    const state = useAuthStore.getState();
-    expect(state.isLoggedIn).toBe(true);
-    expect(state.userPhone).toBe('0771234567');
-    expect(state.userRole).toBe('admin');
-  });
-
-  test('should strip whitespace from phone number during login', () => {
-    useAuthStore.getState().login('077 123 4567', '11111');
-    expect(useAuthStore.getState().userPhone).toBe('0771234567');
-  });
-
-  test('should fail login with incorrect OTP', () => {
-    const success = useAuthStore.getState().login('0771234567', '99999');
-    expect(success).toBe(false);
-
-    const state = useAuthStore.getState();
-    expect(state.isLoggedIn).toBe(false);
-    expect(state.userPhone).toBeNull();
+  test('exposes no client-side login that can grant a session', () => {
+    expect((useAuthStore.getState() as unknown as Record<string, unknown>).login).toBeUndefined();
   });
 
   test('should login with employee details and save token to localStorage', () => {

@@ -17,7 +17,9 @@ import { HelpSupportModal } from '../common/HelpSupportModal';
 import { LanguageSwitcherModal } from '../common/LanguageSwitcherModal';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTranslation } from '../../hooks/useTranslation';
-import { useIsPro, useSubscriptionSummary } from '../../hooks/useEntitlement';
+import { useIsPro, useSubscriptionSummary, useIsBusinessOwner } from '../../hooks/useEntitlement';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { deleteAccount } from '../../services/account';
 
 export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -27,6 +29,9 @@ export const ProfileScreen: React.FC = () => {
 
   const { t, language } = useTranslation();
   const subscription = useSubscriptionSummary();
+  const isOwner = useIsBusinessOwner();
+  const userPhone = useAuthStore((s) => s.userPhone);
+  const activeBusinessId = useAuthStore((s) => s.activeBusinessId);
 
   // Shown under "Premium Plans" so the current plan and its renewal date are
   // visible from Profile, rather than only after opening the screen.
@@ -70,6 +75,43 @@ export const ProfileScreen: React.FC = () => {
   };
 
   const { canPerform, role: userRole } = useUserPermissions();
+
+  // Two confirmations on purpose: this wipes every shop registered to the
+  // owner's phone on the server and on the device, and nothing restores it.
+  const confirmDeleteAccount = () => {
+    hapticFeedback.notificationWarning();
+    if (!activeBusinessId || !userPhone) return;
+
+    Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('profile.deleteAccountContinue'),
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(t('profile.deleteAccountFinalTitle'), t('profile.deleteAccountFinalMsg'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('profile.deleteAccountConfirm'),
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await deleteCurrentDeviceSession();
+                  await deleteAccount(activeBusinessId, userPhone);
+                  cartState.logout();
+                  router.replace('/auth/number-input');
+                } catch (err: any) {
+                  Alert.alert(
+                    t('profile.deleteAccountFailedTitle'),
+                    err?.message || t('profile.deleteAccountFailedMsg')
+                  );
+                }
+              },
+            },
+          ]);
+        },
+      },
+    ]);
+  };
 
   return (
     <ScreenWrapper noPaddingBottom style={styles.container}>
@@ -395,6 +437,26 @@ export const ProfileScreen: React.FC = () => {
             </View>
             <Feather name="chevron-right" size={16} color={TOKENS.muted} />
           </TouchableOpacity>
+
+          {/* Option: Delete account and data (owner only, Play requirement) */}
+          {isOwner && (
+            <TouchableOpacity
+              style={styles.optionRow}
+              activeOpacity={0.7}
+              onPress={confirmDeleteAccount}
+            >
+              <View style={[styles.optionIconBox, { backgroundColor: '#FCE8E6' }]}>
+                <Feather name="trash-2" size={18} color={TOKENS.error} />
+              </View>
+              <View style={styles.optionTextWrapper}>
+                <Text style={[styles.optionTitle, { color: TOKENS.error }]}>
+                  {t('profile.deleteAccountTitle')}
+                </Text>
+                <Text style={styles.optionSubtitle}>{t('profile.deleteAccountSub')}</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={TOKENS.muted} />
+            </TouchableOpacity>
+          )}
         </View>
         {/* Footer info: Made in Sri Lanka & App Version */}
         <View style={styles.footerContainer}>

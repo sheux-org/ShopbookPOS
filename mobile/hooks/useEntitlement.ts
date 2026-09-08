@@ -10,20 +10,24 @@
 import { useEffect } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { useAuthStore } from '../stores/useAuthStore';
-import { useBusinessStore } from '../stores/useBusinessStore';
 import { useEntitlementStore } from '../stores/useEntitlementStore';
 import {
   addCustomerInfoListener,
   isPurchasesConfigured,
   logoutPurchases,
 } from '../services/purchases';
-import { isBusinessOwner } from '../utils/business';
-import { normalizePhone } from '../utils/phoneUtils';
 
+/**
+ * Whether this session owns the active business.
+ *
+ * Answered by get_entitlement, not derived here. The previous version
+ * compared the session's phone against the active business's phone, which
+ * silently returned false whenever the local database had not been populated
+ * yet — the state every fresh install is in, and the one the hard paywall
+ * prevents the app from leaving.
+ */
 export function useIsBusinessOwner(): boolean {
-  const userPhone = useAuthStore((s) => s.userPhone);
-  const activeBusiness = useBusinessStore((s) => s.activeBusiness);
-  return isBusinessOwner(userPhone, activeBusiness?.phone, normalizePhone);
+  return useEntitlementStore((s) => s.isOwner);
 }
 
 export function useEntitlementSync() {

@@ -14,19 +14,15 @@
 import { supabase } from './sync';
 import { loginPurchases, isPurchasesConfigured } from './purchases';
 import { useEntitlementStore } from '../stores/useEntitlementStore';
-import { isBusinessOwner } from '../utils/business';
-import { normalizePhone } from '../utils/phoneUtils';
 
 export async function bootstrapEntitlement(params: {
   phone: string;
   businessId: string;
-  businessPhone?: string | null;
+  isOwner: boolean;
 }): Promise<void> {
-  const { phone, businessId, businessPhone } = params;
+  const { phone, businessId, isOwner } = params;
 
-  const owner = isBusinessOwner(phone, businessPhone ?? phone, normalizePhone);
-
-  if (owner) {
+  if (isOwner) {
     try {
       // Minting the owners row is NOT conditional on the RevenueCat SDK being
       // configured. get_entitlement inner-joins businesses -> owners, and the

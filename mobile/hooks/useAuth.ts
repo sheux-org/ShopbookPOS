@@ -49,6 +49,28 @@ export function useVerifyOtp() {
         throw new Error(err.message || 'Verification failed. Please try again.');
       }
 
+      // Businesses before employees, matching check_phone_registered on the
+      // server. Registration also creates an employees row carrying the
+      // owner's own phone, so checking employees first reported every owner
+      // as staff — the inversion that made ownership unresolvable on the
+      // client and cost this app its entire purchase path.
+      const allBusinesses: any[] = await database.get('businesses').query().fetch();
+      const matchedBiz: any = allBusinesses.find((biz: any) => {
+        return normalizePhone(biz.phoneNumber || '') === cleanPhone;
+      });
+
+      if (matchedBiz) {
+        return {
+          status: 'success' as const,
+          type: 'owner' as const,
+          phone: cleanPhone,
+          role: 'admin',
+          name: 'Owner / Admin',
+          businessId: matchedBiz.id,
+          employeeId: 'owner',
+        };
+      }
+
       const allEmployees: any[] = await database.get('employees').query().fetch();
 
       const matchedEmployee: any = allEmployees.find((emp: any) => {
@@ -71,23 +93,6 @@ export function useVerifyOtp() {
         }
       }
 
-      const allBusinesses: any[] = await database.get('businesses').query().fetch();
-      const matchedBiz: any = allBusinesses.find((biz: any) => {
-        return normalizePhone(biz.phoneNumber || '') === cleanPhone;
-      });
-
-      if (matchedBiz) {
-        return {
-          status: 'success' as const,
-          type: 'owner' as const,
-          phone: cleanPhone,
-          role: 'admin',
-          name: 'Owner / Admin',
-          businessId: matchedBiz.id,
-          employeeId: 'owner',
-        };
-      }
-
       // If not found locally, check if there is a synced account in the Supabase database
       try {
         const { data: remoteData, error: remoteError } = await supabase.rpc(
@@ -100,13 +105,11 @@ export function useVerifyOtp() {
         if (remoteError) {
           console.error('Failed to query remote synced account from Supabase:', remoteError);
         } else if (remoteData && remoteData.exists) {
-          // Set backup/sync as enabled in settings store
+          // Backup on; the pull itself happens in onSuccess. syncDatabase
+          // aborts when activeBusinessId is null, and the session that sets it
+          // is not established until this mutation resolves — so calling it
+          // here never once pulled a row.
           useSettingsStore.getState().setBackupEnabled(true);
-
-          // Force sync to pull all tables (businesses, employees, products, orders, etc.) from Supabase
-          console.log('Found synced account on Supabase. Triggering database sync...');
-          const syncSuccess = await syncDatabase();
-          console.log('Database sync finished with success status:', syncSuccess);
 
           return {
             status: 'success' as const,
@@ -139,6 +142,11 @@ export function useVerifyOtp() {
             data.employeeId!,
             variables.token
           );
+        // Now that the session carries a business id, the pull can run. A
+        // device signing in against an account that already exists in the
+        // cloud has an empty local database until this happens.
+        await syncDatabase();
+
         await useBusinessStore.getState().loadBusinessesFromDb();
         useBusinessStore.getState().setActiveBusiness(data.businessId!);
 
@@ -149,7 +157,7 @@ export function useVerifyOtp() {
         void bootstrapEntitlement({
           phone: data.phone!,
           businessId: data.businessId!,
-          businessPhone: useBusinessStore.getState().activeBusiness?.phone,
+          isOwner: data.type === 'owner',
         });
       }
     },
@@ -244,7 +252,7 @@ export function useRegisterUser() {
       void bootstrapEntitlement({
         phone: data.phone,
         businessId: data.businessId,
-        businessPhone: data.phone,
+        isOwner: true,
       });
 
       // Automatically trigger sync to cloud

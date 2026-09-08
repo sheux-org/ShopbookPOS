@@ -350,6 +350,17 @@ export default {
     // Logout
     signOutTitle: 'வெளியேறு',
     signOutSub: 'POS அமர்வை பாதுகாப்பாக துண்டிக்கவும்',
+    deleteAccountTitle: 'கணக்கை நீக்கு',
+    deleteAccountSub: 'உங்கள் கடை மற்றும் அனைத்து தரவுகளையும் நிரந்தரமாக அழிக்கும்',
+    deleteAccountMsg:
+      'இது உங்கள் கணக்கையும் உங்கள் தொலைபேசி எண்ணில் பதிவு செய்யப்பட்ட அனைத்து கடைகளையும் \u2014 பொருட்கள், ரசீதுகள், பணியாளர்கள், இருப்பு வரலாறு மற்றும் சாதனங்கள் \u2014 இந்த சாதனத்திலிருந்தும் கிளவுட்டிலிருந்தும் நீக்கும்.\n\nஇதை மீட்டெடுக்க முடியாது.\n\nகட்டண சந்தா இருந்தால், கணக்கை நீக்குவது அதை ரத்து செய்யாது. App Store அல்லது Google Play கணக்கில் தனியாக ரத்து செய்யவும்.',
+    deleteAccountContinue: 'தொடரவும்',
+    deleteAccountFinalTitle: 'அனைத்தையும் நீக்கவா?',
+    deleteAccountFinalMsg: 'கடைசி வாய்ப்பு. இதற்குப் பிறகு தரவுகளை மீட்க முடியாது.',
+    deleteAccountConfirm: 'எனது கணக்கை நீக்கு',
+    deleteAccountFailedTitle: 'கணக்கை நீக்க முடியவில்லை',
+    deleteAccountFailedMsg:
+      'ஏதோ தவறாகிவிட்டது. இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும், அல்லது shopbookoperations@gmail.com க்கு மின்னஞ்சல் அனுப்பவும்.',
     disconnectConfirmTitle: 'சுயவிவரத்தைத் துண்டிக்கவும்',
     disconnectConfirmMsg: 'இந்த Shopbook POS முனையத்திலிருந்து வெளியேற விரும்புகிறீர்களா?',
     profileLoggedOut: 'சுயவிவரம் வெளியேறியது',

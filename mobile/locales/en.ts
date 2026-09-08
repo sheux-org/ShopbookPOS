@@ -345,6 +345,17 @@ export default {
     // Logout
     signOutTitle: 'Sign Out',
     signOutSub: 'Disconnect POS session safely',
+    deleteAccountTitle: 'Delete Account',
+    deleteAccountSub: 'Permanently erase your shop and all its data',
+    deleteAccountMsg:
+      'This deletes your account and every shop registered to your phone number \u2014 products, bills, staff, stock history and devices \u2014 from this phone and from the cloud.\n\nThis cannot be undone.\n\nIf you have a paid subscription, deleting your account does not cancel it. Cancel it separately in your App Store or Google Play account.',
+    deleteAccountContinue: 'Continue',
+    deleteAccountFinalTitle: 'Delete everything?',
+    deleteAccountFinalMsg: 'Last chance. Your shop data cannot be recovered after this.',
+    deleteAccountConfirm: 'Delete my account',
+    deleteAccountFailedTitle: 'Could not delete account',
+    deleteAccountFailedMsg:
+      'Something went wrong. Check your connection and try again, or email shopbookoperations@gmail.com.',
     disconnectConfirmTitle: 'Disconnect Profile',
     disconnectConfirmMsg: 'Are you sure you want to log out from this Shopbook POS terminal?',
     profileLoggedOut: 'Profile logged out',

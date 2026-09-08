@@ -122,7 +122,7 @@ export default function AuthPage() {
         );
       }
     } catch (err: any) {
-      setOtpError(err.message || 'Invalid OTP. Hint: Use 11111');
+      setOtpError(err.message || 'Invalid OTP code!');
     }
   };
 

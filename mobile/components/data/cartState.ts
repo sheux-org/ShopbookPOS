@@ -87,9 +87,6 @@ export const cartState = {
 
   // Auth Actions mapped cleanly to useAuthStore store
   getIsLoggedIn: () => useAuthStore.getState().isLoggedIn,
-  login: (phone: string, otp: string): boolean => {
-    return useAuthStore.getState().login(phone, otp);
-  },
   logout: () => {
     useAuthStore.getState().logout();
   },
