@@ -94,9 +94,7 @@ export const useBusinessStore = create<BusinessState>()(
 
           // If online, fetch user businesses from remote Supabase and upsert them locally
           try {
-            const { data, error } = await supabase.rpc('fetch_user_businesses', {
-              input_phone: loggedInPhone,
-            });
+            const { data, error } = await supabase.rpc('fetch_user_businesses');
             if (!error && data) {
               const { businesses: remoteBizs = [], employees: remoteEmps = [] } = data;
               await database.write(async () => {

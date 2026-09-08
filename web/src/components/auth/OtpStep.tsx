@@ -22,7 +22,7 @@ export const OtpStep: React.FC<OtpStepProps> = ({
   resendCooldown,
   onBack,
 }) => {
-  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '']);
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -41,12 +41,12 @@ export const OtpStep: React.FC<OtpStepProps> = ({
     const fullOtp = newDigits.join('');
 
     // Auto-focus next input
-    if (cleanVal && index < 4) {
+    if (cleanVal && index < 5) {
       otpRefs.current[index + 1]?.focus();
     }
 
-    // Auto verify when 5 digits are entered
-    if (fullOtp.length === 5) {
+    // Auto verify when 6 digits are entered
+    if (fullOtp.length === 6) {
       onVerify(fullOtp);
     }
   };
@@ -68,10 +68,10 @@ export const OtpStep: React.FC<OtpStepProps> = ({
 
   const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 5);
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (pastedData.length > 0) {
       const newDigits = [...otpDigits];
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         if (pastedData[i]) {
           newDigits[i] = pastedData[i];
         }
@@ -79,10 +79,10 @@ export const OtpStep: React.FC<OtpStepProps> = ({
       setOtpDigits(newDigits);
       const fullOtp = newDigits.join('');
 
-      const nextFocusIndex = Math.min(pastedData.length, 4);
+      const nextFocusIndex = Math.min(pastedData.length, 5);
       otpRefs.current[nextFocusIndex]?.focus();
 
-      if (fullOtp.length === 5) {
+      if (fullOtp.length === 6) {
         onVerify(fullOtp);
       }
     }
@@ -91,7 +91,7 @@ export const OtpStep: React.FC<OtpStepProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const fullOtp = otpDigits.join('');
-    if (fullOtp.length === 5) {
+    if (fullOtp.length === 6) {
       onVerify(fullOtp);
     }
   };

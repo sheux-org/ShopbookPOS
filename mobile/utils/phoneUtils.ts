@@ -17,6 +17,11 @@ export function normalizePhone(phoneStr: string): string {
   return cleaned;
 }
 
+/** Supabase Auth wants E.164. */
+export function toE164(phoneStr: string): string {
+  return `+94${normalizePhone(phoneStr)}`;
+}
+
 /**
  * Validates whether the given phone string normalizes to a valid 9-digit Sri Lankan phone number.
  */

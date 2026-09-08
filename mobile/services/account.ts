@@ -14,13 +14,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import database from '../components/data/db';
 import { supabase } from './sync';
 
-export async function deleteAccount(businessId: string, phone: string): Promise<void> {
+export async function deleteAccount(businessId: string): Promise<void> {
   const { error } = await supabase.rpc('delete_account', {
     input_business_id: businessId,
-    input_phone: phone,
   });
 
   if (error) throw new Error(error.message);
+
+  // The auth user is gone server-side; drop the now-dead session locally.
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
 
   // Server data is gone; the local copy must go too, or the next sync would
   // push the whole shop back up under the same ids.

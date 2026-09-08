@@ -1,30 +1,12 @@
 import { synchronize } from '@nozbe/watermelondb/sync';
-import { createClient } from '@supabase/supabase-js';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import database from '@/components/data/db';
 import { schema } from '@/components/data/db/schema';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+import { supabase, supabaseKey, supabaseUrl } from './supabaseClient';
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn(
-    'Supabase env missing. Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to .env'
-  );
-}
-
-export const supabase = createClient(
-  supabaseUrl ?? 'https://placeholder.supabase.co',
-  supabaseKey ?? 'placeholder-key',
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  }
-);
+export { supabase };
 
 let memoizedClientId = '';
 export function getClientId(): string {
@@ -184,7 +166,7 @@ export async function syncDatabase(): Promise<boolean> {
         if (hasChanges) {
           console.log('[Sync] Local changes pushed. Broadcasting sync trigger...');
           supabase
-            .channel(`sync:${activeBusinessId}`)
+            .channel(`sync:${activeBusinessId}`, { config: { private: true } })
             .send({
               type: 'broadcast',
               event: 'sync_trigger',

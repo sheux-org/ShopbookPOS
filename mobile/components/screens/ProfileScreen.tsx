@@ -96,7 +96,7 @@ export const ProfileScreen: React.FC = () => {
               onPress: async () => {
                 try {
                   await deleteCurrentDeviceSession();
-                  await deleteAccount(activeBusinessId, userPhone);
+                  await deleteAccount(activeBusinessId);
                   cartState.logout();
                   router.replace('/auth/number-input');
                 } catch (err: any) {

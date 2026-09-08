@@ -157,7 +157,7 @@ export const styles = StyleSheet.create({
     width: '100%',
   },
   otpSlotBox: {
-    width: 46,
+    width: 42,
     height: 50,
     borderRadius: 10,
     borderWidth: 1.5,

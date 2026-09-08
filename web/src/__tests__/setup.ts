@@ -169,6 +169,14 @@ vi.mock('@supabase/supabase-js', () => {
   return {
     createClient: vi.fn().mockReturnValue({
       from: mockFrom,
+      auth: {
+        signInWithOtp: vi.fn().mockResolvedValue({ data: {}, error: null }),
+        verifyOtp: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+        signOut: vi.fn().mockResolvedValue({ error: null }),
+        onAuthStateChange: vi.fn().mockReturnValue({
+          data: { subscription: { unsubscribe: vi.fn() } },
+        }),
+      },
       rpc: vi.fn().mockResolvedValue({ data: { exists: false }, error: null }),
       channel: vi.fn().mockReturnValue({
         on: vi.fn().mockReturnThis(),

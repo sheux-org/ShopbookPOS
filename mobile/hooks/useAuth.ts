@@ -1,53 +1,50 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import database from '../components/data/db';
-import { supabase, syncDatabase } from '../services/sync';
+import { supabase } from '../services/supabaseClient';
+import { syncDatabase } from '../services/sync';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useBusinessStore } from '../stores/useBusinessStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { SEEDING_PRODUCTS } from '../utils/seedProducts';
-import { checkPhoneAvailability, normalizePhone } from '../utils/phoneUtils';
+import { checkPhoneAvailability, normalizePhone, toE164 } from '../utils/phoneUtils';
 import { bootstrapEntitlement } from '../services/entitlement';
+
+function authErrorMessage(error: { status?: number; message: string }): string {
+  if (error.status === 429) {
+    return 'Too many requests. You have exceeded the login limit. Please try again in a little while.';
+  }
+  return error.message;
+}
+
+export function useSendOtp() {
+  return useMutation({
+    mutationFn: async (phone: string) => {
+      const cleanPhone = normalizePhone(phone);
+      if (cleanPhone.length !== 9) {
+        throw new Error('Please enter a valid mobile number!');
+      }
+      const { error } = await supabase.auth.signInWithOtp({ phone: toE164(cleanPhone) });
+      if (error) throw new Error(authErrorMessage(error));
+    },
+  });
+}
 
 export function useVerifyOtp() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { phone: string; otp: string; token: string }) => {
-      const { phone, otp, token } = params;
-      const cleanPhone = normalizePhone(phone);
-
-      // Call real verification API
-      try {
-        const response = await fetch('https://mini-pos-sync-server.vercel.app/api/v1/auth/verify', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            code: otp,
-            phone_number: cleanPhone,
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            'Too many requests. You have exceeded the login limit. Please try again in a little while.'
-          );
-        }
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Invalid OTP code!');
-        }
-
-        const data = await response.json();
-        if (data.message !== 'Success') {
-          throw new Error(data.message || 'Invalid OTP code!');
-        }
-      } catch (err: any) {
-        throw new Error(err.message || 'Verification failed. Please try again.');
+    mutationFn: async (params: { phone: string; otp: string }) => {
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: toE164(normalizePhone(params.phone)),
+        token: params.otp,
+        type: 'sms',
+      });
+      if (error || !data.session) {
+        throw new Error(error ? authErrorMessage(error) : 'Invalid OTP code!');
       }
+      // The database now answers every call from this phone claim; the local
+      // lookup below only decides which business and role to open.
+      const cleanPhone = normalizePhone(data.session.user.phone ?? params.phone);
 
       // Businesses before employees, matching check_phone_registered on the
       // server. Registration also creates an employees row carrying the
@@ -130,7 +127,7 @@ export function useVerifyOtp() {
         phone: cleanPhone,
       };
     },
-    onSuccess: async (data, variables) => {
+    onSuccess: async (data) => {
       if (data.status === 'success') {
         useAuthStore
           .getState()
@@ -139,8 +136,7 @@ export function useVerifyOtp() {
             data.role as any,
             data.name!,
             data.businessId!,
-            data.employeeId!,
-            variables.token
+            data.employeeId!
           );
         // Now that the session carries a business id, the pull can run. A
         // device signing in against an account that already exists in the
@@ -155,7 +151,6 @@ export function useVerifyOtp() {
 
         // Identify the owner to RevenueCat (owners only) and load entitlement.
         void bootstrapEntitlement({
-          phone: data.phone!,
           businessId: data.businessId!,
           isOwner: data.type === 'owner',
         });
@@ -250,7 +245,6 @@ export function useRegisterUser() {
 
       // A freshly registered user is by definition the owner.
       void bootstrapEntitlement({
-        phone: data.phone,
         businessId: data.businessId,
         isOwner: true,
       });

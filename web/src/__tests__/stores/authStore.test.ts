@@ -1,6 +1,5 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useAuthStore } from '../../stores/authStore';
-import type { Session, User } from '@supabase/supabase-js';
 
 describe('authStore', () => {
   beforeEach(() => {
@@ -21,17 +20,10 @@ describe('authStore', () => {
     expect((useAuthStore.getState() as unknown as Record<string, unknown>).login).toBeUndefined();
   });
 
-  test('should login with employee details and save token to localStorage', () => {
+  test('should login with employee details', () => {
     useAuthStore
       .getState()
-      .loginWithEmployee(
-        '0771234567',
-        'manager',
-        'John Cashier',
-        'biz-123',
-        'emp-456',
-        'test-jwt-token'
-      );
+      .loginWithEmployee('0771234567', 'manager', 'John Cashier', 'biz-123', 'emp-456');
 
     const state = useAuthStore.getState();
     expect(state.isLoggedIn).toBe(true);
@@ -40,21 +32,12 @@ describe('authStore', () => {
     expect(state.employeeName).toBe('John Cashier');
     expect(state.activeBusinessId).toBe('biz-123');
     expect(state.activeEmployeeId).toBe('emp-456');
-    expect(localStorage.getItem('auth_token')).toBe('test-jwt-token');
   });
 
-  test('should login with employee without token (no localStorage write)', () => {
-    useAuthStore.getState().loginWithEmployee(
-      '0771234567',
-      'cashier',
-      'Jane Doe',
-      'biz-999',
-      'emp-999'
-      // no token argument
-    );
-
-    const state = useAuthStore.getState();
-    expect(state.isLoggedIn).toBe(true);
+  test('never persists a bearer token of its own', () => {
+    useAuthStore
+      .getState()
+      .loginWithEmployee('0771234567', 'cashier', 'Jane Doe', 'biz-999', 'emp-999');
     expect(localStorage.getItem('auth_token')).toBeNull();
   });
 
@@ -63,17 +46,10 @@ describe('authStore', () => {
     expect(useAuthStore.getState().userPhone).toBe('0771234567');
   });
 
-  test('should clear all credentials and remove auth_token on logout', () => {
+  test('should clear all credentials on logout', () => {
     useAuthStore
       .getState()
-      .loginWithEmployee(
-        '0771234567',
-        'manager',
-        'John Cashier',
-        'biz-123',
-        'emp-456',
-        'test-jwt-token'
-      );
+      .loginWithEmployee('0771234567', 'manager', 'John Cashier', 'biz-123', 'emp-456');
 
     useAuthStore.getState().logout();
 
@@ -84,28 +60,9 @@ describe('authStore', () => {
     expect(state.employeeName).toBe('Owner / Admin');
     expect(state.activeBusinessId).toBeNull();
     expect(state.activeEmployeeId).toBeNull();
-    expect(localStorage.getItem('auth_token')).toBeNull();
   });
 
   // ─── Individual setters ──────────────────────────────────────────
-
-  test('setSession should update the session field', () => {
-    const fakeSession = { access_token: 'abc', user: null } as unknown as Session;
-    useAuthStore.getState().setSession(fakeSession);
-    expect(useAuthStore.getState().session).toEqual(fakeSession);
-
-    useAuthStore.getState().setSession(null);
-    expect(useAuthStore.getState().session).toBeNull();
-  });
-
-  test('setUser should update the user field', () => {
-    const fakeUser = { id: 'u-123', email: 'test@shop.com' } as unknown as User;
-    useAuthStore.getState().setUser(fakeUser);
-    expect(useAuthStore.getState().user).toEqual(fakeUser);
-
-    useAuthStore.getState().setUser(null);
-    expect(useAuthStore.getState().user).toBeNull();
-  });
 
   test('setActiveBusinessId should update the activeBusinessId field', () => {
     useAuthStore.getState().setActiveBusinessId('biz-new');

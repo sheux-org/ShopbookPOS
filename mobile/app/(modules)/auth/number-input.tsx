@@ -5,7 +5,7 @@ import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cartState } from '../../../components/data/cartState';
 import { TOKENS } from '../../../constants/tokens';
-import { useRegisterUser, useVerifyOtp } from '../../../hooks/useAuth';
+import { useRegisterUser, useSendOtp, useVerifyOtp } from '../../../hooks/useAuth';
 
 import { OtpVerifyPanel } from '../../../components/auth/OtpVerifyPanel';
 import { PhoneInputPanel } from '../../../components/auth/PhoneInputPanel';
@@ -22,8 +22,6 @@ export default function NumberInputRoute() {
   const [phone, setPhone] = useState<string>('');
   const [otp, setOtp] = useState<string>('');
   const [otpError, setOtpError] = useState<boolean>(false);
-  const [verificationToken, setVerificationToken] = useState<string>('');
-  const [, setHasAccount] = useState<boolean>(true);
 
   const [businessName, setBusinessName] = useState<string>('');
   const [businessType, setBusinessType] = useState<string>('');
@@ -33,6 +31,7 @@ export default function NumberInputRoute() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  const sendOtpMutation = useSendOtp();
   const verifyOtpMutation = useVerifyOtp();
   const registerUserMutation = useRegisterUser();
 
@@ -48,69 +47,33 @@ export default function NumberInputRoute() {
     setTimeout(() => setToastMessage(null), 2500);
   };
 
-  const handleSendOtp = async () => {
-    const normalizePhone = (phoneStr: string): string => {
-      let cleaned = phoneStr.replace(/\D/g, '');
-      if (cleaned.startsWith('94')) cleaned = cleaned.slice(2);
-      if (cleaned.startsWith('0')) cleaned = cleaned.slice(1);
-      return cleaned;
-    };
-
-    const cleanPhone = normalizePhone(phone);
-    if (cleanPhone.length < 9) {
-      triggerToast('Please enter a valid mobile number!');
-      return;
-    }
-
+  const handleSendOtp = () => {
     setIsLoading(true);
-    try {
-      const response = await fetch('https://mini-pos-sync-server.vercel.app/api/v1/auth/check', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phone_number: cleanPhone }),
-      });
-
-      if (response.status === 429) {
-        throw new Error(
-          'Too many requests. You have exceeded the login limit. Please try again in a little while.'
-        );
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to check phone number. Please try again.');
-      }
-
-      const data = await response.json();
-      setIsLoading(false);
-
-      setVerificationToken(data.token || '');
-      setHasAccount(!!data.hasAccount);
-      setStep('otp');
-      setOtp('');
-      triggerToast('Verification code sent to +94 ' + phone);
-    } catch (err: any) {
-      setIsLoading(false);
-      triggerToast(err.message || 'Network error. Please try again.');
-    }
+    sendOtpMutation.mutate(phone, {
+      onSuccess: () => {
+        setIsLoading(false);
+        setStep('otp');
+        setOtp('');
+        triggerToast('Verification code sent to +94 ' + phone);
+      },
+      onError: (err: any) => {
+        setIsLoading(false);
+        triggerToast(err.message || 'Network error. Please try again.');
+      },
+    });
   };
 
   const handleVerifyOtp = (currentOtp?: string) => {
     const codeToVerify = currentOtp || otp;
-    if (codeToVerify.length < 5) {
-      triggerToast('Please enter a 5-digit code!');
+    if (codeToVerify.length < 6) {
+      triggerToast('Please enter a 6-digit code!');
       return;
     }
     setIsLoading(true);
     setOtpError(false);
 
     verifyOtpMutation.mutate(
-      {
-        phone,
-        otp: codeToVerify,
-        token: verificationToken,
-      },
+      { phone, otp: codeToVerify },
       {
         onSuccess: (data) => {
           setIsLoading(false);
