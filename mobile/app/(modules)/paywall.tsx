@@ -399,7 +399,7 @@ export default function PaywallRoute() {
         </TouchableOpacity>
 
         {canPurchase && (
-          <Text style={styles.finePrint}>
+          <Text style={styles.finePrint} numberOfLines={3} maxFontSizeMultiplier={1.15}>
             {trialEligible
               ? `Free for ${TRIAL_DAYS} days, then ${price} ${selected?.billing}`
               : `${price} ${selected?.billing}`}
@@ -554,7 +554,9 @@ const styles = StyleSheet.create({
   ctaDisabled: { backgroundColor: TOKENS.border },
   ctaText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
   ctaTextDisabled: { color: TOKENS.muted },
-  finePrint: { fontSize: 11, color: TOKENS.muted, textAlign: 'center', lineHeight: 16 },
+  // Reserve three lines: the text is two lines for some plans and three for
+  // others, and without this the button and links jump on every selection.
+  finePrint: { fontSize: 11, color: TOKENS.muted, textAlign: 'center', lineHeight: 16, minHeight: 48 },
   footerLinks: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   footerLink: { fontSize: 12, color: TOKENS.primary, fontWeight: '600' },
   footerDot: { fontSize: 12, color: TOKENS.border },
