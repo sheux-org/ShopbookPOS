@@ -56,6 +56,7 @@ export function configurePurchases(): boolean {
     Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR);
     Purchases.configure({ apiKey });
     configured = true;
+    void prefetchProPackages();
     return true;
   } catch (err) {
     console.warn('[Purchases] configure failed:', err);
@@ -84,15 +85,32 @@ export async function logoutPurchases(): Promise<void> {
   }
 }
 
-export async function getProPackages(): Promise<PurchasesPackage[]> {
+let cachedPackages: PurchasesPackage[] | null = null;
+
+export async function prefetchProPackages(): Promise<PurchasesPackage[]> {
   if (!configured) return [];
   try {
     const offerings = await Purchases.getOfferings();
-    return offerings.current?.availablePackages ?? [];
+    cachedPackages = offerings.current?.availablePackages ?? [];
+    return cachedPackages;
   } catch (err) {
-    console.warn('[Purchases] getOfferings failed:', err);
+    console.warn('[Purchases] prefetchProPackages failed:', err);
     return [];
   }
+}
+
+export async function getProPackages(): Promise<PurchasesPackage[]> {
+  if (!configured) return [];
+  if (cachedPackages && cachedPackages.length > 0) {
+    // Return cached immediately; refresh in background
+    Purchases.getOfferings()
+      .then((offerings) => {
+        cachedPackages = offerings.current?.availablePackages ?? [];
+      })
+      .catch(() => {});
+    return cachedPackages;
+  }
+  return prefetchProPackages();
 }
 
 export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerInfo> {

@@ -69,42 +69,40 @@ function MainAppContent() {
     return unsubscribe;
   }, []);
 
-  // Display custom premium splash screen during initial store loading
-  if (isSplashActive) {
-    return (
-      <CustomSplashScreen
-        isReady={!isLoading && isHydrated}
-        onAnimationComplete={() => setIsSplashActive(false)}
-      />
-    );
-  }
-
-  // Once splash completes, show force update blocking screen if required
-  if (isUpdateRequired) {
-    return <ForceUpdateScreen config={config} currentVersion={currentVersion} onRetry={refetch} />;
-  }
-
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="(modules)/auth/number-input" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(modules)/pos/cart" />
-      <Stack.Screen name="(modules)/pos/catalog" />
-      <Stack.Screen name="(modules)/pos/payment-tender" />
-      <Stack.Screen name="(modules)/pos/search" />
-      <Stack.Screen name="(modules)/stocks/scan" />
-      <Stack.Screen name="(modules)/profile/business-details" />
-      <Stack.Screen name="(modules)/profile/bluetooth-printer" />
-      <Stack.Screen name="(modules)/profile/manage-businesses" />
-      <Stack.Screen name="(modules)/profile/manage-staff" />
-      <Stack.Screen name="(modules)/profile/active-devices" />
-      <Stack.Screen
-        name="(modules)/paywall"
-        options={{ headerShown: false, gestureEnabled: false }}
-      />
-      <Stack.Screen name="(modules)/profile/premium-plans" />
-    </Stack>
+    <>
+      {isUpdateRequired ? (
+        <ForceUpdateScreen config={config} currentVersion={currentVersion} onRetry={refetch} />
+      ) : (
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(modules)/auth/number-input" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(modules)/pos/cart" />
+          <Stack.Screen name="(modules)/pos/catalog" />
+          <Stack.Screen name="(modules)/pos/payment-tender" />
+          <Stack.Screen name="(modules)/pos/search" />
+          <Stack.Screen name="(modules)/stocks/scan" />
+          <Stack.Screen name="(modules)/profile/business-details" />
+          <Stack.Screen name="(modules)/profile/bluetooth-printer" />
+          <Stack.Screen name="(modules)/profile/manage-businesses" />
+          <Stack.Screen name="(modules)/profile/manage-staff" />
+          <Stack.Screen name="(modules)/profile/active-devices" />
+          <Stack.Screen name="(modules)/profile/premium-plans" />
+          <Stack.Screen
+            name="(modules)/paywall"
+            options={{ headerShown: false, gestureEnabled: false }}
+          />
+        </Stack>
+      )}
+
+      {isSplashActive && (
+        <CustomSplashScreen
+          isReady={!isLoading && isHydrated}
+          onAnimationComplete={() => setIsSplashActive(false)}
+        />
+      )}
+    </>
   );
 }
 

@@ -45,15 +45,29 @@ export default function SessionGateRoute() {
   // session to the paywall — where Restore and Log out are both reachable.
   useEffect(() => {
     if (checkedAt !== null) return;
-    const timer = setTimeout(() => setEntitlementTimedOut(true), 8000);
+    const timer = setTimeout(() => setEntitlementTimedOut(true), 2500);
     return () => clearTimeout(timer);
   }, [checkedAt]);
 
   useEffect(() => {
-    if (hasHydrated && isLoggedIn) {
-      useBusinessStore.getState().loadBusinessesFromDb();
-      void useEntitlementStore.getState().refresh(useAuthStore.getState().activeBusinessId);
-    }
+    if (!hasHydrated || !isLoggedIn) return;
+
+    let isMounted = true;
+    (async () => {
+      await useBusinessStore.getState().loadBusinessesFromDb();
+      if (!isMounted) return;
+
+      const activeBizId = useAuthStore.getState().activeBusinessId;
+      if (activeBizId && activeBizId !== '0') {
+        await useEntitlementStore.getState().refresh(activeBizId);
+      } else {
+        setEntitlementTimedOut(true);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
   }, [hasHydrated, isLoggedIn]);
 
   if (!hasHydrated) {

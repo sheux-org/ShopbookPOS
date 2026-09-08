@@ -18,7 +18,6 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { CustomerInfo } from 'react-native-purchases';
 import { supabase } from '../services/sync';
-import { useAuthStore } from './useAuthStore';
 import { ENTITLEMENT_ID } from '../services/purchases';
 
 type Source = 'rpc' | 'sdk' | 'none';
@@ -85,7 +84,12 @@ export const useEntitlementStore = create<EntitlementState>()(
       ...EMPTY,
 
       refresh: async (businessId) => {
-        if (!businessId) return;
+        if (!businessId || businessId === '0') {
+          if (get().checkedAt === null) {
+            set({ checkedAt: Date.now() });
+          }
+          return;
+        }
         if (get().isRefreshing) return;
 
         set({ isRefreshing: true });
@@ -97,6 +101,9 @@ export const useEntitlementStore = create<EntitlementState>()(
           if (error) {
             // Offline or RPC failure: keep the cached value, expiry still applies.
             console.warn('[Entitlement] refresh failed:', error.message);
+            if (get().checkedAt === null) {
+              set({ checkedAt: Date.now() });
+            }
             return;
           }
 

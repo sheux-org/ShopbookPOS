@@ -11,15 +11,36 @@ export interface AppConfig {
   privacy_url: string;
 }
 
+let cachedAppConfig: AppConfig | null = null;
+
 /**
  * Fetches the global application configuration settings from Supabase.
  * This includes parameters for force updating.
  */
 export async function fetchAppConfig(): Promise<AppConfig | null> {
+  if (cachedAppConfig) {
+    void Promise.resolve(
+      supabase
+        .from('app_config')
+        .select(
+          'force_update, min_version, android_url, ios_url, iap_enabled, terms_url, privacy_url'
+        )
+        .eq('id', 1)
+        .single()
+    )
+      .then(({ data, error }) => {
+        if (!error && data) cachedAppConfig = data as AppConfig;
+      })
+      .catch(() => {});
+    return cachedAppConfig;
+  }
+
   try {
     const { data, error } = await supabase
       .from('app_config')
-      .select('force_update, min_version, android_url, ios_url, iap_enabled, terms_url, privacy_url')
+      .select(
+        'force_update, min_version, android_url, ios_url, iap_enabled, terms_url, privacy_url'
+      )
       .eq('id', 1)
       .single();
 
@@ -28,7 +49,8 @@ export async function fetchAppConfig(): Promise<AppConfig | null> {
       return null;
     }
 
-    return data as AppConfig;
+    cachedAppConfig = data as AppConfig;
+    return cachedAppConfig;
   } catch (err) {
     console.error('Failed to fetch app config due to connection/unexpected error:', err);
     return null;
