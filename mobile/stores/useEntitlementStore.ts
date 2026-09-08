@@ -18,6 +18,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { CustomerInfo } from 'react-native-purchases';
 import { supabase } from '../services/sync';
+import { useAuthStore } from './useAuthStore';
 import { ENTITLEMENT_ID } from '../services/purchases';
 
 type Source = 'rpc' | 'sdk' | 'none';
@@ -25,6 +26,16 @@ type Source = 'rpc' | 'sdk' | 'none';
 interface EntitlementState {
   isPro: boolean;
   isTrial: boolean;
+  /**
+   * Whether this session owns the active business, as decided by the server.
+   *
+   * Deliberately not derived on the client and not kept on the auth session:
+   * the local database is empty on a fresh install, and the auth store is
+   * persisted, so either route leaves an owner unrecognised. This refreshes
+   * on every launch alongside the entitlement, so a session that predates the
+   * field corrects itself without a migration.
+   */
+  isOwner: boolean;
   expiresAt: string | null;
   willRenew: boolean;
   productId: string | null;
@@ -43,6 +54,7 @@ interface EntitlementState {
 const EMPTY = {
   isPro: false,
   isTrial: false,
+  isOwner: false,
   expiresAt: null,
   willRenew: false,
   productId: null,
@@ -78,6 +90,9 @@ export const useEntitlementStore = create<EntitlementState>()(
         try {
           const { data, error } = await supabase.rpc('get_entitlement', {
             client_business_id: businessId,
+            // Read here rather than threaded through eight call sites: the
+            // phone is a property of the session, not of any one caller.
+            client_phone: useAuthStore.getState().userPhone,
           });
 
           if (error) {
@@ -90,6 +105,7 @@ export const useEntitlementStore = create<EntitlementState>()(
           set({
             isPro: !!row.is_pro,
             isTrial: !!row.is_trial,
+            isOwner: !!row.is_owner,
             expiresAt: (row.expires_at as string) ?? null,
             willRenew: !!row.will_renew,
             productId: (row.product_id as string) ?? null,
