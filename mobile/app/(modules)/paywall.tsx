@@ -16,6 +16,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Linking,
   ScrollView,
   StyleSheet,
@@ -24,6 +25,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PurchasesPackage } from 'react-native-purchases';
@@ -262,19 +264,32 @@ export default function PaywallRoute() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <View style={styles.topBar}>
-          <View style={styles.brand}>
-            <View style={styles.heroBadge}>
-              <Ionicons name="diamond" size={16} color="#D97706" />
-            </View>
-            <Text style={styles.brandText}>Shopbook POS Pro</Text>
-          </View>
-          <TouchableOpacity onPress={confirmLogout} hitSlop={12}>
-            <Text style={styles.topLink}>Log out</Text>
+        <LinearGradient
+          colors={['#2563EB', '#1E3A8A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.banner}
+        >
+          <View style={[styles.bannerOrb, styles.bannerOrbLarge]} />
+          <View style={[styles.bannerOrb, styles.bannerOrbSmall]} />
+          <TouchableOpacity onPress={confirmLogout} hitSlop={12} style={styles.bannerLogout}>
+            <Text style={styles.bannerLogoutText}>Log out</Text>
           </TouchableOpacity>
-        </View>
-
-        <Text style={styles.heroTitle}>Your shop, backed up and open anywhere</Text>
+          <View style={styles.bannerTile}>
+            <Image
+              source={require('../../assets/images/logo.png')}
+              style={styles.bannerLogo}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.bannerCopy}>
+            <View style={styles.proPill}>
+              <Ionicons name="diamond" size={11} color="#FDE68A" />
+              <Text style={styles.proPillText}>SHOPBOOK POS PRO</Text>
+            </View>
+            <Text style={styles.heroTitle}>Your shop, backed up and open anywhere</Text>
+          </View>
+        </LinearGradient>
 
         <View style={styles.benefits}>
           {BENEFITS.map((line) => (
@@ -418,23 +433,37 @@ const styles = StyleSheet.create({
   },
   scroll: { paddingHorizontal: 20, paddingBottom: 16, gap: 18 },
 
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  brandText: { fontSize: 13, fontWeight: 'bold', color: '#B45309', letterSpacing: 0.3 },
-  topLink: { fontSize: 13, color: TOKENS.muted, fontWeight: '600' },
-  heroBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#FEF3C7',
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: 18,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    overflow: 'hidden',
+  },
+  bannerOrb: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.10)' },
+  bannerOrbLarge: { width: 220, height: 220, right: -70, top: -110 },
+  bannerOrbSmall: { width: 120, height: 120, left: -40, bottom: -70 },
+  bannerLogout: { position: 'absolute', top: 12, right: 14 },
+  bannerLogoutText: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
+  bannerTile: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bannerLogo: { width: 36, height: 40 },
+  bannerCopy: { flex: 1, gap: 6, paddingTop: 10 },
+  proPill: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  proPillText: { fontSize: 11, fontWeight: 'bold', color: '#FDE68A', letterSpacing: 1 },
   heroTitle: {
-    fontSize: 26,
+    fontSize: 21,
     fontWeight: 'bold',
-    color: TOKENS.dark,
-    lineHeight: 32,
+    color: '#FFFFFF',
+    lineHeight: 27,
   },
 
   benefits: { gap: 10 },
