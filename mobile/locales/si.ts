@@ -342,6 +342,17 @@ export default {
     // Logout
     signOutTitle: 'ගිණුමෙන් ඉවත් වන්න',
     signOutSub: 'POS සැසිය ආරක්ෂිතව විසන්ධි කරන්න',
+    deleteAccountTitle: 'ගිණුම මකන්න',
+    deleteAccountSub: 'ඔබේ සාප්පුව සහ සියලු දත්ත ස්ථිරවම මකන්න',
+    deleteAccountMsg:
+      'මෙය ඔබේ ගිණුම සහ ඔබේ දුරකථන අංකයට ලියාපදිංචි සියලු සාප්පු \u2014 භාණ්ඩ, බිල්පත්, සේවකයන්, තොග ඉතිහාසය සහ උපාංග \u2014 මෙම දුරකථනයෙන් සහ වලාකුළෙන් මකා දමයි.\n\nමෙය නැවත ලබා ගත නොහැක.\n\nඔබට ගෙවුම් දායකත්වයක් තිබේ නම්, ගිණුම මැකීමෙන් එය අවලංගු නොවේ. App Store හෝ Google Play ගිණුමෙන් වෙනම අවලංගු කරන්න.',
+    deleteAccountContinue: 'ඉදිරියට',
+    deleteAccountFinalTitle: 'සියල්ල මකන්නද?',
+    deleteAccountFinalMsg: 'අවසාන අවස්ථාව. මින් පසු සාප්පු දත්ත නැවත ලබා ගත නොහැක.',
+    deleteAccountConfirm: 'මගේ ගිණුම මකන්න',
+    deleteAccountFailedTitle: 'ගිණුම මැකීමට නොහැකි විය',
+    deleteAccountFailedMsg:
+      'දෝෂයක් ඇති විය. සම්බන්ධතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න, නැතහොත් shopbookoperations@gmail.com වෙත ලියන්න.',
     disconnectConfirmTitle: 'ගිණුම විසන්ධි කරන්න',
     disconnectConfirmMsg: 'මෙම Shopbook POS පර්යන්තයෙන් ඉවත් වීමට ඔබට විශ්වාසද?',
     profileLoggedOut: 'ගිණුමෙන් ඉවත් විය',
