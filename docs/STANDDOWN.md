@@ -23,8 +23,8 @@ sessions fix it.
 
 | | |
 |---|---|
-| Merged to `main` | PRs #1, #2, #3 |
-| Open, awaiting review | **#4** (tenant directory), **#5** (ownership hotfix) |
+| Merged to `main` | #1, #2, #3 |
+| Open, awaiting review | **#4**, **#5** — see the table below |
 | Migrations applied to production today | `20260908000000`, `20260908010000`, `20260908020000`, `20260908030000` |
 | Real subscriptions ever completed | **0** |
 | Webhook rows ever written by a real purchase | **0** |
@@ -35,6 +35,52 @@ Both open PRs are **already applied to production**. The database is ahead of `m
 deliberate for #4 (live exposure) and #5 (owners were locked out of paying), but it means
 merging them is bookkeeping that must not be skipped, or the next environment rebuilt from
 migrations will silently differ from production.
+
+### Pull requests
+
+| PR | Title | State | Reviewer |
+|---|---|---|---|
+| [#1](https://github.com/sheux-org/ShopbookPOS/pull/1) | Server-backed Pro entitlement and hard paywall via RevenueCat | merged | — |
+| [#2](https://github.com/sheux-org/ShopbookPOS/pull/2) | Hard paywall, store-granted trial, and subscription management | merged | Pasan-Pahasara |
+| [#3](https://github.com/sheux-org/ShopbookPOS/pull/3) | Remove the OTP bypass and let owners delete their account | merged | Pasan-Pahasara |
+| [#4](https://github.com/sheux-org/ShopbookPOS/pull/4) | Close the tenant directory that made SEC-2 self-service | **open** | Pasan-Pahasara |
+| [#5](https://github.com/sheux-org/ShopbookPOS/pull/5) | Resolve ownership without requiring the owners row | **open** | Pasan-Pahasara |
+
+The full audit — 15 findings with exploit paths and evidence — is
+`docs/tenant-isolation-audit.md`, which lands with **#4**. It is not on `main` yet, so read it
+from that branch.
+
+---
+
+## Security ledger
+
+Every finding from the audit, with what is actually true right now. Two are closed. The rest
+are live in production today.
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| TEN-1 | Critical | `active_devices` world-readable — published the complete tenant directory plus staff PII, GPS and push tokens | **closed** (#4) |
+| TEN-6 | High | `active_devices` / `device_session_revocations` world-**writable** — forge devices, harvest push tokens, force-logout every till | **closed** (#4) |
+| TEN-9 | Medium | RBAC client-side only, and failed **open** to `admin` | **half** — fail-open fixed (#4); still advisory only (SEC-3) |
+| TEN-4 | Critical | `get_or_create_owner` + `delete_account` destroys any merchant account | **open** — entry point closed with TEN-1; still reachable with a known `business_id` |
+| TEN-2 | Critical | `pull_watermelondb_changes` returns any tenant's full dataset to anon | **open** |
+| TEN-3 | Critical | `push_watermelondb_changes` grants any tenant full write and delete to anon | **open** |
+| TEN-5 | High | `check_phone_registered` / `check_synced_account` / `fetch_user_businesses` — pre-auth phone→tenant+PII oracle over a ~10⁷ keyspace | **open** |
+| TEN-7 | High | Realtime presence and sync channels are public topics keyed by `business_id`; no Realtime Authorization configured | **open** |
+| TEN-8 | Medium | Paywall bypass — `get_entitlement` trusts a client-supplied `business_id`, and `is_owner` a client-supplied phone | **open** (and `is_owner` was added today) |
+| TEN-10 | Medium | One unpartitioned local SQLite accumulates every business the device has opened | **open** |
+| TEN-11 | Medium | `log_paywall_event` — unauthenticated unbounded INSERT against any `business_id` | **open** |
+| TEN-12 | Medium | UploadThing route has no auth middleware; `DELETE` accepts an arbitrary `fileKey` | **open** |
+| TEN-13 | Low | `anon` holds table privileges across all 14 tables; RLS is the only barrier | **open** |
+| TEN-14 | Info | `get_auth_business_id()` is dead code — reads `auth.jwt()`, always null | — (it is the shape the real fix needs) |
+| TEN-15 | Info | Secrets inventory — no genuinely-secret value ships in a client bundle | — (nothing to do) |
+
+**TEN-2, TEN-3, TEN-5, TEN-7 and TEN-8 all collapse into one fix: server-derived tenancy.**
+Patching them individually is not worth doing; they are the same bug wearing five hats.
+
+**TEN-12 is independent and cheap.** An unauthenticated `DELETE` accepting any `fileKey` means
+anyone can delete any merchant's product images. It has nothing to do with SEC-2 and can be
+fixed in an afternoon.
 
 ---
 
@@ -174,7 +220,8 @@ RevenueCat are all processors. Encrypted in transit: yes.
 
 ### 6. Smaller, already recorded
 
-`docs/known-issues.md` carries SYNC-1 (concurrent stock decrements lost), SYNC-2, BUILD-1 (the
+Beyond the security ledger above, `docs/known-issues.md` carries SYNC-1 (concurrent stock
+decrements lost), SYNC-2, BUILD-1 (the
 pre-commit hook fails for everyone on Expo version drift — every commit today needed
 `--no-verify`), ENT-2 (no test coverage on entitlement), PRICE-1.
 
@@ -207,6 +254,10 @@ safety form.
 
 Add: the Apple screenshots, both store questionnaires, and one real sandbox purchase — the only
 thing that will tell you whether the RevenueCat integration works at all.
+
+Also worth an afternoon: **TEN-12**. The UploadThing route takes no auth and its `DELETE`
+accepts any `fileKey`, so anyone can delete any merchant's product images. It is independent of
+SEC-2 and does not need the auth rework.
 
 ## Before you promise anyone a launch date
 
