@@ -243,15 +243,16 @@ export function useRegisterUser() {
       // Invalidate businesses query cache!
       queryClient.invalidateQueries({ queryKey: ['businesses'] });
 
-      // A freshly registered user is by definition the owner.
+      // The server can only call this phone the owner once the shop exists
+      // there, so the first push has to land before entitlement is asked.
+      try {
+        await syncDatabase();
+      } catch (err) {
+        console.error('Auto sync after registration failed:', err);
+      }
       void bootstrapEntitlement({
         businessId: data.businessId,
         isOwner: true,
-      });
-
-      // Automatically trigger sync to cloud
-      syncDatabase().catch((err) => {
-        console.error('Auto sync after registration failed:', err);
       });
     },
   });
