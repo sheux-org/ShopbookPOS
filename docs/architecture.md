@@ -69,36 +69,28 @@ Receipt printing is ESC/POS over Bluetooth Classic, via a patched dependency (`m
 
 ## 3. Identity and authentication
 
-The unusual part of this system. `mobile/hooks/useAuth.ts`:
+Supabase Auth phone OTP. `signInWithOtp` sends the code (delivered by the Send SMS hook via `mini-pos-sync-server` and text.lk), `verifyOtp` returns a session, and supabase-js persists and refreshes it. The JWT's `phone` claim is the identity the database trusts; see [`rls-architecture.md`](./rls-architecture.md).
 
-1. **OTP is verified remotely, identity is resolved locally.** The Vercel service is asked only _"is this code valid for this phone"_ — it returns no identity, no session, no token beyond the bearer used for the call.
+After verification the client only decides **which business and role to open**, in this order (`mobile/hooks/useAuth.ts`):
 
-2. **The client then searches its own local database** for who that phone belongs to, in this order:
+| Order | Match                        | Result                                                                                         |
+| ----- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1     | `businesses.phone_number`    | owner session (`employeeId: 'owner'`, role `admin`)                                            |
+| 2     | `employees.phone`            | staff session, role from the row                                                               |
+| 3     | RPC `check_phone_registered` | account exists in cloud, not on device → enable backup, full `syncDatabase()`, pull everything |
+| 4     | no match                     | → register a new business                                                                      |
 
-   | Order | Match                        | Result                                                                                         |
-   | ----- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
-   | 1     | `employees.phone`            | staff session, role from the row                                                               |
-   | 2     | `businesses.phone_number`    | owner session (`employeeId: 'owner'`, role `admin`)                                            |
-   | 3     | RPC `check_phone_registered` | account exists in cloud, not on device → enable backup, full `syncDatabase()`, pull everything |
-   | 4     | no match                     | → register a new business                                                                      |
-
-3. `loginWithEmployee(...)` writes the session into a persisted zustand store (`useAuthStore`, AsyncStorage). The bearer token goes to `expo-secure-store`.
-
-**There is no Supabase Auth session anywhere.** `persistSession: false`, `autoRefreshToken: false`, and every client operates on the public anon key (`mobile/services/sync.ts:17-27`).
-
-### Consequence: owner detection is not obvious
-
-Registration also creates an `employees` row carrying the owner's own phone. Because step 1 runs before step 2, **an owner logging in matches as staff first**. Any code needing "is this the owner" must compare the session phone against `businesses.phone_number`, not check `activeEmployeeId === 'owner'`.
+`loginWithEmployee(...)` writes that choice into a persisted zustand store (`useAuthStore`). It holds no token. A zustand session without a Supabase session (an install that predates Supabase Auth, or a revoked one) is logged out by the `onAuthStateChange` listener in the root layout.
 
 ## 4. Multi-tenancy and authorization
 
-The tenant key is `business_id`, threaded from the client into every RPC as a parameter:
+The tenant key is `business_id`, still passed to every RPC because one phone can belong to several businesses:
 
 ```ts
 supabase.rpc('pull_watermelondb_changes', { last_pulled_at, client_business_id });
 ```
 
-Server-side each RPC is `SECURITY DEFINER` (bypassing RLS), `GRANT`ed to `anon`, and filters on the `client_business_id` it was handed. Push additionally asserts per row:
+Server-side each RPC is `SECURITY DEFINER`, executable by `authenticated` only, and begins with `require_member(client_business_id)`, which compares the JWT phone against `businesses.phone_number` and `employees.phone`. Push additionally asserts per row:
 
 ```sql
 IF (r->>'business_id') != client_business_id THEN

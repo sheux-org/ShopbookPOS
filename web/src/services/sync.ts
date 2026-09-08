@@ -1,20 +1,12 @@
 import { synchronize } from '@nozbe/watermelondb/sync';
-import { createClient } from '@supabase/supabase-js';
 import database from '../db/database';
 import { schema } from '../db/schema';
 import { useAuthStore } from '../stores/authStore';
 import { useSyncStore } from '../stores/syncStore';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+import { supabase, supabaseKey, supabaseUrl } from './supabaseClient';
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-  },
-});
+export { supabase };
 
 let memoizedClientId = '';
 export function getClientId(): string {
@@ -189,7 +181,7 @@ export async function syncDatabase(force: boolean = true): Promise<boolean> {
           if (hasChanges) {
             console.log('[Sync] Local changes pushed. Broadcasting sync trigger...');
             supabase
-              .channel(`sync:${activeBusinessId}`)
+              .channel(`sync:${activeBusinessId}`, { config: { private: true } })
               .send({
                 type: 'broadcast',
                 event: 'sync_trigger',

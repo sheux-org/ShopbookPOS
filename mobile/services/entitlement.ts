@@ -16,11 +16,10 @@ import { loginPurchases, isPurchasesConfigured } from './purchases';
 import { useEntitlementStore } from '../stores/useEntitlementStore';
 
 export async function bootstrapEntitlement(params: {
-  phone: string;
   businessId: string;
   isOwner: boolean;
 }): Promise<void> {
-  const { phone, businessId, isOwner } = params;
+  const { businessId, isOwner } = params;
 
   if (isOwner) {
     try {
@@ -28,9 +27,7 @@ export async function bootstrapEntitlement(params: {
       // configured. get_entitlement inner-joins businesses -> owners, and the
       // free trial is derived from owners.created_at, so skipping this before
       // the SDK keys exist would resolve every user to is_pro=false forever.
-      const { data: ownerId, error } = await supabase.rpc('get_or_create_owner', {
-        input_phone: phone,
-      });
+      const { data: ownerId, error } = await supabase.rpc('get_or_create_owner');
       if (error) throw new Error(error.message);
 
       if (ownerId && isPurchasesConfigured()) {

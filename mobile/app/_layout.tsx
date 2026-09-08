@@ -15,6 +15,7 @@ import { useForceUpdate } from '../hooks/useForceUpdate';
 import { ForceUpdateScreen } from '../components/screens/ForceUpdateScreen';
 import { CustomSplashScreen } from '../components/screens/CustomSplashScreen';
 import { useAuthStore } from '../stores/useAuthStore';
+import { supabase } from '../services/supabaseClient';
 import * as SplashScreen from 'expo-splash-screen';
 import { configurePurchases } from '../services/purchases';
 
@@ -48,6 +49,16 @@ function MainAppContent() {
   const [isSplashActive, setIsSplashActive] = useState(true);
 
   // Monitor Zustand storage hydration status
+  // Installs that predate Supabase Auth carry a zustand session but no token;
+  // so does a session revoked server-side. Either way, back to login.
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const lost = event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session);
+      if (lost && useAuthStore.getState().isLoggedIn) useAuthStore.getState().logout();
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
   useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
       setIsHydrated(true);
@@ -88,7 +99,10 @@ function MainAppContent() {
       <Stack.Screen name="(modules)/profile/manage-businesses" />
       <Stack.Screen name="(modules)/profile/manage-staff" />
       <Stack.Screen name="(modules)/profile/active-devices" />
-      <Stack.Screen name="(modules)/paywall" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen
+        name="(modules)/paywall"
+        options={{ headerShown: false, gestureEnabled: false }}
+      />
       <Stack.Screen name="(modules)/profile/premium-plans" />
     </Stack>
   );

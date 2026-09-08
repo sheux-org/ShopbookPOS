@@ -25,7 +25,7 @@ export function OtpVerifyPanel({
   handleVerifyOtp,
   setStep,
 }: OtpVerifyPanelProps) {
-  const isOtpValid = otp.length >= 5;
+  const isOtpValid = otp.length >= 6;
   const isSubmitDisabled = !isOtpValid || isLoading;
 
   return (
@@ -37,31 +37,31 @@ export function OtpVerifyPanel({
 
       <Text style={styles.cardTitle}>Enter Verification Code</Text>
       <Text style={styles.cardSubtitle}>
-        We sent a 5-digit verification code to +94 {phone}. Enter it below to unlock.
+        We sent a 6-digit verification code to +94 {phone}. Enter it below to unlock.
       </Text>
 
-      <Text style={styles.inputLabel}>5-Digit OTP Code</Text>
+      <Text style={styles.inputLabel}>6-Digit OTP Code</Text>
 
       <View style={styles.otpContainer}>
         {/* Hidden absolute invisible TextInput for native keyboard */}
         <TextInput
           style={styles.hiddenOtpInput}
           keyboardType="number-pad"
-          maxLength={5}
+          maxLength={6}
           value={otp}
           onChangeText={(val) => {
             setOtp(val);
             if (otpError) setOtpError(false);
-            if (val.length === 5) {
+            if (val.length === 6) {
               handleVerifyOtp(val);
             }
           }}
           autoFocus={true}
         />
 
-        {/* 5 Premium individual digit slot boxes */}
+        {/* 6 individual digit slot boxes */}
         <View style={styles.otpSlotsRow}>
-          {[0, 1, 2, 3, 4].map((idx) => {
+          {[0, 1, 2, 3, 4, 5].map((idx) => {
             const char = otp[idx] || '';
             const isFocused = otp.length === idx;
             return (

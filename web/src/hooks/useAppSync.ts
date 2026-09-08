@@ -22,6 +22,16 @@ export function useAppSync(hydrated: boolean) {
     }
   };
 
+  // A zustand session without a Supabase session (an install that predates
+  // Supabase Auth, or one revoked server-side) goes back to login.
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const lost = event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session);
+      if (lost && useAuthStore.getState().isLoggedIn) useAuthStore.getState().logout();
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
   // Sync Success cache invalidator
   useEffect(() => {
     if (syncSuccess === true) {
@@ -67,7 +77,7 @@ export function useAppSync(hydrated: boolean) {
 
     const clientId = getClientId();
     const channel = supabase
-      .channel(`sync:${activeBusinessId}`)
+      .channel(`sync:${activeBusinessId}`, { config: { private: true } })
       .on('broadcast', { event: 'sync_trigger' }, (payload) => {
         const data = payload.payload;
         if (data && data.senderId !== clientId && data.businessId === activeBusinessId) {

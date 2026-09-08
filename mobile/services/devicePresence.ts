@@ -184,6 +184,7 @@ function ensureChannel(businessId: string, deviceId: string): RealtimeChannel {
 
   channel = supabase.channel(getDevicesChannelName(businessId), {
     config: {
+      private: true,
       presence: { key: deviceId, enabled: true },
     },
   });
@@ -259,7 +260,9 @@ export async function revokeDeviceSession(params: {
       payload: { targetDeviceId, businessId },
     });
   } else {
-    const tempChannel = supabase.channel(getDevicesChannelName(businessId));
+    const tempChannel = supabase.channel(getDevicesChannelName(businessId), {
+      config: { private: true },
+    });
     await new Promise<void>((resolve) => {
       tempChannel.subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -317,6 +320,7 @@ export function subscribePresenceObserver(options: {
     currentBusinessId = businessId;
     channel = supabase.channel(getDevicesChannelName(businessId), {
       config: {
+        private: true,
         presence: { enabled: true },
       },
     });
@@ -387,10 +391,7 @@ let lastTrackTime = 0;
 const MIN_TRACK_INTERVAL_MS = 10000;
 let pendingTrackTimeout: ReturnType<typeof setTimeout> | null = null;
 
-export async function trackPresenceState(
-  state: DevicePresenceState,
-  force = false
-): Promise<void> {
+export async function trackPresenceState(state: DevicePresenceState, force = false): Promise<void> {
   if (!channel) return;
 
   lastTrackedState = {
@@ -401,12 +402,15 @@ export async function trackPresenceState(
   const now = Date.now();
   if (!force && now - lastTrackTime < MIN_TRACK_INTERVAL_MS) {
     if (!pendingTrackTimeout) {
-      pendingTrackTimeout = setTimeout(() => {
-        pendingTrackTimeout = null;
-        if (lastTrackedState) {
-          void trackPresenceState(lastTrackedState, true);
-        }
-      }, MIN_TRACK_INTERVAL_MS - (now - lastTrackTime));
+      pendingTrackTimeout = setTimeout(
+        () => {
+          pendingTrackTimeout = null;
+          if (lastTrackedState) {
+            void trackPresenceState(lastTrackedState, true);
+          }
+        },
+        MIN_TRACK_INTERVAL_MS - (now - lastTrackTime)
+      );
     }
     return;
   }

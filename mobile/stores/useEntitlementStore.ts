@@ -90,9 +90,6 @@ export const useEntitlementStore = create<EntitlementState>()(
         try {
           const { data, error } = await supabase.rpc('get_entitlement', {
             client_business_id: businessId,
-            // Read here rather than threaded through eight call sites: the
-            // phone is a property of the session, not of any one caller.
-            client_phone: useAuthStore.getState().userPhone,
           });
 
           if (error) {

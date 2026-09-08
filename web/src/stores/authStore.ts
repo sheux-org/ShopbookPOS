@@ -1,20 +1,16 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../services/supabaseClient';
 
 export type UserRole = 'admin' | 'manager' | 'cashier';
 
 interface AuthState {
-  session: Session | null;
-  user: User | null;
   isLoggedIn: boolean;
   userPhone: string | null;
   userRole: UserRole;
   employeeName: string | null;
   activeBusinessId: string | null;
   activeEmployeeId: string | null;
-  setSession: (session: Session | null) => void;
-  setUser: (user: User | null) => void;
   setActiveBusinessId: (id: string | null) => void;
   setActiveEmployeeId: (id: string | null) => void;
   loginWithEmployee: (
@@ -22,8 +18,7 @@ interface AuthState {
     role: UserRole,
     employeeName: string,
     businessId: string,
-    employeeId: string,
-    token?: string
+    employeeId: string
   ) => void;
   logout: () => void;
 }
@@ -31,46 +26,34 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      session: null,
-      user: null,
       isLoggedIn: false,
       userPhone: null,
       userRole: 'admin',
       employeeName: 'Owner / Admin',
       activeBusinessId: null,
       activeEmployeeId: null,
-      setSession: (session) => set({ session }),
-      setUser: (user) => set({ user }),
       setActiveBusinessId: (activeBusinessId) => set({ activeBusinessId }),
       setActiveEmployeeId: (activeEmployeeId) => set({ activeEmployeeId }),
-      loginWithEmployee: (phone, role, employeeName, businessId, employeeId, token) => {
-        const cleanPhone = phone.replace(/\s+/g, '');
+      loginWithEmployee: (phone, role, employeeName, businessId, employeeId) => {
         set({
           isLoggedIn: true,
-          userPhone: cleanPhone,
+          userPhone: phone.replace(/\s+/g, ''),
           userRole: role,
-          employeeName: employeeName,
+          employeeName,
           activeBusinessId: businessId,
           activeEmployeeId: employeeId,
         });
-        if (token && typeof window !== 'undefined') {
-          localStorage.setItem('auth_token', token);
-        }
       },
       logout: () => {
         set({
           isLoggedIn: false,
-          session: null,
-          user: null,
           userPhone: null,
           userRole: 'admin',
           employeeName: 'Owner / Admin',
           activeBusinessId: null,
           activeEmployeeId: null,
         });
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('auth_token');
-        }
+        void supabase.auth.signOut().catch(() => undefined);
       },
     }),
     {

@@ -20,7 +20,6 @@ export default function AuthPage() {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState<string>('');
   const [otpError, setOtpError] = useState<string>('');
-  const [verificationToken, setVerificationToken] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(30);
 
@@ -63,8 +62,7 @@ export default function AuthPage() {
     if (resendCooldown > 0 || loading) return;
     const cleanPhone = normalizePhone(phone);
     try {
-      const token = await sendOtpMutation.mutateAsync(cleanPhone);
-      setVerificationToken(token || '');
+      await sendOtpMutation.mutateAsync(cleanPhone);
       setOtpError('');
       setResendCooldown(30);
       triggerToast('Verification code resent to +94 ' + phone);
@@ -88,8 +86,7 @@ export default function AuthPage() {
       return;
     }
     try {
-      const token = await sendOtpMutation.mutateAsync(cleanPhone);
-      setVerificationToken(token || '');
+      await sendOtpMutation.mutateAsync(cleanPhone);
       setStep('otp');
       setResendCooldown(30);
       triggerToast('Verification code sent to +94 ' + phone);
@@ -101,17 +98,13 @@ export default function AuthPage() {
   const handleOtpVerify = async (code: string) => {
     if (loading) return;
     setOtpError('');
-    if (code.length < 5) {
-      triggerToast('Please enter a 5-digit code!');
+    if (code.length < 6) {
+      triggerToast('Please enter a 6-digit code!');
       return;
     }
 
     try {
-      const result = await verifyOtpMutation.mutateAsync({
-        phone,
-        otp: code,
-        verificationToken,
-      });
+      const result = await verifyOtpMutation.mutateAsync({ phone, otp: code });
 
       if (result.status === 'success') {
         triggerToast('Welcome back to Shopbook POS!');

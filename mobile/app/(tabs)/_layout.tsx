@@ -33,7 +33,7 @@ export default function TabLayout() {
 
     const clientId = getClientId();
     const channel = supabase
-      .channel(`sync:${activeBusinessId}`)
+      .channel(`sync:${activeBusinessId}`, { config: { private: true } })
       .on('broadcast', { event: 'sync_trigger' }, (payload) => {
         const data = payload.payload;
         if (data && data.senderId !== clientId && data.businessId === activeBusinessId) {
