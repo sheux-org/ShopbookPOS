@@ -8,24 +8,29 @@ import { useEntitlementStore } from '../stores/useEntitlementStore';
 
 export default function SessionGateRoute() {
   const [isLoggedIn, setIsLoggedIn] = useState(cartState.getIsLoggedIn());
-  const [hasHydrated, setHasHydrated] = useState(false);
+  const [hasAuthHydrated, setHasAuthHydrated] = useState(useAuthStore.persist.hasHydrated());
+  const [hasEntitlementHydrated, setHasEntitlementHydrated] = useState(
+    useEntitlementStore.persist.hasHydrated()
+  );
   const isPro = useEntitlementStore((s) => s.isPro);
   const checkedAt = useEntitlementStore((s) => s.checkedAt);
   const [entitlementTimedOut, setEntitlementTimedOut] = useState(false);
 
   useEffect(() => {
-    const checkHydration = () => {
-      if (useAuthStore.persist.hasHydrated()) {
-        setHasHydrated(true);
-        setIsLoggedIn(cartState.getIsLoggedIn());
-      }
-    };
-
-    checkHydration();
-
-    const unsubFinish = useAuthStore.persist.onFinishHydration(() => {
-      setHasHydrated(true);
+    if (useAuthStore.persist.hasHydrated()) {
+      setHasAuthHydrated(true);
       setIsLoggedIn(cartState.getIsLoggedIn());
+    }
+    const unsubAuth = useAuthStore.persist.onFinishHydration(() => {
+      setHasAuthHydrated(true);
+      setIsLoggedIn(cartState.getIsLoggedIn());
+    });
+
+    if (useEntitlementStore.persist.hasHydrated()) {
+      setHasEntitlementHydrated(true);
+    }
+    const unsubEntitlement = useEntitlementStore.persist.onFinishHydration(() => {
+      setHasEntitlementHydrated(true);
     });
 
     const unsubBridge = cartState.subscribe(() => {
@@ -33,34 +38,42 @@ export default function SessionGateRoute() {
     });
 
     return () => {
-      unsubFinish();
+      unsubAuth();
+      unsubEntitlement();
       unsubBridge();
     };
   }, []);
 
-  // A session that has never resolved an entitlement waits for the first
-  // refresh, but not forever: with no connectivity that check never returns,
-  // and an unbounded wait leaves a till showing a spinner with no way out.
-  // After the deadline we route on what we have, which sends an unverified
-  // session to the paywall — where Restore and Log out are both reachable.
+  const hasHydrated = hasAuthHydrated && hasEntitlementHydrated;
+
+  // A brand new session that has never resolved an entitlement waits for the
+  // first refresh, with a max 2.5s fallback timeout for offline/slow networks.
   useEffect(() => {
     if (checkedAt !== null) return;
     const timer = setTimeout(() => setEntitlementTimedOut(true), 2500);
     return () => clearTimeout(timer);
   }, [checkedAt]);
 
+  // Non-blocking background sync (Stale-While-Revalidate):
+  // Synchronizes business records and refreshes entitlement from the server
+  // asynchronously without blocking the UI or route transition for returning users.
   useEffect(() => {
     if (!hasHydrated || !isLoggedIn) return;
 
     let isMounted = true;
     (async () => {
-      await useBusinessStore.getState().loadBusinessesFromDb();
-      if (!isMounted) return;
+      try {
+        await useBusinessStore.getState().loadBusinessesFromDb();
+        if (!isMounted) return;
 
-      const activeBizId = useAuthStore.getState().activeBusinessId;
-      if (activeBizId && activeBizId !== '0') {
-        await useEntitlementStore.getState().refresh(activeBizId);
-      } else {
+        const activeBizId = useAuthStore.getState().activeBusinessId;
+        if (activeBizId && activeBizId !== '0') {
+          await useEntitlementStore.getState().refresh(activeBizId);
+        } else {
+          setEntitlementTimedOut(true);
+        }
+      } catch (err) {
+        console.warn('[SessionGate] Background sync error:', err);
         setEntitlementTimedOut(true);
       }
     })();

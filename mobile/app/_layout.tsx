@@ -15,6 +15,7 @@ import { useForceUpdate } from '../hooks/useForceUpdate';
 import { ForceUpdateScreen } from '../components/screens/ForceUpdateScreen';
 import { CustomSplashScreen } from '../components/screens/CustomSplashScreen';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useEntitlementStore } from '../stores/useEntitlementStore';
 import { supabase } from '../services/supabaseClient';
 import * as SplashScreen from 'expo-splash-screen';
 import { configurePurchases } from '../services/purchases';
@@ -60,13 +61,20 @@ function MainAppContent() {
   }, []);
 
   useEffect(() => {
-    if (useAuthStore.persist.hasHydrated()) {
-      setIsHydrated(true);
-    }
-    const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
-      setIsHydrated(true);
-    });
-    return unsubscribe;
+    const checkHydration = () => {
+      if (useAuthStore.persist.hasHydrated() && useEntitlementStore.persist.hasHydrated()) {
+        setIsHydrated(true);
+      }
+    };
+
+    checkHydration();
+    const unsubAuth = useAuthStore.persist.onFinishHydration(checkHydration);
+    const unsubEntitlement = useEntitlementStore.persist.onFinishHydration(checkHydration);
+
+    return () => {
+      unsubAuth();
+      unsubEntitlement();
+    };
   }, []);
 
   return (
