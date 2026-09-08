@@ -36,11 +36,19 @@ export function isPurchasesConfigured(): boolean {
 export function configurePurchases(): boolean {
   if (configured) return true;
 
+  const storeKey = Platform.select({
+    ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY,
+    android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY,
+  });
+
+  // Local development runs against the RevenueCat Test Store: a simulator has
+  // no App Store account, so the store keys drop it into an Apple sign-in that
+  // never completes. A release build never reads the test key, even if the
+  // variable is present in its environment.
   const apiKey =
-    Platform.select({
-      ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY,
-      android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY,
-    }) || process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY;
+    __DEV__ && process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY
+      ? process.env.EXPO_PUBLIC_REVENUECAT_TEST_KEY
+      : storeKey;
 
   if (!apiKey) return false;
 
