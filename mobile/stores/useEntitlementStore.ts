@@ -51,6 +51,8 @@ interface EntitlementState {
   reset: () => void;
 }
 
+const WEBHOOK_GRACE_MS = 60_000;
+
 const EMPTY = {
   isPro: false,
   isTrial: false,
@@ -99,6 +101,19 @@ export const useEntitlementStore = create<EntitlementState>()(
           }
 
           const row = (data ?? {}) as Record<string, unknown>;
+
+          // Right after a purchase the SDK says Pro and the webhook that
+          // writes `subscriptions` is still in flight, so the server briefly
+          // answers false. That is not a revocation. Keep the SDK's unlock
+          // until the grace passes; the next refresh reconciles either way.
+          const prior = get();
+          const webhookStillLanding =
+            prior.source === 'sdk' &&
+            prior.isPro &&
+            !row.is_pro &&
+            Date.now() - (prior.checkedAt ?? 0) < WEBHOOK_GRACE_MS;
+          if (webhookStillLanding) return;
+
           set({
             isPro: !!row.is_pro,
             isTrial: !!row.is_trial,
