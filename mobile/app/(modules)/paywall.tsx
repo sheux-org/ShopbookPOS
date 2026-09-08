@@ -82,10 +82,15 @@ const priceOf = (pkg: PurchasesPackage) =>
 const perMonthOf = (pkg: PurchasesPackage, months: number) =>
   asRupees(rupeeAmount(pkg) / months);
 
+/**
+ * `anchor` is the list price the website strikes through (pos.shopbook.lk);
+ * the saving and percentage are computed against the store's real price so
+ * the card never claims a discount the store is not giving.
+ */
 const PLANS = [
-  { packageId: '$rc_annual', label: '1 Year', months: 12, billing: 'billed yearly', per: 'year' },
-  { packageId: '$rc_three_month', label: '3 Months', months: 3, billing: 'billed quarterly', per: '3 months' },
-  { packageId: '$rc_monthly', label: '1 Month', months: 1, billing: 'billed monthly', per: 'month' },
+  { packageId: '$rc_annual', label: '1 Year', months: 12, billing: 'billed yearly', per: 'year', anchor: 48000, badge: 'Best value' },
+  { packageId: '$rc_three_month', label: '3 Months', months: 3, billing: 'billed quarterly', per: '3 months', anchor: 12000, badge: 'Most popular' },
+  { packageId: '$rc_monthly', label: '1 Month', months: 1, billing: 'billed monthly', per: 'month', anchor: 5000, badge: 'Special offer' },
 ] as const;
 
 /** Outcomes, not feature names — what the shop owner gets, in their words. */
@@ -95,12 +100,6 @@ const BENEFITS = [
   'Staff log in with their own PIN; you see every sale',
   'Open the shop on a computer, export sales & profit reports',
 ];
-
-/** Honest badge: the saving over paying month by month, from the rounded prices shown. */
-const savingsOver = (monthly: PurchasesPackage | undefined, pkg: PurchasesPackage, months: number) =>
-  monthly && months > 1
-    ? Math.round((1 - rupeeAmount(pkg) / months / rupeeAmount(monthly)) * 100)
-    : 0;
 
 export default function PaywallRoute() {
   const insets = useSafeAreaInsets();
@@ -256,7 +255,6 @@ export default function PaywallRoute() {
 
   const price = selected?.pkg ? priceOf(selected.pkg) : '—';
   const perMonth = selected?.pkg ? perMonthOf(selected.pkg, selected.months) : null;
-  const monthlyPkg = plans.find((p) => p.packageId === '$rc_monthly')?.pkg;
   const storeOpen = iapEnabled && plans.some((p) => p.pkg);
 
   return (
@@ -328,15 +326,12 @@ export default function PaywallRoute() {
             {plans.map((plan) => {
               if (!plan.pkg) return null;
               const active = plan.packageId === selectedId;
-              const saving = savingsOver(monthlyPkg, plan.pkg, plan.months);
+              const saving = plan.anchor - rupeeAmount(plan.pkg);
+              const percentOff = Math.round((saving / plan.anchor) * 100);
               const badge =
-                plan.packageId === '$rc_annual'
-                  ? saving > 0
-                    ? `Best value · Save ${saving}%`
-                    : 'Best value'
-                  : saving > 0
-                    ? `Save ${saving}%`
-                    : null;
+                plan.packageId === '$rc_annual' && saving > 0
+                  ? `${plan.badge} · ${percentOff}% off`
+                  : plan.badge;
               return (
                 <TouchableOpacity
                   key={plan.packageId}
@@ -344,13 +339,11 @@ export default function PaywallRoute() {
                   onPress={() => selectPlan(plan.packageId, plan.pkg)}
                   style={[styles.planCard, active && styles.planCardActive]}
                 >
-                  {badge && (
-                    <View style={[styles.badge, active && styles.badgeActive]}>
-                      <Text style={[styles.badgeText, active && styles.badgeTextActive]}>
-                        {badge}
-                      </Text>
-                    </View>
-                  )}
+                  <View style={[styles.badge, active && styles.badgeActive]}>
+                    <Text style={[styles.badgeText, active && styles.badgeTextActive]}>
+                      {badge}
+                    </Text>
+                  </View>
                   <View style={styles.planRadio}>
                     {active ? (
                       <Ionicons name="checkmark-circle" size={22} color={TOKENS.primary} />
@@ -360,6 +353,14 @@ export default function PaywallRoute() {
                   </View>
                   <View style={styles.planBody}>
                     <Text style={styles.planLabel}>{plan.label}</Text>
+                    {saving > 0 && (
+                      <View style={styles.savingRow}>
+                        <Text style={styles.anchorPrice}>{asRupees(plan.anchor)}</Text>
+                        <View style={styles.savingPill}>
+                          <Text style={styles.savingText}>Save {asRupees(saving)}</Text>
+                        </View>
+                      </View>
+                    )}
                     <Text style={styles.planBilling}>
                       {trialEligible
                         ? `Free ${TRIAL_DAYS} days · ${priceOf(plan.pkg)}/${plan.per}`
@@ -509,7 +510,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: TOKENS.border,
   },
-  planBody: { flex: 1, gap: 2 },
+  planBody: { flex: 1, gap: 3 },
+  savingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  anchorPrice: { fontSize: 12, color: TOKENS.muted, textDecorationLine: 'line-through' },
+  savingPill: {
+    backgroundColor: '#DCFCE7',
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  savingText: { fontSize: 10, fontWeight: 'bold', color: '#166534' },
   planLabel: { fontSize: 16, fontWeight: 'bold', color: TOKENS.dark },
   planBilling: { fontSize: 12, color: TOKENS.muted },
   planRight: { alignItems: 'flex-end' },
