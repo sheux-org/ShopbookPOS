@@ -83,9 +83,9 @@ const perMonthOf = (pkg: PurchasesPackage, months: number) =>
   asRupees(rupeeAmount(pkg) / months);
 
 const PLANS = [
-  { packageId: '$rc_annual', label: '1 Year', months: 12, billing: 'billed yearly' },
-  { packageId: '$rc_three_month', label: '3 Months', months: 3, billing: 'billed quarterly' },
-  { packageId: '$rc_monthly', label: '1 Month', months: 1, billing: 'billed monthly' },
+  { packageId: '$rc_annual', label: '1 Year', months: 12, billing: 'billed yearly', per: 'year' },
+  { packageId: '$rc_three_month', label: '3 Months', months: 3, billing: 'billed quarterly', per: '3 months' },
+  { packageId: '$rc_monthly', label: '1 Month', months: 1, billing: 'billed monthly', per: 'month' },
 ] as const;
 
 /** Outcomes, not feature names — what the shop owner gets, in their words. */
@@ -289,7 +289,9 @@ export default function PaywallRoute() {
               <Ionicons name="diamond" size={11} color="#FDE68A" />
               <Text style={styles.proPillText}>SHOPBOOK POS PRO</Text>
             </View>
-            <Text style={styles.heroTitle}>Bill in seconds. Close the day in minutes.</Text>
+            <Text style={styles.heroTitle} maxFontSizeMultiplier={1.15}>
+              Bill in seconds. Close the day in minutes.
+            </Text>
           </View>
         </LinearGradient>
 
@@ -297,7 +299,9 @@ export default function PaywallRoute() {
           {BENEFITS.map((line) => (
             <View key={line} style={styles.benefitRow}>
               <Ionicons name="checkmark-circle" size={18} color="#D97706" />
-              <Text style={styles.benefitText}>{line}</Text>
+              <Text style={styles.benefitText} maxFontSizeMultiplier={1.15}>
+                {line}
+              </Text>
             </View>
           ))}
         </View>
@@ -357,8 +361,8 @@ export default function PaywallRoute() {
                   <View style={styles.planBody}>
                     <Text style={styles.planLabel}>{plan.label}</Text>
                     <Text style={styles.planBilling}>
-                      {plan.packageId === '$rc_annual' && trialEligible
-                        ? `${TRIAL_DAYS} days free, then ${priceOf(plan.pkg)} ${plan.billing}`
+                      {trialEligible
+                        ? `Free ${TRIAL_DAYS} days · ${priceOf(plan.pkg)}/${plan.per}`
                         : `${priceOf(plan.pkg)} ${plan.billing}`}
                     </Text>
                   </View>
@@ -386,7 +390,7 @@ export default function PaywallRoute() {
             <Text style={[styles.ctaText, !canPurchase && styles.ctaTextDisabled]}>
               {!isOwner
                 ? 'Owner account required'
-                : trialEligible && selected?.packageId === '$rc_annual'
+                : trialEligible
                   ? `Start ${TRIAL_DAYS}-day free trial`
                   : `Subscribe · ${price}`}
             </Text>
@@ -395,7 +399,7 @@ export default function PaywallRoute() {
 
         {canPurchase && (
           <Text style={styles.finePrint}>
-            {trialEligible && selected?.packageId === '$rc_annual'
+            {trialEligible
               ? `Free for ${TRIAL_DAYS} days, then ${price} ${selected?.billing}`
               : `${price} ${selected?.billing}`}
             {perMonth ? ` · about ${perMonth} a month` : ''}. Renews automatically; cancel any
@@ -433,7 +437,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scroll: { paddingHorizontal: 20, paddingBottom: 16, gap: 18 },
+  scroll: { paddingHorizontal: 20, paddingBottom: 16, gap: 16 },
 
   banner: {
     flexDirection: 'row',
@@ -468,7 +472,7 @@ const styles = StyleSheet.create({
     lineHeight: 27,
   },
 
-  benefits: { gap: 10 },
+  benefits: { gap: 8 },
   benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   benefitText: { flex: 1, fontSize: 14, color: TOKENS.dark, lineHeight: 20 },
 
