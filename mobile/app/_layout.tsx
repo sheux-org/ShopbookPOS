@@ -18,12 +18,15 @@ import { useAuthStore } from '../stores/useAuthStore';
 import { useEntitlementStore } from '../stores/useEntitlementStore';
 import { supabase } from '../services/supabaseClient';
 import * as SplashScreen from 'expo-splash-screen';
-import { configurePurchases } from '../services/purchases';
+import { configurePurchases, isProPackagesReady, onProPackagesReady } from '../services/purchases';
 
 // Prevent native splash screen from hiding automatically on app startup
 SplashScreen.preventAutoHideAsync().catch((err) => {
   console.warn('Failed to prevent native splash auto hide:', err);
 });
+
+// Configure RevenueCat immediately at startup so offerings are prefetched during splash
+configurePurchases();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +51,24 @@ function MainAppContent() {
   const { isLoading, isUpdateRequired, config, currentVersion, refetch } = useForceUpdate();
   const [isHydrated, setIsHydrated] = useState(false);
   const [isSplashActive, setIsSplashActive] = useState(true);
+  const [isPackagesReady, setIsPackagesReady] = useState(isProPackagesReady());
+
+  const isPro = useEntitlementStore((s) => s.isPro);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const needsPackages = isLoggedIn && !isPro;
+
+  useEffect(() => {
+    if (isProPackagesReady()) {
+      setIsPackagesReady(true);
+      return;
+    }
+    const unsub = onProPackagesReady(() => setIsPackagesReady(true));
+    const timer = setTimeout(() => setIsPackagesReady(true), 2500);
+    return () => {
+      unsub();
+      clearTimeout(timer);
+    };
+  }, []);
 
   // Monitor Zustand storage hydration status
   // Installs that predate Supabase Auth carry a zustand session but no token;
@@ -106,7 +127,7 @@ function MainAppContent() {
 
       {isSplashActive && (
         <CustomSplashScreen
-          isReady={!isLoading && isHydrated}
+          isReady={!isLoading && isHydrated && (!needsPackages || isPackagesReady)}
           onAnimationComplete={() => setIsSplashActive(false)}
         />
       )}

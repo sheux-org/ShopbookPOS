@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './sync';
 
 export interface AppConfig {
@@ -11,7 +12,37 @@ export interface AppConfig {
   privacy_url: string;
 }
 
-let cachedAppConfig: AppConfig | null = null;
+const CACHE_KEY = '@shopbook_app_config_cache';
+
+const DEFAULT_CONFIG: AppConfig = {
+  force_update: false,
+  min_version: '1.0.0',
+  android_url: '',
+  ios_url: '',
+  iap_enabled: true,
+  terms_url: 'https://pos.shopbook.lk/terms',
+  privacy_url: 'https://pos.shopbook.lk/privacy',
+};
+
+let cachedAppConfig: AppConfig = DEFAULT_CONFIG;
+
+// Load persisted config eagerly on module load
+AsyncStorage.getItem(CACHE_KEY)
+  .then((json) => {
+    if (json) {
+      try {
+        const parsed = JSON.parse(json);
+        if (parsed && typeof parsed === 'object') {
+          cachedAppConfig = { ...DEFAULT_CONFIG, ...parsed };
+        }
+      } catch {}
+    }
+  })
+  .catch(() => {});
+
+export function getCachedAppConfig(): AppConfig {
+  return cachedAppConfig;
+}
 
 /**
  * Fetches the global application configuration settings from Supabase.
@@ -29,7 +60,10 @@ export async function fetchAppConfig(): Promise<AppConfig | null> {
         .single()
     )
       .then(({ data, error }) => {
-        if (!error && data) cachedAppConfig = data as AppConfig;
+        if (!error && data) {
+          cachedAppConfig = data as AppConfig;
+          void AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
+        }
       })
       .catch(() => {});
     return cachedAppConfig;
@@ -46,10 +80,11 @@ export async function fetchAppConfig(): Promise<AppConfig | null> {
 
     if (error) {
       console.error('Error fetching app configuration:', error.message);
-      return null;
+      return cachedAppConfig;
     }
 
     cachedAppConfig = data as AppConfig;
+    void AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
     return cachedAppConfig;
   } catch (err) {
     console.error('Failed to fetch app config due to connection/unexpected error:', err);
