@@ -289,7 +289,7 @@ export default function PaywallRoute() {
               <Ionicons name="diamond" size={11} color="#FDE68A" />
               <Text style={styles.proPillText}>SHOPBOOK POS PRO</Text>
             </View>
-            <Text style={styles.heroTitle}>Your shop, backed up and open anywhere</Text>
+            <Text style={styles.heroTitle}>Every rupee counted, even when you're away.</Text>
           </View>
         </LinearGradient>
 
