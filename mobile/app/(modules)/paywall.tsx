@@ -35,10 +35,12 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useBusinessStore } from '../../stores/useBusinessStore';
 import { useEntitlementStore } from '../../stores/useEntitlementStore';
 import { useIsBusinessOwner } from '../../hooks/useEntitlement';
-import { fetchAppConfig } from '../../services/appConfig';
+import { fetchAppConfig, getCachedAppConfig } from '../../services/appConfig';
 import { logPaywallEvent } from '../../services/paywallTelemetry';
 import {
   getProPackages,
+  getCachedProPackages,
+  onProPackagesReady,
   purchasePackage,
   restorePurchases,
   hasProEntitlement,
@@ -79,8 +81,7 @@ const priceOf = (pkg: PurchasesPackage) =>
  * the raw price the rounding pulled quarterly and monthly to the same number
  * and the comparison between plans disappeared.
  */
-const perMonthOf = (pkg: PurchasesPackage, months: number) =>
-  asRupees(rupeeAmount(pkg) / months);
+const perMonthOf = (pkg: PurchasesPackage, months: number) => asRupees(rupeeAmount(pkg) / months);
 
 /**
  * `anchor` is the list price the website strikes through (pos.shopbook.lk);
@@ -88,9 +89,33 @@ const perMonthOf = (pkg: PurchasesPackage, months: number) =>
  * the card never claims a discount the store is not giving.
  */
 const PLANS = [
-  { packageId: '$rc_annual', label: '1 Year', months: 12, billing: 'billed yearly', per: 'year', anchor: 48000, badge: 'Best value' },
-  { packageId: '$rc_three_month', label: '3 Months', months: 3, billing: 'billed quarterly', per: '3 months', anchor: 12000, badge: 'Most popular' },
-  { packageId: '$rc_monthly', label: '1 Month', months: 1, billing: 'billed monthly', per: 'month', anchor: 5000, badge: 'Special offer' },
+  {
+    packageId: '$rc_annual',
+    label: '1 Year',
+    months: 12,
+    billing: 'billed yearly',
+    per: 'year',
+    anchor: 48000,
+    badge: 'Best value',
+  },
+  {
+    packageId: '$rc_three_month',
+    label: '3 Months',
+    months: 3,
+    billing: 'billed quarterly',
+    per: '3 months',
+    anchor: 12000,
+    badge: 'Most popular',
+  },
+  {
+    packageId: '$rc_monthly',
+    label: '1 Month',
+    months: 1,
+    billing: 'billed monthly',
+    per: 'month',
+    anchor: 5000,
+    badge: 'Special offer',
+  },
 ] as const;
 
 /** Outcomes, not feature names — what the shop owner gets, in their words. */
@@ -113,16 +138,25 @@ export default function PaywallRoute() {
   const setFromSdk = useEntitlementStore((s) => s.setFromSdk);
   const refreshEntitlement = useEntitlementStore((s) => s.refresh);
 
-  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cachedPkgs = getCachedProPackages();
+  const cachedConfig = getCachedAppConfig();
+
+  const [packages, setPackages] = useState<PurchasesPackage[]>(cachedPkgs);
   const [busy, setBusy] = useState(false);
-  const [iapEnabled, setIapEnabled] = useState(false);
+  const [iapEnabled, setIapEnabled] = useState(cachedConfig ? !!cachedConfig.iap_enabled : true);
   const [trialEligible, setTrialEligible] = useState(true);
   const [legal, setLegal] = useState({
-    terms: 'https://pos.shopbook.lk/terms',
-    privacy: 'https://pos.shopbook.lk/privacy',
+    terms: cachedConfig?.terms_url ?? 'https://pos.shopbook.lk/terms',
+    privacy: cachedConfig?.privacy_url ?? 'https://pos.shopbook.lk/privacy',
   });
   const [selectedId, setSelectedId] = useState<string>('$rc_annual');
+
+  useEffect(() => {
+    return onProPackagesReady(() => {
+      const fresh = getCachedProPackages();
+      if (fresh.length > 0) setPackages(fresh);
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,7 +175,6 @@ export default function PaywallRoute() {
       const annual = pkgs.find((p) => p.identifier === '$rc_annual');
       if (annual) setTrialEligible(await isTrialEligible(annual.product.identifier));
 
-      setLoading(false);
       logPaywallEvent('viewed', {
         businessId: activeBusinessId,
         metadata: { isOwner, packages: pkgs.length },
@@ -244,14 +277,6 @@ export default function PaywallRoute() {
       },
     ]);
   };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingRoot}>
-        <ActivityIndicator size="large" color={TOKENS.primary} />
-      </View>
-    );
-  }
 
   const price = selected?.pkg ? priceOf(selected.pkg) : '—';
   const perMonth = selected?.pkg ? perMonthOf(selected.pkg, selected.months) : null;
@@ -403,8 +428,8 @@ export default function PaywallRoute() {
             {trialEligible
               ? `Free for ${TRIAL_DAYS} days, then ${price} ${selected?.billing}`
               : `${price} ${selected?.billing}`}
-            {perMonth ? ` · about ${perMonth} a month` : ''}. Renews automatically; cancel any
-            time in your store account.
+            {perMonth ? ` · about ${perMonth} a month` : ''}. Renews automatically; cancel any time
+            in your store account.
           </Text>
         )}
 
@@ -432,12 +457,6 @@ export default function PaywallRoute() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: TOKENS.background },
-  loadingRoot: {
-    flex: 1,
-    backgroundColor: TOKENS.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   scroll: { paddingHorizontal: 20, paddingBottom: 16, gap: 16 },
 
   banner: {
@@ -556,7 +575,13 @@ const styles = StyleSheet.create({
   ctaTextDisabled: { color: TOKENS.muted },
   // Reserve three lines: the text is two lines for some plans and three for
   // others, and without this the button and links jump on every selection.
-  finePrint: { fontSize: 11, color: TOKENS.muted, textAlign: 'center', lineHeight: 16, minHeight: 48 },
+  finePrint: {
+    fontSize: 11,
+    color: TOKENS.muted,
+    textAlign: 'center',
+    lineHeight: 16,
+    minHeight: 48,
+  },
   footerLinks: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   footerLink: { fontSize: 12, color: TOKENS.primary, fontWeight: '600' },
   footerDot: { fontSize: 12, color: TOKENS.border },

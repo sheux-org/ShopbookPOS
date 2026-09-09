@@ -15,14 +15,18 @@ import { useForceUpdate } from '../hooks/useForceUpdate';
 import { ForceUpdateScreen } from '../components/screens/ForceUpdateScreen';
 import { CustomSplashScreen } from '../components/screens/CustomSplashScreen';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useEntitlementStore } from '../stores/useEntitlementStore';
 import { supabase } from '../services/supabaseClient';
 import * as SplashScreen from 'expo-splash-screen';
-import { configurePurchases } from '../services/purchases';
+import { configurePurchases, isProPackagesReady, onProPackagesReady } from '../services/purchases';
 
 // Prevent native splash screen from hiding automatically on app startup
 SplashScreen.preventAutoHideAsync().catch((err) => {
   console.warn('Failed to prevent native splash auto hide:', err);
 });
+
+// Configure RevenueCat immediately at startup so offerings are prefetched during splash
+configurePurchases();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +51,24 @@ function MainAppContent() {
   const { isLoading, isUpdateRequired, config, currentVersion, refetch } = useForceUpdate();
   const [isHydrated, setIsHydrated] = useState(false);
   const [isSplashActive, setIsSplashActive] = useState(true);
+  const [isPackagesReady, setIsPackagesReady] = useState(isProPackagesReady());
+
+  const isPro = useEntitlementStore((s) => s.isPro);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const needsPackages = isLoggedIn && !isPro;
+
+  useEffect(() => {
+    if (isProPackagesReady()) {
+      setIsPackagesReady(true);
+      return;
+    }
+    const unsub = onProPackagesReady(() => setIsPackagesReady(true));
+    const timer = setTimeout(() => setIsPackagesReady(true), 2500);
+    return () => {
+      unsub();
+      clearTimeout(timer);
+    };
+  }, []);
 
   // Monitor Zustand storage hydration status
   // Installs that predate Supabase Auth carry a zustand session but no token;
@@ -60,51 +82,56 @@ function MainAppContent() {
   }, []);
 
   useEffect(() => {
-    if (useAuthStore.persist.hasHydrated()) {
-      setIsHydrated(true);
-    }
-    const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
-      setIsHydrated(true);
-    });
-    return unsubscribe;
+    const checkHydration = () => {
+      if (useAuthStore.persist.hasHydrated() && useEntitlementStore.persist.hasHydrated()) {
+        setIsHydrated(true);
+      }
+    };
+
+    checkHydration();
+    const unsubAuth = useAuthStore.persist.onFinishHydration(checkHydration);
+    const unsubEntitlement = useEntitlementStore.persist.onFinishHydration(checkHydration);
+
+    return () => {
+      unsubAuth();
+      unsubEntitlement();
+    };
   }, []);
 
-  // Display custom premium splash screen during initial store loading
-  if (isSplashActive) {
-    return (
-      <CustomSplashScreen
-        isReady={!isLoading && isHydrated}
-        onAnimationComplete={() => setIsSplashActive(false)}
-      />
-    );
-  }
-
-  // Once splash completes, show force update blocking screen if required
-  if (isUpdateRequired) {
-    return <ForceUpdateScreen config={config} currentVersion={currentVersion} onRetry={refetch} />;
-  }
-
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="(modules)/auth/number-input" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(modules)/pos/cart" />
-      <Stack.Screen name="(modules)/pos/catalog" />
-      <Stack.Screen name="(modules)/pos/payment-tender" />
-      <Stack.Screen name="(modules)/pos/search" />
-      <Stack.Screen name="(modules)/stocks/scan" />
-      <Stack.Screen name="(modules)/profile/business-details" />
-      <Stack.Screen name="(modules)/profile/bluetooth-printer" />
-      <Stack.Screen name="(modules)/profile/manage-businesses" />
-      <Stack.Screen name="(modules)/profile/manage-staff" />
-      <Stack.Screen name="(modules)/profile/active-devices" />
-      <Stack.Screen
-        name="(modules)/paywall"
-        options={{ headerShown: false, gestureEnabled: false }}
-      />
-      <Stack.Screen name="(modules)/profile/premium-plans" />
-    </Stack>
+    <>
+      {isUpdateRequired ? (
+        <ForceUpdateScreen config={config} currentVersion={currentVersion} onRetry={refetch} />
+      ) : (
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(modules)/auth/number-input" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(modules)/pos/cart" />
+          <Stack.Screen name="(modules)/pos/catalog" />
+          <Stack.Screen name="(modules)/pos/payment-tender" />
+          <Stack.Screen name="(modules)/pos/search" />
+          <Stack.Screen name="(modules)/stocks/scan" />
+          <Stack.Screen name="(modules)/profile/business-details" />
+          <Stack.Screen name="(modules)/profile/bluetooth-printer" />
+          <Stack.Screen name="(modules)/profile/manage-businesses" />
+          <Stack.Screen name="(modules)/profile/manage-staff" />
+          <Stack.Screen name="(modules)/profile/active-devices" />
+          <Stack.Screen name="(modules)/profile/premium-plans" />
+          <Stack.Screen
+            name="(modules)/paywall"
+            options={{ headerShown: false, gestureEnabled: false }}
+          />
+        </Stack>
+      )}
+
+      {isSplashActive && (
+        <CustomSplashScreen
+          isReady={!isLoading && isHydrated && (!needsPackages || isPackagesReady)}
+          onAnimationComplete={() => setIsSplashActive(false)}
+        />
+      )}
+    </>
   );
 }
 

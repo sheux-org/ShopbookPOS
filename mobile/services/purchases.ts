@@ -11,6 +11,7 @@
  */
 
 import { Linking, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases, {
   INTRO_ELIGIBILITY_STATUS,
   LOG_LEVEL,
@@ -56,6 +57,7 @@ export function configurePurchases(): boolean {
     Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR);
     Purchases.configure({ apiKey });
     configured = true;
+    void prefetchProPackages();
     return true;
   } catch (err) {
     console.warn('[Purchases] configure failed:', err);
@@ -84,19 +86,145 @@ export async function logoutPurchases(): Promise<void> {
   }
 }
 
-export async function getProPackages(): Promise<PurchasesPackage[]> {
-  if (!configured) return [];
+export const FALLBACK_PACKAGES: PurchasesPackage[] = [
+  {
+    identifier: '$rc_annual',
+    packageType: 'ANNUAL' as any,
+    product: {
+      identifier: 'shopbook_pro_annual_36000',
+      description: 'Shopbook POS Pro - 1 Year',
+      title: '1 Year Pro',
+      price: 36000,
+      priceString: 'Rs 36,000',
+      currencyCode: 'LKR',
+    } as any,
+    offeringIdentifier: 'default',
+  } as unknown as PurchasesPackage,
+  {
+    identifier: '$rc_three_month',
+    packageType: 'THREE_MONTH' as any,
+    product: {
+      identifier: 'shopbook_pro_quarterly_10500',
+      description: 'Shopbook POS Pro - 3 Months',
+      title: '3 Months Pro',
+      price: 10500,
+      priceString: 'Rs 10,500',
+      currencyCode: 'LKR',
+    } as any,
+    offeringIdentifier: 'default',
+  } as unknown as PurchasesPackage,
+  {
+    identifier: '$rc_monthly',
+    packageType: 'MONTHLY' as any,
+    product: {
+      identifier: 'shopbook_pro_monthly_4000',
+      description: 'Shopbook POS Pro - 1 Month',
+      title: '1 Month Pro',
+      price: 4000,
+      priceString: 'Rs 4,000',
+      currencyCode: 'LKR',
+    } as any,
+    offeringIdentifier: 'default',
+  } as unknown as PurchasesPackage,
+];
+
+const PACKAGES_CACHE_KEY = '@shopbook_pro_packages_cache';
+
+let cachedPackages: PurchasesPackage[] = FALLBACK_PACKAGES;
+let isPackagesLoaded = false;
+let packageListeners: Array<() => void> = [];
+
+// Hydrate from persistent disk cache immediately
+AsyncStorage.getItem(PACKAGES_CACHE_KEY)
+  .then((json) => {
+    if (json) {
+      try {
+        const parsed = JSON.parse(json);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          cachedPackages = parsed;
+          isPackagesLoaded = true;
+          packageListeners.forEach((cb) => cb());
+        }
+      } catch {}
+    }
+  })
+  .catch(() => {});
+
+export function isProPackagesReady(): boolean {
+  return isPackagesLoaded;
+}
+
+export function onProPackagesReady(callback: () => void): () => void {
+  if (isPackagesLoaded) {
+    callback();
+    return () => {};
+  }
+  packageListeners.push(callback);
+  return () => {
+    packageListeners = packageListeners.filter((cb) => cb !== callback);
+  };
+}
+
+export function getCachedProPackages(): PurchasesPackage[] {
+  return cachedPackages;
+}
+
+export async function prefetchProPackages(): Promise<PurchasesPackage[]> {
+  if (!configured) {
+    isPackagesLoaded = true;
+    packageListeners.forEach((cb) => cb());
+    return cachedPackages;
+  }
   try {
     const offerings = await Purchases.getOfferings();
-    return offerings.current?.availablePackages ?? [];
+    const livePackages = offerings.current?.availablePackages;
+    if (livePackages && livePackages.length > 0) {
+      cachedPackages = livePackages;
+      void AsyncStorage.setItem(PACKAGES_CACHE_KEY, JSON.stringify(livePackages)).catch(() => {});
+    }
+    isPackagesLoaded = true;
+    packageListeners.forEach((cb) => cb());
+    return cachedPackages;
   } catch (err) {
-    console.warn('[Purchases] getOfferings failed:', err);
-    return [];
+    console.warn('[Purchases] prefetchProPackages failed:', err);
+    isPackagesLoaded = true;
+    packageListeners.forEach((cb) => cb());
+    return cachedPackages;
   }
 }
 
+export async function getProPackages(): Promise<PurchasesPackage[]> {
+  if (!configured) return cachedPackages;
+  if (isPackagesLoaded && cachedPackages.length > 0) {
+    // Return cached immediately; refresh in background
+    Purchases.getOfferings()
+      .then((offerings) => {
+        const livePackages = offerings.current?.availablePackages;
+        if (livePackages && livePackages.length > 0) {
+          cachedPackages = livePackages;
+          void AsyncStorage.setItem(PACKAGES_CACHE_KEY, JSON.stringify(livePackages)).catch(
+            () => {}
+          );
+        }
+      })
+      .catch(() => {});
+    return cachedPackages;
+  }
+  return prefetchProPackages();
+}
+
 export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerInfo> {
-  const { customerInfo } = await Purchases.purchasePackage(pkg);
+  let packageToPurchase = pkg;
+  if (configured) {
+    try {
+      const offerings = await Purchases.getOfferings();
+      const live = offerings.current?.availablePackages?.find(
+        (p) => p.identifier === pkg.identifier
+      );
+      if (live) packageToPurchase = live;
+    } catch {}
+  }
+  const { customerInfo } = await Purchases.purchasePackage(packageToPurchase);
   return customerInfo;
 }
 
