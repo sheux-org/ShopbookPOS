@@ -65,8 +65,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 
 function RootLayoutContent({ children }: { children: React.ReactNode }) {
-  useActiveDeviceTracker();
-  const { isPro, isResolved } = useEntitlement();
+  const { isPro, isResolved, status, refetch } = useEntitlement();
+  useActiveDeviceTracker(isPro);
   const pathname = usePathname();
   const { t } = useTranslation();
 
@@ -81,7 +81,7 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
   // Custom Hooks for State & Routing Guards
   const { hydrated, isLoggedIn, activeBusiness } = useAppAuthGuard();
-  const { handleSync } = useAppSync(hydrated);
+  const { handleSync } = useAppSync(hydrated, isPro);
   const hasLocalData = useLocalDataCheck();
 
   // Network connection status watcher
@@ -91,7 +91,9 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
     const handleOnline = () => {
       setIsOnline(true);
-      handleSync(); // Auto sync when connection is restored
+      if (isPro) {
+        handleSync(); // Auto sync when connection is restored
+      }
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -100,14 +102,16 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initialize background upload queue monitor
-    startUploadQueueMonitor();
+    // Initialize background upload queue monitor only if Pro
+    if (isPro) {
+      startUploadQueueMonitor();
+    }
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [hydrated, isLoggedIn]);
+  }, [hydrated, isLoggedIn, isPro]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -212,12 +216,122 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
     return <div style={{ backgroundColor: '#f9fafb', height: '100vh' }} />;
   }
 
+  if (pathname === '/auth') {
+    return <div style={{ backgroundColor: '#f9fafb', height: '100vh' }} />;
+  }
+
+  // -------------------------------------------------------------
+  // PRO ENTITLEMENT GATE (Strict Fail-Closed, Zero-Flash Architecture)
+  // Web access is itself a Pro feature. Never mount or leak the POS UI
+  // until valid entitlement is confirmed.
+  // -------------------------------------------------------------
+  if (status === 'BLOCKED' || (isResolved && !isPro)) {
+    return <ProBlocker businessName={activeBusiness?.name} />;
+  }
+
+  if (status === 'INITIALIZING' || (!isPro && !isResolved)) {
+    return (
+      <div
+        style={{
+          backgroundColor: '#f9fafb',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }}
+      >
+        <div
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}
+        >
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #e5e7eb',
+              borderTopColor: '#2563eb',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }}
+          />
+          <div
+            style={{
+              color: '#6b7280',
+              fontSize: '13px',
+              fontWeight: '600',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Verifying Shopbook Pro access...
+          </div>
+        </div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (status === 'NETWORK_ERROR' && !isPro) {
+    return (
+      <div
+        style={{
+          backgroundColor: '#f9fafb',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          padding: '24px',
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 10px 30px rgba(15, 23, 42, 0.06)',
+            padding: '40px 32px',
+            maxWidth: '440px',
+            width: '100%',
+          }}
+        >
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: '0 0 10px' }}>
+            Unable to verify subscription
+          </h2>
+          <p style={{ fontSize: '14px', lineHeight: '22px', color: '#64748b', margin: '0 0 24px' }}>
+            Could not connect to verify your Shopbook Pro status. Please check your internet
+            connection and try again.
+          </p>
+          <button
+            onClick={() => void refetch()}
+            style={{
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (
-    isLoggedIn &&
-    pathname !== '/auth' &&
-    (!activeBusiness ||
-      activeBusiness.id === '0' ||
-      (!hasCompletedInitialSync && hasLocalData === false))
+    !activeBusiness ||
+    activeBusiness.id === '0' ||
+    (!hasCompletedInitialSync && hasLocalData === false)
   ) {
     return (
       <SyncBlocker
@@ -227,16 +341,6 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
         handleSync={handleSync}
       />
     );
-  }
-
-  if (pathname === '/auth') {
-    return <div style={{ backgroundColor: '#f9fafb', height: '100vh' }} />;
-  }
-
-  // Web access is itself a Pro feature. Only block once the server has actually
-  // answered — a failed RPC must never lock out a shop that has paid.
-  if (isResolved && !isPro) {
-    return <ProBlocker businessName={activeBusiness?.name} />;
   }
 
   const headerInfo = getHeaderInfo();

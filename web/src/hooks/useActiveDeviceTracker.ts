@@ -57,7 +57,7 @@ export async function deleteCurrentDeviceSession() {
   }
 }
 
-export function useActiveDeviceTracker() {
+export function useActiveDeviceTracker(enabled: boolean = true) {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusiness = useBusinessStore((s) => s.activeBusiness);
   const activeBusinessId = activeBusiness?.id;
@@ -70,7 +70,7 @@ export function useActiveDeviceTracker() {
   const isActiveRef = useRef(false);
 
   useEffect(() => {
-    if (!isLoggedIn || !activeBusinessId || activeBusinessId === '0') {
+    if (!enabled || !isLoggedIn || !activeBusinessId || activeBusinessId === '0') {
       if (isActiveRef.current) {
         void teardownDevicePresence({ writeSnapshot: true });
         isActiveRef.current = false;

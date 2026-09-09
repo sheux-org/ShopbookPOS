@@ -6,7 +6,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { useSyncStore } from '../stores/syncStore';
 import { syncDatabase, supabase, getClientId } from '../services/sync';
 
-export function useAppSync(hydrated: boolean) {
+export function useAppSync(hydrated: boolean, isPro: boolean = false) {
   const queryClient = useQueryClient();
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const activeBusinessId = useAuthStore((s) => s.activeBusinessId);
@@ -15,6 +15,7 @@ export function useAppSync(hydrated: boolean) {
   const { syncSuccess } = useSyncStore();
 
   const handleSync = async () => {
+    if (!isPro) return;
     try {
       await syncDatabase();
     } catch {
@@ -34,7 +35,7 @@ export function useAppSync(hydrated: boolean) {
 
   // Sync Success cache invalidator
   useEffect(() => {
-    if (syncSuccess === true) {
+    if (syncSuccess === true && isPro) {
       loadBusinessesFromDb();
       queryClient.invalidateQueries();
       const timer = setTimeout(() => {
@@ -42,11 +43,11 @@ export function useAppSync(hydrated: boolean) {
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [syncSuccess, queryClient, loadBusinessesFromDb]);
+  }, [syncSuccess, isPro, queryClient, loadBusinessesFromDb]);
 
-  // Trigger immediate sync when connection state is restored
+  // Trigger immediate sync when connection state is restored (Pro sessions only)
   useEffect(() => {
-    if (!hydrated || !isLoggedIn) return;
+    if (!hydrated || !isLoggedIn || !isPro) return;
 
     const handleOnline = () => {
       console.log('Device is back online, triggering sync...');
@@ -57,11 +58,11 @@ export function useAppSync(hydrated: boolean) {
     return () => {
       window.removeEventListener('online', handleOnline);
     };
-  }, [hydrated, isLoggedIn]);
+  }, [hydrated, isLoggedIn, isPro]);
 
-  // Auto trigger sync on mount, login, or when changing active business
+  // Auto trigger sync on mount, login, or when changing active business (Pro sessions only)
   useEffect(() => {
-    if (hydrated && isLoggedIn) {
+    if (hydrated && isLoggedIn && isPro) {
       const targetBizId =
         activeBusinessId || (activeBusiness?.id !== '0' ? activeBusiness?.id : null);
       if (targetBizId && targetBizId !== '0') {
@@ -69,11 +70,11 @@ export function useAppSync(hydrated: boolean) {
         handleSync();
       }
     }
-  }, [hydrated, isLoggedIn, activeBusiness?.id, activeBusinessId]);
+  }, [hydrated, isLoggedIn, isPro, activeBusiness?.id, activeBusinessId]);
 
-  // Real-time Supabase Broadcast listener for reactive sync
+  // Real-time Supabase Broadcast listener for reactive sync (Pro sessions only)
   useEffect(() => {
-    if (!isLoggedIn || !activeBusinessId) return;
+    if (!isLoggedIn || !activeBusinessId || !isPro) return;
 
     const clientId = getClientId();
     const channel = supabase
@@ -98,7 +99,7 @@ export function useAppSync(hydrated: boolean) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isLoggedIn, activeBusinessId]);
+  }, [isLoggedIn, activeBusinessId, isPro]);
 
   return { handleSync };
 }
