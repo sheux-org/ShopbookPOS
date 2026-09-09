@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuthStore } from '../stores/authStore';
+import { useEntitlementStore } from '../stores/useEntitlementStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { startUploadQueueMonitor } from '@/services/uploadQueue';
 import { useSyncStore } from '../stores/syncStore';
@@ -18,7 +20,10 @@ import { MobileNavbar } from '../components/layout/MobileNavbar';
 import { Header } from '../components/layout/Header';
 import { WifiOff } from 'lucide-react';
 import { MobileBlocker } from '../components/layout/MobileBlocker';
-import { useActiveDeviceTracker } from '../hooks/useActiveDeviceTracker';
+import {
+  useActiveDeviceTracker,
+  deleteCurrentDeviceSession,
+} from '../hooks/useActiveDeviceTracker';
 import { useTranslation } from '@/hooks/useTranslation';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -68,7 +73,20 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const { isPro, isResolved, status, refetch } = useEntitlement();
   useActiveDeviceTracker(isPro);
   const pathname = usePathname();
+  const router = useRouter();
+  const logout = useAuthStore((s) => s.logout);
   const { t } = useTranslation();
+
+  const handleLogout = async () => {
+    try {
+      await deleteCurrentDeviceSession();
+    } catch (e) {
+      console.warn('Error clearing device session:', e);
+    }
+    useEntitlementStore.getState().reset();
+    logout();
+    router.push('/auth');
+  };
 
   const posMode = useSettingsStore((s) => s.posMode);
   const setPosMode = useSettingsStore((s) => s.setPosMode);
@@ -308,21 +326,38 @@ function RootLayoutContent({ children }: { children: React.ReactNode }) {
             Could not connect to verify your Shopbook Pro status. Please check your internet
             connection and try again.
           </p>
-          <button
-            onClick={() => void refetch()}
-            style={{
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '12px 24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Retry Connection
-          </button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button
+              onClick={() => void refetch()}
+              style={{
+                backgroundColor: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '12px 22px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Retry Connection
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                backgroundColor: '#f8fafc',
+                color: '#475569',
+                border: '1px solid #cbd5e1',
+                borderRadius: '10px',
+                padding: '12px 22px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
     );
