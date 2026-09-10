@@ -73,6 +73,16 @@
           "alwaysUsageDescription": "Shopbook POS requires Bluetooth to print invoices in the background.",
           "protocols": ["com.shopbook.pos"]
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keep class com.nozbe.watermelondb.** { *; }\n-keep class com.bluetoothclassic.** { *; }\n-dontwarn com.bluetoothclassic.**"
+          }
+        }
       ]
     ],
     "experiments": {
