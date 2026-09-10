@@ -42,6 +42,12 @@ export interface ReceiptModel {
   date: string;
   time: string;
   status: string;
+  /**
+   * The status worth spending a line of paper on. A paid sale is the
+   * unremarkable case a receipt already implies; a void or a refund is not.
+   * The on-screen receipt still shows `status` unconditionally.
+   */
+  notableStatus: string | null;
   isVoided: boolean;
   items: ReceiptModelItem[];
   subtotal: number;
@@ -118,6 +124,7 @@ export function buildReceiptModel({
     date: datePart,
     time: timePart,
     status,
+    notableStatus: status === 'PAID' ? null : status,
     isVoided: order.status === 'voided',
     items: items.map((it) => ({
       name: it.name,

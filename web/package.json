@@ -15,9 +15,9 @@
     "doctor": "react-doctor"
   },
   "dependencies": {
-    "@angadie/chittie": "^0.5.9",
+    "@angadie/chittie": "^0.5.12",
     "@angadie/chittie-companion": "^0.7.1",
-    "@angadie/chittie-preview": "^0.7.1",
+    "@angadie/chittie-preview": "^0.9.0",
     "@nozbe/watermelondb": "^0.28.0",
     "@nozbe/with-observables": "^1.6.0",
     "@supabase/supabase-js": "^2.106.0",

@@ -89,15 +89,15 @@ export function buildReceiptPrintHtml(m: ReceiptModel): string {
           <div class="receipt-meta">
             <div class="receipt-meta-row">
               <span><strong>Invoice:</strong> ${m.invoiceNumber}</span>
-              <span><strong>Date:</strong> ${m.date}</span>
+              <span><strong>Date:</strong> ${m.date} ${m.time}</span>
             </div>
-            <div class="receipt-meta-row">
-              <span><strong>Cashier:</strong> ${m.cashierName}</span>
-              <span><strong>Time:</strong> ${m.time}</span>
-            </div>
-            <div class="receipt-meta-row">
-              <span><strong>Status:</strong> ${m.status}</span>
-            </div>
+            ${
+              m.notableStatus
+                ? `<div class="receipt-meta-row">
+              <span><strong>Status:</strong> ${m.notableStatus}</span>
+            </div>`
+                : ''
+            }
           </div>
 
           <div class="receipt-divider"></div>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Shopbook POS",
     "slug": "shopbook-pos",
-    "version": "1.0.7",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "shopbookpos",
@@ -10,22 +10,19 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "lk.shopbook.pos",
-      "buildNumber": "7",
+      "version": "1.0.9",
+      "buildNumber": "9",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSBluetoothAlwaysUsageDescription": "Shopbook POS requires Bluetooth to connect with thermal printers.",
+        "NSBluetoothPeripheralUsageDescription": "Shopbook POS uses Bluetooth to connect with your thermal printer."
       }
     },
     "android": {
       "package": "lk.shopbook.pos",
-      "versionCode": 7,
+      "version": "1.0.9",
+      "versionCode": 9,
       "permissions": [
-        "android.permission.BLUETOOTH",
-        "android.permission.BLUETOOTH_ADMIN",
-        "android.permission.BLUETOOTH_CONNECT",
-        "android.permission.BLUETOOTH_SCAN",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.BLUETOOTH_ADVERTISE",
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.BLUETOOTH_CONNECT",
@@ -35,9 +32,9 @@
         "android.permission.BLUETOOTH_ADVERTISE"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE"
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -67,11 +64,13 @@
         }
       ],
       [
-        "with-rn-bluetooth-classic",
+        "expo-build-properties",
         {
-          "peripheralUsageDescription": "Shopbook POS uses Bluetooth to connect with your thermal printer.",
-          "alwaysUsageDescription": "Shopbook POS requires Bluetooth to print invoices in the background.",
-          "protocols": ["com.shopbook.pos"]
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keep class com.nozbe.watermelondb.** { *; }\n-keep class com.bluetoothclassic.** { *; }\n-dontwarn com.bluetoothclassic.**"
+          }
         }
       ]
     ],
