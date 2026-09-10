@@ -28,6 +28,17 @@ export type RenderReceiptParams = ReceiptModelInput & {
 
 const DEFAULT_PROFILE: PrinterProfile = '80mm';
 
+/**
+ * Line-feed pitch in dots. A 203-DPI printer's own default is 30 dots (Epson's
+ * ESC 3 reference) while font A is 24 dots tall, so leaving it unset spends 6
+ * dots of blank paper on every line. 24 is flush — and it also matches the
+ * 24-dot band a rasterized Sinhala/Tamil row prints as, so a mixed-script
+ * receipt keeps every row the same physical height. Below ~22 the lines start
+ * to touch. A taller line is safe: the printer feeds the character height
+ * instead, which is what keeps the double-height total from being clipped.
+ */
+const LINE_SPACING_DOTS = 24;
+
 /** Vertical spacing in millimetres, converted to dots per the profile's DPI. */
 const SPACING_MM = {
   beforeFooter: 3,
@@ -40,6 +51,13 @@ const feedDots = (mm: number, dpi: number) => Math.round(mm * dotsPerMm(dpi));
 const GAP = 1;
 /** Width of the quantity column on an item line ('12x'). */
 const QUANTITY_WIDTH = 3;
+
+/**
+ * Character magnification for the business name. Double width halves the
+ * characters that fit — 16 on a 58mm roll — so a long name wraps rather than
+ * overruns; that is the trade for a name the customer can read at a glance.
+ */
+const NAME_SIZE = { width: 2, height: 2 } as const;
 
 /** Font fallback chain handed to the rasterizer for non-Latin runs. */
 const FONT_FAMILIES = ['Noto Sans Sinhala', 'Noto Sans Tamil', 'sans-serif'];
@@ -87,19 +105,29 @@ export function buildReceiptElement(params: RenderReceiptParams) {
   return (
     <Printer width={columns}>
       {params.openCashDrawer ? <Cashdraw device={params.cashDrawerDevice ?? 0} /> : null}
-      <Text align="center" bold>
+      {/* The shop name is what the customer identifies the receipt by, so it is
+          the one thing printed larger than body text. The address and phone drop
+          to font B so the name has something to contrast against. */}
+      <Text align="center" size={NAME_SIZE}>
         {m.businessName}
       </Text>
-      <Text align="center">{m.businessAddress}</Text>
-      {m.businessPhone ? <Text align="center">Tel: {m.businessPhone}</Text> : null}
+      <Text align="center" small>
+        {m.businessAddress}
+      </Text>
+      {m.businessPhone ? (
+        <Text align="center" small>
+          Tel: {m.businessPhone}
+        </Text>
+      ) : null}
 
       <Line />
 
       <Row gap={GAP} left="Invoice" right={m.invoiceNumber} />
-      <Row gap={GAP} left="Cashier" right={m.cashierName} />
-      <Row gap={GAP} left="Date" right={m.date} />
-      {m.time ? <Row gap={GAP} left="Time" right={m.time} /> : null}
-      <Row gap={GAP} left="Status" right={m.status} />
+      {/* One row, not two: a date and a time are one fact about the sale. */}
+      <Row gap={GAP} left="Date" right={m.time ? `${m.date} ${m.time}` : m.date} />
+      {/* A paid sale is what a receipt already means. Only a void or a refund
+          is worth a line — and then it needs to be impossible to miss. */}
+      {m.notableStatus ? <Row gap={GAP} left="Status" right={m.notableStatus} /> : null}
 
       <Line />
 
@@ -125,9 +153,9 @@ export function buildReceiptElement(params: RenderReceiptParams) {
       ) : null}
       {m.tax ? <Row gap={GAP} left={m.tax.label} right={formatMoney(m.tax.amount)} /> : null}
 
-      <Line />
-
-      <Row gap={GAP} left="TOTAL" right={formatMoney(m.total)} />
+      {/* Double height is what separates the total from the numbers above it —
+          it needs no rule of its own, and a rule would only cost a line. */}
+      <Row gap={GAP} height={2} left="TOTAL" right={formatMoney(m.total)} />
 
       <Line />
 
@@ -159,6 +187,7 @@ export function buildReceiptElement(params: RenderReceiptParams) {
 const renderOpts = (profile: PrinterProfile) => {
   const { dotWidth, dpi } = PRINTER_PROFILES[profile];
   return {
+    lineSpacing: LINE_SPACING_DOTS,
     dotWidth,
     dpi,
     fontFamilies: FONT_FAMILIES,

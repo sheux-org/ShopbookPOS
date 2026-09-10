@@ -49,6 +49,59 @@ describe('thermalReceipt', () => {
     expect(Array.from(data)).toEqual(expect.arrayContaining([0x1b, 0x40]));
   });
 
+  // ESC 3 n sets the line-feed pitch. Without it the printer stays on its own
+  // 1/6in default (~34 dots) while font A is 24 tall, and every line wastes ~10
+  // dots of paper. The option is silently ignored by chittie < 0.5.10, so assert
+  // the byte rather than the call.
+  test('sets the line-feed pitch so the printer default does not pad every line', async () => {
+    const data = await renderReceiptBytes({
+      order,
+      items,
+      activeBusiness: business,
+      changeDue: 50,
+    });
+    expect(containsSequence(data, [0x1b, 0x33, 24])).toBe(true);
+  });
+
+  // GS ! n — the low nibble is the height multiplier, the high nibble the width.
+  const GS_SIZE = (width: number, height: number) => [
+    0x1d,
+    0x21,
+    ((width - 1) << 4) | (height - 1),
+  ];
+
+  test('prints the business name larger than the body, and the total larger than the subtotal', async () => {
+    const data = await renderReceiptBytes({
+      order,
+      items,
+      activeBusiness: business,
+      changeDue: 50,
+    });
+    expect(containsSequence(data, GS_SIZE(2, 2))).toBe(true);
+    expect(containsSequence(data, GS_SIZE(1, 2))).toBe(true);
+  });
+
+  test('spends no line on a paid status, and cannot hide a voided one', async () => {
+    const base = { items, activeBusiness: business, changeDue: 50 };
+    const paid = await renderReceiptBytes({ ...base, order });
+    const voided = await renderReceiptBytes({ ...base, order: { ...order, status: 'voided' } });
+    const text = (d: Uint8Array) => String.fromCharCode(...Array.from(d));
+    expect(text(paid)).not.toContain('Status');
+    expect(text(voided)).toContain('VOIDED');
+  });
+
+  test('date and time share one row, and the cashier does not get one', async () => {
+    const data = await renderReceiptBytes({
+      order,
+      items,
+      activeBusiness: business,
+      changeDue: 50,
+    });
+    const text = String.fromCharCode(...Array.from(data));
+    expect(text).toContain('2026-06-22 14:30');
+    expect(text).not.toContain('Cashier');
+  });
+
   test('58mm and 80mm profiles both render and produce different bytes', async () => {
     const base = { order, items, activeBusiness: business, changeDue: 50 };
     const narrow = await renderReceiptBytes({ ...base, profile: '58mm' });

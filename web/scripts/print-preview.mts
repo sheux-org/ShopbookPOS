@@ -117,6 +117,11 @@ async function main() {
       const canvas = renderReceipt(bytes, {
         createCanvas,
         columns: PRINTER_PROFILES[profile].columns,
+        // The pitch a printer falls back to when nothing sets one: 30 dots on a
+        // 203-DPI TM printer, per Epson's ESC 3 reference. chittie-preview
+        // defaults to 26, which would make a receipt that forgot to set its
+        // pitch look shorter here than it prints.
+        lineHeight: 30,
       });
       writeFileSync(resolve(OUT, `${s.name}-${profile}.bin`), bytes);
       writeFileSync(resolve(OUT, `${s.name}-${profile}.png`), canvas.toBuffer('image/png'));
